@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub Feed Digest"
+  short_description: "Summarize GitHub Home Feed into useful digests"
+  default_prompt: "Use $github-feed-digest to run or configure my daily GitHub feed summary."
