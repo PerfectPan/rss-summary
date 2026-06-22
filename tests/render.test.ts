@@ -10,6 +10,7 @@ describe("markdown digest renderer", () => {
       candidates: [
         {
           repo: "BuilderIO/skills",
+          source: "github",
           category: "discovery",
           score: 135,
           actors: ["fi3ework"],
@@ -35,13 +36,90 @@ describe("markdown digest renderer", () => {
             pushedAt: "2026-06-22T02:55:49Z",
           },
         },
+        {
+          repo: "rss:https://deno.com/blog/v2.4",
+          source: "rss",
+          category: "article",
+          score: 70,
+          actors: ["Deno Blog"],
+          eventTypes: ["article"],
+          reasons: ["rss feed: Deno Blog", "matches interest: deno"],
+          events: [
+            {
+              id: "rss-1",
+              type: "article",
+              source: "rss",
+              actor: "Deno Blog",
+              repo: "rss:https://deno.com/blog/v2.4",
+              createdAt: "2026-06-22T08:00:00Z",
+              title: "Deno 2.4",
+              htmlUrl: "https://deno.com/blog/v2.4",
+            },
+          ],
+          label: "Deno 2.4",
+          url: "https://deno.com/blog/v2.4",
+          description: "Runtime updates for TypeScript and JavaScript.",
+        },
       ],
     });
 
-    expect(markdown).toContain("# GitHub Feed Digest - 2026-06-22");
+    expect(markdown).toContain("# Feed Digest - 2026-06-22");
     expect(markdown).toContain("## 值得看");
     expect(markdown).toContain("[BuilderIO/skills](https://github.com/BuilderIO/skills)");
+    expect(markdown).toContain("## RSS 文章");
+    expect(markdown).toContain("[Deno 2.4](https://deno.com/blog/v2.4)");
     expect(markdown).toContain("fi3ework");
     expect(markdown).toContain("Skills for coding agents");
+  });
+
+  it("keeps RSS articles visible when GitHub activity has higher scores", () => {
+    const markdown = renderMarkdownDigest({
+      generatedAt: "2026-06-22T10:00:00Z",
+      username: "PerfectPan",
+      candidates: [
+        ...Array.from({ length: 12 }, (_, index) => ({
+          repo: `example/repo-${index}`,
+          source: "github" as const,
+          category: "activity" as const,
+          score: 100 - index,
+          actors: ["followee"],
+          eventTypes: ["pull_request" as const],
+          reasons: ["followed actor: followee"],
+          events: [
+            {
+              id: `pr-${index}`,
+              type: "pull_request" as const,
+              actor: "followee",
+              repo: `example/repo-${index}`,
+              createdAt: "2026-06-22T08:00:00Z",
+            },
+          ],
+        })),
+        {
+          repo: "rss:https://deno.com/blog/v2.4",
+          source: "rss",
+          category: "article",
+          score: 10,
+          actors: ["Deno Blog"],
+          eventTypes: ["article"],
+          reasons: ["rss feed: Deno Blog"],
+          events: [
+            {
+              id: "rss-1",
+              type: "article",
+              source: "rss",
+              actor: "Deno Blog",
+              repo: "rss:https://deno.com/blog/v2.4",
+              createdAt: "2026-06-22T08:00:00Z",
+            },
+          ],
+          label: "Deno 2.4",
+          url: "https://deno.com/blog/v2.4",
+        },
+      ],
+    });
+
+    expect(markdown).toContain("## RSS 文章");
+    expect(markdown).toContain("[Deno 2.4](https://deno.com/blog/v2.4)");
   });
 });

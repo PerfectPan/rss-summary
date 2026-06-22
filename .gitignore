@@ -4,4 +4,5 @@ dist/
 .env
 .env.*
 !.env.example
+feeds.json
 npm-debug.log*

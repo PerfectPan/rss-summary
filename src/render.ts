@@ -8,15 +8,16 @@ export type DigestDocument = {
 
 export function renderMarkdownDigest(document: DigestDocument): string {
   const date = document.generatedAt.slice(0, 10);
-  const sections = groupCandidates(document.candidates.slice(0, 12));
-  const lines = [`# GitHub Feed Digest - ${date}`, "", `账号：${document.username}`, ""];
+  const sections = groupCandidates(document.candidates);
+  const lines = [`# Feed Digest - ${date}`, "", `GitHub 账号：${document.username}`, ""];
 
   appendSection(lines, "值得看", sections.discovery);
+  appendSection(lines, "RSS 文章", sections.article);
   appendSection(lines, "项目动态", sections.activity);
   appendSection(lines, "版本发布", sections.release);
 
   if (document.candidates.length === 0) {
-    lines.push("今天没有筛出高价值 GitHub Feed 项目。");
+    lines.push("今天没有筛出高价值 GitHub/RSS 条目。");
   }
 
   return `${lines.join("\n").trim()}\n`;
@@ -25,6 +26,7 @@ export function renderMarkdownDigest(document: DigestDocument): string {
 function groupCandidates(candidates: CandidateProject[]) {
   return {
     discovery: candidates.filter((candidate) => candidate.category === "discovery"),
+    article: candidates.filter((candidate) => candidate.category === "article"),
     activity: candidates.filter((candidate) => candidate.category === "activity"),
     release: candidates.filter((candidate) => candidate.category === "release"),
   };
@@ -34,17 +36,18 @@ function appendSection(lines: string[], title: string, candidates: CandidateProj
   if (candidates.length === 0) return;
   lines.push(`## ${title}`, "");
 
-  candidates.forEach((candidate, index) => {
+  candidates.slice(0, 8).forEach((candidate, index) => {
     const repository = candidate.repository;
-    const url = repository?.htmlUrl ?? `https://github.com/${candidate.repo}`;
-    const description = repository?.description ?? "No description.";
+    const url = candidate.url ?? repository?.htmlUrl ?? `https://github.com/${candidate.repo}`;
+    const label = candidate.label ?? candidate.repo;
+    const description = candidate.description ?? repository?.description ?? "No description.";
     const language = repository?.language ? ` · ${repository.language}` : "";
     const stars =
       typeof repository?.stargazersCount === "number"
         ? ` · ${formatCount(repository.stargazersCount)} stars`
         : "";
 
-    lines.push(`${index + 1}. [${candidate.repo}](${url})`);
+    lines.push(`${index + 1}. [${label}](${url})`);
     lines.push(`   - 信号：${candidate.actors.join(", ")} · ${candidate.eventTypes.join(", ")}`);
     lines.push(`   - 简介：${description}${language}${stars}`);
     lines.push(`   - 为什么看：${candidate.reasons.slice(0, 3).join("; ")}`);

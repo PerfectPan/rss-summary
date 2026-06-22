@@ -127,4 +127,66 @@ describe("github feed domain", () => {
 
     expect(candidates[0]?.reasons).not.toContain("matches interest: ai");
   });
+
+  it("turns matching RSS articles into article candidates", () => {
+    const candidates = buildCandidateProjects(
+      [
+        {
+          id: "rss-1",
+          type: "article",
+          source: "rss",
+          actor: "Deno Blog",
+          repo: "rss:https://deno.com/blog/v2.4",
+          createdAt: "2026-06-22T08:00:00Z",
+          action: "published",
+          htmlUrl: "https://deno.com/blog/v2.4",
+          title: "Deno 2.4",
+          summary: "Runtime updates for TypeScript and JavaScript.",
+          sourceName: "Deno Blog",
+          sourceUrl: "https://deno.com/feed",
+          tags: ["deno", "runtime"],
+        },
+      ],
+      {
+        followees: new Set(),
+        interests: ["deno", "runtime"],
+        repositories: new Map(),
+      },
+    );
+
+    expect(candidates[0]).toMatchObject({
+      source: "rss",
+      category: "article",
+      label: "Deno 2.4",
+      url: "https://deno.com/blog/v2.4",
+      description: "Runtime updates for TypeScript and JavaScript.",
+    });
+    expect(candidates[0]?.reasons).toContain("rss feed: Deno Blog");
+    expect(candidates[0]?.reasons).toContain("matches interest: deno");
+  });
+
+  it("uses feed URL when an RSS article has no item link", () => {
+    const candidates = buildCandidateProjects(
+      [
+        {
+          id: "rss-1",
+          type: "article",
+          source: "rss",
+          actor: "Example Feed",
+          repo: "rss:guid-1",
+          createdAt: "2026-06-22T08:00:00Z",
+          title: "Untitled note",
+          sourceName: "Example Feed",
+          sourceUrl: "https://example.com/feed.xml",
+        },
+      ],
+      {
+        followees: new Set(),
+        interests: [],
+        repositories: new Map(),
+      },
+    );
+
+    expect(candidates[0]?.url).toBe("https://example.com/feed.xml");
+  });
 });

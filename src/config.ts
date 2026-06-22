@@ -1,3 +1,11 @@
+import { existsSync, readFileSync } from "node:fs";
+
+export type FeedSubscription = {
+  name: string;
+  url: string;
+  tags: string[];
+};
+
 export type AppConfig = {
   username: string;
   token?: string;
@@ -8,6 +16,7 @@ export type AppConfig = {
   maxRepos: number;
   dryRun: boolean;
   interests: string[];
+  rssFeeds: FeedSubscription[];
 };
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env, argv: string[] = process.argv.slice(2)): AppConfig {
@@ -42,6 +51,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, argv: string[] 
       "performance",
       "skills",
     ],
+    rssFeeds: loadFeedSubscriptions(env, args.rssFeedsFile),
   };
 }
 
@@ -67,8 +77,39 @@ function parseArgs(argv: string[]) {
     perPage?: string;
     windowHours?: string;
     maxRepos?: string;
+    rssFeedsFile?: string;
     dryRun?: boolean;
   };
+}
+
+export function parseFeedSubscriptions(value: string): FeedSubscription[] {
+  const parsed: unknown = JSON.parse(value);
+  if (!Array.isArray(parsed)) {
+    throw new Error("RSS feed configuration must be a JSON array.");
+  }
+
+  return parsed.map((item) => {
+    if (typeof item === "string") {
+      return {
+        name: nameFromUrl(item),
+        url: item,
+        tags: [],
+      };
+    }
+
+    if (!item || typeof item !== "object") {
+      throw new Error("Each RSS feed must be a URL string or an object.");
+    }
+
+    const record = item as Record<string, unknown>;
+    const url = requireString(record.url, "RSS feed url");
+    const name = typeof record.name === "string" && record.name.trim() ? record.name.trim() : nameFromUrl(url);
+    const tags = Array.isArray(record.tags)
+      ? record.tags.map((tag) => (typeof tag === "string" ? tag.trim() : "")).filter(Boolean)
+      : [];
+
+    return { name, url, tags };
+  });
 }
 
 function numberFrom(value: string | undefined, fallback: number): number {
@@ -82,4 +123,27 @@ function parseList(value: string | undefined): string[] | undefined {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function loadFeedSubscriptions(env: NodeJS.ProcessEnv, configuredFile: string | undefined): FeedSubscription[] {
+  if (env.RSS_FEEDS) return parseFeedSubscriptions(env.RSS_FEEDS);
+
+  const feedsFile = configuredFile ?? env.RSS_FEEDS_FILE ?? "feeds.json";
+  if (!existsSync(feedsFile)) return [];
+  return parseFeedSubscriptions(readFileSync(feedsFile, "utf8"));
+}
+
+function requireString(value: unknown, label: string): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`${label} is required.`);
+  }
+  return value.trim();
+}
+
+function nameFromUrl(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
 }

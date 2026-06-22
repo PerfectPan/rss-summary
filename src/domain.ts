@@ -1,8 +1,11 @@
-export type ActivityType = "watch" | "pull_request" | "release" | "fork" | "create" | "other";
+export type ActivitySource = "github" | "rss";
+
+export type ActivityType = "watch" | "pull_request" | "release" | "fork" | "create" | "article" | "other";
 
 export type ActivityCard = {
   id: string;
   type: ActivityType;
+  source?: ActivitySource;
   actor: string;
   repo: string;
   createdAt: string;
@@ -12,6 +15,9 @@ export type ActivityCard = {
   htmlUrl?: string;
   title?: string;
   summary?: string;
+  sourceName?: string;
+  sourceUrl?: string;
+  tags?: string[];
 };
 
 export type RepositoryMetadata = {
@@ -26,13 +32,17 @@ export type RepositoryMetadata = {
 
 export type CandidateProject = {
   repo: string;
-  category: "discovery" | "release" | "activity";
+  source: ActivitySource;
+  category: "discovery" | "release" | "activity" | "article";
   score: number;
   actors: string[];
   eventTypes: ActivityType[];
   reasons: string[];
   events: ActivityCard[];
   repository?: RepositoryMetadata;
+  label?: string;
+  url?: string;
+  description?: string;
 };
 
 export type BuildCandidatesContext = {
@@ -145,6 +155,9 @@ function scoreRepo(
       score += 30;
       reasons.add(`followed actor: ${event.actor}`);
     }
+    if (event.type === "article") {
+      reasons.add(`rss feed: ${event.sourceName ?? event.actor}`);
+    }
   }
 
   if (actors.length > 1) {
@@ -158,6 +171,11 @@ function scoreRepo(
     reasons.add(`matches interest: ${interest}`);
   }
 
+  for (const interest of matchEventInterests(events, context.interests)) {
+    score += 20;
+    reasons.add(`matches interest: ${interest}`);
+  }
+
   if (repository) {
     score += Math.min(25, Math.log10(Math.max(1, repository.stargazersCount)) * 6);
     if (repository.pushedAt && daysSince(repository.pushedAt) <= 14) {
@@ -168,6 +186,7 @@ function scoreRepo(
 
   return {
     repo,
+    source: sourceFor(events),
     category: categoryFor(eventTypes),
     score: Math.round(score),
     actors,
@@ -175,6 +194,9 @@ function scoreRepo(
     reasons: [...reasons],
     events: events.sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     repository,
+    label: labelFor(repo, events),
+    url: urlFor(repo, events, repository),
+    description: descriptionFor(events),
   };
 }
 
@@ -187,6 +209,7 @@ function baseScore(event: ActivityCard): number {
   if (event.type === "release") return 85;
   if (event.type === "fork") return 45;
   if (event.type === "create") return 35;
+  if (event.type === "article") return 30;
   if (event.type === "pull_request") {
     if (event.action === "merged") return 55;
     if (event.action === "opened") return 35;
@@ -197,11 +220,53 @@ function baseScore(event: ActivityCard): number {
 }
 
 function categoryFor(types: ActivityType[]): CandidateProject["category"] {
+  if (types.includes("article")) return "article";
   if (types.includes("watch") || types.includes("fork") || types.includes("create")) {
     return "discovery";
   }
   if (types.includes("release")) return "release";
   return "activity";
+}
+
+function matchEventInterests(events: ActivityCard[], interests: string[]): string[] {
+  const tokens = tokenize(
+    events
+      .flatMap((event) => [
+        event.title ?? "",
+        event.summary ?? "",
+        event.sourceName ?? "",
+        event.htmlUrl ?? "",
+        ...(event.tags ?? []),
+      ])
+      .join(" "),
+  );
+
+  return interests.filter((interest) => {
+    const interestTokens = [...tokenize(interest)];
+    return interestTokens.length > 0 && interestTokens.every((token) => tokens.has(token));
+  });
+}
+
+function sourceFor(events: ActivityCard[]): ActivitySource {
+  return events.some((event) => event.source === "rss" || event.type === "article") ? "rss" : "github";
+}
+
+function labelFor(repo: string, events: ActivityCard[]): string | undefined {
+  const article = events.find((event) => event.type === "article");
+  return article?.title ?? (article ? repo.replace(/^rss:/u, "") : undefined);
+}
+
+function urlFor(
+  repo: string,
+  events: ActivityCard[],
+  repository: RepositoryMetadata | undefined,
+): string | undefined {
+  const article = events.find((event) => event.type === "article");
+  return article?.htmlUrl ?? article?.sourceUrl ?? repository?.htmlUrl ?? `https://github.com/${repo}`;
+}
+
+function descriptionFor(events: ActivityCard[]): string | undefined {
+  return events.find((event) => event.type === "article")?.summary;
 }
 
 function matchInterests(repository: RepositoryMetadata | undefined, interests: string[]): string[] {

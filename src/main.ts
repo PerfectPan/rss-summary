@@ -3,17 +3,24 @@ import { buildCandidateProjects, normalizeEvent, type ActivityCard, type Reposit
 import { GitHubClient } from "./github.js";
 import { createNotifier } from "./notifier.js";
 import { renderMarkdownDigest } from "./render.js";
+import { RssClient } from "./rss.js";
 
 export async function run(): Promise<void> {
   const config = loadConfig();
   const client = new GitHubClient({ token: config.token });
+  const rssClient = new RssClient();
 
-  const rawEvents = await client.getReceivedEvents(config.username, {
-    perPage: config.perPage,
-    pages: config.eventPages,
-  });
+  const [rawEvents, rssEvents] = await Promise.all([
+    client.getReceivedEvents(config.username, {
+      perPage: config.perPage,
+      pages: config.eventPages,
+    }),
+    fetchRssEvents(rssClient, config.rssFeeds),
+  ]);
   const since = Date.now() - config.windowHours * 60 * 60 * 1000;
-  const events = rawEvents.map(normalizeEvent).filter((event) => new Date(event.createdAt).getTime() >= since);
+  const events = [...rawEvents.map(normalizeEvent), ...rssEvents].filter(
+    (event) => new Date(event.createdAt).getTime() >= since,
+  );
 
   const followees = config.token ? await client.getFollowing() : new Set<string>();
   const repositories = await fetchRepositoryMetadata(client, events, config.maxRepos);
@@ -34,6 +41,24 @@ export async function run(): Promise<void> {
   await createNotifier({ webhookUrl: config.webhookUrl }).send(markdown);
 }
 
+async function fetchRssEvents(
+  client: RssClient,
+  feeds: Array<{ name: string; url: string; tags: string[] }>,
+): Promise<ActivityCard[]> {
+  const results = await Promise.all(
+    feeds.map(async (feed) => {
+      try {
+        return await client.getFeedEvents(feed);
+      } catch {
+        // A broken feed should not block GitHub summaries or other RSS sources.
+        return [];
+      }
+    }),
+  );
+
+  return results.flat();
+}
+
 async function fetchRepositoryMetadata(
   client: GitHubClient,
   events: ActivityCard[],
@@ -44,6 +69,7 @@ async function fetchRepositoryMetadata(
     ...new Set(
       events
         .filter((event) => event.type !== "other")
+        .filter((event) => event.source !== "rss")
         .map((event) => event.repo)
         .filter(Boolean),
     ),
