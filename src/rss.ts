@@ -5,6 +5,7 @@ import type { ActivityCard } from "./domain.js";
 
 type RssClientOptions = {
   fetch?: typeof fetch;
+  timeoutMs?: number;
 };
 
 type XmlRecord = Record<string, unknown>;
@@ -19,13 +20,16 @@ const parser = new XMLParser({
 
 export class RssClient {
   private readonly fetchImpl: typeof fetch;
+  private readonly timeoutMs: number;
 
   constructor(options: RssClientOptions = {}) {
     this.fetchImpl = options.fetch ?? fetch;
+    this.timeoutMs = options.timeoutMs ?? 12_000;
   }
 
   async getFeedEvents(feed: FeedSubscription): Promise<ActivityCard[]> {
     const response = await this.fetchImpl(feed.url, {
+      signal: AbortSignal.timeout(this.timeoutMs),
       headers: {
         accept: "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.8",
         "user-agent": "rss-summary/0.1",

@@ -114,4 +114,22 @@ describe("RSS source", () => {
     expect(events).toHaveLength(1);
     expect(events[0]?.title).toBe("Useful MCP note");
   });
+
+  it("passes an abort signal to feed fetches", async () => {
+    let signal: AbortSignal | undefined;
+    const client = new RssClient({
+      fetch: async (_url, init) => {
+        signal = init?.signal ?? undefined;
+        return new Response("<rss><channel></channel></rss>", { status: 200 });
+      },
+    });
+
+    await client.getFeedEvents({
+      name: "Slow Feed",
+      url: "https://example.com/feed.xml",
+      tags: [],
+    });
+
+    expect(signal).toBeInstanceOf(AbortSignal);
+  });
 });
