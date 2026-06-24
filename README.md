@@ -51,6 +51,24 @@ Dry run:
 GH_FEED_TOKEN="$(gh auth token)" GITHUB_USERNAME=PerfectPan npm run digest -- --dry-run
 ```
 
+Preview only new high-signal candidates as JSON for a research skill or model pipeline:
+
+```bash
+GH_FEED_TOKEN="$(gh auth token)" \
+GITHUB_USERNAME=PerfectPan \
+RSS_FEEDS_FILE=feeds.json \
+npm run --silent digest -- --json --only-new --dry-run
+```
+
+Run the daily digest and mark emitted candidates as seen:
+
+```bash
+GH_FEED_TOKEN="$(gh auth token)" \
+GITHUB_USERNAME=PerfectPan \
+RSS_FEEDS_FILE=feeds.json \
+npm run --silent digest -- --only-new
+```
+
 With RSS feeds:
 
 ```bash
@@ -81,7 +99,7 @@ The webhook payload is:
 Install Node.js 24+, clone or copy this repository, run `npm ci`, then schedule:
 
 ```cron
-0 9 * * * cd /path/to/rss-summary && GH_FEED_TOKEN=... GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json npm run digest >> /tmp/feed-digest.log 2>&1
+0 9 * * * cd /path/to/rss-summary && GH_FEED_TOKEN=... GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json npm run digest -- --only-new >> /tmp/feed-digest.log 2>&1
 ```
 
 Use the `GH_FEED_TOKEN` from the account whose Home Feed should be summarized. The machine identity does not matter; the token identity does.
@@ -91,10 +109,11 @@ Use the `GH_FEED_TOKEN` from the account whose Home Feed should be summarized. T
 - `src/github.ts`: read-only GitHub API client for received events, following list, repositories, and PR details.
 - `src/rss.ts`: RSS 2.0 / Atom source adapter built on `fast-xml-parser`.
 - `src/domain.ts`: normalizes source events into activity cards, scores high-signal repos/articles, and records reasons.
+- `src/state.ts`: stores seen event IDs in `.state/feed-state.json` so daily runs can focus on new items.
 - `src/render.ts`: renders Markdown sections for project discovery, RSS articles, project activity, and releases.
 - `src/notifier.ts`: prints to stdout and optionally POSTs `{ "text": markdown }` to a generic webhook.
 
-The next durable step before deep automatic research is a small cache of researched repo/article IDs so repeated daily runs do not re-investigate the same item.
+`feeds.json` and `.state/` are intentionally gitignored because they contain personal subscriptions and local run state.
 
 ## Research notes
 
@@ -102,10 +121,11 @@ See `docs/competitive-research.md` for the competitor scan behind the RSS design
 
 ## Codex skill
 
-The portable Codex skill lives at:
+The portable Codex skills live at:
 
 ```text
 skills/github-feed-digest
+skills/feed-research-digest
 ```
 
-Copy that directory into another machine's `$CODEX_HOME/skills/` or keep it with this repository and explicitly ask Codex to use `$github-feed-digest`.
+Use `$github-feed-digest` to configure/run the automation. Use `$feed-research-digest` when you want Codex to inspect the new JSON candidates and produce an actionable daily research summary.

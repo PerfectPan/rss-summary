@@ -23,6 +23,10 @@ export function renderMarkdownDigest(document: DigestDocument): string {
   return `${lines.join("\n").trim()}\n`;
 }
 
+export function renderJsonDigest(document: DigestDocument): string {
+  return `${JSON.stringify(document, null, 2)}\n`;
+}
+
 function groupCandidates(candidates: CandidateProject[]) {
   return {
     discovery: candidates.filter((candidate) => candidate.category === "discovery"),

@@ -39,4 +39,12 @@ describe("config", () => {
       },
     ]);
   });
+
+  it("loads state and output options from args", () => {
+    const config = loadConfig({}, ["--json", "--only-new", "--state-file", ".state/test.json", "--dry-run"]);
+
+    expect(config.outputFormat).toBe("json");
+    expect(config.onlyNew).toBe(true);
+    expect(config.stateFile).toBe(".state/test.json");
+  });
 });

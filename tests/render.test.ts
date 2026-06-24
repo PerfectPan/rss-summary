@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { renderMarkdownDigest } from "../src/render.js";
+import { renderJsonDigest, renderMarkdownDigest } from "../src/render.js";
 
 describe("markdown digest renderer", () => {
   it("renders a concise project-focused digest", () => {
@@ -121,5 +121,42 @@ describe("markdown digest renderer", () => {
 
     expect(markdown).toContain("## RSS 文章");
     expect(markdown).toContain("[Deno 2.4](https://deno.com/blog/v2.4)");
+  });
+
+  it("renders machine-readable JSON for research skills", () => {
+    const json = renderJsonDigest({
+      generatedAt: "2026-06-22T10:00:00Z",
+      username: "PerfectPan",
+      candidates: [
+        {
+          repo: "rss:https://deno.com/blog/v2.4",
+          source: "rss",
+          category: "article",
+          score: 70,
+          actors: ["Deno Blog"],
+          eventTypes: ["article"],
+          reasons: ["rss feed: Deno Blog"],
+          events: [
+            {
+              id: "rss-1",
+              type: "article",
+              source: "rss",
+              actor: "Deno Blog",
+              repo: "rss:https://deno.com/blog/v2.4",
+              createdAt: "2026-06-22T08:00:00Z",
+              title: "Deno 2.4",
+              htmlUrl: "https://deno.com/blog/v2.4",
+            },
+          ],
+          label: "Deno 2.4",
+          url: "https://deno.com/blog/v2.4",
+        },
+      ],
+    });
+
+    expect(JSON.parse(json)).toMatchObject({
+      username: "PerfectPan",
+      candidates: [{ source: "rss", label: "Deno 2.4" }],
+    });
   });
 });

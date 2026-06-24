@@ -10,11 +10,14 @@ export type AppConfig = {
   username: string;
   token?: string;
   webhookUrl?: string;
+  outputFormat: "markdown" | "json";
   eventPages: number;
   perPage: number;
   windowHours: number;
   maxRepos: number;
   dryRun: boolean;
+  onlyNew: boolean;
+  stateFile: string;
   interests: string[];
   rssFeeds: FeedSubscription[];
 };
@@ -29,11 +32,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, argv: string[] 
     username,
     token,
     webhookUrl: dryRun ? undefined : env.NOTIFY_WEBHOOK_URL,
+    outputFormat: args.json || env.FEED_OUTPUT_FORMAT === "json" ? "json" : "markdown",
     eventPages: numberFrom(args.pages ?? env.FEED_EVENT_PAGES, 3),
     perPage: numberFrom(args.perPage ?? env.FEED_PER_PAGE, 100),
     windowHours: numberFrom(args.windowHours ?? env.FEED_WINDOW_HOURS, 36),
     maxRepos: numberFrom(args.maxRepos ?? env.FEED_MAX_REPOS, 30),
     dryRun,
+    onlyNew: args.onlyNew || env.FEED_ONLY_NEW === "1" || env.FEED_ONLY_NEW === "true",
+    stateFile: args.stateFile ?? env.FEED_STATE_FILE ?? ".state/feed-state.json",
     interests: parseList(env.FEED_INTERESTS) ?? [
       "agent",
       "coding-agent",
@@ -63,8 +69,16 @@ function parseArgs(argv: string[]) {
       result.dryRun = true;
       continue;
     }
+    if (arg === "--json") {
+      result.json = true;
+      continue;
+    }
+    if (arg === "--only-new") {
+      result.onlyNew = true;
+      continue;
+    }
     if (!arg.startsWith("--")) continue;
-    const key = arg.slice(2);
+    const key = camelCase(arg.slice(2));
     const value = argv[index + 1];
     if (value && !value.startsWith("--")) {
       result[key] = value;
@@ -78,8 +92,15 @@ function parseArgs(argv: string[]) {
     windowHours?: string;
     maxRepos?: string;
     rssFeedsFile?: string;
+    stateFile?: string;
     dryRun?: boolean;
+    json?: boolean;
+    onlyNew?: boolean;
   };
+}
+
+function camelCase(value: string): string {
+  return value.replace(/-([a-z])/gu, (_, char: string) => char.toUpperCase());
 }
 
 export function parseFeedSubscriptions(value: string): FeedSubscription[] {

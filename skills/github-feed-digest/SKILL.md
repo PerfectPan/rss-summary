@@ -34,16 +34,22 @@ Dry run:
 GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json npm run digest -- --dry-run
 ```
 
+Preview new candidates for research:
+
+```bash
+GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json npm run --silent digest -- --json --only-new --dry-run
+```
+
 Send to webhook:
 
 ```bash
-GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json NOTIFY_WEBHOOK_URL="https://example.com/webhook" npm run digest
+GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json NOTIFY_WEBHOOK_URL="https://example.com/webhook" npm run --silent digest -- --only-new
 ```
 
 Cron example:
 
 ```cron
-0 9 * * * cd /path/to/rss-summary && GH_FEED_TOKEN=... GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json npm run digest >> /tmp/feed-digest.log 2>&1
+0 9 * * * cd /path/to/rss-summary && GH_FEED_TOKEN=... GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json npm run --silent digest -- --only-new >> /tmp/feed-digest.log 2>&1
 ```
 
 ## Output Shape
@@ -56,6 +62,13 @@ The digest is Markdown with project-focused sections:
 - `版本发布`: release signals.
 
 Do not summarize raw GitHub events as a flat timeline. Explain why each repository may matter.
+
+## Daily New State
+
+- `--only-new --dry-run` previews new candidates without mutating state.
+- `--only-new` writes seen event IDs to `.state/feed-state.json` after output.
+- `--json` emits machine-readable candidates for `$feed-research-digest`.
+- Do not commit `.state/` or `feeds.json`.
 
 ## Troubleshooting
 

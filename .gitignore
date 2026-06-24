@@ -1,4 +1,5 @@
 .omx/
+.state/
 node_modules/
 dist/
 .env

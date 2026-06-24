@@ -2,8 +2,9 @@ import { loadConfig } from "./config.js";
 import { buildCandidateProjects, normalizeEvent, type ActivityCard, type RepositoryMetadata } from "./domain.js";
 import { GitHubClient } from "./github.js";
 import { createNotifier } from "./notifier.js";
-import { renderMarkdownDigest } from "./render.js";
+import { renderJsonDigest, renderMarkdownDigest } from "./render.js";
 import { RssClient } from "./rss.js";
+import { filterNewCandidates, loadFeedState, markCandidatesSeen, saveFeedState } from "./state.js";
 
 export async function run(): Promise<void> {
   const config = loadConfig();
@@ -26,19 +27,27 @@ export async function run(): Promise<void> {
   const repositories = await fetchRepositoryMetadata(client, events, config.maxRepos);
   await enrichPullRequests(client, events);
 
-  const candidates = buildCandidateProjects(events, {
+  const allCandidates = buildCandidateProjects(events, {
     followees,
     interests: config.interests,
     repositories,
   });
+  const state = loadFeedState(config.stateFile);
+  const candidates = config.onlyNew ? filterNewCandidates(allCandidates, state) : allCandidates;
 
-  const markdown = renderMarkdownDigest({
+  const document = {
     generatedAt: new Date().toISOString(),
     username: config.username,
     candidates,
-  });
+  };
+  const output = config.outputFormat === "json" ? renderJsonDigest(document) : renderMarkdownDigest(document);
 
-  await createNotifier({ webhookUrl: config.webhookUrl }).send(markdown);
+  await createNotifier({ webhookUrl: config.webhookUrl }).send(output);
+
+  if (config.onlyNew && !config.dryRun) {
+    markCandidatesSeen(state, candidates, document.generatedAt);
+    saveFeedState(config.stateFile, state);
+  }
 }
 
 async function fetchRssEvents(
