@@ -64,4 +64,26 @@ describe("feeds CLI", () => {
     expect(readFileSync(file, "utf8")).toBe(before);
     expect(output.join("")).toContain("GitHub Blog: ok, 1 item");
   });
+
+  it("removes feeds by URL through remove and delete aliases", async () => {
+    const file = join(mkdtempSync(join(tmpdir(), "rss-summary-feeds-")), "feeds.json");
+    const silent = { stdout: { write: () => undefined } };
+
+    await runFeedsCommand(["add", "--file", file, "--name", "GitHub Blog", "--url", "https://github.blog/feed"], silent);
+    await runFeedsCommand(["add", "--file", file, "--name", "Deno Blog", "--url", "https://deno.com/feed"], silent);
+
+    const removeExitCode = await runFeedsCommand(["remove", "--file", file, "--url", "https://github.blog/feed"], silent);
+    expect(removeExitCode).toBe(0);
+    expect(JSON.parse(readFileSync(file, "utf8"))).toEqual([
+      {
+        name: "Deno Blog",
+        url: "https://deno.com/feed",
+        tags: [],
+      },
+    ]);
+
+    const deleteExitCode = await runFeedsCommand(["delete", "--file", file, "--url", "https://deno.com/feed"], silent);
+    expect(deleteExitCode).toBe(0);
+    expect(JSON.parse(readFileSync(file, "utf8"))).toEqual([]);
+  });
 });

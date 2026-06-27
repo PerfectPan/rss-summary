@@ -7,26 +7,29 @@ description: Use when adding, listing, validating, or troubleshooting RSS/Atom s
 
 Use the repository CLI for deterministic RSS source changes. Do not hand-edit `feeds.json` unless the CLI cannot express the needed change.
 
+If `rss-summary` is not available, run `npm ci && npm run build && npm link` from the project root first.
+
 ## Commands
 
 Run from the `rss-summary` project root:
 
 ```bash
-npm run feeds -- add --url "https://example.com/feed.xml" --name "Example" --tags "ai,agent,mcp"
-npm run feeds -- list
-npm run feeds -- test
+rss-summary feeds add --url "https://example.com/feed.xml" --name "Example" --tags "ai,agent,mcp"
+rss-summary feeds list
+rss-summary feeds test
+rss-summary feeds remove --url "https://example.com/feed.xml"
 ```
 
-Use `--file <path>` when working with a non-default feed file.
+Use `--file <path>` when working with a non-default feed file. If the bin has not been built/linked in a dev checkout, use `npm run feeds -- <command>` as the fallback.
 
 ## Workflow
 
-1. Add the source with `npm run feeds -- add`.
-2. Validate parsing with `npm run feeds -- test`.
+1. Add the source with `rss-summary feeds add`.
+2. Validate parsing with `rss-summary feeds test`.
 3. Preview candidates for the target day:
 
 ```bash
-RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" npm run --silent digest -- --json --dry-run
+RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --json --dry-run
 ```
 
 4. Keep `feeds.json` local and uncommitted unless the user explicitly asks to share a feed set.

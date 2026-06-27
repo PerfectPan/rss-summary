@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { addFeedSubscription, formatFeedSubscriptions } from "../src/feed-store.js";
+import { addFeedSubscription, formatFeedSubscriptions, removeFeedSubscription } from "../src/feed-store.js";
 
 describe("feed store", () => {
   it("adds a normalized feed subscription", () => {
@@ -38,5 +38,23 @@ describe("feed store", () => {
         },
       ]),
     ).toBe('[\n  {\n    "name": "GitHub Blog",\n    "url": "https://github.blog/feed",\n    "tags": [\n      "github",\n      "ai"\n    ]\n  }\n]\n');
+  });
+
+  it("removes a feed subscription by URL", () => {
+    const feeds = removeFeedSubscription(
+      [
+        { name: "GitHub Blog", url: "https://github.blog/feed", tags: ["github"] },
+        { name: "Deno Blog", url: "https://deno.com/feed", tags: ["deno"] },
+      ],
+      " https://github.blog/feed ",
+    );
+
+    expect(feeds).toEqual([{ name: "Deno Blog", url: "https://deno.com/feed", tags: ["deno"] }]);
+  });
+
+  it("rejects removing a missing feed URL", () => {
+    expect(() => removeFeedSubscription([], "https://github.blog/feed")).toThrow(
+      "RSS feed not found: https://github.blog/feed",
+    );
   });
 });

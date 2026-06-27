@@ -20,6 +20,15 @@ export function addFeedSubscription(
   return [...feeds, next];
 }
 
+export function removeFeedSubscription(feeds: FeedSubscription[], url: string): FeedSubscription[] {
+  const normalizedUrl = url.trim();
+  const next = feeds.filter((feed) => feed.url !== normalizedUrl);
+  if (next.length === feeds.length) {
+    throw new Error(`RSS feed not found: ${normalizedUrl}`);
+  }
+  return next;
+}
+
 export function loadFeedFile(path: string): FeedSubscription[] {
   if (!existsSync(path)) return [];
   return parseFeedSubscriptions(readFileSync(path, "utf8"));

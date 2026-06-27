@@ -12,6 +12,8 @@ The tool reads GitHub's received events API plus optional RSS/Atom feeds, enrich
 
 ```bash
 npm ci
+npm run build
+npm link
 cp .env.example .env
 ```
 
@@ -46,19 +48,20 @@ Edit `feeds.json` locally:
 Manage RSS sources with the CLI:
 
 ```bash
-npm run feeds -- add --url "https://github.blog/feed" --name "GitHub Blog" --tags "github,ai,developer-tools"
-npm run feeds -- list
-npm run feeds -- test
+rss-summary feeds add --url "https://github.blog/feed" --name "GitHub Blog" --tags "github,ai,developer-tools"
+rss-summary feeds list
+rss-summary feeds test
+rss-summary feeds remove --url "https://github.blog/feed"
 ```
 
-Use `--file <path>` when the feed list is not `feeds.json`.
+Use `--file <path>` when the feed list is not `feeds.json`. During repo-local development before `npm link`, the equivalent fallback is `npm run feeds -- <command>`.
 
 ## Run
 
 Dry run:
 
 ```bash
-GH_FEED_TOKEN="$(gh auth token)" GITHUB_USERNAME=PerfectPan npm run digest -- --dry-run
+GH_FEED_TOKEN="$(gh auth token)" GITHUB_USERNAME=PerfectPan rss-summary digest --dry-run
 ```
 
 Preview only new high-signal candidates as JSON for a research skill or model pipeline:
@@ -68,7 +71,7 @@ GH_FEED_TOKEN="$(gh auth token)" \
 GITHUB_USERNAME=PerfectPan \
 RSS_FEEDS_FILE=feeds.json \
 FEED_DAY="$(TZ=Asia/Shanghai date +%F)" \
-npm run --silent digest -- --json --only-new --dry-run
+rss-summary digest --json --only-new --dry-run
 ```
 
 Run the daily digest and mark emitted candidates as seen:
@@ -78,7 +81,7 @@ GH_FEED_TOKEN="$(gh auth token)" \
 GITHUB_USERNAME=PerfectPan \
 RSS_FEEDS_FILE=feeds.json \
 FEED_DAY="$(TZ=Asia/Shanghai date +%F)" \
-npm run --silent digest -- --only-new
+rss-summary digest --only-new
 ```
 
 With RSS feeds:
@@ -87,7 +90,7 @@ With RSS feeds:
 GH_FEED_TOKEN="$(gh auth token)" \
 GITHUB_USERNAME=PerfectPan \
 RSS_FEEDS_FILE=feeds.json \
-npm run digest -- --dry-run
+rss-summary digest --dry-run
 ```
 
 With a generic webhook:
@@ -97,7 +100,7 @@ GH_FEED_TOKEN="..." \
 GITHUB_USERNAME=PerfectPan \
 RSS_FEEDS_FILE=feeds.json \
 NOTIFY_WEBHOOK_URL="https://example.com/webhook" \
-npm run digest
+rss-summary digest
 ```
 
 The webhook payload is:
@@ -111,7 +114,7 @@ The webhook payload is:
 By default, the CLI uses a rolling `FEED_WINDOW_HOURS=36` window for compatibility. For scheduled daily summaries, prefer an explicit calendar day:
 
 ```bash
-npm run --silent digest -- --day 2026-06-27 --timezone-offset +08:00 --only-new
+rss-summary digest --day 2026-06-27 --timezone-offset +08:00 --only-new
 ```
 
 Equivalent environment variables:
@@ -122,10 +125,10 @@ Equivalent environment variables:
 
 ## Schedule on another machine
 
-Install Node.js 24+, clone or copy this repository, run `npm ci`, then schedule:
+Install Node.js 24+, clone or copy this repository, run `npm ci && npm run build && npm link`, then schedule:
 
 ```cron
-0 9 * * * cd /path/to/rss-summary && FEED_DAY="$(TZ=Asia/Shanghai date +\%F)" GH_FEED_TOKEN=... GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json npm run --silent digest -- --only-new >> /tmp/feed-digest.log 2>&1
+0 9 * * * cd /path/to/rss-summary && FEED_DAY="$(TZ=Asia/Shanghai date +\%F)" GH_FEED_TOKEN=... GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json rss-summary digest --only-new >> /tmp/feed-digest.log 2>&1
 ```
 
 Use the `GH_FEED_TOKEN` from the account whose Home Feed should be summarized. The machine identity does not matter; the token identity does.
@@ -133,6 +136,7 @@ Use the `GH_FEED_TOKEN` from the account whose Home Feed should be summarized. T
 ## Current architecture
 
 - `src/github.ts`: read-only GitHub API client for received events, following list, repositories, and PR details.
+- `src/cli.ts`: package `bin` entrypoint for `rss-summary digest` and `rss-summary feeds`.
 - `src/rss.ts`: RSS 2.0 / Atom source adapter built on `fast-xml-parser`.
 - `src/feeds.ts`: CLI for adding, listing, and validating local RSS sources.
 - `src/feed-store.ts`: JSON file operations for feed subscriptions.

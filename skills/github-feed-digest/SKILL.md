@@ -15,10 +15,11 @@ The GitHub identity comes from the token, not the machine. To summarize `Perfect
 
 1. Locate the project root containing `package.json`.
 2. Install dependencies with `npm ci`.
-3. Set `GH_FEED_TOKEN` to a read-only GitHub token.
-4. Set `GITHUB_USERNAME=PerfectPan` unless the user asks for another account.
-5. Optionally copy `feeds.example.json` to `feeds.json` and set `RSS_FEEDS_FILE=feeds.json`.
-6. Optionally set `NOTIFY_WEBHOOK_URL` for generic webhook delivery.
+3. Build and link the CLI with `npm run build && npm link`.
+4. Set `GH_FEED_TOKEN` to a read-only GitHub token.
+5. Set `GITHUB_USERNAME=PerfectPan` unless the user asks for another account.
+6. Optionally copy `feeds.example.json` to `feeds.json` and set `RSS_FEEDS_FILE=feeds.json`.
+7. Optionally set `NOTIFY_WEBHOOK_URL` for generic webhook delivery.
 
 Minimum token permissions:
 
@@ -31,25 +32,25 @@ Minimum token permissions:
 Dry run:
 
 ```bash
-GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json npm run digest -- --dry-run
+GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json rss-summary digest --dry-run
 ```
 
 Preview new candidates for research:
 
 ```bash
-GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" npm run --silent digest -- --json --only-new --dry-run
+GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --json --only-new --dry-run
 ```
 
 Send to webhook:
 
 ```bash
-GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" NOTIFY_WEBHOOK_URL="https://example.com/webhook" npm run --silent digest -- --only-new
+GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" NOTIFY_WEBHOOK_URL="https://example.com/webhook" rss-summary digest --only-new
 ```
 
 Cron example:
 
 ```cron
-0 9 * * * cd /path/to/rss-summary && FEED_DAY="$(TZ=Asia/Shanghai date +\%F)" GH_FEED_TOKEN=... GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json npm run --silent digest -- --only-new >> /tmp/feed-digest.log 2>&1
+0 9 * * * cd /path/to/rss-summary && FEED_DAY="$(TZ=Asia/Shanghai date +\%F)" GH_FEED_TOKEN=... GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json rss-summary digest --only-new >> /tmp/feed-digest.log 2>&1
 ```
 
 ## Time Window

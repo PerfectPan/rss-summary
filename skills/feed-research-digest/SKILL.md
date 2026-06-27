@@ -13,7 +13,7 @@ Use this skill after the local `rss-summary` project has fetched GitHub and RSS 
 2. Preview new candidates without mutating state:
 
 ```bash
-GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" npm run --silent digest -- --json --only-new --dry-run
+GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --json --only-new --dry-run
 ```
 
 3. Parse the JSON `candidates` array. If it is empty, report that there are no new high-signal items.
@@ -26,7 +26,7 @@ GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DA
 6. After the user accepts or after a scheduled non-dry run, mark candidates seen with:
 
 ```bash
-GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" npm run --silent digest -- --only-new
+GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --only-new
 ```
 
 The non-dry run writes `.state/feed-state.json`. Do not commit `.state/` or `feeds.json`.

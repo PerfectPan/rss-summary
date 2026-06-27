@@ -3,7 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "bin": {
+    "rss-summary": "./dist/cli.js"
+  },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
     "digest": "tsx src/main.ts",
     "feeds": "tsx src/feeds.ts",
     "test": "vitest run",

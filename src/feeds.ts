@@ -1,6 +1,6 @@
 import type { FeedSubscription } from "./config.js";
 import { type ActivityCard } from "./domain.js";
-import { addFeedSubscription, loadFeedFile, saveFeedFile } from "./feed-store.js";
+import { addFeedSubscription, loadFeedFile, removeFeedSubscription, saveFeedFile } from "./feed-store.js";
 import { RssClient } from "./rss.js";
 
 type Writable = {
@@ -43,6 +43,13 @@ export async function runFeedsCommand(
       return 0;
     }
 
+    if (args.command === "remove" || args.command === "delete") {
+      const feeds = removeFeedSubscription(loadFeedFile(args.file), requireUrl(args));
+      saveFeedFile(args.file, feeds);
+      stdout.write(`Removed ${args.url}\n`);
+      return 0;
+    }
+
     if (args.command === "test") {
       await testFeeds(stdout, loadFeedsForTest(args), deps.rssClient ?? new RssClient());
       return 0;
@@ -81,12 +88,17 @@ function parseArgs(argv: string[]): ParsedArgs {
 }
 
 function requireFeedInput(args: ParsedArgs): { name?: string; url: string; tags: string[] } {
-  if (!args.url) throw new Error("--url is required.");
+  const url = requireUrl(args);
   return {
     name: args.name,
-    url: args.url,
+    url,
     tags: args.tags,
   };
+}
+
+function requireUrl(args: ParsedArgs): string {
+  if (!args.url) throw new Error("--url is required.");
+  return args.url;
 }
 
 function loadFeedsForTest(args: ParsedArgs): FeedSubscription[] {
@@ -125,10 +137,12 @@ async function testFeeds(
 
 function writeHelp(stdout: Writable): void {
   stdout.write(`Usage:
-  npm run feeds -- add --url <rss-url> [--name <name>] [--tags ai,mcp] [--file feeds.json]
-  npm run feeds -- list [--file feeds.json]
-  npm run feeds -- test [--file feeds.json]
-  npm run feeds -- test --url <rss-url> [--name <name>] [--tags ai,mcp]
+  rss-summary feeds add --url <rss-url> [--name <name>] [--tags ai,mcp] [--file feeds.json]
+  rss-summary feeds remove --url <rss-url> [--file feeds.json]
+  rss-summary feeds delete --url <rss-url> [--file feeds.json]
+  rss-summary feeds list [--file feeds.json]
+  rss-summary feeds test [--file feeds.json]
+  rss-summary feeds test --url <rss-url> [--name <name>] [--tags ai,mcp]
 `);
 }
 
