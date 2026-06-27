@@ -13,10 +13,12 @@ The tool reads GitHub's received events API plus optional RSS/Atom feeds, enrich
 ```bash
 pnpm install
 pnpm build
+pnpm setup
+pnpm link --global
 cp .env.example .env
 ```
 
-Commands below use `pnpm exec rss-summary` so they work from the checked-out repository without a global link. If you want a bare `rss-summary` command, run `pnpm setup` once if needed, then `pnpm link --global`.
+Commands below use the linked `rss-summary` bin. If a machine has not linked the bin yet, use `pnpm exec rss-summary ...` from the repository root as the fallback.
 
 Create a fine-grained GitHub token from the `PerfectPan` account and put it in `GH_FEED_TOKEN`.
 
@@ -49,10 +51,10 @@ Edit `feeds.json` locally:
 Manage RSS sources with the CLI:
 
 ```bash
-pnpm exec rss-summary feeds add --url "https://github.blog/feed" --name "GitHub Blog" --tags "github,ai,developer-tools"
-pnpm exec rss-summary feeds list
-pnpm exec rss-summary feeds test
-pnpm exec rss-summary feeds remove --url "https://github.blog/feed"
+rss-summary feeds add --url "https://github.blog/feed" --name "GitHub Blog" --tags "github,ai,developer-tools"
+rss-summary feeds list
+rss-summary feeds test
+rss-summary feeds remove --url "https://github.blog/feed"
 ```
 
 Use `--file <path>` when the feed list is not `feeds.json`. The lower-level development fallback is `pnpm feeds -- <command>`.
@@ -62,7 +64,7 @@ Use `--file <path>` when the feed list is not `feeds.json`. The lower-level deve
 Dry run:
 
 ```bash
-GH_FEED_TOKEN="$(gh auth token)" GITHUB_USERNAME=PerfectPan pnpm exec rss-summary digest --dry-run
+GH_FEED_TOKEN="$(gh auth token)" GITHUB_USERNAME=PerfectPan rss-summary digest --dry-run
 ```
 
 Preview only new high-signal candidates as JSON for a research skill or model pipeline:
@@ -72,7 +74,7 @@ GH_FEED_TOKEN="$(gh auth token)" \
 GITHUB_USERNAME=PerfectPan \
 RSS_FEEDS_FILE=feeds.json \
 FEED_DAY="$(TZ=Asia/Shanghai date +%F)" \
-pnpm exec rss-summary digest --json --only-new --dry-run
+rss-summary digest --json --only-new --dry-run
 ```
 
 Run the daily digest and mark emitted candidates as seen:
@@ -82,7 +84,7 @@ GH_FEED_TOKEN="$(gh auth token)" \
 GITHUB_USERNAME=PerfectPan \
 RSS_FEEDS_FILE=feeds.json \
 FEED_DAY="$(TZ=Asia/Shanghai date +%F)" \
-pnpm exec rss-summary digest --only-new
+rss-summary digest --only-new
 ```
 
 With RSS feeds:
@@ -91,7 +93,7 @@ With RSS feeds:
 GH_FEED_TOKEN="$(gh auth token)" \
 GITHUB_USERNAME=PerfectPan \
 RSS_FEEDS_FILE=feeds.json \
-pnpm exec rss-summary digest --dry-run
+rss-summary digest --dry-run
 ```
 
 With a generic webhook:
@@ -101,7 +103,7 @@ GH_FEED_TOKEN="..." \
 GITHUB_USERNAME=PerfectPan \
 RSS_FEEDS_FILE=feeds.json \
 NOTIFY_WEBHOOK_URL="https://example.com/webhook" \
-pnpm exec rss-summary digest
+rss-summary digest
 ```
 
 The webhook payload is:
@@ -115,7 +117,7 @@ The webhook payload is:
 By default, the CLI uses a rolling `FEED_WINDOW_HOURS=36` window for compatibility. For scheduled daily summaries, prefer an explicit calendar day:
 
 ```bash
-pnpm exec rss-summary digest --day 2026-06-27 --timezone-offset +08:00 --only-new
+rss-summary digest --day 2026-06-27 --timezone-offset +08:00 --only-new
 ```
 
 Equivalent environment variables:
@@ -126,10 +128,10 @@ Equivalent environment variables:
 
 ## Schedule on another machine
 
-Install Node.js 24+, clone or copy this repository, run `pnpm install && pnpm build`, then schedule:
+Install Node.js 24+, clone or copy this repository, run `pnpm install && pnpm build && pnpm setup && pnpm link --global`, then schedule:
 
 ```cron
-0 9 * * * cd /path/to/rss-summary && FEED_DAY="$(TZ=Asia/Shanghai date +\%F)" GH_FEED_TOKEN=... GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json pnpm exec rss-summary digest --only-new >> /tmp/feed-digest.log 2>&1
+0 9 * * * cd /path/to/rss-summary && FEED_DAY="$(TZ=Asia/Shanghai date +\%F)" GH_FEED_TOKEN=... GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json rss-summary digest --only-new >> /tmp/feed-digest.log 2>&1
 ```
 
 Use the `GH_FEED_TOKEN` from the account whose Home Feed should be summarized. The machine identity does not matter; the token identity does.

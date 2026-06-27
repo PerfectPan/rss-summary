@@ -7,29 +7,29 @@ description: Use when adding, listing, validating, or troubleshooting RSS/Atom s
 
 Use the repository CLI for deterministic RSS source changes. Do not hand-edit `feeds.json` unless the CLI cannot express the needed change.
 
-Run `pnpm install && pnpm build` from the project root first. Use `pnpm exec rss-summary ...` for repo-local execution; use `pnpm setup && pnpm link --global` only when a bare `rss-summary` command is required.
+Run `pnpm install && pnpm build && pnpm setup && pnpm link --global` from the project root first. Use `pnpm exec rss-summary ...` from the repository root only as a fallback when the bin is not linked.
 
 ## Commands
 
 Run from the `rss-summary` project root:
 
 ```bash
-pnpm exec rss-summary feeds add --url "https://example.com/feed.xml" --name "Example" --tags "ai,agent,mcp"
-pnpm exec rss-summary feeds list
-pnpm exec rss-summary feeds test
-pnpm exec rss-summary feeds remove --url "https://example.com/feed.xml"
+rss-summary feeds add --url "https://example.com/feed.xml" --name "Example" --tags "ai,agent,mcp"
+rss-summary feeds list
+rss-summary feeds test
+rss-summary feeds remove --url "https://example.com/feed.xml"
 ```
 
 Use `--file <path>` when working with a non-default feed file. The lower-level development fallback is `pnpm feeds -- <command>`.
 
 ## Workflow
 
-1. Add the source with `pnpm exec rss-summary feeds add`.
-2. Validate parsing with `pnpm exec rss-summary feeds test`.
+1. Add the source with `rss-summary feeds add`.
+2. Validate parsing with `rss-summary feeds test`.
 3. Preview candidates for the target day:
 
 ```bash
-RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" pnpm exec rss-summary digest --json --dry-run
+RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --json --dry-run
 ```
 
 4. Keep `feeds.json` local and uncommitted unless the user explicitly asks to share a feed set.
