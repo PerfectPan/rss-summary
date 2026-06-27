@@ -37,20 +37,26 @@ GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json npm run
 Preview new candidates for research:
 
 ```bash
-GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json npm run --silent digest -- --json --only-new --dry-run
+GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" npm run --silent digest -- --json --only-new --dry-run
 ```
 
 Send to webhook:
 
 ```bash
-GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json NOTIFY_WEBHOOK_URL="https://example.com/webhook" npm run --silent digest -- --only-new
+GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" NOTIFY_WEBHOOK_URL="https://example.com/webhook" npm run --silent digest -- --only-new
 ```
 
 Cron example:
 
 ```cron
-0 9 * * * cd /path/to/rss-summary && GH_FEED_TOKEN=... GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json npm run --silent digest -- --only-new >> /tmp/feed-digest.log 2>&1
+0 9 * * * cd /path/to/rss-summary && FEED_DAY="$(TZ=Asia/Shanghai date +\%F)" GH_FEED_TOKEN=... GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json npm run --silent digest -- --only-new >> /tmp/feed-digest.log 2>&1
 ```
+
+## Time Window
+
+- Use `FEED_DAY=YYYY-MM-DD` or `--day YYYY-MM-DD` for a calendar-day digest.
+- The default timezone offset is `+08:00`; override with `FEED_TIMEZONE_OFFSET` or `--timezone-offset`.
+- If no day is set, the CLI falls back to rolling `FEED_WINDOW_HOURS=36`.
 
 ## Output Shape
 
@@ -68,11 +74,12 @@ Do not summarize raw GitHub events as a flat timeline. Explain why each reposito
 - `--only-new --dry-run` previews new candidates without mutating state.
 - `--only-new` writes seen event IDs to `.state/feed-state.json` after output.
 - `--json` emits machine-readable candidates for `$feed-research-digest`.
+- `--day YYYY-MM-DD` filters to that calendar day in the configured timezone offset.
 - Do not commit `.state/` or `feeds.json`.
 
 ## Troubleshooting
 
-- Empty digest: widen `FEED_WINDOW_HOURS` or increase `FEED_EVENT_PAGES`.
+- Empty digest: confirm `FEED_DAY`, widen `FEED_WINDOW_HOURS` for rolling mode, or increase `FEED_EVENT_PAGES`.
 - Missing RSS items: confirm `RSS_FEEDS_FILE` points at a JSON array and that the feed publishes RSS 2.0 or Atom.
 - Missing private events: ensure the token belongs to the same username and has read access to those repositories.
 - Webhook failure: rerun with `--dry-run` to isolate GitHub fetching from delivery.

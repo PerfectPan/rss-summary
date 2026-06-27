@@ -57,6 +57,7 @@ Preview only new high-signal candidates as JSON for a research skill or model pi
 GH_FEED_TOKEN="$(gh auth token)" \
 GITHUB_USERNAME=PerfectPan \
 RSS_FEEDS_FILE=feeds.json \
+FEED_DAY="$(TZ=Asia/Shanghai date +%F)" \
 npm run --silent digest -- --json --only-new --dry-run
 ```
 
@@ -66,6 +67,7 @@ Run the daily digest and mark emitted candidates as seen:
 GH_FEED_TOKEN="$(gh auth token)" \
 GITHUB_USERNAME=PerfectPan \
 RSS_FEEDS_FILE=feeds.json \
+FEED_DAY="$(TZ=Asia/Shanghai date +%F)" \
 npm run --silent digest -- --only-new
 ```
 
@@ -94,12 +96,26 @@ The webhook payload is:
 { "text": "# Feed Digest - ..." }
 ```
 
+## Time window
+
+By default, the CLI uses a rolling `FEED_WINDOW_HOURS=36` window for compatibility. For scheduled daily summaries, prefer an explicit calendar day:
+
+```bash
+npm run --silent digest -- --day 2026-06-27 --timezone-offset +08:00 --only-new
+```
+
+Equivalent environment variables:
+
+- `FEED_DAY=YYYY-MM-DD`
+- `FEED_TIMEZONE_OFFSET=+08:00`
+- `FEED_WINDOW_HOURS=36` for the legacy rolling-hour mode when `FEED_DAY` is not set
+
 ## Schedule on another machine
 
 Install Node.js 24+, clone or copy this repository, run `npm ci`, then schedule:
 
 ```cron
-0 9 * * * cd /path/to/rss-summary && GH_FEED_TOKEN=... GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json npm run digest -- --only-new >> /tmp/feed-digest.log 2>&1
+0 9 * * * cd /path/to/rss-summary && FEED_DAY="$(TZ=Asia/Shanghai date +\%F)" GH_FEED_TOKEN=... GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json npm run --silent digest -- --only-new >> /tmp/feed-digest.log 2>&1
 ```
 
 Use the `GH_FEED_TOKEN` from the account whose Home Feed should be summarized. The machine identity does not matter; the token identity does.
@@ -109,6 +125,7 @@ Use the `GH_FEED_TOKEN` from the account whose Home Feed should be summarized. T
 - `src/github.ts`: read-only GitHub API client for received events, following list, repositories, and PR details.
 - `src/rss.ts`: RSS 2.0 / Atom source adapter built on `fast-xml-parser`.
 - `src/domain.ts`: normalizes source events into activity cards, scores high-signal repos/articles, and records reasons.
+- `src/event-window.ts`: resolves rolling-hour or explicit calendar-day filtering windows.
 - `src/state.ts`: stores seen event IDs in `.state/feed-state.json` so daily runs can focus on new items.
 - `src/render.ts`: renders Markdown sections for project discovery, RSS articles, project activity, and releases.
 - `src/notifier.ts`: prints to stdout and optionally POSTs `{ "text": markdown }` to a generic webhook.

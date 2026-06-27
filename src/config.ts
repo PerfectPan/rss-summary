@@ -14,6 +14,8 @@ export type AppConfig = {
   eventPages: number;
   perPage: number;
   windowHours: number;
+  day?: string;
+  timezoneOffset: string;
   maxRepos: number;
   dryRun: boolean;
   onlyNew: boolean;
@@ -36,6 +38,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, argv: string[] 
     eventPages: numberFrom(args.pages ?? env.FEED_EVENT_PAGES, 3),
     perPage: numberFrom(args.perPage ?? env.FEED_PER_PAGE, 100),
     windowHours: numberFrom(args.windowHours ?? env.FEED_WINDOW_HOURS, 36),
+    day: args.day ?? env.FEED_DAY,
+    timezoneOffset: args.timezoneOffset ?? env.FEED_TIMEZONE_OFFSET ?? "+08:00",
     maxRepos: numberFrom(args.maxRepos ?? env.FEED_MAX_REPOS, 30),
     dryRun,
     onlyNew: args.onlyNew || env.FEED_ONLY_NEW === "1" || env.FEED_ONLY_NEW === "true",
@@ -90,6 +94,8 @@ function parseArgs(argv: string[]) {
     pages?: string;
     perPage?: string;
     windowHours?: string;
+    day?: string;
+    timezoneOffset?: string;
     maxRepos?: string;
     rssFeedsFile?: string;
     stateFile?: string;

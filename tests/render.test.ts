@@ -127,6 +127,7 @@ describe("markdown digest renderer", () => {
     const json = renderJsonDigest({
       generatedAt: "2026-06-22T10:00:00Z",
       username: "PerfectPan",
+      windowLabel: "2026-06-22 +08:00",
       candidates: [
         {
           repo: "rss:https://deno.com/blog/v2.4",
@@ -156,7 +157,19 @@ describe("markdown digest renderer", () => {
 
     expect(JSON.parse(json)).toMatchObject({
       username: "PerfectPan",
+      windowLabel: "2026-06-22 +08:00",
       candidates: [{ source: "rss", label: "Deno 2.4" }],
     });
+  });
+
+  it("shows the event window in markdown output", () => {
+    const markdown = renderMarkdownDigest({
+      generatedAt: "2026-06-22T10:00:00Z",
+      username: "PerfectPan",
+      windowLabel: "2026-06-22 +08:00",
+      candidates: [],
+    });
+
+    expect(markdown).toContain("筛选窗口：2026-06-22 +08:00");
   });
 });

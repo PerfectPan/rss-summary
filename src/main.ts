@@ -1,5 +1,6 @@
 import { loadConfig } from "./config.js";
 import { buildCandidateProjects, normalizeEvent, type ActivityCard, type RepositoryMetadata } from "./domain.js";
+import { isWithinEventWindow, resolveEventWindow } from "./event-window.js";
 import { GitHubClient } from "./github.js";
 import { createNotifier } from "./notifier.js";
 import { renderJsonDigest, renderMarkdownDigest } from "./render.js";
@@ -18,9 +19,9 @@ export async function run(): Promise<void> {
     }),
     fetchRssEvents(rssClient, config.rssFeeds),
   ]);
-  const since = Date.now() - config.windowHours * 60 * 60 * 1000;
-  const events = [...rawEvents.map(normalizeEvent), ...rssEvents].filter(
-    (event) => new Date(event.createdAt).getTime() >= since,
+  const eventWindow = resolveEventWindow(config);
+  const events = [...rawEvents.map(normalizeEvent), ...rssEvents].filter((event) =>
+    isWithinEventWindow(event, eventWindow),
   );
 
   const followees = config.token ? await client.getFollowing() : new Set<string>();
@@ -38,6 +39,7 @@ export async function run(): Promise<void> {
   const document = {
     generatedAt: new Date().toISOString(),
     username: config.username,
+    windowLabel: eventWindow.label,
     candidates,
   };
   const output = config.outputFormat === "json" ? renderJsonDigest(document) : renderMarkdownDigest(document);

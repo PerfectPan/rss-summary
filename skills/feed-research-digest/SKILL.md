@@ -13,11 +13,11 @@ Use this skill after the local `rss-summary` project has fetched GitHub and RSS 
 2. Preview new candidates without mutating state:
 
 ```bash
-GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json npm run --silent digest -- --json --only-new --dry-run
+GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" npm run --silent digest -- --json --only-new --dry-run
 ```
 
 3. Parse the JSON `candidates` array. If it is empty, report that there are no new high-signal items.
-4. Research only the top candidates that are plausibly useful. Prefer 5 to 8 items unless the user asks for more.
+4. Research only the top candidates that are plausibly useful. Prefer 5 to 8 items unless the user asks for more. Do not stop at the feed snippet: open the repo, PR, release, README, docs, or article page needed to make a decision.
 5. Produce a concise Markdown digest with:
    - `今日最值得看`: strongest items with why they matter.
    - `建议深挖`: items that need follow-up, install/test/read later.
@@ -26,7 +26,7 @@ GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json npm run
 6. After the user accepts or after a scheduled non-dry run, mark candidates seen with:
 
 ```bash
-GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json npm run --silent digest -- --only-new
+GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" npm run --silent digest -- --only-new
 ```
 
 The non-dry run writes `.state/feed-state.json`. Do not commit `.state/` or `feeds.json`.
@@ -37,6 +37,7 @@ The non-dry run writes `.state/feed-state.json`. Do not commit `.state/` or `fee
 - GitHub `release`: inspect release notes and breaking changes. Summarize impact, upgrade risk, and whether action is needed.
 - GitHub `activity`: inspect the PR title/body and repo context. Focus on merged PRs, repeated followed-actor signals, and trend indicators.
 - RSS `article`: read the article page when available. Summarize the core claim, evidence, and practical relevance. Do not summarize only the feed snippet when the page is accessible.
+- If the candidate is not useful after inspection, still record the skip reason so it does not appear as an unexplained omission.
 
 ## Output Style
 
@@ -44,6 +45,7 @@ Keep the output decision-oriented. For each recommended item include:
 
 - Link and source.
 - One-sentence gist.
+- Evidence checked: README/release/PR/article and the concrete signal found there.
 - Why it matters to the user.
 - Recommended action: `track`, `read`, `try`, `save`, or `skip`.
 
@@ -54,4 +56,5 @@ Avoid raw timelines. Avoid re-listing every candidate. The value is selection an
 - `--only-new --dry-run`: preview new candidates; does not update state.
 - `--only-new`: outputs new candidates and records their event IDs in `.state/feed-state.json`.
 - `--json`: emits the digest document as machine-readable JSON for this skill or other model pipelines.
+- `FEED_DAY` or `--day`: filters to a calendar day; use this for scheduled daily summaries.
 - `FEED_STATE_FILE`: overrides the default `.state/feed-state.json` path.

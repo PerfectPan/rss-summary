@@ -3,6 +3,7 @@ import type { CandidateProject } from "./domain.js";
 export type DigestDocument = {
   generatedAt: string;
   username: string;
+  windowLabel?: string;
   candidates: CandidateProject[];
 };
 
@@ -10,6 +11,9 @@ export function renderMarkdownDigest(document: DigestDocument): string {
   const date = document.generatedAt.slice(0, 10);
   const sections = groupCandidates(document.candidates);
   const lines = [`# Feed Digest - ${date}`, "", `GitHub 账号：${document.username}`, ""];
+  if (document.windowLabel) {
+    lines.push(`筛选窗口：${document.windowLabel}`, "");
+  }
 
   appendSection(lines, "值得看", sections.discovery);
   appendSection(lines, "RSS 文章", sections.article);

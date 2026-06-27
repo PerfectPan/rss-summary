@@ -47,4 +47,11 @@ describe("config", () => {
     expect(config.onlyNew).toBe(true);
     expect(config.stateFile).toBe(".state/test.json");
   });
+
+  it("loads a calendar-day window from args", () => {
+    const config = loadConfig({}, ["--day", "2026-06-27", "--timezone-offset", "+08:00", "--dry-run"]);
+
+    expect((config as { day?: string }).day).toBe("2026-06-27");
+    expect((config as { timezoneOffset?: string }).timezoneOffset).toBe("+08:00");
+  });
 });
