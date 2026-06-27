@@ -24,15 +24,25 @@ Use `--file <path>` when working with a non-default feed file. The lower-level d
 
 ## Workflow
 
-1. Add the source with `rss-summary feeds add`.
-2. Validate parsing with `rss-summary feeds test`.
-3. Preview candidates for the target day:
+Feed additions and removals both go through pull requests. Do not push `feeds.json` changes directly to `main`, even when the change is only one URL.
+
+1. Create a short-lived branch from `main`.
+2. Add or remove the source with the CLI:
+
+```bash
+rss-summary feeds add --url "https://example.com/feed.xml" --name "Example" --tags "ai,agent,mcp"
+rss-summary feeds remove --url "https://example.com/feed.xml"
+```
+
+3. Validate parsing with `rss-summary feeds test`.
+4. Preview candidates for the target day:
 
 ```bash
 RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --json --dry-run
 ```
 
-4. Keep `feeds.json` local and uncommitted unless the user explicitly asks to share a feed set.
+5. Run `pnpm verify`.
+6. Commit `feeds.json` and related docs/tests, push the branch, and open a pull request.
 
 ## Tagging
 
@@ -41,5 +51,5 @@ Use tags as ranking hints, not categories for display. Prefer terms already used
 ## Notes
 
 - RSS 2.0 and Atom are supported.
-- `feeds.json` is gitignored because it can reveal personal reading interests.
+- `feeds.json` is tracked as this repository's shared RSS subscription list.
 - For one-off runs, `RSS_FEEDS='[...]'` still works, but the CLI is preferred for persistent sources.

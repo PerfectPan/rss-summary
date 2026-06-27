@@ -18,7 +18,7 @@ The GitHub identity comes from the token, not the machine. To summarize `Perfect
 3. Build and link the CLI with `pnpm build && pnpm setup && pnpm link --global`.
 4. Set `GH_FEED_TOKEN` to a read-only GitHub token.
 5. Set `GITHUB_USERNAME=PerfectPan` unless the user asks for another account.
-6. Optionally copy `feeds.example.json` to `feeds.json` and set `RSS_FEEDS_FILE=feeds.json`.
+6. Use the tracked `feeds.json` as the shared RSS source list. Set `RSS_FEEDS_FILE=feeds.json` only when being explicit; the CLI defaults to that path.
 7. Optionally set `NOTIFY_WEBHOOK_URL` for generic webhook delivery.
 
 Minimum token permissions:
@@ -76,7 +76,7 @@ Do not summarize raw GitHub events as a flat timeline. Explain why each reposito
 - `--only-new` writes seen event IDs to `.state/feed-state.json` after output.
 - `--json` emits machine-readable candidates for `$feed-research-digest`.
 - `--day YYYY-MM-DD` filters to that calendar day in the configured timezone offset.
-- Do not commit `.state/` or `feeds.json`.
+- Do not commit `.state/`. Commit intentional `feeds.json` subscription changes through a pull request.
 
 ## Troubleshooting
 

@@ -28,25 +28,7 @@ Minimum recommended permissions:
 - Repository access: public repositories only for the first version
 - Add selected private repositories with read-only metadata / pull request access only if private activity should be summarized
 
-Optional RSS setup:
-
-```bash
-cp feeds.example.json feeds.json
-```
-
-Edit `feeds.json` locally:
-
-```json
-[
-  {
-    "name": "Deno Blog",
-    "url": "https://deno.com/feed",
-    "tags": ["deno", "runtime", "typescript"]
-  }
-]
-```
-
-`feeds.json` is intentionally gitignored because it may reveal personal reading interests. For ephemeral runs, use `RSS_FEEDS` with the same JSON array.
+RSS sources are maintained in the tracked `feeds.json` file. Update it intentionally and send feed changes through the normal pull request workflow.
 
 Manage RSS sources with the CLI:
 
@@ -58,6 +40,7 @@ rss-summary feeds remove --url "https://github.blog/feed"
 ```
 
 Use `--file <path>` when the feed list is not `feeds.json`. The lower-level development fallback is `pnpm feeds -- <command>`.
+For one-off experiments, `RSS_FEEDS` can still provide a JSON array without modifying `feeds.json`.
 
 ## Run
 
@@ -161,7 +144,7 @@ For the full architecture, data flow, and extension points, see [docs/architectu
 - `src/render.ts`: renders Markdown sections for project discovery, RSS articles, project activity, and releases.
 - `src/notifier.ts`: prints to stdout and optionally POSTs `{ "text": markdown }` to a generic webhook.
 
-`feeds.json` and `.state/` are intentionally gitignored because they contain personal subscriptions and local run state.
+`feeds.json` is tracked as the shared RSS subscription list. `.state/` remains gitignored because it contains local run state.
 
 ## Research notes
 

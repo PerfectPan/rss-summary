@@ -33,11 +33,11 @@ pnpm build
 
 ## Local And Secret Files
 
-Do not commit `.env`, `.env.*`, `feeds.json`, `.state/`, `dist/`, `node_modules/`, local logs, tokens, or machine-specific paths.
+Do not commit `.env`, `.env.*`, `.state/`, `dist/`, `node_modules/`, local logs, tokens, or machine-specific paths.
 
 ## Design Notes
 
 - GitHub visibility is controlled by `GH_FEED_TOKEN`, not by the machine running the CLI.
 - `received_events` is a practical API approximation of GitHub Home Feed, not guaranteed exact UI parity.
 - Deep research is currently a skill/model workflow, not a deterministic CLI command.
-- `feeds.json` is local by default because it can reveal personal reading interests.
+- `feeds.json` is the repository-maintained RSS subscription list. Update it intentionally and include those changes in the pull request.
