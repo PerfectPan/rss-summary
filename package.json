@@ -12,7 +12,8 @@
     "digest": "tsx src/main.ts",
     "feeds": "tsx src/feeds.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verify": "pnpm test && pnpm typecheck && pnpm build"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
