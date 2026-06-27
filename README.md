@@ -11,11 +11,12 @@ The tool reads GitHub's received events API plus optional RSS/Atom feeds, enrich
 ## Setup
 
 ```bash
-npm ci
-npm run build
-npm link
+pnpm install
+pnpm build
 cp .env.example .env
 ```
+
+Commands below use `pnpm exec rss-summary` so they work from the checked-out repository without a global link. If you want a bare `rss-summary` command, run `pnpm setup` once if needed, then `pnpm link --global`.
 
 Create a fine-grained GitHub token from the `PerfectPan` account and put it in `GH_FEED_TOKEN`.
 
@@ -48,20 +49,20 @@ Edit `feeds.json` locally:
 Manage RSS sources with the CLI:
 
 ```bash
-rss-summary feeds add --url "https://github.blog/feed" --name "GitHub Blog" --tags "github,ai,developer-tools"
-rss-summary feeds list
-rss-summary feeds test
-rss-summary feeds remove --url "https://github.blog/feed"
+pnpm exec rss-summary feeds add --url "https://github.blog/feed" --name "GitHub Blog" --tags "github,ai,developer-tools"
+pnpm exec rss-summary feeds list
+pnpm exec rss-summary feeds test
+pnpm exec rss-summary feeds remove --url "https://github.blog/feed"
 ```
 
-Use `--file <path>` when the feed list is not `feeds.json`. During repo-local development before `npm link`, the equivalent fallback is `npm run feeds -- <command>`.
+Use `--file <path>` when the feed list is not `feeds.json`. The lower-level development fallback is `pnpm feeds -- <command>`.
 
 ## Run
 
 Dry run:
 
 ```bash
-GH_FEED_TOKEN="$(gh auth token)" GITHUB_USERNAME=PerfectPan rss-summary digest --dry-run
+GH_FEED_TOKEN="$(gh auth token)" GITHUB_USERNAME=PerfectPan pnpm exec rss-summary digest --dry-run
 ```
 
 Preview only new high-signal candidates as JSON for a research skill or model pipeline:
@@ -71,7 +72,7 @@ GH_FEED_TOKEN="$(gh auth token)" \
 GITHUB_USERNAME=PerfectPan \
 RSS_FEEDS_FILE=feeds.json \
 FEED_DAY="$(TZ=Asia/Shanghai date +%F)" \
-rss-summary digest --json --only-new --dry-run
+pnpm exec rss-summary digest --json --only-new --dry-run
 ```
 
 Run the daily digest and mark emitted candidates as seen:
@@ -81,7 +82,7 @@ GH_FEED_TOKEN="$(gh auth token)" \
 GITHUB_USERNAME=PerfectPan \
 RSS_FEEDS_FILE=feeds.json \
 FEED_DAY="$(TZ=Asia/Shanghai date +%F)" \
-rss-summary digest --only-new
+pnpm exec rss-summary digest --only-new
 ```
 
 With RSS feeds:
@@ -90,7 +91,7 @@ With RSS feeds:
 GH_FEED_TOKEN="$(gh auth token)" \
 GITHUB_USERNAME=PerfectPan \
 RSS_FEEDS_FILE=feeds.json \
-rss-summary digest --dry-run
+pnpm exec rss-summary digest --dry-run
 ```
 
 With a generic webhook:
@@ -100,7 +101,7 @@ GH_FEED_TOKEN="..." \
 GITHUB_USERNAME=PerfectPan \
 RSS_FEEDS_FILE=feeds.json \
 NOTIFY_WEBHOOK_URL="https://example.com/webhook" \
-rss-summary digest
+pnpm exec rss-summary digest
 ```
 
 The webhook payload is:
@@ -114,7 +115,7 @@ The webhook payload is:
 By default, the CLI uses a rolling `FEED_WINDOW_HOURS=36` window for compatibility. For scheduled daily summaries, prefer an explicit calendar day:
 
 ```bash
-rss-summary digest --day 2026-06-27 --timezone-offset +08:00 --only-new
+pnpm exec rss-summary digest --day 2026-06-27 --timezone-offset +08:00 --only-new
 ```
 
 Equivalent environment variables:
@@ -125,10 +126,10 @@ Equivalent environment variables:
 
 ## Schedule on another machine
 
-Install Node.js 24+, clone or copy this repository, run `npm ci && npm run build && npm link`, then schedule:
+Install Node.js 24+, clone or copy this repository, run `pnpm install && pnpm build`, then schedule:
 
 ```cron
-0 9 * * * cd /path/to/rss-summary && FEED_DAY="$(TZ=Asia/Shanghai date +\%F)" GH_FEED_TOKEN=... GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json rss-summary digest --only-new >> /tmp/feed-digest.log 2>&1
+0 9 * * * cd /path/to/rss-summary && FEED_DAY="$(TZ=Asia/Shanghai date +\%F)" GH_FEED_TOKEN=... GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json pnpm exec rss-summary digest --only-new >> /tmp/feed-digest.log 2>&1
 ```
 
 Use the `GH_FEED_TOKEN` from the account whose Home Feed should be summarized. The machine identity does not matter; the token identity does.
