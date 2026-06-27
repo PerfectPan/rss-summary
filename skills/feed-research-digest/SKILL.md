@@ -29,7 +29,7 @@ GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DA
 GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --only-new
 ```
 
-The non-dry run writes `.state/feed-state.json`. Do not commit `.state/` or `feeds.json`.
+The non-dry run writes `.state/feed-state.json`. Do not commit `.state/`.
 
 ## Research Rules
 

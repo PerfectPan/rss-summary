@@ -84,7 +84,7 @@ Without `FEED_DAY` or `--day`, the CLI uses the compatibility rolling window fro
 
 ## Feed Management Workflow
 
-RSS/Atom sources are local subscriptions, not shared repository config by default. The CLI manages them through `src/feeds.ts`:
+RSS/Atom sources are maintained in the tracked `feeds.json` file. The CLI manages that shared subscription list through `src/feeds.ts`:
 
 ```bash
 rss-summary feeds add --url "https://example.com/feed.xml" --name "Example" --tags "ai,agent"
@@ -93,7 +93,7 @@ rss-summary feeds test
 rss-summary feeds remove --url "https://example.com/feed.xml"
 ```
 
-`feeds.json` is intentionally gitignored because it can reveal personal reading interests. For one-off runs, `RSS_FEEDS='[...]'` can provide the same JSON array without creating a file.
+Commit intentional `feeds.json` changes through the pull request workflow. For one-off runs, `RSS_FEEDS='[...]'` can provide the same JSON array without modifying the tracked subscription list.
 
 ## Research Workflow
 
@@ -117,7 +117,7 @@ The machine identity does not control GitHub visibility. The token identity does
 - A token created by another account can only see public received events for `PerfectPan`.
 - `received_events` is the closest API approximation of GitHub Home Feed, but it is not guaranteed to exactly match the github.com Home Feed UI.
 
-Keep `GH_FEED_TOKEN`, `.env`, `.state/`, and `feeds.json` out of git.
+Keep `GH_FEED_TOKEN`, `.env`, and `.state/` out of git. `feeds.json` is intentionally tracked as the shared RSS subscription list.
 
 ## Extension Points
 
