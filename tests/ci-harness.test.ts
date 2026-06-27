@@ -34,4 +34,16 @@ describe("CI harness", () => {
     expect(instructions).toContain("`codex/...` branch");
     expect(instructions).toContain("Run `pnpm verify`");
   });
+
+  it("provides Claude-specific instructions with the same harness", () => {
+    const instructionsUrl = new URL("../CLAUDE.md", import.meta.url);
+    expect(existsSync(instructionsUrl)).toBe(true);
+
+    const instructions = readFileSync(instructionsUrl, "utf8");
+    expect(instructions).toContain("Follow `AGENTS.md` first");
+    expect(instructions).toContain("Do not push directly to `main`");
+    expect(instructions).toContain("Open a pull request");
+    expect(instructions).toContain("Run `pnpm verify`");
+    expect(instructions).toContain("local TypeScript CLI");
+  });
 });
