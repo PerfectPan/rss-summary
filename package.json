@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "digest": "tsx src/main.ts",
+    "feeds": "tsx src/feeds.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

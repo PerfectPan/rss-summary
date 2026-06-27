@@ -43,6 +43,16 @@ Edit `feeds.json` locally:
 
 `feeds.json` is intentionally gitignored because it may reveal personal reading interests. For ephemeral runs, use `RSS_FEEDS` with the same JSON array.
 
+Manage RSS sources with the CLI:
+
+```bash
+npm run feeds -- add --url "https://github.blog/feed" --name "GitHub Blog" --tags "github,ai,developer-tools"
+npm run feeds -- list
+npm run feeds -- test
+```
+
+Use `--file <path>` when the feed list is not `feeds.json`.
+
 ## Run
 
 Dry run:
@@ -124,6 +134,8 @@ Use the `GH_FEED_TOKEN` from the account whose Home Feed should be summarized. T
 
 - `src/github.ts`: read-only GitHub API client for received events, following list, repositories, and PR details.
 - `src/rss.ts`: RSS 2.0 / Atom source adapter built on `fast-xml-parser`.
+- `src/feeds.ts`: CLI for adding, listing, and validating local RSS sources.
+- `src/feed-store.ts`: JSON file operations for feed subscriptions.
 - `src/domain.ts`: normalizes source events into activity cards, scores high-signal repos/articles, and records reasons.
 - `src/event-window.ts`: resolves rolling-hour or explicit calendar-day filtering windows.
 - `src/state.ts`: stores seen event IDs in `.state/feed-state.json` so daily runs can focus on new items.
@@ -143,6 +155,8 @@ The portable Codex skills live at:
 ```text
 skills/github-feed-digest
 skills/feed-research-digest
+skills/rss-feed-management
 ```
 
 Use `$github-feed-digest` to configure/run the automation. Use `$feed-research-digest` when you want Codex to inspect the new JSON candidates and produce an actionable daily research summary.
+Use `$rss-feed-management` when adding or validating RSS/Atom sources.

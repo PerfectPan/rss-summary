@@ -1,0 +1,4 @@
+interface:
+  display_name: "RSS Feed Management"
+  short_description: "Add, list, and validate rss-summary RSS sources."
+  default_prompt: "Use $rss-feed-management to add or validate an RSS feed source for rss-summary."
