@@ -138,6 +138,8 @@ Use the `GH_FEED_TOKEN` from the account whose Home Feed should be summarized. T
 
 ## Current architecture
 
+For the full architecture, data flow, and extension points, see [docs/architecture.md](docs/architecture.md).
+
 - `src/github.ts`: read-only GitHub API client for received events, following list, repositories, and PR details.
 - `src/cli.ts`: package `bin` entrypoint for `rss-summary digest` and `rss-summary feeds`.
 - `src/rss.ts`: RSS 2.0 / Atom source adapter built on `fast-xml-parser`.
