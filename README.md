@@ -136,6 +136,16 @@ Install Node.js 24+, clone or copy this repository, run `pnpm install && pnpm bu
 
 Use the `GH_FEED_TOKEN` from the account whose Home Feed should be summarized. The machine identity does not matter; the token identity does.
 
+## Development workflow
+
+Run the same local harness as GitHub Actions before opening or merging a change:
+
+```bash
+pnpm verify
+```
+
+`main` is protected for pull request-based changes. Work on a `codex/...` branch, open a PR, and merge after the `Verify` check passes.
+
 ## Current architecture
 
 For the full architecture, data flow, and extension points, see [docs/architecture.md](docs/architecture.md).
