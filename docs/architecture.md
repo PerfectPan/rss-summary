@@ -2,7 +2,7 @@
 
 `rss-summary` is a local TypeScript CLI plus a small set of portable Codex skills. It is not a daemon or hosted service. Scheduling is handled outside the repo by cron, launchd, systemd, or Codex automation.
 
-The runtime goal is simple: collect rendered GitHub Home activity and RSS/Atom items, normalize them into one activity model, rank the useful projects/articles, and emit a digest that can be read directly or sent to a webhook.
+The runtime goal is simple: collect GitHub Home activity and RSS/Atom items, normalize them into one activity model, rank the useful projects/articles, and emit a digest that can be read directly or sent to a webhook.
 
 ## High-Level Flow
 
@@ -34,7 +34,7 @@ flowchart TD
 
 - CLI layer: `src/cli.ts` is the package `bin` entrypoint. It routes `rss-summary digest` to the digest workflow and `rss-summary feeds ...` to feed management.
 - Application workflow: `src/main.ts` owns IO orchestration. It loads config, fetches sources, enriches GitHub repos/PRs, applies state, renders output, and sends notifications.
-- Source adapters: `src/github-home.ts`, `src/github.ts`, and `src/rss.ts` fetch external data and convert source-specific payloads into the shared domain shape. `src/github-home.ts` is the exact GitHub Home source; `src/github.ts` is API fallback plus enrichment.
+- Source adapters: `src/github-home.ts`, `src/github.ts`, and `src/rss.ts` fetch external data and convert source-specific payloads into the shared domain shape. `src/github-home.ts` is the exact GitHub Home source; it first tries GitHub's internal conduit Turbo frame and falls back to rendered browser parsing. `src/github.ts` is API fallback plus enrichment.
 - Domain layer: `src/domain.ts` owns normalization of GitHub events, high-signal filtering, scoring, category selection, and candidate grouping. It should not perform network or filesystem IO.
 - Local persistence: `src/feed-store.ts` manages RSS subscriptions. `src/state.ts` manages local digest state.
 - Presentation and delivery: `src/render.ts` formats Markdown/JSON. `src/notifier.ts` prints to stdout and optionally posts a generic webhook payload.
@@ -68,7 +68,7 @@ Current high-signal event types:
 `rss-summary digest` currently runs this sequence:
 
 1. `src/config.ts` reads environment variables, CLI flags, optional `feeds.json`, and default interests.
-2. `src/main.ts` fetches GitHub Home cards and RSS/Atom feeds in parallel. If `GITHUB_FEED_SOURCE=events`, it fetches REST `received_events` instead.
+2. `src/main.ts` fetches GitHub Home cards and RSS/Atom feeds in parallel. If `GITHUB_HOME_FETCH=conduit`, it directly fetches `/conduit/for_you_feed?requested_from_filter_event=true` with the saved web session and falls back to rendered browser parsing. If `GITHUB_FEED_SOURCE=events`, it fetches REST `received_events` instead.
 3. `src/event-window.ts` filters events by either an explicit calendar day or a rolling hour window.
 4. `src/github.ts` optionally fetches followed accounts, repository metadata, and up to 20 pull request details.
 5. `src/domain.ts` builds ranked `CandidateProject` records from normalized events.
@@ -116,7 +116,8 @@ The state file already has a `researched` field, but the CLI does not yet write 
 
 The machine identity does not control GitHub visibility. In exact Home mode, the saved GitHub web session identity does. In REST fallback mode, the token identity does.
 
-- `GITHUB_FEED_SOURCE=home` opens github.com with `.state/github-home-storage.json` and reads the same rendered Home feed cards the account sees in the browser.
+- `GITHUB_FEED_SOURCE=home` uses `.state/github-home-storage.json` and reads the same Home feed cards the account sees in the browser.
+- `GITHUB_HOME_FETCH=conduit` is the default Home fetch mode. It parses GitHub's internal conduit HTML response and automatically falls back to browser-rendered parsing when the internal request is unavailable.
 - `rss-summary github-home login` creates or refreshes that storage state. Do this once on each scheduled machine.
 - `GITHUB_FEED_SOURCE=events` uses `received_events`; a token created by `PerfectPan` can see `PerfectPan` received events that the token is allowed to read, while another account only sees public received events for `PerfectPan`.
 
@@ -133,7 +134,7 @@ Keep `GH_FEED_TOKEN`, `.env`, and `.state/` out of git. `feeds.json` is intentio
 
 ## Current Gaps
 
-- GitHub Home exact mode depends on GitHub's rendered DOM and `data-hydro-view` card metadata, so it may need maintenance if github.com changes the Home page structure.
+- GitHub Home exact mode depends on GitHub's internal conduit endpoint, rendered DOM, and `data-hydro-view` card metadata, so it may need maintenance if github.com changes the Home page structure.
 - Deep project/article research is skill-driven, not a built-in CLI command.
 - `researched` state exists in the schema but is not yet used by the CLI.
 - Webhook delivery is generic only.

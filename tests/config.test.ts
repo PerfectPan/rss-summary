@@ -59,11 +59,18 @@ describe("config", () => {
     const config = loadConfig({}, ["--dry-run"]);
 
     expect(config.githubFeedSource).toBe("home");
+    expect(config.githubHomeFetch).toBe("conduit");
   });
 
   it("allows received events as an explicit fallback feed source", () => {
     const config = loadConfig({ GITHUB_FEED_SOURCE: "events" }, ["--dry-run"]);
 
     expect(config.githubFeedSource).toBe("events");
+  });
+
+  it("allows rendered browser mode for GitHub Home fetching", () => {
+    const config = loadConfig({ GITHUB_HOME_FETCH: "browser" }, ["--dry-run"]);
+
+    expect(config.githubHomeFetch).toBe("browser");
   });
 });

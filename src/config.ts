@@ -7,11 +7,13 @@ export type FeedSubscription = {
 };
 
 export type GithubFeedSource = "home" | "events";
+export type GithubHomeFetch = "conduit" | "browser";
 
 export type AppConfig = {
   username: string;
   token?: string;
   githubFeedSource: GithubFeedSource;
+  githubHomeFetch: GithubHomeFetch;
   githubHomeStorageState: string;
   webhookUrl?: string;
   outputFormat: "markdown" | "json";
@@ -38,6 +40,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, argv: string[] 
     username,
     token,
     githubFeedSource: parseGithubFeedSource(args.githubFeedSource ?? env.GITHUB_FEED_SOURCE),
+    githubHomeFetch: parseGithubHomeFetch(args.githubHomeFetch ?? env.GITHUB_HOME_FETCH),
     githubHomeStorageState: args.githubHomeStorageState ?? env.GITHUB_HOME_STORAGE_STATE ?? ".state/github-home-storage.json",
     webhookUrl: dryRun ? undefined : env.NOTIFY_WEBHOOK_URL,
     outputFormat: args.json || env.FEED_OUTPUT_FORMAT === "json" ? "json" : "markdown",
@@ -104,6 +107,7 @@ function parseArgs(argv: string[]) {
     timezoneOffset?: string;
     maxRepos?: string;
     githubFeedSource?: string;
+    githubHomeFetch?: string;
     githubHomeStorageState?: string;
     rssFeedsFile?: string;
     stateFile?: string;
@@ -164,6 +168,12 @@ function parseGithubFeedSource(value: string | undefined): GithubFeedSource {
   if (!value) return "home";
   if (value === "home" || value === "events") return value;
   throw new Error("GITHUB_FEED_SOURCE must be either 'home' or 'events'.");
+}
+
+function parseGithubHomeFetch(value: string | undefined): GithubHomeFetch {
+  if (!value) return "conduit";
+  if (value === "conduit" || value === "browser") return value;
+  throw new Error("GITHUB_HOME_FETCH must be either 'conduit' or 'browser'.");
 }
 
 function loadFeedSubscriptions(env: NodeJS.ProcessEnv, configuredFile: string | undefined): FeedSubscription[] {
