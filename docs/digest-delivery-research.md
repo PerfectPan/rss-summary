@@ -30,7 +30,6 @@ The pushed digest should be decision-oriented:
 ## 今日最值得看
 1. Title / repo / article
    - Why it matters:
-   - Evidence checked:
    - Suggested action: try | read | track | save | skip
 
 ## 短线观察
@@ -48,7 +47,6 @@ Each recommended item should include:
 - Link and source.
 - One-sentence gist.
 - Signal: who starred, release, merged PR, RSS source, or repeated trend.
-- Evidence checked: README, release notes, PR body, article, docs, examples.
 - Relevance to the user's interests.
 - Recommended action: `try`, `read`, `track`, `save`, or `skip`.
 - Confidence: `high`, `medium`, or `low` when the evidence is incomplete.
@@ -59,7 +57,8 @@ Merged PR cards need extra interpretation and daily-briefing language. The final
 - What happened today: behavior/API/docs/security/tooling change from the PR body and changed-file signal.
 - Why it matters: relevance to the user's agent/tooling/frontend/Rust/TypeScript interests.
 - Suggested action: read now, track, save, try, or skip.
-- Evidence checked: PR body, tests mentioned, repo README/description, and any linked issue when needed.
+
+Keep evidence checked in research notes and structured state, but do not show an `evidence` or `依据` field in the final daily brief unless the user explicitly asks for citations.
 
 Avoid:
 

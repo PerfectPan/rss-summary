@@ -49,7 +49,6 @@ Keep the output decision-oriented. For each recommended item include:
 
 - Link and source.
 - One-sentence gist.
-- Evidence checked: README/release/PR/article and the concrete signal found there.
 - Why it matters to the user.
 - Recommended action: `track`, `read`, `try`, `save`, or `skip`.
 
@@ -61,9 +60,9 @@ For merged PR items, use a daily-briefing voice instead of implementation-log wo
 - 今天发生了什么：
 - 为什么值得你看：
 - 建议动作：
-- 依据：
 ```
 
+Keep evidence checked in your working notes, not as a visible field in the final daily brief.
 Avoid raw timelines. Avoid re-listing every candidate. The value is selection and judgment.
 
 ## State Semantics
