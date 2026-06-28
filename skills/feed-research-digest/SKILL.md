@@ -53,15 +53,15 @@ Keep the output decision-oriented. For each recommended item include:
 - Why it matters to the user.
 - Recommended action: `track`, `read`, `try`, `save`, or `skip`.
 
-For merged PR items, use this compact shape:
+For merged PR items, use a daily-briefing voice instead of implementation-log wording:
 
 ```text
-### owner/repo — action
-- 项目一句话：
-- 这次 merge：
-- 值不值得看：
-- 为什么和你有关：
-- 证据：
+### owner/repo — 建议动作
+- 项目是什么：
+- 今天发生了什么：
+- 为什么值得你看：
+- 建议动作：
+- 依据：
 ```
 
 Avoid raw timelines. Avoid re-listing every candidate. The value is selection and judgment.
