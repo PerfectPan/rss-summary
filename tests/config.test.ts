@@ -54,4 +54,16 @@ describe("config", () => {
     expect((config as { day?: string }).day).toBe("2026-06-27");
     expect((config as { timezoneOffset?: string }).timezoneOffset).toBe("+08:00");
   });
+
+  it("uses GitHub Home as the default GitHub feed source", () => {
+    const config = loadConfig({}, ["--dry-run"]);
+
+    expect(config.githubFeedSource).toBe("home");
+  });
+
+  it("allows received events as an explicit fallback feed source", () => {
+    const config = loadConfig({ GITHUB_FEED_SOURCE: "events" }, ["--dry-run"]);
+
+    expect(config.githubFeedSource).toBe("events");
+  });
 });

@@ -1,6 +1,17 @@
 export type ActivitySource = "github" | "rss";
 
-export type ActivityType = "watch" | "pull_request" | "release" | "fork" | "create" | "article" | "other";
+export type ActivityType =
+  | "watch"
+  | "pull_request"
+  | "release"
+  | "fork"
+  | "create"
+  | "trending"
+  | "recommendation"
+  | "follow"
+  | "announcement"
+  | "article"
+  | "other";
 
 export type ActivityCard = {
   id: string;
@@ -149,7 +160,13 @@ function scoreRepo(
   for (const event of events) {
     score += baseScore(event);
     if (event.type === "watch") reasons.add("followee starred this repository");
+    if (event.type === "trending") reasons.add("GitHub Home trending repository");
+    if (event.type === "recommendation") reasons.add("GitHub Home recommendation");
     if (event.type === "release") reasons.add("new release published");
+    if (event.type === "fork") reasons.add("followed actor forked repository");
+    if (event.type === "create") reasons.add("new repository created");
+    if (event.type === "follow") reasons.add("follow relationship from GitHub Home");
+    if (event.type === "announcement") reasons.add("GitHub Home announcement");
     if (event.type === "pull_request" && event.action === "merged") reasons.add("important PR merged");
     if (context.followees.has(event.actor)) {
       score += 30;
@@ -206,9 +223,13 @@ function isHighSignal(event: ActivityCard): boolean {
 
 function baseScore(event: ActivityCard): number {
   if (event.type === "watch") return 90;
+  if (event.type === "trending") return 80;
+  if (event.type === "recommendation") return 75;
+  if (event.type === "announcement") return 65;
   if (event.type === "release") return 85;
   if (event.type === "fork") return 45;
   if (event.type === "create") return 35;
+  if (event.type === "follow") return 25;
   if (event.type === "article") return 30;
   if (event.type === "pull_request") {
     if (event.action === "merged") return 55;
@@ -221,7 +242,14 @@ function baseScore(event: ActivityCard): number {
 
 function categoryFor(types: ActivityType[]): CandidateProject["category"] {
   if (types.includes("article")) return "article";
-  if (types.includes("watch") || types.includes("fork") || types.includes("create")) {
+  if (
+    types.includes("watch") ||
+    types.includes("fork") ||
+    types.includes("create") ||
+    types.includes("trending") ||
+    types.includes("recommendation") ||
+    types.includes("follow")
+  ) {
     return "discovery";
   }
   if (types.includes("release")) return "release";

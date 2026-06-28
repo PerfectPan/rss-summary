@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { run as runDigest } from "./main.js";
 import { runFeedsCommand } from "./feeds.js";
+import { runGithubHomeCommand } from "./github-home-cli.js";
 
 type Writable = {
   write(chunk: string): unknown;
@@ -23,6 +24,10 @@ export async function runCliCommand(argv: string[] = process.argv.slice(2), deps
     return runFeedsCommand(rest, deps);
   }
 
+  if (command === "github-home") {
+    return runGithubHomeCommand(rest, deps);
+  }
+
   if (command === "digest") {
     await runDigest();
     return 0;
@@ -40,6 +45,7 @@ export async function runCliCommand(argv: string[] = process.argv.slice(2), deps
 function writeHelp(stdout: Writable): void {
   stdout.write(`Usage:
   rss-summary digest [digest options]
+  rss-summary github-home login [--storage-state .state/github-home-storage.json]
   rss-summary feeds add --url <rss-url> [--name <name>] [--tags ai,mcp]
   rss-summary feeds remove --url <rss-url>
   rss-summary feeds delete --url <rss-url>

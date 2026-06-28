@@ -46,6 +46,7 @@ describe("top-level CLI", () => {
     });
 
     expect(exitCode).toBe(0);
+    expect(output.join("")).toContain("rss-summary github-home login");
     expect(output.join("")).toContain("rss-summary feeds remove --url <rss-url>");
     expect(output.join("")).toContain("rss-summary feeds delete --url <rss-url>");
   });

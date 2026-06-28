@@ -6,9 +6,13 @@ export type FeedSubscription = {
   tags: string[];
 };
 
+export type GithubFeedSource = "home" | "events";
+
 export type AppConfig = {
   username: string;
   token?: string;
+  githubFeedSource: GithubFeedSource;
+  githubHomeStorageState: string;
   webhookUrl?: string;
   outputFormat: "markdown" | "json";
   eventPages: number;
@@ -33,6 +37,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, argv: string[] 
   return {
     username,
     token,
+    githubFeedSource: parseGithubFeedSource(args.githubFeedSource ?? env.GITHUB_FEED_SOURCE),
+    githubHomeStorageState: args.githubHomeStorageState ?? env.GITHUB_HOME_STORAGE_STATE ?? ".state/github-home-storage.json",
     webhookUrl: dryRun ? undefined : env.NOTIFY_WEBHOOK_URL,
     outputFormat: args.json || env.FEED_OUTPUT_FORMAT === "json" ? "json" : "markdown",
     eventPages: numberFrom(args.pages ?? env.FEED_EVENT_PAGES, 3),
@@ -97,6 +103,8 @@ function parseArgs(argv: string[]) {
     day?: string;
     timezoneOffset?: string;
     maxRepos?: string;
+    githubFeedSource?: string;
+    githubHomeStorageState?: string;
     rssFeedsFile?: string;
     stateFile?: string;
     dryRun?: boolean;
@@ -150,6 +158,12 @@ function parseList(value: string | undefined): string[] | undefined {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function parseGithubFeedSource(value: string | undefined): GithubFeedSource {
+  if (!value) return "home";
+  if (value === "home" || value === "events") return value;
+  throw new Error("GITHUB_FEED_SOURCE must be either 'home' or 'events'.");
 }
 
 function loadFeedSubscriptions(env: NodeJS.ProcessEnv, configuredFile: string | undefined): FeedSubscription[] {
