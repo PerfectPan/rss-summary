@@ -38,6 +38,8 @@ The non-dry run writes `.state/feed-state.json`. Do not commit `.state/`.
 - GitHub `discovery`: inspect repo README, description, topics, stars, recent activity, releases, and examples. Decide whether it helps the user's agent/tooling/frontend/Rust/TypeScript interests.
 - GitHub `release`: inspect release notes and breaking changes. Summarize impact, upgrade risk, and whether action is needed.
 - GitHub `activity`: inspect the PR title/body and repo context. Focus on merged PRs, repeated followed-actor signals, and trend indicators.
+- For each merged PR that survives initial filtering, answer three questions before recommending it: what changed, whether the change deserves attention, and what the project is.
+- Do not write `important PR merged` as the final reason. Replace it with a concrete reason such as "router API behavior changed", "agent write path hardened", "parser edge-case fixed", or "docs only; track but no action".
 - RSS `article`: read the article page when available. Summarize the core claim, evidence, and practical relevance. Do not summarize only the feed snippet when the page is accessible.
 - If the candidate is not useful after inspection, still record the skip reason so it does not appear as an unexplained omission.
 
@@ -50,6 +52,17 @@ Keep the output decision-oriented. For each recommended item include:
 - Evidence checked: README/release/PR/article and the concrete signal found there.
 - Why it matters to the user.
 - Recommended action: `track`, `read`, `try`, `save`, or `skip`.
+
+For merged PR items, use this compact shape:
+
+```text
+### owner/repo — action
+- 项目一句话：
+- 这次 merge：
+- 值不值得看：
+- 为什么和你有关：
+- 证据：
+```
 
 Avoid raw timelines. Avoid re-listing every candidate. The value is selection and judgment.
 
