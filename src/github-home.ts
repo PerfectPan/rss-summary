@@ -118,7 +118,14 @@ export class GitHubHomeClient {
         );
       }
 
-      await page.waitForSelector("#conduit-feed-frame article.js-feed-item-component", { timeout: this.timeoutMs });
+      try {
+        await page.waitForSelector("#conduit-feed-frame article.js-feed-item-component", { timeout: this.timeoutMs });
+      } catch (error) {
+        throw new Error(
+          `GitHub Home feed did not render. Refresh ${this.storageState} with 'rss-summary github-home login'.`,
+          { cause: error },
+        );
+      }
       return page.evaluate(extractHomeFeedSnapshots);
     } finally {
       await browser.close();
@@ -150,8 +157,8 @@ export async function saveGithubHomeStorageState(options: {
       rl.close();
     }
 
-    if (page.url().includes("/login")) {
-      throw new Error("GitHub Home is still on the login page; sign in before saving the storage state.");
+    if (!(await page.evaluate(hasGitHubHomeFeedDom))) {
+      throw new Error("GitHub Home feed is not visible; sign in before saving the storage state.");
     }
 
     mkdirSync(dirname(options.storageState), { recursive: true });
@@ -186,6 +193,11 @@ export function extractHomeFeedSnapshotsFromHtml(html: string): HomeFeedCardSnap
         links,
       };
     });
+}
+
+export function hasGitHubHomeFeedMarkup(html: string): boolean {
+  const $ = load(html);
+  return $("feed-container").length > 0 && $("#conduit-feed-frame").length > 0;
 }
 
 export function normalizeHomeCardSnapshot(snapshot: HomeFeedCardSnapshot): ActivityCard {
@@ -376,4 +388,8 @@ function extractHomeFeedSnapshots(): HomeFeedCardSnapshot[] {
       links,
     };
   });
+}
+
+function hasGitHubHomeFeedDom(): boolean {
+  return document.querySelector("feed-container") !== null && document.querySelector("#conduit-feed-frame") !== null;
 }

@@ -7,6 +7,7 @@ import { join } from "node:path";
 import {
   GitHubHomeClient,
   extractHomeFeedSnapshotsFromHtml,
+  hasGitHubHomeFeedMarkup,
   normalizeHomeCardSnapshot,
   normalizeHomeCardSnapshots,
 } from "../src/github-home.js";
@@ -165,6 +166,13 @@ describe("GitHub Home feed source", () => {
         ],
       },
     ]);
+  });
+
+  it("detects whether HTML contains the logged-in GitHub Home feed surface", () => {
+    expect(hasGitHubHomeFeedMarkup('<feed-container><turbo-frame id="conduit-feed-frame"></turbo-frame></feed-container>')).toBe(
+      true,
+    );
+    expect(hasGitHubHomeFeedMarkup("<main><h1>Build and ship software on a single platform</h1></main>")).toBe(false);
   });
 
   it("uses conduit snapshots before rendered browser snapshots", async () => {
