@@ -32,6 +32,9 @@ describe("research contract documentation", () => {
     expect(prompt).toContain("state.researched");
     expect(prompt).toContain("代码质量判断");
     expect(prompt).toContain("top-level tree");
-    expect(prompt).toContain("do not show `evidence` or `依据`");
+    expect(prompt).toContain("你正在准备 PerfectPan 的每日 GitHub Home 和 RSS 简报");
+    expect(prompt).toContain("## 输入");
+    expect(prompt).toContain("## 调研策略");
+    expect(prompt).toContain("不要展示 `evidence` 或 `依据`");
   });
 });
