@@ -53,12 +53,12 @@ Each recommended item should include:
 - Recommended action: `try`, `read`, `track`, `save`, or `skip`.
 - Confidence: `high`, `medium`, or `low` when the evidence is incomplete.
 
-Merged PR cards need extra interpretation. The final digest should not say only "important PR merged"; it should say what changed, whether that change deserves attention, and what the project is. A merged PR entry should answer:
+Merged PR cards need extra interpretation and daily-briefing language. The final digest should not say only "important PR merged" or use implementation-log labels like "this merge"; it should say what happened today, whether it deserves attention, and what the project is. A merged PR entry should answer:
 
-- Project summary: what the repo is for.
-- Merge summary: behavior/API/docs/security/tooling change from the PR body and changed-file signal.
-- Value judgment: read now, track, save, or skip.
-- Relevance: why this matters to the user's agent/tooling/frontend/Rust/TypeScript interests.
+- Project: what the repo is for.
+- What happened today: behavior/API/docs/security/tooling change from the PR body and changed-file signal.
+- Why it matters: relevance to the user's agent/tooling/frontend/Rust/TypeScript interests.
+- Suggested action: read now, track, save, try, or skip.
 - Evidence checked: PR body, tests mentioned, repo README/description, and any linked issue when needed.
 
 Avoid:
