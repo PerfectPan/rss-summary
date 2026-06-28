@@ -18,10 +18,11 @@ The GitHub identity comes from the saved GitHub web session in `GITHUB_FEED_SOUR
 3. Build and link the CLI with `pnpm build && pnpm setup && pnpm link --global`.
 4. Run `rss-summary github-home login` once to create `.state/github-home-storage.json`.
 5. Set `GITHUB_FEED_SOURCE=home`.
-6. Set `GITHUB_USERNAME=PerfectPan` unless the user asks for another account.
-7. Use the tracked `feeds.json` as the shared RSS source list. Set `RSS_FEEDS_FILE=feeds.json` only when being explicit; the CLI defaults to that path.
-8. Optionally set `GH_FEED_TOKEN` for GitHub API enrichment or `GITHUB_FEED_SOURCE=events` fallback.
-9. Optionally set `NOTIFY_WEBHOOK_URL` for generic webhook delivery.
+6. Keep `GITHUB_HOME_FETCH=conduit` for the direct internal Turbo frame fast path with browser fallback, or set `GITHUB_HOME_FETCH=browser` to skip the direct request.
+7. Set `GITHUB_USERNAME=PerfectPan` unless the user asks for another account.
+8. Use the tracked `feeds.json` as the shared RSS source list. Set `RSS_FEEDS_FILE=feeds.json` only when being explicit; the CLI defaults to that path.
+9. Optionally set `GH_FEED_TOKEN` for GitHub API enrichment or `GITHUB_FEED_SOURCE=events` fallback.
+10. Optionally set `NOTIFY_WEBHOOK_URL` for generic webhook delivery.
 
 Minimum token permissions for fallback/enrichment:
 
@@ -34,25 +35,25 @@ Minimum token permissions for fallback/enrichment:
 Dry run:
 
 ```bash
-GITHUB_FEED_SOURCE=home GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json rss-summary digest --dry-run
+GITHUB_FEED_SOURCE=home GITHUB_HOME_FETCH=conduit GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json rss-summary digest --dry-run
 ```
 
 Preview new candidates for research:
 
 ```bash
-GITHUB_FEED_SOURCE=home GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --json --only-new --dry-run
+GITHUB_FEED_SOURCE=home GITHUB_HOME_FETCH=conduit GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --json --only-new --dry-run
 ```
 
 Send to webhook:
 
 ```bash
-GITHUB_FEED_SOURCE=home GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" NOTIFY_WEBHOOK_URL="https://example.com/webhook" rss-summary digest --only-new
+GITHUB_FEED_SOURCE=home GITHUB_HOME_FETCH=conduit GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" NOTIFY_WEBHOOK_URL="https://example.com/webhook" rss-summary digest --only-new
 ```
 
 Cron example:
 
 ```cron
-0 9 * * * cd /path/to/rss-summary && FEED_DAY="$(TZ=Asia/Shanghai date +\%F)" GITHUB_FEED_SOURCE=home GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json rss-summary digest --only-new >> /tmp/feed-digest.log 2>&1
+0 9 * * * cd /path/to/rss-summary && FEED_DAY="$(TZ=Asia/Shanghai date +\%F)" GITHUB_FEED_SOURCE=home GITHUB_HOME_FETCH=conduit GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json rss-summary digest --only-new >> /tmp/feed-digest.log 2>&1
 ```
 
 ## Time Window
@@ -85,6 +86,7 @@ Do not summarize raw GitHub events as a flat timeline. Explain why each reposito
 - Empty digest: confirm `FEED_DAY`, widen `FEED_WINDOW_HOURS` for rolling mode, or increase `FEED_EVENT_PAGES`.
 - Missing RSS items: confirm `RSS_FEEDS_FILE` points at a JSON array and that the feed publishes RSS 2.0 or Atom.
 - Missing GitHub Home cards: run `rss-summary github-home login` again and confirm `.state/github-home-storage.json` exists on that machine.
+- Direct conduit failure: leave `GITHUB_HOME_FETCH=conduit`; the CLI falls back to browser rendering automatically. Use `GITHUB_HOME_FETCH=browser` only when direct requests are consistently problematic.
 - Browser launch failure: install Chrome, or run `pnpm exec playwright install chromium` and unset `GITHUB_HOME_BROWSER_CHANNEL`.
 - Need token-only fallback: set `GITHUB_FEED_SOURCE=events` and ensure the token belongs to the same username and has read access to those repositories.
 - Webhook failure: rerun with `--dry-run` to isolate GitHub fetching from delivery.

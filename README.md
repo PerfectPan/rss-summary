@@ -2,13 +2,15 @@
 
 Daily GitHub Home Feed and RSS digest for `PerfectPan`.
 
-The tool reads the rendered GitHub Home page plus optional RSS/Atom feeds, enriches interesting repositories and pull requests, ranks projects/articles by usefulness, then outputs a short Markdown digest. It is read-only against GitHub and RSS sources unless you wire a webhook notification endpoint.
+The tool reads the GitHub Home feed plus optional RSS/Atom feeds, enriches interesting repositories and pull requests, ranks projects/articles by usefulness, then outputs a short Markdown digest. It is read-only against GitHub and RSS sources unless you wire a webhook notification endpoint.
 
 ## GitHub Home Exact Mode
 
 `GITHUB_FEED_SOURCE=home` is the default because GitHub's REST `received_events` API does not match github.com Home exactly. The Home page includes user filter settings, ranking, trending repositories, popular projects among followed people, and recommendation cards.
 
-Home exact mode opens `https://github.com/` with a saved Playwright storage state, reads the rendered `feed-container` / `conduit-feed-frame` cards, and uses GitHub's own `data-hydro-view.feed_card` metadata for card type, position, gatherer, and timestamp.
+Home exact mode uses a saved Playwright storage state. By default, `GITHUB_HOME_FETCH=conduit` fetches GitHub's internal `/conduit/for_you_feed?requested_from_filter_event=true` Turbo frame with that web session, parses the returned HTML, and uses GitHub's own `data-hydro-view.feed_card` metadata for card type, position, gatherer, and timestamp.
+
+If the conduit request fails or returns no supported feed cards, the CLI automatically falls back to rendered browser mode: it opens `https://github.com/`, waits for `feed-container` / `conduit-feed-frame`, and parses the rendered cards. Set `GITHUB_HOME_FETCH=browser` to skip the direct conduit request.
 
 The REST API path is still available with `GITHUB_FEED_SOURCE=events`, but it is a fallback approximation, not the source of truth for GitHub Home.
 
@@ -68,6 +70,7 @@ Preview only new high-signal candidates as JSON for a research skill or model pi
 
 ```bash
 GITHUB_FEED_SOURCE=home \
+GITHUB_HOME_FETCH=conduit \
 GITHUB_USERNAME=PerfectPan \
 RSS_FEEDS_FILE=feeds.json \
 FEED_DAY="$(TZ=Asia/Shanghai date +%F)" \
@@ -137,7 +140,7 @@ Equivalent environment variables:
 Install Node.js 24+, clone or copy this repository, run `pnpm install && pnpm build && pnpm setup && pnpm link --global`, run `rss-summary github-home login` once on that machine, then schedule:
 
 ```cron
-0 9 * * * cd /path/to/rss-summary && FEED_DAY="$(TZ=Asia/Shanghai date +\%F)" GITHUB_FEED_SOURCE=home GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json rss-summary digest --only-new >> /tmp/feed-digest.log 2>&1
+0 9 * * * cd /path/to/rss-summary && FEED_DAY="$(TZ=Asia/Shanghai date +\%F)" GITHUB_FEED_SOURCE=home GITHUB_HOME_FETCH=conduit GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json rss-summary digest --only-new >> /tmp/feed-digest.log 2>&1
 ```
 
 Use the browser login from the account whose Home Feed should be summarized. The machine identity does not matter; the saved GitHub web session does.
@@ -156,7 +159,7 @@ pnpm verify
 
 For the full architecture, data flow, and extension points, see [docs/architecture.md](docs/architecture.md).
 
-- `src/github-home.ts`: exact GitHub Home page adapter using Playwright storage state and rendered Home card metadata.
+- `src/github-home.ts`: exact GitHub Home adapter using Playwright storage state, direct conduit HTML parsing, and rendered-browser fallback.
 - `src/github.ts`: read-only GitHub API client for received-events fallback, following list, repositories, and PR details.
 - `src/cli.ts`: package `bin` entrypoint for `rss-summary digest` and `rss-summary feeds`.
 - `src/rss.ts`: RSS 2.0 / Atom source adapter built on `fast-xml-parser`.

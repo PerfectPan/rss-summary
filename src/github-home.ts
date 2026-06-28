@@ -2,6 +2,8 @@ import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { createInterface } from "node:readline/promises";
 
+import { load } from "cheerio";
+
 import type { ActivityCard, ActivityType } from "./domain.js";
 
 export type HomeFeedLinkSnapshot = {
@@ -18,26 +20,39 @@ export type HomeFeedCardSnapshot = {
 
 export type GithubHomeClientOptions = {
   storageState: string;
+  fetchMode?: GithubHomeFetchMode;
   headless?: boolean;
   browserChannel?: string;
   timeoutMs?: number;
+  conduitFetcher?: HomeFeedSnapshotFetcher;
+  browserFetcher?: HomeFeedSnapshotFetcher;
 };
+
+export type GithubHomeFetchMode = "conduit" | "browser";
+export type HomeFeedSnapshotFetcher = () => Promise<HomeFeedCardSnapshot[]>;
 
 type PlaywrightModule = typeof import("playwright");
 
 const githubHomeUrl = "https://github.com/";
+const conduitFeedPath = "/conduit/for_you_feed?requested_from_filter_event=true";
 
 export class GitHubHomeClient {
   private readonly storageState: string;
+  private readonly fetchMode: GithubHomeFetchMode;
   private readonly headless: boolean;
   private readonly browserChannel?: string;
   private readonly timeoutMs: number;
+  private readonly conduitFetcher: HomeFeedSnapshotFetcher;
+  private readonly browserFetcher: HomeFeedSnapshotFetcher;
 
   constructor(options: GithubHomeClientOptions) {
     this.storageState = options.storageState;
+    this.fetchMode = options.fetchMode ?? "conduit";
     this.headless = options.headless ?? true;
     this.browserChannel = options.browserChannel ?? "chrome";
     this.timeoutMs = options.timeoutMs ?? 30_000;
+    this.conduitFetcher = options.conduitFetcher ?? (() => this.getConduitSnapshots());
+    this.browserFetcher = options.browserFetcher ?? (() => this.getRenderedSnapshots());
   }
 
   async getHomeEvents(): Promise<ActivityCard[]> {
@@ -47,6 +62,45 @@ export class GitHubHomeClient {
       );
     }
 
+    if (this.fetchMode === "browser") {
+      return normalizeHomeCardSnapshots(await this.browserFetcher());
+    }
+
+    try {
+      const events = normalizeHomeCardSnapshots(await this.conduitFetcher());
+      if (events.length === 0) {
+        throw new Error("GitHub conduit feed returned no supported Home cards.");
+      }
+      return events;
+    } catch {
+      return normalizeHomeCardSnapshots(await this.browserFetcher());
+    }
+  }
+
+  private async getConduitSnapshots(): Promise<HomeFeedCardSnapshot[]> {
+    const playwright = await import("playwright");
+    const requestContext = await playwright.request.newContext({
+      baseURL: githubHomeUrl,
+      storageState: this.storageState,
+      extraHTTPHeaders: {
+        Accept: "text/html, application/xhtml+xml",
+        "Turbo-Frame": "conduit-feed-frame",
+        "User-Agent": "rss-summary",
+      },
+    });
+
+    try {
+      const response = await requestContext.get(conduitFeedPath, { timeout: this.timeoutMs });
+      if (!response.ok()) {
+        throw new Error(`GitHub conduit feed returned ${response.status()}.`);
+      }
+      return extractHomeFeedSnapshotsFromHtml(await response.text());
+    } finally {
+      await requestContext.dispose();
+    }
+  }
+
+  private async getRenderedSnapshots(): Promise<HomeFeedCardSnapshot[]> {
     const playwright = await import("playwright");
     const browser = await launchBrowser(playwright, {
       headless: this.headless,
@@ -65,8 +119,7 @@ export class GitHubHomeClient {
       }
 
       await page.waitForSelector("#conduit-feed-frame article.js-feed-item-component", { timeout: this.timeoutMs });
-      const snapshots = await page.evaluate(extractHomeFeedSnapshots);
-      return normalizeHomeCardSnapshots(snapshots);
+      return page.evaluate(extractHomeFeedSnapshots);
     } finally {
       await browser.close();
     }
@@ -110,6 +163,29 @@ export async function saveGithubHomeStorageState(options: {
 
 export function normalizeHomeCardSnapshots(cards: HomeFeedCardSnapshot[]): ActivityCard[] {
   return cards.map(normalizeHomeCardSnapshot).filter((card) => card.type !== "other");
+}
+
+export function extractHomeFeedSnapshotsFromHtml(html: string): HomeFeedCardSnapshot[] {
+  const $ = load(html);
+  return $("#conduit-feed-frame article.js-feed-item-component, article.js-feed-item-component")
+    .toArray()
+    .map((article) => {
+      const element = $(article);
+      const links = element
+        .find("a[href]")
+        .toArray()
+        .map((link) => ({
+          text: cleanText($(link).text()),
+          href: absoluteGithubHref($(link).attr("href") ?? ""),
+        }));
+
+      return {
+        id: element.attr("id") ?? "",
+        card: parseHydroFeedCard(element.attr("data-hydro-view")),
+        text: cleanText(element.text()),
+        links,
+      };
+    });
 }
 
 export function normalizeHomeCardSnapshot(snapshot: HomeFeedCardSnapshot): ActivityCard {
@@ -218,8 +294,12 @@ function parseGithubUrl(href: string):
 }
 
 function cleanSummary(text: string): string | undefined {
-  const cleaned = text.replace(/\s+/gu, " ").trim();
+  const cleaned = cleanText(text);
   return cleaned ? cleaned : undefined;
+}
+
+function cleanText(text: string): string {
+  return text.replace(/\s+/gu, " ").trim();
 }
 
 function repoUrl(fullName: string): string {
@@ -233,6 +313,28 @@ function fallbackId(cardType: string, repo: string | undefined, createdAt: strin
 function stringField(record: Record<string, unknown> | null, key: string): string {
   const value = record?.[key];
   return typeof value === "string" ? value : "";
+}
+
+function parseHydroFeedCard(value: string | undefined): Record<string, unknown> | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as { payload?: { feed_card?: unknown } };
+    return asRecord(parsed.payload?.feed_card);
+  } catch {
+    return null;
+  }
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
+function absoluteGithubHref(href: string): string {
+  try {
+    return new URL(href, githubHomeUrl).href;
+  } catch {
+    return href;
+  }
 }
 
 async function launchBrowser(

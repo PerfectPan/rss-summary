@@ -55,6 +55,7 @@ async function fetchGithubEvents(
   if (config.githubFeedSource === "home") {
     return new GitHubHomeClient({
       storageState: config.githubHomeStorageState,
+      fetchMode: config.githubHomeFetch,
       browserChannel: process.env.GITHUB_HOME_BROWSER_CHANNEL,
     }).getHomeEvents();
   }
