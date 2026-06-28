@@ -149,6 +149,7 @@ For the full architecture, data flow, and extension points, see [docs/architectu
 ## Research notes
 
 See `docs/competitive-research.md` for the competitor scan behind the RSS design. The short version: Feedly, Inoreader, Readwise Reader, and Folo all treat RSS value as a combination of source management, filtering/deduplication, and selective AI, not raw timeline summarization.
+See `docs/digest-delivery-research.md` for the recommended daily summary and push model.
 
 ## Codex skill
 

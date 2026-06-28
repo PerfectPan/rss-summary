@@ -7,6 +7,8 @@ description: Research and summarize newly fetched rss-summary candidates after G
 
 Use this skill after the local `rss-summary` project has fetched GitHub and RSS activity. The CLI decides what is new and high-signal; this skill decides what is worth attention.
 
+Use `docs/digest-delivery-research.md` as the current summary and delivery contract: research only selected candidates, produce a decision-oriented daily brief, and push only the final digest instead of raw events or raw candidate JSON.
+
 ## Daily Workflow
 
 1. Locate the `rss-summary` project root containing `package.json`.
