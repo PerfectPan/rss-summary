@@ -5,9 +5,9 @@ description: Research and summarize newly fetched rss-summary candidates after G
 
 # Feed Research Digest
 
-Use this skill after the local `rss-summary` project has fetched GitHub and RSS activity. The CLI decides what is new and high-signal; this skill decides what is worth attention.
+Use this skill after the local `rss-summary` project has fetched GitHub and RSS activity. The CLI decides what is new and high-signal; the reusable prompt decides what is worth attention.
 
-Use `docs/digest-delivery-research.md` as the current summary and delivery contract: research only selected candidates, produce a decision-oriented daily brief, and push only the final digest instead of raw events or raw candidate JSON.
+Use `prompts/feed-research.md` as the model prompt. Use `docs/digest-delivery-research.md` as the architecture and delivery contract: research only selected candidates, produce a decision-oriented daily brief, and push only the final digest instead of raw events or raw candidate JSON.
 
 ## Daily Workflow
 
@@ -18,15 +18,9 @@ Use `docs/digest-delivery-research.md` as the current summary and delivery contr
 GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --json --only-new --dry-run
 ```
 
-3. Parse the JSON `candidates` array. If it is empty, report that there are no new high-signal items.
-4. Research only the top candidates that are plausibly useful. Prefer 5 to 8 items unless the user asks for more. Do not stop at the feed snippet: open the repo, PR, release, README, docs, code tree, or article page needed to make a decision.
-   - Before researching a GitHub repo candidate, check `state.researched["github:owner/repo"]`.
-   - If a starred repo was already researched, reuse the cached repo-level decision and do not deep-research it again. Treat new stars as fresh social signals only.
-5. Produce a concise Markdown digest with:
-   - `今日最值得看`: strongest items with why they matter.
-   - `建议深挖`: items that need follow-up, install/test/read later.
-   - `可以略过`: noisy or low-value items, with one-line reason.
-   - `后续行动`: concrete next steps.
+3. If the JSON `candidates` array is empty, report that there are no new high-signal items.
+4. Read `prompts/feed-research.md` and use it as the prompt body. Fill `CANDIDATES_JSON` with the dry-run JSON output and `FEED_STATE_JSON` with `.state/feed-state.json` when present.
+5. Follow the prompt's research policy and output format. Do not replace it with an ad hoc summary.
 6. After the user accepts or after a scheduled non-dry run, mark candidates seen with:
 
 ```bash

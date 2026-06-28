@@ -77,6 +77,8 @@ FEED_DAY="$(TZ=Asia/Shanghai date +%F)" \
 rss-summary digest --json --only-new --dry-run
 ```
 
+Use [prompts/feed-research.md](prompts/feed-research.md) as the portable model prompt for turning that JSON into the final daily brief. The Codex wrapper skill at [skills/feed-research-digest/SKILL.md](skills/feed-research-digest/SKILL.md) uses the same prompt, so another machine can run the same flow without depending on Codex-specific skill behavior.
+
 Run the daily digest and mark emitted candidates as seen:
 
 ```bash
