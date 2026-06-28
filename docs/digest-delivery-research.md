@@ -51,6 +51,14 @@ Each recommended item should include:
 - Recommended action: `try`, `read`, `track`, `save`, or `skip`.
 - Confidence: `high`, `medium`, or `low` when the evidence is incomplete.
 
+Star/discovery cards need one compact code-quality judgment, because the useful question is whether the repository is worth the user's time, not only who starred it. The final digest can keep this to one line:
+
+- Project: what the repo is for.
+- Why it appeared today: who starred it, trend/recommendation source, or repeated social signal.
+- Code quality judgment: architecture/runtime/test signals from a lightweight code review.
+- Why it matters: relevance to the user's agent/tooling/frontend/Rust/TypeScript interests.
+- Suggested action: try, track, save, or skip.
+
 Merged PR cards need extra interpretation and daily-briefing language. The final digest should not say only "important PR merged" or use implementation-log labels like "this merge"; it should say what happened today, whether it deserves attention, and what the project is. A merged PR entry should answer:
 
 - Project: what the repo is for.
@@ -103,7 +111,10 @@ Research only the top candidates after filtering:
 - Default: top 5-8 candidates.
 - Always research `watch` / star events for unknown repos above threshold.
 - For `watch` / star events, the useful question is not "who starred it" but "what is this project, why did this star matter, and should the user try/track/save/skip it".
+- Starred repo research is a lightweight code review, not a README summary. Inspect the top-level tree, package/workspace files, entrypoints, dependency/runtime choices, tests/CI, examples, and recent commits, PRs, or releases before recommending it.
+- Judge code quality from concrete signals: cohesive modules, typed public APIs, clear error paths, useful fixtures/examples, docs that match code, and absence of obvious abandoned scaffolding or giant unrelated files.
 - Dedupe star research by stable repo identity, not event ID. Use `github:owner/repo` in `state.researched`, so a repo already researched from one star is not deep-researched again when another followed account stars it later.
+- Do not deep-research a starred repo again after it is in `state.researched`; reuse the cached repo-level decision and mention later stars only as fresh social signals unless there is a major release, large architectural rewrite, or stale cache window.
 - Always inspect releases and merged PRs when they match interests.
 - For RSS articles, open the article page when accessible instead of relying on the feed excerpt.
 - Stop researching once a candidate is clearly low-value, but record the skip reason.

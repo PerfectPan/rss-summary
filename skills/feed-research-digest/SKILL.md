@@ -19,9 +19,9 @@ GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DA
 ```
 
 3. Parse the JSON `candidates` array. If it is empty, report that there are no new high-signal items.
-4. Research only the top candidates that are plausibly useful. Prefer 5 to 8 items unless the user asks for more. Do not stop at the feed snippet: open the repo, PR, release, README, docs, or article page needed to make a decision.
+4. Research only the top candidates that are plausibly useful. Prefer 5 to 8 items unless the user asks for more. Do not stop at the feed snippet: open the repo, PR, release, README, docs, code tree, or article page needed to make a decision.
    - Before researching a GitHub repo candidate, check `state.researched["github:owner/repo"]`.
-   - If a starred repo was already researched, do not deep-research it again. Treat new stars as fresh social signals only.
+   - If a starred repo was already researched, reuse the cached repo-level decision and do not deep-research it again. Treat new stars as fresh social signals only.
 5. Produce a concise Markdown digest with:
    - `今日最值得看`: strongest items with why they matter.
    - `建议深挖`: items that need follow-up, install/test/read later.
@@ -47,6 +47,19 @@ The non-dry run writes `.state/feed-state.json`. Do not commit `.state/`.
 - RSS `article`: read the article page when available. Summarize the core claim, evidence, and practical relevance. Do not summarize only the feed snippet when the page is accessible.
 - If the candidate is not useful after inspection, still record the skip reason so it does not appear as an unexplained omission.
 
+### Code architecture and quality checks
+
+For unknown GitHub `discovery` and `watch` / star repos, treat research as a lightweight code review instead of a README summary. Use GitHub files/API first; clone only when the visible repo surface is not enough to judge. Check:
+
+- top-level tree and package/workspace files to understand product shape and repository boundaries.
+- entrypoints such as `bin`, app/server files, library exports, examples, or extension/plugin manifests.
+- dependency/runtime choices, especially whether they match the claimed problem and avoid unnecessary stacks.
+- tests/CI, typechecking, linting, fixtures, or examples that prove the project can be trusted.
+- recent commits, PRs, or releases to see whether the star followed active useful work or stale hype.
+- code quality signals: cohesive modules, typed public APIs, clear error paths, small integration surfaces, docs that match code, and no obvious giant unrelated files or abandoned scaffolding.
+
+Do not overclaim from shallow evidence. If you only inspected public metadata and key files, say the quality judgment is a surface-level impression. If the repo is already in `state.researched`, do not repeat this deep inspection unless there is a major release, large architectural rewrite, or long stale cache window.
+
 ## Output Style
 
 Keep the output decision-oriented. For each recommended item include:
@@ -62,6 +75,7 @@ For star/discovery items, use this compact shape:
 ### owner/repo — 建议动作
 - 项目是什么：
 - 今天为什么出现：
+- 代码质量判断：
 - 为什么值得你看：
 - 建议动作：
 ```
