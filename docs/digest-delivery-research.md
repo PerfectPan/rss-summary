@@ -209,6 +209,8 @@ The current `{ "text": markdown }` generic webhook is a good compatibility floor
 
 4. Add a research prompt contract.
    - Input: JSON candidates.
+   - Keep the portable model prompt in `prompts/feed-research.md`.
+   - Keep `skills/feed-research-digest/SKILL.md` as the Codex wrapper that invokes the prompt.
    - Output: structured digest decisions.
    - Include `decision`, `confidence`, `evidenceChecked`, `reason`, and `action`.
 
