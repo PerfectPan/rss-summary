@@ -20,6 +20,8 @@ GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DA
 
 3. Parse the JSON `candidates` array. If it is empty, report that there are no new high-signal items.
 4. Research only the top candidates that are plausibly useful. Prefer 5 to 8 items unless the user asks for more. Do not stop at the feed snippet: open the repo, PR, release, README, docs, or article page needed to make a decision.
+   - Before researching a GitHub repo candidate, check `state.researched["github:owner/repo"]`.
+   - If a starred repo was already researched, do not deep-research it again. Treat new stars as fresh social signals only.
 5. Produce a concise Markdown digest with:
    - `今日最值得看`: strongest items with why they matter.
    - `建议深挖`: items that need follow-up, install/test/read later.
@@ -36,6 +38,8 @@ The non-dry run writes `.state/feed-state.json`. Do not commit `.state/`.
 ## Research Rules
 
 - GitHub `discovery`: inspect repo README, description, topics, stars, recent activity, releases, and examples. Decide whether it helps the user's agent/tooling/frontend/Rust/TypeScript interests.
+- GitHub `watch` / star: summarize the project, who starred it, what problem it solves, why it may matter, and whether to `try`, `track`, `save`, or `skip`. Do not say only "someone starred this repository".
+- For star research dedupe, use repo identity rather than event identity: `github:owner/repo`. If `owner/repo` was researched before, do not inspect the README again unless the repo has materially changed; optionally mention "new star signal from X" in a short observation.
 - GitHub `release`: inspect release notes and breaking changes. Summarize impact, upgrade risk, and whether action is needed.
 - GitHub `activity`: inspect the PR title/body and repo context. Focus on merged PRs, repeated followed-actor signals, and trend indicators.
 - For each merged PR that survives initial filtering, answer three questions before recommending it: what changed, whether the change deserves attention, and what the project is.
@@ -51,6 +55,16 @@ Keep the output decision-oriented. For each recommended item include:
 - One-sentence gist.
 - Why it matters to the user.
 - Recommended action: `track`, `read`, `try`, `save`, or `skip`.
+
+For star/discovery items, use this compact shape:
+
+```text
+### owner/repo — 建议动作
+- 项目是什么：
+- 今天为什么出现：
+- 为什么值得你看：
+- 建议动作：
+```
 
 For merged PR items, use a daily-briefing voice instead of implementation-log wording:
 
@@ -72,3 +86,4 @@ Avoid raw timelines. Avoid re-listing every candidate. The value is selection an
 - `--json`: emits the digest document as machine-readable JSON for this skill or other model pipelines.
 - `FEED_DAY` or `--day`: filters to a calendar day; use this for scheduled daily summaries.
 - `FEED_STATE_FILE`: overrides the default `.state/feed-state.json` path.
+- `state.researched` is keyed by stable research identity. GitHub repo candidates use `github:owner/repo`, so repeated star events for the same repo do not trigger repeated deep research.
