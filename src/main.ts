@@ -2,6 +2,7 @@ import { loadConfig } from "./config.js";
 import { buildCandidateProjects, normalizeEvent, type ActivityCard, type RepositoryMetadata } from "./domain.js";
 import { isWithinEventWindow, resolveEventWindow } from "./event-window.js";
 import { GitHubClient } from "./github.js";
+import { GitHubHomeClient } from "./github-home.js";
 import { createNotifier } from "./notifier.js";
 import { renderJsonDigest, renderMarkdownDigest } from "./render.js";
 import { RssClient } from "./rss.js";
@@ -12,17 +13,12 @@ export async function run(): Promise<void> {
   const client = new GitHubClient({ token: config.token });
   const rssClient = new RssClient();
 
-  const [rawEvents, rssEvents] = await Promise.all([
-    client.getReceivedEvents(config.username, {
-      perPage: config.perPage,
-      pages: config.eventPages,
-    }),
+  const [githubEvents, rssEvents] = await Promise.all([
+    fetchGithubEvents(config, client),
     fetchRssEvents(rssClient, config.rssFeeds),
   ]);
   const eventWindow = resolveEventWindow(config);
-  const events = [...rawEvents.map(normalizeEvent), ...rssEvents].filter((event) =>
-    isWithinEventWindow(event, eventWindow),
-  );
+  const events = [...githubEvents, ...rssEvents].filter((event) => isWithinEventWindow(event, eventWindow));
 
   const followees = config.token ? await client.getFollowing() : new Set<string>();
   const repositories = await fetchRepositoryMetadata(client, events, config.maxRepos);
@@ -50,6 +46,24 @@ export async function run(): Promise<void> {
     markCandidatesSeen(state, candidates, document.generatedAt);
     saveFeedState(config.stateFile, state);
   }
+}
+
+async function fetchGithubEvents(
+  config: ReturnType<typeof loadConfig>,
+  client: GitHubClient,
+): Promise<ActivityCard[]> {
+  if (config.githubFeedSource === "home") {
+    return new GitHubHomeClient({
+      storageState: config.githubHomeStorageState,
+      browserChannel: process.env.GITHUB_HOME_BROWSER_CHANNEL,
+    }).getHomeEvents();
+  }
+
+  const rawEvents = await client.getReceivedEvents(config.username, {
+    perPage: config.perPage,
+    pages: config.eventPages,
+  });
+  return rawEvents.map(normalizeEvent);
 }
 
 async function fetchRssEvents(

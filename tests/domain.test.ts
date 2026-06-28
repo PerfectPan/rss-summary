@@ -189,4 +189,41 @@ describe("github feed domain", () => {
 
     expect(candidates[0]?.url).toBe("https://example.com/feed.xml");
   });
+
+  it("explains GitHub Home trending and recommendation signals", () => {
+    const candidates = buildCandidateProjects(
+      [
+        {
+          id: "home-trending-1",
+          type: "trending",
+          source: "github",
+          actor: "GitHub Home",
+          repo: "simplex-chat/simplex-chat",
+          createdAt: "2026-06-27T11:08:52Z",
+          action: "trending",
+        },
+        {
+          id: "home-rec-1",
+          type: "recommendation",
+          source: "github",
+          actor: "GitHub Home",
+          repo: "onnx/onnx",
+          createdAt: "2026-06-27T00:00:00Z",
+          action: "recommended",
+        },
+      ],
+      {
+        followees: new Set(),
+        interests: [],
+        repositories: new Map(),
+      },
+    );
+
+    expect(candidates.find((candidate) => candidate.repo === "simplex-chat/simplex-chat")?.reasons).toContain(
+      "GitHub Home trending repository",
+    );
+    expect(candidates.find((candidate) => candidate.repo === "onnx/onnx")?.reasons).toContain(
+      "GitHub Home recommendation",
+    );
+  });
 });

@@ -2,11 +2,15 @@
 
 Daily GitHub Home Feed and RSS digest for `PerfectPan`.
 
-The tool reads GitHub's received events API plus optional RSS/Atom feeds, enriches interesting repositories and pull requests, ranks projects/articles by usefulness, then outputs a short Markdown digest. It is read-only against GitHub and RSS sources unless you wire a webhook notification endpoint.
+The tool reads the rendered GitHub Home page plus optional RSS/Atom feeds, enriches interesting repositories and pull requests, ranks projects/articles by usefulness, then outputs a short Markdown digest. It is read-only against GitHub and RSS sources unless you wire a webhook notification endpoint.
 
-## Why `received_events`
+## GitHub Home Exact Mode
 
-`GET /users/{username}/received_events` is the closest API source for the GitHub Home Feed: events received from watched repositories and followed users. When the token belongs to the same `{username}`, GitHub can include private events the token is allowed to read. With another account's token, GitHub only returns public events.
+`GITHUB_FEED_SOURCE=home` is the default because GitHub's REST `received_events` API does not match github.com Home exactly. The Home page includes user filter settings, ranking, trending repositories, popular projects among followed people, and recommendation cards.
+
+Home exact mode opens `https://github.com/` with a saved Playwright storage state, reads the rendered `feed-container` / `conduit-feed-frame` cards, and uses GitHub's own `data-hydro-view.feed_card` metadata for card type, position, gatherer, and timestamp.
+
+The REST API path is still available with `GITHUB_FEED_SOURCE=events`, but it is a fallback approximation, not the source of truth for GitHub Home.
 
 ## Setup
 
@@ -20,7 +24,17 @@ cp .env.example .env
 
 Commands below use the linked `rss-summary` bin. If a machine has not linked the bin yet, use `pnpm exec rss-summary ...` from the repository root as the fallback.
 
-Create a fine-grained GitHub token from the `PerfectPan` account and put it in `GH_FEED_TOKEN`.
+Create the GitHub Home browser storage state once:
+
+```bash
+rss-summary github-home login
+```
+
+This opens a browser. Sign in to GitHub, confirm `https://github.com/` shows Home, then press Enter in the terminal. The login state is saved to `.state/github-home-storage.json`, which must stay out of git.
+
+By default the CLI launches the local Chrome channel. If a scheduled machine does not have Chrome, install Chrome or run `pnpm exec playwright install chromium` and unset `GITHUB_HOME_BROWSER_CHANNEL`.
+
+Optionally create a fine-grained GitHub token from the `PerfectPan` account and put it in `GH_FEED_TOKEN` for API enrichment or `GITHUB_FEED_SOURCE=events` fallback.
 
 Minimum recommended permissions:
 
@@ -47,13 +61,13 @@ For one-off experiments, `RSS_FEEDS` can still provide a JSON array without modi
 Dry run:
 
 ```bash
-GH_FEED_TOKEN="$(gh auth token)" GITHUB_USERNAME=PerfectPan rss-summary digest --dry-run
+GITHUB_FEED_SOURCE=home GITHUB_USERNAME=PerfectPan rss-summary digest --dry-run
 ```
 
 Preview only new high-signal candidates as JSON for a research skill or model pipeline:
 
 ```bash
-GH_FEED_TOKEN="$(gh auth token)" \
+GITHUB_FEED_SOURCE=home \
 GITHUB_USERNAME=PerfectPan \
 RSS_FEEDS_FILE=feeds.json \
 FEED_DAY="$(TZ=Asia/Shanghai date +%F)" \
@@ -63,7 +77,7 @@ rss-summary digest --json --only-new --dry-run
 Run the daily digest and mark emitted candidates as seen:
 
 ```bash
-GH_FEED_TOKEN="$(gh auth token)" \
+GITHUB_FEED_SOURCE=home \
 GITHUB_USERNAME=PerfectPan \
 RSS_FEEDS_FILE=feeds.json \
 FEED_DAY="$(TZ=Asia/Shanghai date +%F)" \
@@ -73,7 +87,7 @@ rss-summary digest --only-new
 With RSS feeds:
 
 ```bash
-GH_FEED_TOKEN="$(gh auth token)" \
+GITHUB_FEED_SOURCE=home \
 GITHUB_USERNAME=PerfectPan \
 RSS_FEEDS_FILE=feeds.json \
 rss-summary digest --dry-run
@@ -82,11 +96,20 @@ rss-summary digest --dry-run
 With a generic webhook:
 
 ```bash
-GH_FEED_TOKEN="..." \
+GITHUB_FEED_SOURCE=home \
 GITHUB_USERNAME=PerfectPan \
 RSS_FEEDS_FILE=feeds.json \
 NOTIFY_WEBHOOK_URL="https://example.com/webhook" \
 rss-summary digest
+```
+
+Fallback to the REST received-events approximation:
+
+```bash
+GITHUB_FEED_SOURCE=events \
+GH_FEED_TOKEN="$(gh auth token)" \
+GITHUB_USERNAME=PerfectPan \
+rss-summary digest --dry-run
 ```
 
 The webhook payload is:
@@ -111,13 +134,13 @@ Equivalent environment variables:
 
 ## Schedule on another machine
 
-Install Node.js 24+, clone or copy this repository, run `pnpm install && pnpm build && pnpm setup && pnpm link --global`, then schedule:
+Install Node.js 24+, clone or copy this repository, run `pnpm install && pnpm build && pnpm setup && pnpm link --global`, run `rss-summary github-home login` once on that machine, then schedule:
 
 ```cron
-0 9 * * * cd /path/to/rss-summary && FEED_DAY="$(TZ=Asia/Shanghai date +\%F)" GH_FEED_TOKEN=... GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json rss-summary digest --only-new >> /tmp/feed-digest.log 2>&1
+0 9 * * * cd /path/to/rss-summary && FEED_DAY="$(TZ=Asia/Shanghai date +\%F)" GITHUB_FEED_SOURCE=home GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json rss-summary digest --only-new >> /tmp/feed-digest.log 2>&1
 ```
 
-Use the `GH_FEED_TOKEN` from the account whose Home Feed should be summarized. The machine identity does not matter; the token identity does.
+Use the browser login from the account whose Home Feed should be summarized. The machine identity does not matter; the saved GitHub web session does.
 
 ## Development workflow
 
@@ -133,7 +156,8 @@ pnpm verify
 
 For the full architecture, data flow, and extension points, see [docs/architecture.md](docs/architecture.md).
 
-- `src/github.ts`: read-only GitHub API client for received events, following list, repositories, and PR details.
+- `src/github-home.ts`: exact GitHub Home page adapter using Playwright storage state and rendered Home card metadata.
+- `src/github.ts`: read-only GitHub API client for received-events fallback, following list, repositories, and PR details.
 - `src/cli.ts`: package `bin` entrypoint for `rss-summary digest` and `rss-summary feeds`.
 - `src/rss.ts`: RSS 2.0 / Atom source adapter built on `fast-xml-parser`.
 - `src/feeds.ts`: CLI for adding, listing, and validating local RSS sources.
