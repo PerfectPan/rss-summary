@@ -102,6 +102,8 @@ Research only the top candidates after filtering:
 
 - Default: top 5-8 candidates.
 - Always research `watch` / star events for unknown repos above threshold.
+- For `watch` / star events, the useful question is not "who starred it" but "what is this project, why did this star matter, and should the user try/track/save/skip it".
+- Dedupe star research by stable repo identity, not event ID. Use `github:owner/repo` in `state.researched`, so a repo already researched from one star is not deep-researched again when another followed account stars it later.
 - Always inspect releases and merged PRs when they match interests.
 - For RSS articles, open the article page when accessible instead of relying on the feed excerpt.
 - Stop researching once a candidate is clearly low-value, but record the skip reason.
