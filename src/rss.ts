@@ -87,7 +87,7 @@ function normalizeAtomEntry(entry: XmlRecord, feed: FeedSubscription): ActivityC
   const htmlUrl = atomLink(entry.link);
   const id = text(entry.id) ?? htmlUrl ?? title ?? "untitled";
   const summary = cleanSummary(text(entry.summary) ?? text(entry.content));
-  const createdAt = normalizeDate(text(entry.updated) ?? text(entry.published));
+  const createdAt = normalizeDate(text(entry.published) ?? text(entry.updated));
 
   return {
     id: `rss:${feed.url}:${id}`,
