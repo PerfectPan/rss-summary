@@ -94,6 +94,29 @@ describe("RSS source", () => {
     });
   });
 
+  it("uses Atom published time before updated time", () => {
+    const events = parseFeedXml(
+      `<?xml version="1.0"?>
+      <feed xmlns="http://www.w3.org/2005/Atom">
+        <entry>
+          <id>https://blog.xlab.app/p/79b64b8e/</id>
+          <title>Agent与人的协作关系</title>
+          <link href="https://blog.xlab.app/p/79b64b8e/" />
+          <published>2026-03-26T12:30:02.000Z</published>
+          <updated>2026-06-28T16:37:58.196Z</updated>
+          <summary>AI的超级入口固然重要。</summary>
+        </entry>
+      </feed>`,
+      {
+        name: "明天的乌云",
+        url: "https://blog.xlab.app/atom.xml",
+        tags: ["ai"],
+      },
+    );
+
+    expect(events[0]?.createdAt).toBe("2026-03-26T12:30:02.000Z");
+  });
+
   it("fetches and parses a configured feed", async () => {
     const client = new RssClient({
       fetch: async (url) => {
