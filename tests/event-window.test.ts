@@ -36,4 +36,20 @@ describe("event window", () => {
       label: "last 36 hours",
     });
   });
+
+  it("uses an explicit since/until window before calendar or rolling modes", () => {
+    const window = resolveEventWindow({
+      since: "2026-06-27T09:00:00+08:00",
+      until: "2026-06-28T09:00:00+08:00",
+      day: "2026-06-28",
+      timezoneOffset: "+08:00",
+      windowHours: 36,
+    });
+
+    expect(window).toEqual({
+      since: Date.parse("2026-06-27T09:00:00+08:00"),
+      until: Date.parse("2026-06-28T09:00:00+08:00"),
+      label: "2026-06-27T09:00:00+08:00 to 2026-06-28T09:00:00+08:00",
+    });
+  });
 });

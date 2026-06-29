@@ -20,11 +20,14 @@ export type AppConfig = {
   eventPages: number;
   perPage: number;
   windowHours: number;
+  since?: string;
+  until?: string;
   day?: string;
   timezoneOffset: string;
   maxRepos: number;
   dryRun: boolean;
   onlyNew: boolean;
+  rssOnly: boolean;
   stateFile: string;
   interests: string[];
   rssFeeds: FeedSubscription[];
@@ -47,11 +50,14 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, argv: string[] 
     eventPages: numberFrom(args.pages ?? env.FEED_EVENT_PAGES, 3),
     perPage: numberFrom(args.perPage ?? env.FEED_PER_PAGE, 100),
     windowHours: numberFrom(args.windowHours ?? env.FEED_WINDOW_HOURS, 36),
+    since: args.since ?? env.FEED_SINCE,
+    until: args.until ?? env.FEED_UNTIL,
     day: args.day ?? env.FEED_DAY,
     timezoneOffset: args.timezoneOffset ?? env.FEED_TIMEZONE_OFFSET ?? "+08:00",
     maxRepos: numberFrom(args.maxRepos ?? env.FEED_MAX_REPOS, 30),
     dryRun,
     onlyNew: args.onlyNew || env.FEED_ONLY_NEW === "1" || env.FEED_ONLY_NEW === "true",
+    rssOnly: args.rssOnly || env.FEED_RSS_ONLY === "1" || env.FEED_RSS_ONLY === "true",
     stateFile: args.stateFile ?? env.FEED_STATE_FILE ?? ".state/feed-state.json",
     interests: parseList(env.FEED_INTERESTS) ?? [
       "agent",
@@ -90,6 +96,10 @@ function parseArgs(argv: string[]) {
       result.onlyNew = true;
       continue;
     }
+    if (arg === "--rss-only") {
+      result.rssOnly = true;
+      continue;
+    }
     if (!arg.startsWith("--")) continue;
     const key = camelCase(arg.slice(2));
     const value = argv[index + 1];
@@ -103,6 +113,8 @@ function parseArgs(argv: string[]) {
     pages?: string;
     perPage?: string;
     windowHours?: string;
+    since?: string;
+    until?: string;
     day?: string;
     timezoneOffset?: string;
     maxRepos?: string;
@@ -114,6 +126,7 @@ function parseArgs(argv: string[]) {
     dryRun?: boolean;
     json?: boolean;
     onlyNew?: boolean;
+    rssOnly?: boolean;
   };
 }
 
