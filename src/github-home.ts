@@ -126,7 +126,7 @@ export class GitHubHomeClient {
           { cause: error },
         );
       }
-      return page.evaluate(extractHomeFeedSnapshots);
+      return await page.evaluate(extractHomeFeedSnapshots);
     } finally {
       await browser.close();
     }

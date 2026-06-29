@@ -3,6 +3,7 @@ import type { CandidateProject } from "./domain.js";
 export type DigestDocument = {
   generatedAt: string;
   username: string;
+  sourceMode?: "mixed" | "rss";
   windowLabel?: string;
   candidates: CandidateProject[];
 };
@@ -10,7 +11,12 @@ export type DigestDocument = {
 export function renderMarkdownDigest(document: DigestDocument): string {
   const date = document.generatedAt.slice(0, 10);
   const sections = groupCandidates(document.candidates);
-  const lines = [`# Feed Digest - ${date}`, "", `GitHub 账号：${document.username}`, ""];
+  const lines = [`# Feed Digest - ${date}`, ""];
+  if (document.sourceMode === "rss") {
+    lines.push("来源模式：RSS only", "");
+  } else {
+    lines.push(`GitHub 账号：${document.username}`, "");
+  }
   if (document.windowLabel) {
     lines.push(`筛选窗口：${document.windowLabel}`, "");
   }
