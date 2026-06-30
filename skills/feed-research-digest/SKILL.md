@@ -15,7 +15,7 @@ Use `prompts/feed-research.md` as the model prompt. Use `docs/digest-delivery-re
 2. Preview new candidates without mutating state:
 
 ```bash
-GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --json --only-new --dry-run
+GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --json --only-new --dry-run
 ```
 
 3. If the JSON `candidates` array is empty, report that there are no new high-signal items.
@@ -24,7 +24,7 @@ GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DA
 6. After the user accepts or after a scheduled non-dry run, mark candidates seen with:
 
 ```bash
-GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --only-new
+GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --only-new
 ```
 
 The non-dry run writes `.state/feed-state.json`. Do not commit `.state/`.

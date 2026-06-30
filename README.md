@@ -55,8 +55,7 @@ rss-summary feeds test
 rss-summary feeds remove --url "https://github.blog/feed"
 ```
 
-Use `--file <path>` when the feed list is not `feeds.json`. The lower-level development fallback is `pnpm feeds -- <command>`.
-For one-off experiments, `RSS_FEEDS` can still provide a JSON array without modifying `feeds.json`.
+Use `--file <path>` only for feed-management experiments. The digest command always loads RSS sources from the tracked `feeds.json`.
 
 ## Run
 
@@ -72,7 +71,6 @@ Preview only new high-signal candidates as JSON for a research skill or model pi
 GITHUB_FEED_SOURCE=home \
 GITHUB_HOME_FETCH=conduit \
 GITHUB_USERNAME=PerfectPan \
-RSS_FEEDS_FILE=feeds.json \
 FEED_DAY="$(TZ=Asia/Shanghai date +%F)" \
 rss-summary digest --json --only-new --dry-run
 ```
@@ -84,7 +82,6 @@ Run the daily digest and mark emitted candidates as seen:
 ```bash
 GITHUB_FEED_SOURCE=home \
 GITHUB_USERNAME=PerfectPan \
-RSS_FEEDS_FILE=feeds.json \
 FEED_DAY="$(TZ=Asia/Shanghai date +%F)" \
 rss-summary digest --only-new
 ```
@@ -94,8 +91,13 @@ With RSS feeds:
 ```bash
 GITHUB_FEED_SOURCE=home \
 GITHUB_USERNAME=PerfectPan \
-RSS_FEEDS_FILE=feeds.json \
 rss-summary digest --dry-run
+```
+
+RSS-only preview, useful before a GitHub token is configured:
+
+```bash
+rss-summary digest --rss-only --window-hours 24 --dry-run
 ```
 
 With a generic webhook:
@@ -103,7 +105,6 @@ With a generic webhook:
 ```bash
 GITHUB_FEED_SOURCE=home \
 GITHUB_USERNAME=PerfectPan \
-RSS_FEEDS_FILE=feeds.json \
 NOTIFY_WEBHOOK_URL="https://example.com/webhook" \
 rss-summary digest
 ```

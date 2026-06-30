@@ -68,7 +68,7 @@ Current high-signal event types:
 `rss-summary digest` currently runs this sequence:
 
 1. `src/config.ts` reads environment variables, CLI flags, optional `feeds.json`, and default interests.
-2. `src/main.ts` fetches GitHub Home cards and RSS/Atom feeds in parallel. If `GITHUB_HOME_FETCH=conduit`, it directly fetches `/conduit/for_you_feed?requested_from_filter_event=true` with the saved web session and falls back to rendered browser parsing. If `GITHUB_FEED_SOURCE=events`, it fetches REST `received_events` instead.
+2. `src/main.ts` fetches GitHub Home cards and RSS/Atom feeds in parallel. If `GITHUB_HOME_FETCH=conduit`, it directly fetches `/conduit/for_you_feed?requested_from_filter_event=true` with the saved web session and falls back to rendered browser parsing. If `GITHUB_FEED_SOURCE=events`, it fetches REST `received_events` instead. If `--rss-only` or `FEED_RSS_ONLY=true` is set, GitHub fetching is skipped.
 3. `src/event-window.ts` filters events by either an explicit calendar day or a rolling hour window.
 4. `src/github.ts` optionally fetches followed accounts, repository metadata, and up to 20 pull request details.
 5. `src/domain.ts` builds ranked `CandidateProject` records from normalized events.
@@ -96,7 +96,7 @@ rss-summary feeds test
 rss-summary feeds remove --url "https://example.com/feed.xml"
 ```
 
-Commit intentional `feeds.json` changes through the pull request workflow. For one-off runs, `RSS_FEEDS='[...]'` can provide the same JSON array without modifying the tracked subscription list.
+Commit intentional `feeds.json` changes through the pull request workflow. The digest command always uses the tracked `feeds.json` as its RSS source list.
 
 ## Research Workflow
 

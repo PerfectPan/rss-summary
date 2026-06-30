@@ -14,15 +14,21 @@ export async function run(): Promise<void> {
   const rssClient = new RssClient();
 
   const [githubEvents, rssEvents] = await Promise.all([
-    fetchGithubEvents(config, client),
+    config.rssOnly
+      ? Promise.resolve([])
+      : fetchGithubEvents(config, client),
     fetchRssEvents(rssClient, config.rssFeeds),
   ]);
   const eventWindow = resolveEventWindow(config);
   const events = [...githubEvents, ...rssEvents].filter((event) => isWithinEventWindow(event, eventWindow));
 
-  const followees = config.token ? await client.getFollowing() : new Set<string>();
-  const repositories = await fetchRepositoryMetadata(client, events, config.maxRepos);
-  await enrichPullRequests(client, events);
+  const followees = config.token && !config.rssOnly ? await client.getFollowing() : new Set<string>();
+  const repositories = config.rssOnly
+    ? new Map<string, RepositoryMetadata>()
+    : await fetchRepositoryMetadata(client, events, config.maxRepos);
+  if (!config.rssOnly) {
+    await enrichPullRequests(client, events);
+  }
 
   const allCandidates = buildCandidateProjects(events, {
     followees,
@@ -35,6 +41,7 @@ export async function run(): Promise<void> {
   const document = {
     generatedAt: new Date().toISOString(),
     username: config.username,
+    sourceMode: config.rssOnly ? ("rss" as const) : ("mixed" as const),
     windowLabel: eventWindow.label,
     candidates,
   };

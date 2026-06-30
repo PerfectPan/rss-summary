@@ -172,4 +172,16 @@ describe("markdown digest renderer", () => {
 
     expect(markdown).toContain("筛选窗口：2026-06-22 +08:00");
   });
+
+  it("labels RSS-only output without showing a GitHub account", () => {
+    const markdown = renderMarkdownDigest({
+      generatedAt: "2026-06-22T10:00:00Z",
+      username: "PerfectPan",
+      sourceMode: "rss",
+      candidates: [],
+    });
+
+    expect(markdown).toContain("来源模式：RSS only");
+    expect(markdown).not.toContain("GitHub 账号：PerfectPan");
+  });
 });

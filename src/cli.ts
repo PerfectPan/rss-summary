@@ -44,7 +44,7 @@ export async function runCliCommand(argv: string[] = process.argv.slice(2), deps
 
 function writeHelp(stdout: Writable): void {
   stdout.write(`Usage:
-  rss-summary digest [digest options]
+  rss-summary digest [--rss-only] [digest options]
   rss-summary github-home login [--storage-state .state/github-home-storage.json]
   rss-summary feeds add --url <rss-url> [--name <name>] [--tags ai,mcp]
   rss-summary feeds remove --url <rss-url>

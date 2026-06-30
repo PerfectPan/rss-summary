@@ -38,7 +38,7 @@ rss-summary feeds remove --url "https://example.com/feed.xml"
 4. Preview candidates for the target day:
 
 ```bash
-RSS_FEEDS_FILE=feeds.json FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --json --dry-run
+FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --json --dry-run
 ```
 
 5. Run `pnpm verify`.
@@ -52,4 +52,4 @@ Use tags as ranking hints, not categories for display. Prefer terms already used
 
 - RSS 2.0 and Atom are supported.
 - `feeds.json` is tracked as this repository's shared RSS subscription list.
-- For one-off runs, `RSS_FEEDS='[...]'` still works, but the CLI is preferred for persistent sources.
+- The digest command always uses `feeds.json`; do not rely on `RSS_FEEDS` or `RSS_FEEDS_FILE` overrides.
