@@ -58,27 +58,29 @@ FEED_STATE_JSON=
 
 ## 输出
 
-输出一份简洁的中文 Markdown 日报：
+输出一份聊天/移动端友好的中文 Markdown 日报。标题和小节标题必须加粗，正文分块要短；不要使用 Markdown 表格、复杂标题层级或内嵌链接，链接单独一行写成 `链接：https://...`。
 
 ```text
-# 每日 Feed 简报 - YYYY-MM-DD
+**每日 Feed 简报 - YYYY-MM-DD**
 
-## 今日最值得看
-### owner/repo or title - try|track|read|save|skip
+**今日最值得看**
+
+**owner/repo or title - try|track|read|save|skip**
 - 项目是什么：
 - 今天为什么出现：        # for star/discovery
 - 今天发生了什么：        # for merged PR/release/article when more natural
 - 代码质量判断：          # required for star/discovery repos
 - 为什么值得你看：
 - 建议动作：
+- 链接：https://...
 
-## 建议深挖
+**建议深挖**
 - ...
 
-## 可以略过
+**可以略过**
 - ...
 
-## 后续行动
+**后续行动**
 - ...
 ```
 
