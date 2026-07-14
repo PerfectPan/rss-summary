@@ -13,12 +13,20 @@ export async function run(): Promise<void> {
   const client = new GitHubClient({ token: config.token });
   const rssClient = new RssClient();
 
-  const [githubEvents, rssEvents] = await Promise.all([
+  const [githubResult, rssResult] = await Promise.allSettled([
     config.rssOnly
       ? Promise.resolve([])
       : fetchGithubEvents(config, client),
     fetchRssEvents(rssClient, config.rssFeeds),
   ]);
+  const githubEvents = githubResult.status === "fulfilled" ? githubResult.value : [];
+  const rssEvents = rssResult.status === "fulfilled" ? rssResult.value : [];
+  if (githubResult.status === "rejected") {
+    console.error(`GitHub feed unavailable; continuing with RSS events: ${formatError(githubResult.reason)}`);
+  }
+  if (rssResult.status === "rejected") {
+    console.error(`RSS feeds unavailable; continuing with GitHub events: ${formatError(rssResult.reason)}`);
+  }
   const eventWindow = resolveEventWindow(config);
   const events = [...githubEvents, ...rssEvents].filter((event) => isWithinEventWindow(event, eventWindow));
 
@@ -72,6 +80,10 @@ async function fetchGithubEvents(
     pages: config.eventPages,
   });
   return rawEvents.map(normalizeEvent);
+}
+
+function formatError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 async function fetchRssEvents(
