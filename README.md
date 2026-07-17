@@ -158,6 +158,8 @@ This repository exports `rss-summary/rivus-plugin`, a real external Rivus Plugin
 
 The Tool reuses the existing collection, ranking, state filtering, and Markdown rendering workflow. It always runs in dry-run mode, so it neither sends the generic webhook nor marks candidates as seen. The Automation passes its exact scheduled occurrence into the Tool, which converts it to the local calendar day using `FEED_TIMEZONE_OFFSET`.
 
+With `@rivus/agent@0.3.x`, proactive Feishu delivery renders that Markdown as one interactive card. `每日技术情报 · YYYY-MM-DD` becomes the blue card header; the source summary, ranked sections, and item links remain in the Markdown body.
+
 Build this checkout before installing it into a Rivus deployment project:
 
 ```bash

@@ -2,6 +2,7 @@ import type { CandidateProject } from "./domain.js";
 
 export type DigestDocument = {
   generatedAt: string;
+  displayDate?: string;
   username: string;
   sourceMode?: "mixed" | "rss";
   windowLabel?: string;
@@ -9,9 +10,9 @@ export type DigestDocument = {
 };
 
 export function renderMarkdownDigest(document: DigestDocument): string {
-  const date = document.generatedAt.slice(0, 10);
+  const date = document.displayDate ?? document.generatedAt.slice(0, 10);
   const sections = groupCandidates(document.candidates);
-  const lines = [`# Feed Digest - ${date}`, ""];
+  const lines = [`# 每日技术情报 · ${date}`, ""];
   if (document.sourceMode === "rss") {
     lines.push("来源模式：RSS only", "");
   } else {

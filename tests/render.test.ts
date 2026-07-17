@@ -63,7 +63,7 @@ describe("markdown digest renderer", () => {
       ],
     });
 
-    expect(markdown).toContain("# Feed Digest - 2026-06-22");
+    expect(markdown).toContain("# 每日技术情报 · 2026-06-22");
     expect(markdown).toContain("## 值得看");
     expect(markdown).toContain("[BuilderIO/skills](https://github.com/BuilderIO/skills)");
     expect(markdown).toContain("## RSS 文章");
