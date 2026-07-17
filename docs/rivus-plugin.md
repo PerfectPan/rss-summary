@@ -25,7 +25,7 @@ cd /path/to/rivus-project
 npm install /path/to/rss-summary
 ```
 
-The Rivus project supplies the `@rivus/agent` peer. The supported Core range is `>=0.1.1 <0.3.0`.
+The Rivus project supplies the `@rivus/agent` peer. The supported Core range is `>=0.1.1 <0.4.0`; use `0.3.x` for proactive Feishu interactive-card delivery.
 
 ## Bind The Plugin
 
@@ -87,6 +87,8 @@ Replace the starter `rivus.config.json` created by `rivus init` with the complet
 ```
 
 The Automation input contains the exact scheduled ISO occurrence. The Tool converts it to `YYYY-MM-DD` using `FEED_TIMEZONE_OFFSET`, preventing a UTC occurrence from selecting the previous local day.
+
+The rendered Markdown starts with `# 每日技术情报 · YYYY-MM-DD`. Rivus `0.3.x` promotes that heading into the blue interactive-card header and keeps the remaining Markdown sections and links in the card body. The Plugin does not call Feishu directly; delivery credentials, target identity, idempotency, and retries remain Host responsibilities.
 
 ## Configure Sources
 

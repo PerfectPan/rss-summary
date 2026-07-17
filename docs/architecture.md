@@ -81,7 +81,7 @@ Current high-signal event types:
 8. `src/notifier.ts` writes to stdout and optionally sends `{ "text": markdown }` to `NOTIFY_WEBHOOK_URL`.
 9. If `--only-new` is set and the run is not `--dry-run`, `.state/feed-state.json` is updated with seen event IDs.
 
-`buildDigestDocument` exposes steps 1–6 as a delivery-free application boundary. The CLI renders and delivers the returned document, while the Rivus adapter renders it as Markdown and forces dry-run mode. Both entrypoints therefore share one collection and ranking implementation.
+`buildDigestDocument` exposes steps 1–6 as a delivery-free application boundary. The CLI renders and delivers the returned document, while the Rivus adapter renders it as Markdown and forces dry-run mode. Rivus `0.3.x` promotes the first Markdown heading into a proactive Feishu card header and owns the card delivery. Both entrypoints therefore share one collection and ranking implementation without importing Feishu concerns into this repository.
 
 For scheduled daily summaries, prefer explicit calendar-day mode:
 
