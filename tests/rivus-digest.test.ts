@@ -5,7 +5,7 @@ import { generateRivusDigest } from "../src/rivus-digest.js";
 describe("Rivus digest Tool adapter", () => {
   it("maps a scheduled occurrence to the configured local day without delivery or state writes", async () => {
     const buildDigestDocument = vi.fn(async (config) => ({
-      generatedAt: "2026-07-17T02:00:00.000Z",
+      generatedAt: "2026-07-16T18:00:00.000Z",
       username: config.username,
       sourceMode: "rss" as const,
       windowLabel: `${config.day} ${config.timezoneOffset}`,
@@ -31,8 +31,8 @@ describe("Rivus digest Tool adapter", () => {
     );
     expect(result).toEqual({
       candidateCount: 0,
-      generatedAt: "2026-07-17T02:00:00.000Z",
-      markdown: expect.stringContaining("今天没有筛出高价值"),
+      generatedAt: "2026-07-16T18:00:00.000Z",
+      markdown: expect.stringMatching(/^# 每日技术情报 · 2026-07-17\n/u),
       windowLabel: "2026-07-17 +08:00",
     });
   });

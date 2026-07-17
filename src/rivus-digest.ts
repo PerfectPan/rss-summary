@@ -50,7 +50,7 @@ export async function generateRivusDigest(
   return {
     candidateCount: document.candidates.length,
     generatedAt: document.generatedAt,
-    markdown: renderMarkdownDigest(document),
+    markdown: renderMarkdownDigest(day ? { ...document, displayDate: day } : document),
     ...(document.windowLabel ? { windowLabel: document.windowLabel } : {}),
   };
 }
