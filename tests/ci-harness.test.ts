@@ -8,7 +8,7 @@ describe("CI harness", () => {
       scripts?: Record<string, string>;
     };
 
-    expect(pkg.scripts?.verify).toBe("pnpm test && pnpm typecheck && pnpm build");
+    expect(pkg.scripts?.verify).toBe("pnpm test && pnpm typecheck && pnpm build && pnpm package:check");
   });
 
   it("runs the verify command on pull requests and main pushes", () => {

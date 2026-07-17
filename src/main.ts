@@ -1,15 +1,31 @@
-import { loadConfig } from "./config.js";
+import { loadConfig, type AppConfig } from "./config.js";
 import { buildCandidateProjects, normalizeEvent, type ActivityCard, type RepositoryMetadata } from "./domain.js";
 import { isWithinEventWindow, resolveEventWindow } from "./event-window.js";
 import { GitHubClient } from "./github.js";
 import { GitHubHomeClient } from "./github-home.js";
 import { createNotifier } from "./notifier.js";
-import { renderJsonDigest, renderMarkdownDigest } from "./render.js";
+import { renderJsonDigest, renderMarkdownDigest, type DigestDocument } from "./render.js";
 import { RssClient } from "./rss.js";
 import { filterNewCandidates, loadFeedState, markCandidatesSeen, saveFeedState } from "./state.js";
 
 export async function run(): Promise<void> {
   const config = loadConfig();
+  const { document, state } = await collectDigest(config);
+  const output = config.outputFormat === "json" ? renderJsonDigest(document) : renderMarkdownDigest(document);
+
+  await createNotifier({ webhookUrl: config.webhookUrl }).send(output);
+
+  if (config.onlyNew && !config.dryRun) {
+    markCandidatesSeen(state, document.candidates, document.generatedAt);
+    saveFeedState(config.stateFile, state);
+  }
+}
+
+export async function buildDigestDocument(config: AppConfig): Promise<DigestDocument> {
+  return (await collectDigest(config)).document;
+}
+
+async function collectDigest(config: AppConfig) {
   const client = new GitHubClient({ token: config.token });
   const rssClient = new RssClient();
 
@@ -46,25 +62,18 @@ export async function run(): Promise<void> {
   const state = loadFeedState(config.stateFile);
   const candidates = config.onlyNew ? filterNewCandidates(allCandidates, state) : allCandidates;
 
-  const document = {
+  const document: DigestDocument = {
     generatedAt: new Date().toISOString(),
     username: config.username,
-    sourceMode: config.rssOnly ? ("rss" as const) : ("mixed" as const),
+    sourceMode: config.rssOnly ? "rss" : "mixed",
     windowLabel: eventWindow.label,
     candidates,
   };
-  const output = config.outputFormat === "json" ? renderJsonDigest(document) : renderMarkdownDigest(document);
-
-  await createNotifier({ webhookUrl: config.webhookUrl }).send(output);
-
-  if (config.onlyNew && !config.dryRun) {
-    markCandidatesSeen(state, candidates, document.generatedAt);
-    saveFeedState(config.stateFile, state);
-  }
+  return { document, state };
 }
 
 async function fetchGithubEvents(
-  config: ReturnType<typeof loadConfig>,
+  config: AppConfig,
   client: GitHubClient,
 ): Promise<ActivityCard[]> {
   if (config.githubFeedSource === "home") {

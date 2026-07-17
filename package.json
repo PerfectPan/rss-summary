@@ -4,18 +4,34 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.7.0",
+  "engines": {
+    "node": "^24.11.0"
+  },
+  "files": [
+    "dist",
+    "docs/rivus-plugin.md",
+    "README.md"
+  ],
   "bin": {
     "rss-summary": "./dist/cli.js"
+  },
+  "exports": {
+    "./rivus-plugin": {
+      "import": "./dist/rivus-plugin.js",
+      "types": "./dist/rivus-plugin.d.ts"
+    }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "digest": "tsx src/main.ts",
     "feeds": "tsx src/feeds.ts",
+    "package:check": "node scripts/check-package.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "verify": "pnpm test && pnpm typecheck && pnpm build"
+    "verify": "pnpm test && pnpm typecheck && pnpm build && pnpm package:check"
   },
   "devDependencies": {
+    "@rivus/agent": "0.1.1",
     "@types/node": "^24.0.0",
     "tsx": "^4.20.0",
     "typescript": "^5.8.0",
@@ -25,5 +41,8 @@
     "cheerio": "^1.2.0",
     "fast-xml-parser": "^5.9.3",
     "playwright": "^1.61.1"
+  },
+  "peerDependencies": {
+    "@rivus/agent": ">=0.1.1 <0.3.0"
   }
 }
