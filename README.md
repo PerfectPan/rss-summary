@@ -148,6 +148,29 @@ Install Node.js 24+, clone or copy this repository, run `pnpm install && pnpm bu
 
 Use the browser login from the account whose Home Feed should be summarized. The machine identity does not matter; the saved GitHub web session does.
 
+## Rivus Agent Plugin
+
+This repository exports `rss-summary/rivus-plugin`, a real external Rivus Plugin with one Agent profile, one read-only Tool, and one daily Automation template:
+
+- profile: `rss-digest`
+- Tool: `rss-summary/generate-digest`
+- Automation template: `rss-summary/daily-digest`
+
+The Tool reuses the existing collection, ranking, state filtering, and Markdown rendering workflow. It always runs in dry-run mode, so it neither sends the generic webhook nor marks candidates as seen. The Automation passes its exact scheduled occurrence into the Tool, which converts it to the local calendar day using `FEED_TIMEZONE_OFFSET`.
+
+Build this checkout before installing it into a Rivus deployment project:
+
+```bash
+cd /path/to/rss-summary
+pnpm install
+pnpm build
+
+cd /path/to/rivus-project
+npm install /path/to/rss-summary
+```
+
+Then reference `rss-summary/rivus-plugin` from the deployment manifest. Keep `RSS_FEEDS_FILE` and `GITHUB_HOME_STORAGE_STATE` as absolute paths when those files remain in this checkout. See [docs/rivus-plugin.md](docs/rivus-plugin.md) for the manifest bindings, environment contract, and verification steps.
+
 ## Development workflow
 
 Run the same local harness as GitHub Actions before opening or merging a change:
@@ -173,6 +196,8 @@ For the full architecture, data flow, and extension points, see [docs/architectu
 - `src/state.ts`: stores seen event IDs in `.state/feed-state.json` so daily runs can focus on new items.
 - `src/render.ts`: renders Markdown sections for project discovery, RSS articles, project activity, and releases.
 - `src/notifier.ts`: prints to stdout and optionally POSTs `{ "text": markdown }` to a generic webhook.
+- `src/rivus-digest.ts`: maps Rivus Tool input to the existing read-only digest workflow.
+- `src/rivus-plugin.ts`: registers the external Rivus profile, Tool, and daily Automation template.
 
 `feeds.json` is tracked as the shared RSS subscription list. `.state/` remains gitignored because it contains local run state.
 

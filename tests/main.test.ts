@@ -1,4 +1,10 @@
+import { existsSync } from "node:fs";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { loadConfig } from "../src/config.js";
 
 const sentOutputs: string[] = [];
 
@@ -75,5 +81,38 @@ describe("digest source isolation", () => {
     expect(sentOutputs[0]).toContain("RSS survives GitHub outage");
 
     errorSpy.mockRestore();
+  });
+
+  it("builds a document without delivering or writing seen state", async () => {
+    const root = await mkdtemp(join(tmpdir(), "rss-summary-rivus-"));
+    const stateFile = join(root, "feed-state.json");
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const config = loadConfig(
+        {
+          GITHUB_USERNAME: "PerfectPan",
+          RSS_FEEDS: JSON.stringify([{ name: "Example Feed", url: "https://example.com/feed", tags: ["ai"] }]),
+        },
+        [
+          "--only-new",
+          "--since",
+          "2026-07-14T00:00:00+08:00",
+          "--until",
+          "2026-07-15T00:00:00+08:00",
+          "--state-file",
+          stateFile,
+        ],
+      );
+      const { buildDigestDocument } = await import("../src/main.js");
+
+      const document = await buildDigestDocument(config);
+
+      expect(document.candidates).toHaveLength(1);
+      expect(sentOutputs).toHaveLength(0);
+      expect(existsSync(stateFile)).toBe(false);
+    } finally {
+      errorSpy.mockRestore();
+      await rm(root, { force: true, recursive: true });
+    }
   });
 });

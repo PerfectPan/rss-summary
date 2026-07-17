@@ -1,6 +1,6 @@
 # Architecture
 
-`rss-summary` is a local TypeScript CLI plus a small set of portable Codex skills. It is not a daemon or hosted service. Scheduling is handled outside the repo by cron, launchd, systemd, or Codex automation.
+`rss-summary` is a local TypeScript CLI, a small set of portable Codex skills, and an external Rivus Plugin. It is not a daemon or hosted service. Scheduling is handled outside the repo by cron, launchd, systemd, Codex automation, or a Rivus deployment daemon.
 
 The runtime goal is simple: collect GitHub Home activity and RSS/Atom items, normalize them into one activity model, rank the useful projects/articles, and emit a digest that can be read directly or sent to a webhook.
 
@@ -9,6 +9,9 @@ The runtime goal is simple: collect GitHub Home activity and RSS/Atom items, nor
 ```mermaid
 flowchart TD
   Trigger["cron / launchd / Codex skill"] --> CLI["rss-summary bin"]
+  RivusSchedule["Rivus Automation"] --> Plugin["src/rivus-plugin.ts"]
+  Plugin --> Adapter["src/rivus-digest.ts read-only adapter"]
+  Adapter --> Digest
   CLI --> Digest["src/main.ts digest workflow"]
   CLI --> FeedsCommand["src/feeds.ts feed management"]
 
@@ -38,6 +41,7 @@ flowchart TD
 - Domain layer: `src/domain.ts` owns normalization of GitHub events, high-signal filtering, scoring, category selection, and candidate grouping. It should not perform network or filesystem IO.
 - Local persistence: `src/feed-store.ts` manages RSS subscriptions. `src/state.ts` manages local digest state.
 - Presentation and delivery: `src/render.ts` formats Markdown/JSON. `src/notifier.ts` prints to stdout and optionally posts a generic webhook payload.
+- Rivus boundary: `src/rivus-plugin.ts` registers one profile, observe-only Tool, and daily Automation template. `src/rivus-digest.ts` validates Tool input and invokes the application workflow in dry-run mode; it does not own feed collection or ranking rules.
 - Skills: `skills/*` describe how Codex should configure, run, research, or manage feeds using this repo.
 
 ## Domain Model
@@ -76,6 +80,8 @@ Current high-signal event types:
 7. `src/render.ts` emits Markdown or JSON.
 8. `src/notifier.ts` writes to stdout and optionally sends `{ "text": markdown }` to `NOTIFY_WEBHOOK_URL`.
 9. If `--only-new` is set and the run is not `--dry-run`, `.state/feed-state.json` is updated with seen event IDs.
+
+`buildDigestDocument` exposes steps 1–6 as a delivery-free application boundary. The CLI renders and delivers the returned document, while the Rivus adapter renders it as Markdown and forces dry-run mode. Both entrypoints therefore share one collection and ranking implementation.
 
 For scheduled daily summaries, prefer explicit calendar-day mode:
 
@@ -130,6 +136,7 @@ Keep `GH_FEED_TOKEN`, `.env`, and `.state/` out of git. `feeds.json` is intentio
 - Tune usefulness: adjust interests, base scores, category rules, or reason generation in `src/domain.ts`.
 - Add deep research caching: connect `state.researched` to the research skill or add a dedicated CLI command that records research decisions.
 - Add delivery channels: extend `src/notifier.ts` or add notifier adapters for Feishu, Slack, Telegram, email, or other targets.
+- Add Rivus capabilities: register narrow Tools in `src/rivus-plugin.ts` and delegate them to application-level functions instead of copying source or ranking logic into the Plugin.
 - Add content deduplication: cluster RSS/article candidates by canonical URL, title, or content fingerprint before scoring.
 
 ## Current Gaps
@@ -139,4 +146,4 @@ Keep `GH_FEED_TOKEN`, `.env`, and `.state/` out of git. `feeds.json` is intentio
 - `researched` state exists in the schema but is not yet used by the CLI.
 - Webhook delivery is generic only.
 - RSS deduplication is based on generated item IDs, not content similarity.
-- Scheduling is external; there is no built-in daemon.
+- This repository has no built-in daemon; a consuming Rivus deployment can host the exported Automation.
