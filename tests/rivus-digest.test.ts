@@ -32,9 +32,33 @@ describe("Rivus digest Tool adapter", () => {
     expect(result).toEqual({
       candidateCount: 0,
       generatedAt: "2026-07-16T18:00:00.000Z",
-      markdown: expect.stringMatching(/^# 每日技术情报 · 2026-07-17\n/u),
+      markdown: expect.stringMatching(/^# 技术订阅日报 · 2026-07-17\n/u),
       windowLabel: "2026-07-17 +08:00",
     });
+  });
+
+  it("maps the morning Automation occurrence to the previous local calendar day", async () => {
+    const buildDigestDocument = vi.fn(async (config) => ({
+      generatedAt: "2026-07-29T01:00:00.000Z",
+      username: config.username,
+      windowLabel: `${config.day} ${config.timezoneOffset}`,
+      candidates: [],
+    }));
+
+    const result = await generateRivusDigest(
+      {
+        occurrence: "2026-07-29T01:00:00.000Z",
+        onlyNew: true,
+        window: "previous-calendar-day",
+      },
+      {
+        buildDigestDocument,
+        env: { FEED_TIMEZONE_OFFSET: "+08:00", GITHUB_USERNAME: "PerfectPan" },
+      },
+    );
+
+    expect(buildDigestDocument).toHaveBeenCalledWith(expect.objectContaining({ day: "2026-07-28" }));
+    expect(result.markdown).toMatch(/^# 技术订阅日报 · 2026-07-28\n/u);
   });
 
   it("rejects ambiguous or malformed date input before running the digest", async () => {

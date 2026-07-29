@@ -1,8 +1,8 @@
 # rss-summary
 
-Daily GitHub Home Feed and RSS digest for `PerfectPan`.
+Scheduled GitHub Home, RSS, and authoritative web-news briefs for `PerfectPan`.
 
-The tool reads the GitHub Home feed plus optional RSS/Atom feeds, enriches interesting repositories and pull requests, ranks projects/articles by usefulness, then outputs a short Markdown digest. It is read-only against GitHub and RSS sources unless you wire a webhook notification endpoint.
+The tool reads the GitHub Home feed plus optional RSS/Atom feeds, enriches interesting repositories and pull requests, ranks projects/articles by usefulness, then outputs a short Markdown digest. Its Rivus Plugin also builds bounded noon and evening briefs from Doubao web search. Source collection is read-only unless you wire a webhook notification endpoint for the CLI path.
 
 ## GitHub Home Exact Mode
 
@@ -150,15 +150,20 @@ Use the browser login from the account whose Home Feed should be summarized. The
 
 ## Rivus Agent Plugin
 
-This repository exports `rss-summary/rivus-plugin`, a real external Rivus Plugin with one Agent profile, one read-only Tool, and one daily Automation template:
+This repository exports `rss-summary/rivus-plugin`, a real external Rivus Plugin with one Agent profile, two read-only Tools, and three production Automation templates:
 
 - profile: `rss-digest`
-- Tool: `rss-summary/generate-digest`
-- Automation template: `rss-summary/daily-digest`
+- feed Tool: `rss-summary/generate-digest`
+- news Tool: `rss-summary/generate-news-brief`
+- morning template: `rss-summary/morning-feed-digest`
+- noon template: `rss-summary/noon-news-brief`
+- evening template: `rss-summary/evening-news-brief`
 
-The Tool reuses the existing collection, ranking, state filtering, and Markdown rendering workflow. It always runs in dry-run mode, so it neither sends the generic webhook nor marks candidates as seen. The Automation passes its exact scheduled occurrence into the Tool, which converts it to the local calendar day using `FEED_TIMEZONE_OFFSET`.
+The 09:00 morning template summarizes the previous local calendar day's GitHub Home and RSS items. The 12:30 and 19:00 templates search the current day's technology and political news. Noon covers local 00:00–12:30; evening covers local 12:30 through its occurrence, so the scheduled windows do not overlap. Political results require Doubao's very-authoritative source level; technology results accept authoritative sources. The packaged policy caps each topic at three stories and collapses near-identical event headlines reported through different publisher URLs. News cards link from each headline and keep every item to a compact two-sentence summary plus source and time. Topics and quotas live in the packaged `news-topics.json`.
 
-With `@rivus/agent@0.3.x`, proactive Feishu delivery renders that Markdown as one interactive card. `每日技术情报 · YYYY-MM-DD` becomes the blue card header; the source summary, ranked sections, and item links remain in the Markdown body.
+Both Tools are observe-only. The feed Tool runs in dry-run mode, so it neither sends the generic webhook nor marks candidates as seen. Rivus owns scheduling and Feishu delivery for all three briefs.
+
+With `@rivus/agent@0.3.x`, proactive Feishu delivery renders that Markdown as one interactive card. `技术订阅日报 · YYYY-MM-DD` becomes the blue card header; the source summary, ranked sections, and item links remain in the Markdown body.
 
 Build this checkout before installing it into a Rivus deployment project:
 
@@ -198,10 +203,14 @@ For the full architecture, data flow, and extension points, see [docs/architectu
 - `src/state.ts`: stores seen event IDs in `.state/feed-state.json` so daily runs can focus on new items.
 - `src/render.ts`: renders Markdown sections for project discovery, RSS articles, project activity, and releases.
 - `src/notifier.ts`: prints to stdout and optionally POSTs `{ "text": markdown }` to a generic webhook.
-- `src/rivus-digest.ts`: maps Rivus Tool input to the existing read-only digest workflow.
-- `src/rivus-plugin.ts`: registers the external Rivus profile, Tool, and daily Automation template.
+- `src/rivus-digest.ts`: maps Rivus Tool input to the existing read-only feed workflow.
+- `src/doubao-search.ts`: calls the Doubao web-search API with exact-day and source-authority filters.
+- `src/news-domain.ts`: validates time/source policy, canonicalizes URLs, deduplicates, ranks, and applies topic quotas.
+- `src/news-brief.ts`: orchestrates bounded noon/evening search windows and partial-failure handling.
+- `src/news-render.ts`: renders mobile-friendly noon/evening Feishu Markdown.
+- `src/rivus-plugin.ts`: registers the external Rivus profile, two Tools, and Automation templates.
 
-`feeds.json` is tracked as the shared RSS subscription list. `.state/` remains gitignored because it contains local run state.
+`feeds.json` is tracked as the shared RSS subscription list. `news-topics.json` is tracked as the web-news topic policy. `.state/` remains gitignored because it contains local run state.
 
 ## Research notes
 

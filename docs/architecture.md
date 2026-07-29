@@ -2,7 +2,7 @@
 
 `rss-summary` is a local TypeScript CLI, a small set of portable Codex skills, and an external Rivus Plugin. It is not a daemon or hosted service. Scheduling is handled outside the repo by cron, launchd, systemd, Codex automation, or a Rivus deployment daemon.
 
-The runtime goal is simple: collect GitHub Home activity and RSS/Atom items, normalize them into one activity model, rank the useful projects/articles, and emit a digest that can be read directly or sent to a webhook.
+The runtime goal is simple: produce a previous-day technical subscription digest from GitHub Home and RSS, plus bounded noon/evening headline briefs from authoritative web search. Collection and ranking stay independent from Rivus scheduling and Feishu delivery.
 
 ## High-Level Flow
 
@@ -10,8 +10,9 @@ The runtime goal is simple: collect GitHub Home activity and RSS/Atom items, nor
 flowchart TD
   Trigger["cron / launchd / Codex skill"] --> CLI["rss-summary bin"]
   RivusSchedule["Rivus Automation"] --> Plugin["src/rivus-plugin.ts"]
-  Plugin --> Adapter["src/rivus-digest.ts read-only adapter"]
-  Adapter --> Digest
+  Plugin --> FeedAdapter["src/rivus-digest.ts feed adapter"]
+  Plugin --> NewsBrief["src/news-brief.ts news application service"]
+  FeedAdapter --> Digest
   CLI --> Digest["src/main.ts digest workflow"]
   CLI --> FeedsCommand["src/feeds.ts feed management"]
 
@@ -30,6 +31,11 @@ flowchart TD
   Domain --> Render["src/render.ts Markdown / JSON"]
   Render --> Notify["src/notifier.ts stdout / webhook"]
 
+  Topics["news-topics.json"] --> NewsBrief
+  NewsBrief --> Doubao["src/doubao-search.ts Doubao web search"]
+  Doubao --> NewsDomain["src/news-domain.ts validate + dedupe + rank"]
+  NewsDomain --> NewsRender["src/news-render.ts mobile Markdown"]
+
   FeedsCommand --> FeedStore["src/feed-store.ts feeds.json"]
 ```
 
@@ -37,11 +43,12 @@ flowchart TD
 
 - CLI layer: `src/cli.ts` is the package `bin` entrypoint. It routes `rss-summary digest` to the digest workflow and `rss-summary feeds ...` to feed management.
 - Application workflow: `src/main.ts` owns IO orchestration. It loads config, fetches sources, enriches GitHub repos/PRs, applies state, renders output, and sends notifications.
-- Source adapters: `src/github-home.ts`, `src/github.ts`, and `src/rss.ts` fetch external data and convert source-specific payloads into the shared domain shape. `src/github-home.ts` is the exact GitHub Home source; it first tries GitHub's internal conduit Turbo frame and falls back to rendered browser parsing. `src/github.ts` is API fallback plus enrichment.
+- Source adapters: `src/github-home.ts`, `src/github.ts`, and `src/rss.ts` feed the technical digest. `src/doubao-search.ts` is the bounded web-news adapter; it requests an exact calendar day, query rewrite, URLs, and the required source-authority level.
 - Domain layer: `src/domain.ts` owns normalization of GitHub events, high-signal filtering, scoring, category selection, and candidate grouping. It should not perform network or filesystem IO.
 - Local persistence: `src/feed-store.ts` manages RSS subscriptions. `src/state.ts` manages local digest state.
 - Presentation and delivery: `src/render.ts` formats Markdown/JSON. `src/notifier.ts` prints to stdout and optionally posts a generic webhook payload.
-- Rivus boundary: `src/rivus-plugin.ts` registers one profile, observe-only Tool, and daily Automation template. `src/rivus-digest.ts` validates Tool input and invokes the application workflow in dry-run mode; it does not own feed collection or ranking rules.
+- News application/domain: `src/news-brief.ts` defines noon/evening windows and orchestrates queries. `src/news-domain.ts` independently rechecks publication time and source authority, canonicalizes URLs, merges duplicate hits, ranks stories, and applies quotas. `src/news-render.ts` owns the mobile Markdown layout.
+- Rivus boundary: `src/rivus-plugin.ts` registers one profile, two observe-only Tools, and the morning/noon/evening templates. `src/rivus-digest.ts` and `src/news-brief.ts` validate Tool input and call their application workflows; neither owns scheduling or Feishu delivery.
 - Skills: `skills/*` describe how Codex should configure, run, research, or manage feeds using this repo.
 
 ## Domain Model

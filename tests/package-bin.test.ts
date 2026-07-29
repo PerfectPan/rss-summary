@@ -21,11 +21,12 @@ describe("package CLI metadata", () => {
     expect(pkg.exports?.["./rivus-plugin"]).toEqual({
       import: "./dist/rivus-plugin.js",
       types: "./dist/rivus-plugin.d.ts",
+      default: "./dist/rivus-plugin.js",
     });
     expect(pkg.peerDependencies?.["@rivus/agent"]).toBe(">=0.1.1 <0.4.0");
     expect(pkg.devDependencies?.["@rivus/agent"]).toBe("0.1.1");
     expect(pkg.engines?.node).toBe("^24.11.0");
-    expect(pkg.files).toEqual(["dist", "docs/rivus-plugin.md", "README.md"]);
+    expect(pkg.files).toEqual(["dist", "docs/rivus-plugin.md", "news-topics.json", "README.md"]);
     expect(pkg.scripts?.build).toBe("tsc -p tsconfig.build.json");
     expect(pkg.scripts?.["package:check"]).toBe("node scripts/check-package.mjs");
     expect(pkg.scripts?.verify).toBe("pnpm test && pnpm typecheck && pnpm build && pnpm package:check");

@@ -11,12 +11,16 @@ import { describe, expect, it, vi } from "vitest";
 import rssSummaryPlugin, {
   createRssSummaryPlugin,
   RSS_SUMMARY_AUTOMATION_ID,
+  RSS_SUMMARY_EVENING_AUTOMATION_ID,
+  RSS_SUMMARY_MORNING_AUTOMATION_ID,
+  RSS_SUMMARY_NEWS_TOOL_ID,
+  RSS_SUMMARY_NOON_AUTOMATION_ID,
   RSS_SUMMARY_PROFILE_ID,
   RSS_SUMMARY_TOOL_ID,
 } from "../src/rivus-plugin.js";
 
 describe("rss-summary Rivus Plugin", () => {
-  it("conforms as an external Plugin with one narrow read-only Tool", async () => {
+  it("conforms as an external Plugin with two narrow read-only Tools", async () => {
     await expect(
       assertRivusPluginConforms({
         deployment: {
@@ -25,14 +29,14 @@ describe("rss-summary Rivus Plugin", () => {
           pluginId: "rss-summary",
           profileId: RSS_SUMMARY_PROFILE_ID,
           skills: { allow: [] },
-          tools: { allow: [RSS_SUMMARY_TOOL_ID] },
+          tools: { allow: [RSS_SUMMARY_TOOL_ID, RSS_SUMMARY_NEWS_TOOL_ID] },
         },
         plugin: rssSummaryPlugin,
       }),
     ).resolves.toMatchObject({
       pluginId: "rss-summary",
       profileId: RSS_SUMMARY_PROFILE_ID,
-      toolIds: [RSS_SUMMARY_TOOL_ID],
+      toolIds: [RSS_SUMMARY_NEWS_TOOL_ID, RSS_SUMMARY_TOOL_ID].sort(),
     });
   });
 
@@ -44,8 +48,9 @@ describe("rss-summary Rivus Plugin", () => {
       windowLabel: "2026-07-17 +08:00",
     }));
     const registrations = register(createRssSummaryPlugin({ generateDigest }));
+    const tool = registrations.tools.get(RSS_SUMMARY_TOOL_ID)!;
 
-    const result = await registrations.tool.createExecutor({
+    const result = await tool.createExecutor({
       toolId: RSS_SUMMARY_TOOL_ID,
       toolVersion: "1.0.0",
     }).execute(
@@ -55,26 +60,90 @@ describe("rss-summary Rivus Plugin", () => {
 
     expect(generateDigest).toHaveBeenCalledWith({ day: "2026-07-17", onlyNew: true });
     expect(result).toMatchObject({ candidateCount: 1, markdown: "# Feed Digest\n" });
-    expect(registrations.tool.risk).toBe("observe");
+    expect(tool.risk).toBe("observe");
   });
 
-  it("registers a daily Automation that passes its exact occurrence to the Tool", () => {
-    const registrations = register(rssSummaryPlugin);
-    const input = registrations.automation.createInput({ occurrence: "2026-07-17T02:00:00.000Z" });
+  it("delegates news Tool execution to the bounded Doubao search adapter", async () => {
+    const generateNewsBrief = vi.fn(async () => ({
+      day: "2026-07-29",
+      edition: "noon" as const,
+      generatedAt: "2026-07-29T04:30:00.000Z",
+      itemCount: 2,
+      markdown: "# 午间热点 · 2026-07-29\n",
+      warnings: [],
+      windowLabel: "00:00–12:30",
+    }));
+    const registrations = register(createRssSummaryPlugin({ generateNewsBrief }));
+    const tool = registrations.tools.get(RSS_SUMMARY_NEWS_TOOL_ID)!;
 
-    expect(registrations.profile.tools.allow).toEqual([RSS_SUMMARY_TOOL_ID]);
-    expect(registrations.automation.id).toBe(RSS_SUMMARY_AUTOMATION_ID);
-    expect(registrations.automation.requestedToolIds).toEqual([RSS_SUMMARY_TOOL_ID]);
-    expect(input.text).toContain(RSS_SUMMARY_TOOL_ID);
-    expect(input.text).toContain('"occurrence":"2026-07-17T02:00:00.000Z"');
-    expect(input.text).toContain("原样返回");
+    const result = await tool.createExecutor({
+      toolId: RSS_SUMMARY_NEWS_TOOL_ID,
+      toolVersion: "1.0.0",
+    }).execute(
+      { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
+      executionContext(RSS_SUMMARY_NEWS_TOOL_ID),
+    );
+
+    expect(generateNewsBrief).toHaveBeenCalledWith({
+      edition: "noon",
+      occurrence: "2026-07-29T04:30:00.000Z",
+    });
+    expect(result).toMatchObject({ itemCount: 2, markdown: "# 午间热点 · 2026-07-29\n" });
+    expect(tool.risk).toBe("observe");
+  });
+
+  it("uses the Node process environment when the Host invokes the packaged news Tool", async () => {
+    vi.stubEnv("DOUBAO_SEARCH_API_KEY", "runtime-key");
+    vi.stubEnv("FEED_TIMEZONE_OFFSET", "+08:00");
+    const fetch = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) =>
+      new Response(JSON.stringify({ ResponseMetadata: {}, Result: { WebResults: [] } }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetch);
+
+    try {
+      const registrations = register(rssSummaryPlugin);
+      const tool = registrations.tools.get(RSS_SUMMARY_NEWS_TOOL_ID)!;
+      const result = await tool.createExecutor({
+        toolId: RSS_SUMMARY_NEWS_TOOL_ID,
+        toolVersion: "1.0.0",
+      }).execute(
+        { edition: "evening", occurrence: "2026-07-29T11:00:00.000Z" },
+        executionContext(RSS_SUMMARY_NEWS_TOOL_ID),
+      );
+
+      expect(result).toMatchObject({ edition: "evening", itemCount: 0 });
+      expect(fetch).toHaveBeenCalledTimes(6);
+      expect(fetch.mock.calls[0]?.[1]?.headers).toMatchObject({ Authorization: "Bearer runtime-key" });
+    } finally {
+      vi.unstubAllEnvs();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("registers morning, noon, and evening Automations with exact Tool grants", () => {
+    const registrations = register(rssSummaryPlugin);
+    const occurrence = "2026-07-29T04:30:00.000Z";
+    const legacy = registrations.automations.get(RSS_SUMMARY_AUTOMATION_ID)!;
+    const morning = registrations.automations.get(RSS_SUMMARY_MORNING_AUTOMATION_ID)!;
+    const noon = registrations.automations.get(RSS_SUMMARY_NOON_AUTOMATION_ID)!;
+    const evening = registrations.automations.get(RSS_SUMMARY_EVENING_AUTOMATION_ID)!;
+
+    expect(registrations.profile.tools.allow).toEqual([RSS_SUMMARY_TOOL_ID, RSS_SUMMARY_NEWS_TOOL_ID]);
+    expect(legacy.requestedToolIds).toEqual([RSS_SUMMARY_TOOL_ID]);
+    expect(morning.requestedToolIds).toEqual([RSS_SUMMARY_TOOL_ID]);
+    expect(noon.requestedToolIds).toEqual([RSS_SUMMARY_NEWS_TOOL_ID]);
+    expect(evening.requestedToolIds).toEqual([RSS_SUMMARY_NEWS_TOOL_ID]);
+    expect(morning.createInput({ occurrence }).text).toContain('"window":"previous-calendar-day"');
+    expect(noon.createInput({ occurrence }).text).toContain('"edition":"noon"');
+    expect(evening.createInput({ occurrence }).text).toContain('"edition":"evening"');
+    expect(noon.createInput({ occurrence }).text).toContain("原样返回");
   });
 });
 
 function register(plugin: { register(registry: RivusPluginRegistry): void }): {
-  automation: RivusAutomationTemplate;
+  automations: Map<string, RivusAutomationTemplate>;
   profile: RivusAgentProfile;
-  tool: RivusToolDescriptor;
+  tools: Map<string, RivusToolDescriptor>;
 } {
   const profiles: RivusAgentProfile[] = [];
   const tools: RivusToolDescriptor[] = [];
@@ -86,10 +155,14 @@ function register(plugin: { register(registry: RivusPluginRegistry): void }): {
     registerTool: (tool) => tools.push(tool),
   });
   if (!profiles[0] || !tools[0] || !automations[0]) throw new Error("Plugin registration is incomplete");
-  return { automation: automations[0], profile: profiles[0], tool: tools[0] };
+  return {
+    automations: new Map(automations.map((automation) => [automation.id, automation])),
+    profile: profiles[0],
+    tools: new Map(tools.map((tool) => [tool.id, tool])),
+  };
 }
 
-function executionContext(): RivusToolExecutionContext {
+function executionContext(toolId = RSS_SUMMARY_TOOL_ID): RivusToolExecutionContext {
   return {
     agentId: "rss-digest",
     callId: "call-1",
@@ -97,7 +170,7 @@ function executionContext(): RivusToolExecutionContext {
     policyEpoch: 1,
     runId: "run-1",
     sessionKey: "local:rss-digest:test",
-    toolId: RSS_SUMMARY_TOOL_ID,
+    toolId,
     toolVersion: "1.0.0",
   };
 }

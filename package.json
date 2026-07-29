@@ -10,6 +10,7 @@
   "files": [
     "dist",
     "docs/rivus-plugin.md",
+    "news-topics.json",
     "README.md"
   ],
   "bin": {
@@ -18,7 +19,8 @@
   "exports": {
     "./rivus-plugin": {
       "import": "./dist/rivus-plugin.js",
-      "types": "./dist/rivus-plugin.d.ts"
+      "types": "./dist/rivus-plugin.d.ts",
+      "default": "./dist/rivus-plugin.js"
     }
   },
   "scripts": {
