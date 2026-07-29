@@ -29,8 +29,10 @@ try {
     [
       "--input-type=module",
       "--eval",
-      `import plugin from "rss-summary/rivus-plugin";
+      `import { createRequire } from "node:module";
+import plugin from "rss-summary/rivus-plugin";
 import { assertRivusPluginConforms } from "@rivus/agent/testing";
+createRequire(import.meta.url).resolve("rss-summary/rivus-plugin");
 const report = await assertRivusPluginConforms({
   deployment: {
     agentId: "rss-digest",
