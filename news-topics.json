@@ -1,0 +1,26 @@
+[
+  {
+    "id": "technology",
+    "label": "科技新闻",
+    "enabled": true,
+    "sourcePolicy": "authoritative",
+    "maxItems": 5,
+    "queries": [
+      "AI Agent 大模型 Coding Agent 重要发布",
+      "开发工具 开源项目 TypeScript JavaScript Rust 重大更新",
+      "芯片 半导体 机器人 科技重大进展",
+      "消费电子 网络安全 科技行业重要新闻"
+    ]
+  },
+  {
+    "id": "politics",
+    "label": "政治新闻",
+    "enabled": true,
+    "sourcePolicy": "official",
+    "maxItems": 5,
+    "queries": [
+      "中国重要政策与政治新闻",
+      "国际政治 外交 重大事件 官方消息"
+    ]
+  }
+]

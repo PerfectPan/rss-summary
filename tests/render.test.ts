@@ -63,11 +63,12 @@ describe("markdown digest renderer", () => {
       ],
     });
 
-    expect(markdown).toContain("# 每日技术情报 · 2026-06-22");
-    expect(markdown).toContain("## 值得看");
-    expect(markdown).toContain("[BuilderIO/skills](https://github.com/BuilderIO/skills)");
-    expect(markdown).toContain("## RSS 文章");
-    expect(markdown).toContain("[Deno 2.4](https://deno.com/blog/v2.4)");
+    expect(markdown).toContain("# 技术订阅日报 · 2026-06-22");
+    expect(markdown).toContain("**🔥 值得看**");
+    expect(markdown).toContain("**1. BuilderIO/skills**");
+    expect(markdown).toContain("- [查看原文](https://github.com/BuilderIO/skills)");
+    expect(markdown).toContain("**📚 RSS 文章**");
+    expect(markdown).toContain("**1. Deno 2.4**");
     expect(markdown).toContain("fi3ework");
     expect(markdown).toContain("Skills for coding agents");
   });
@@ -119,8 +120,8 @@ describe("markdown digest renderer", () => {
       ],
     });
 
-    expect(markdown).toContain("## RSS 文章");
-    expect(markdown).toContain("[Deno 2.4](https://deno.com/blog/v2.4)");
+    expect(markdown).toContain("**📚 RSS 文章**");
+    expect(markdown).toContain("- [查看原文](https://deno.com/blog/v2.4)");
   });
 
   it("renders machine-readable JSON for research skills", () => {
@@ -170,7 +171,7 @@ describe("markdown digest renderer", () => {
       candidates: [],
     });
 
-    expect(markdown).toContain("筛选窗口：2026-06-22 +08:00");
+    expect(markdown).toContain("0 条高信号 · GitHub + RSS · 2026-06-22 +08:00");
   });
 
   it("labels RSS-only output without showing a GitHub account", () => {
@@ -181,7 +182,7 @@ describe("markdown digest renderer", () => {
       candidates: [],
     });
 
-    expect(markdown).toContain("来源模式：RSS only");
+    expect(markdown).toContain("0 条高信号 · RSS");
     expect(markdown).not.toContain("GitHub 账号：PerfectPan");
   });
 });

@@ -2,12 +2,14 @@ import type { AppConfig } from "./config.js";
 import { loadConfig } from "./config.js";
 import { buildDigestDocument } from "./main.js";
 import { renderMarkdownDigest, type DigestDocument } from "./render.js";
+import { calendarDayAtOffset, shiftCalendarDay } from "./scheduled-date.js";
 
 export type RivusDigestInput = {
   day?: string;
   occurrence?: string;
   onlyNew?: boolean;
   rssOnly?: boolean;
+  window?: "previous-calendar-day";
 };
 
 export type RivusDigestResult = {
@@ -33,7 +35,13 @@ export async function generateRivusDigest(
 
   const env = dependencies.env ?? process.env;
   const timezoneOffset = env.FEED_TIMEZONE_OFFSET ?? "+08:00";
-  const day = input.day ?? (input.occurrence ? dayAtOffset(input.occurrence, timezoneOffset) : undefined);
+  if (input.window && !input.occurrence) {
+    throw new Error("window requires occurrence.");
+  }
+  const occurrenceDay = input.occurrence ? calendarDayAtOffset(input.occurrence, timezoneOffset) : undefined;
+  const day = input.day ?? (input.window === "previous-calendar-day" && occurrenceDay
+    ? shiftCalendarDay(occurrenceDay, -1)
+    : occurrenceDay);
   if (day && !/^\d{4}-\d{2}-\d{2}$/u.test(day)) {
     throw new Error("day must use YYYY-MM-DD format.");
   }
@@ -67,6 +75,7 @@ function parseInput(value: unknown): RivusDigestInput {
     occurrence: optionalString(input.occurrence, "occurrence"),
     onlyNew: optionalBoolean(input.onlyNew, "onlyNew"),
     rssOnly: optionalBoolean(input.rssOnly, "rssOnly"),
+    window: optionalWindow(input.window),
   };
 }
 
@@ -82,16 +91,8 @@ function optionalBoolean(value: unknown, name: string): boolean | undefined {
   return value;
 }
 
-function dayAtOffset(occurrence: string, timezoneOffset: string): string {
-  const instant = Date.parse(occurrence);
-  if (!Number.isFinite(instant)) throw new Error("occurrence must be a valid date-time.");
-
-  const match = /^([+-])(\d{2}):(\d{2})$/u.exec(timezoneOffset);
-  if (!match) throw new Error("FEED_TIMEZONE_OFFSET must use +HH:MM or -HH:MM format.");
-  const hours = Number(match[2]);
-  const minutes = Number(match[3]);
-  if (hours > 23 || minutes > 59) throw new Error("FEED_TIMEZONE_OFFSET is outside the valid range.");
-
-  const direction = match[1] === "+" ? 1 : -1;
-  return new Date(instant + direction * (hours * 60 + minutes) * 60_000).toISOString().slice(0, 10);
+function optionalWindow(value: unknown): "previous-calendar-day" | undefined {
+  if (value === undefined) return undefined;
+  if (value !== "previous-calendar-day") throw new Error("window must be previous-calendar-day.");
+  return value;
 }

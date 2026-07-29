@@ -23,6 +23,7 @@ try {
   const installed = join(consumer, "node_modules", "rss-summary");
   requireFile(join(installed, "dist", "rivus-plugin.d.ts"));
   requireFile(join(installed, "docs", "rivus-plugin.md"));
+  requireFile(join(installed, "news-topics.json"));
   run(
     process.execPath,
     [
@@ -37,7 +38,7 @@ const report = await assertRivusPluginConforms({
     pluginId: "rss-summary",
     profileId: "rss-digest",
     skills: { allow: [] },
-    tools: { allow: ["rss-summary/generate-digest"] }
+    tools: { allow: ["rss-summary/generate-digest", "rss-summary/generate-news-brief"] }
   },
   plugin
 });
