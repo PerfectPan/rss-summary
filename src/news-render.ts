@@ -25,8 +25,8 @@ export function renderNewsBrief(document: NewsBriefDocument): string {
   for (const topic of document.topics.filter(({ enabled }) => enabled)) {
     const stories = document.stories.filter(({ selectedTopicId }) => selectedTopicId === topic.id);
     if (stories.length === 0) continue;
-    lines.push(`**${topicIcon(topic.id)} ${topic.label}**`, "");
-    stories.forEach((story, index) => appendStory(lines, story, index + 1, topic.id));
+    lines.push(`**${topicIcon(topic.id)} ${shortTopicLabel(topic.label)} · ${stories.length}**`, "");
+    stories.forEach((story, index) => appendStory(lines, story, index + 1));
   }
 
   if (document.stories.length === 0) {
@@ -38,25 +38,24 @@ export function renderNewsBrief(document: NewsBriefDocument): string {
   return `${lines.join("\n").trim()}\n`;
 }
 
-function appendStory(lines: string[], story: SelectedNewsStory, index: number, topicId: string): void {
-  lines.push(`**${index}. ${story.title}**`);
-  lines.push(`- 发生了什么：${story.summary}`);
-  lines.push(`- 为什么看：${whyItMatters(story)}`);
-  lines.push(`- 来源：${story.siteName} · ${displayTime(story.publishTime)} · ${story.authInfoDescription ?? "已校验来源"}`);
-  lines.push(`- 建议：${topicId === "politics" ? "关注后续官方进展" : "阅读原文"}`);
-  lines.push(`- [查看原文](${story.canonicalUrl})`, "");
-}
-
-function whyItMatters(story: SelectedNewsStory): string {
-  if (story.queryHits > 1) return `被 ${story.queryHits} 个独立主题查询同时命中，且来源权威度满足本栏目要求。`;
-  if (story.authInfoLevel === 1) return "来自非常权威信源，适合作为已确认事实继续跟踪。";
-  return "搜索相关度较高，且来源权威度满足本栏目要求。";
+function appendStory(lines: string[], story: SelectedNewsStory, index: number): void {
+  lines.push(`**${index}. [${markdownLinkText(story.title)}](${story.canonicalUrl})**`);
+  lines.push(story.summary);
+  lines.push(`${story.siteName} · ${displayTime(story.publishTime)}`, "");
 }
 
 function topicIcon(topicId: string): string {
   if (topicId === "technology") return "💻";
   if (topicId === "politics") return "🌍";
   return "📰";
+}
+
+function shortTopicLabel(value: string): string {
+  return value.replace(/新闻$/u, "");
+}
+
+function markdownLinkText(value: string): string {
+  return value.replace(/([\\\[\]])/gu, "\\$1");
 }
 
 function displayTime(value: string): string {

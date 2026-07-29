@@ -4,7 +4,7 @@
     "label": "科技新闻",
     "enabled": true,
     "sourcePolicy": "authoritative",
-    "maxItems": 5,
+    "maxItems": 3,
     "queries": [
       "AI Agent 大模型 Coding Agent 重要发布",
       "开发工具 开源项目 TypeScript JavaScript Rust 重大更新",
@@ -17,7 +17,7 @@
     "label": "政治新闻",
     "enabled": true,
     "sourcePolicy": "official",
-    "maxItems": 5,
+    "maxItems": 3,
     "queries": [
       "中国重要政策与政治新闻",
       "国际政治 外交 重大事件 官方消息"

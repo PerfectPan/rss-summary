@@ -17,24 +17,27 @@ describe("Rivus news brief Tool adapter", () => {
   });
 
   it("searches every enabled topic query and renders one bounded mobile brief", async () => {
-    const search = vi.fn(async ({ query }: { query: string }) => ({
-      logId: `log:${query}`,
-      resultCount: 1,
-      timeCostMs: 20,
-      results: [
-        {
-          id: query,
-          title: `${query} headline`,
-          url: `https://example.com/${encodeURIComponent(query)}`,
-          summary: "Confirmed update with a concise summary.",
-          siteName: query.includes("政策") ? "权威政务媒体" : "Technology News",
-          publishTime: "2026-07-29T09:00:00+08:00",
-          rankScore: 0.9,
-          authInfoLevel: query.includes("政策") ? 1 : 2,
-          authInfoDescription: query.includes("政策") ? "非常权威" : "正常权威",
-        },
-      ],
-    }));
+    const search = vi.fn(async ({ query }: { query: string }) => {
+      const siteName = query.includes("政策") ? "权威政务媒体" : "Technology News";
+      return {
+        logId: `log:${query}`,
+        resultCount: 1,
+        timeCostMs: 20,
+        results: [
+          {
+            id: query,
+            title: `${query} headline`,
+            url: `https://example.com/${encodeURIComponent(query)}`,
+            summary: `${query} headline ${siteName} 2026-07-29 09:00:00 ${query} headline。苹果集中推送系统安全更新，覆盖手机、平板和电脑等产品线。此次更新修复多项高危漏洞，用户应尽快升级设备。这里是不会进入卡片的第三句冗长背景。`,
+            siteName,
+            publishTime: "2026-07-29T09:00:00+08:00",
+            rankScore: 0.9,
+            authInfoLevel: query.includes("政策") ? 1 : 2,
+            authInfoDescription: query.includes("政策") ? "非常权威" : "正常权威",
+          },
+        ],
+      };
+    });
 
     const result = await generateRivusNewsBrief(
       { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
@@ -68,8 +71,18 @@ describe("Rivus news brief Tool adapter", () => {
     );
     expect(result).toMatchObject({ edition: "noon", itemCount: 3, day: "2026-07-29" });
     expect(result.markdown).toContain("# 午间热点 · 2026-07-29");
-    expect(result.markdown).toContain("**💻 科技新闻**");
-    expect(result.markdown).toContain("**🌍 政治新闻**");
+    expect(result.markdown).toContain("**💻 科技 · 2**");
+    expect(result.markdown).toContain("**🌍 政治 · 1**");
+    expect(result.markdown).toContain("**1. [AI Agent headline](https://example.com/AI%20Agent)**");
+    expect(result.markdown).toContain(
+      "苹果集中推送系统安全更新，覆盖手机、平板和电脑等产品线。此次更新修复多项高危漏洞，用户应尽快升级设备。",
+    );
+    expect(result.markdown).toContain("Technology News · 09:00");
+    expect(result.markdown).not.toContain("发生了什么");
+    expect(result.markdown).not.toContain("为什么看");
+    expect(result.markdown).not.toContain("建议：");
+    expect(result.markdown).not.toContain("查看原文");
+    expect(result.markdown).not.toContain("这里是不会进入卡片的第三句冗长背景");
     expect(result.markdown).not.toContain("utm_source");
   });
 

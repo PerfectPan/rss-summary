@@ -92,7 +92,11 @@ function toStory(canonicalUrl: string, matches: NewsSearchHit[]): NewsStory {
     id: representative.id,
     title: representative.title.trim(),
     canonicalUrl,
-    summary: boundedSummary(representative.summary ?? representative.snippet ?? "暂无可用摘要。"),
+    summary: compactSummary(
+      representative.summary ?? representative.snippet ?? "暂无可用摘要。",
+      representative.title,
+      representative.siteName,
+    ),
     siteName: representative.siteName?.trim() || new URL(canonicalUrl).hostname,
     publishTime: representative.publishTime!,
     rankScore,
@@ -122,9 +126,23 @@ export function canonicalizeUrl(value: string): string | undefined {
   }
 }
 
-function boundedSummary(value: string): string {
-  const normalized = value.replace(/\s+/gu, " ").trim();
-  return normalized.length <= 500 ? normalized : `${normalized.slice(0, 497)}…`;
+function compactSummary(value: string, title: string, siteName: string | undefined): string {
+  let normalized = value.replace(/\s+/gu, " ").trim();
+  normalized = stripLeadingLiteral(normalized, title);
+  normalized = stripLeadingLiteral(normalized, siteName);
+  normalized = normalized.replace(/^20\d{2}[-/.年]\d{1,2}[-/.月]\d{1,2}(?:日)?(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?\s*/u, "");
+  normalized = stripLeadingLiteral(normalized, title);
+  normalized = normalized.replace(/^[：:·|—–\-，,。；;\s]+/u, "");
+
+  const sentences = normalized.match(/[^。！？!?]+[。！？!?]?/gu) ?? [];
+  const summary = sentences.slice(0, 2).join("").trim() || "暂无可用摘要。";
+  return summary.length <= 110 ? summary : `${summary.slice(0, 109).trimEnd()}…`;
+}
+
+function stripLeadingLiteral(value: string, literal: string | undefined): string {
+  const prefix = literal?.replace(/\s+/gu, " ").trim();
+  if (!prefix || !value.startsWith(prefix)) return value;
+  return value.slice(prefix.length).replace(/^[：:·|—–\-，,。；;\s]+/u, "");
 }
 
 function unique<T>(items: T[]): T[] {

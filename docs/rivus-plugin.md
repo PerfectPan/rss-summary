@@ -144,7 +144,7 @@ NEWS_TOPICS_FILE=/path/to/rss-summary/news-topics.json
 RIVUS_RSS_DIGEST_TARGET=replace-with-union-id
 ```
 
-`news-topics.json` defines query sets, per-topic quotas, and source policy. Politics uses `official`, which requires `AuthInfoLevel=1`; technology uses `authoritative`, which accepts levels 1–2. `NEWS_SEARCH_COUNT_PER_QUERY` defaults to 10 and `NEWS_SEARCH_TIMEOUT_MS` defaults to 15000. If one query fails, the brief includes a source-status warning and continues with successful queries; if all queries fail, the Tool fails so Rivus can apply its normal failure handling.
+`news-topics.json` defines query sets, per-topic quotas, and source policy. The packaged policy selects at most three stories per topic. Politics uses `official`, which requires `AuthInfoLevel=1`; technology uses `authoritative`, which accepts levels 1–2. The renderer removes duplicated search-result prefixes, limits each story to two sentences and 110 characters, links the headline directly, and keeps source plus time on one metadata line. `NEWS_SEARCH_COUNT_PER_QUERY` defaults to 10 and `NEWS_SEARCH_TIMEOUT_MS` defaults to 15000. If one query fails, the brief includes a source-status warning and continues with successful queries; if all queries fail, the Tool fails so Rivus can apply its normal failure handling.
 
 Do not set `NOTIFY_WEBHOOK_URL` for the Plugin path; Rivus owns delivery. API keys, GitHub tokens, and browser storage remain local secrets and must not be committed.
 
