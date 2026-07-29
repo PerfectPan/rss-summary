@@ -121,6 +121,27 @@ describe("news domain", () => {
     expect(selected).toHaveLength(1);
     expect(selected[0]?.selectedTopicId).toBe("technology");
   });
+
+  it("caps a brief at eight stories even when custom topic quotas are larger", () => {
+    const stories = buildNewsStories(
+      Array.from({ length: 10 }, (_, index) =>
+        hit({
+          id: `story-${index + 1}`,
+          title: `Distinct technology event ${index + 1}`,
+          url: `https://example.com/story-${index + 1}`,
+          rankScore: 1 - index / 100,
+        }),
+      ),
+      {
+        since: Date.parse("2026-07-29T00:00:00+08:00"),
+        until: Date.parse("2026-07-29T12:30:00+08:00"),
+      },
+    );
+
+    const selected = selectNewsStories(stories, [topic({ maxItems: 10 })]);
+
+    expect(selected).toHaveLength(8);
+  });
 });
 
 function topic(overrides: Partial<NewsTopic>): NewsTopic {

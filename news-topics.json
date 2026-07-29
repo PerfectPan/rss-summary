@@ -1,26 +1,63 @@
 [
   {
-    "id": "technology",
-    "label": "科技新闻",
+    "id": "ai-agents",
+    "label": "AI Agent 与模型",
     "enabled": true,
     "sourcePolicy": "authoritative",
-    "maxItems": 3,
+    "maxItems": 2,
     "queries": [
-      "AI Agent 大模型 Coding Agent 重要发布",
-      "开发工具 开源项目 TypeScript JavaScript Rust 重大更新",
-      "芯片 半导体 机器人 科技重大进展",
-      "消费电子 网络安全 科技行业重要新闻"
+      "AI Agent 大模型 工具调用 Memory Multi-Agent 重要发布",
+      "Coding Agent 编程智能体 模型能力 重大更新"
     ]
   },
   {
-    "id": "politics",
-    "label": "政治新闻",
+    "id": "developer-tools",
+    "label": "开发工具与开源",
+    "enabled": true,
+    "sourcePolicy": "authoritative",
+    "maxItems": 2,
+    "queries": [
+      "开发工具 开源项目 IDE CLI TypeScript Rust 重大更新"
+    ]
+  },
+  {
+    "id": "product-organization",
+    "label": "产品与组织创新",
+    "enabled": true,
+    "sourcePolicy": "authoritative",
+    "maxItems": 1,
+    "queries": [
+      "AI Native 产品 商业化 研发组织 小团队 重要案例"
+    ]
+  },
+  {
+    "id": "infrastructure-reliability",
+    "label": "基础设施与可靠性",
+    "enabled": true,
+    "sourcePolicy": "authoritative",
+    "maxItems": 1,
+    "queries": [
+      "云服务 基础设施 可观测性 数据库 网络安全 重大故障 复盘"
+    ]
+  },
+  {
+    "id": "tech-policy",
+    "label": "科技政策与产业格局",
     "enabled": true,
     "sourcePolicy": "official",
-    "maxItems": 3,
+    "maxItems": 1,
     "queries": [
-      "中国重要政策与政治新闻",
-      "国际政治 外交 重大事件 官方消息"
+      "人工智能 数据 芯片 开源 科技政策 监管 官方消息"
+    ]
+  },
+  {
+    "id": "capital-industry",
+    "label": "资本与商业信号",
+    "enabled": true,
+    "sourcePolicy": "authoritative",
+    "maxItems": 1,
+    "queries": [
+      "人工智能 科技公司 融资 并购 财报 商业模式 重大变化"
     ]
   }
 ]

@@ -35,6 +35,8 @@ export type NewsTimeWindow = {
   timezoneOffset?: string;
 };
 
+const maxNewsBriefItems = 8;
+
 export function buildNewsStories(hits: NewsSearchHit[], window: NewsTimeWindow): NewsStory[] {
   const groups = new Map<string, NewsSearchHit[]>();
   for (const hit of hits) {
@@ -55,12 +57,14 @@ export function selectNewsStories(stories: NewsStory[], topics: NewsTopic[]): Se
   const selected: SelectedNewsStory[] = [];
   const selectedUrls = new Set<string>();
   for (const topic of topics.filter(({ enabled }) => enabled)) {
+    if (selected.length >= maxNewsBriefItems) break;
     const matches = stories.filter(
       (story) => story.topicIds.includes(topic.id) && !selectedUrls.has(story.canonicalUrl),
     );
     let count = 0;
     for (const story of matches) {
-      if (count >= topic.maxItems || selectedUrls.has(story.canonicalUrl)) continue;
+      if (count >= topic.maxItems || selected.length >= maxNewsBriefItems) break;
+      if (selectedUrls.has(story.canonicalUrl)) continue;
       if (selected.some((candidate) => isSameNewsEvent(candidate, story))) continue;
       selected.push({ ...story, selectedTopicId: topic.id });
       selectedUrls.add(story.canonicalUrl);

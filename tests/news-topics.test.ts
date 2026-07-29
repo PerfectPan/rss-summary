@@ -5,21 +5,22 @@ import { describe, expect, it } from "vitest";
 import { parseNewsTopics } from "../src/news-topics.js";
 
 describe("news topics", () => {
-  it("loads the tracked technology and politics search topics", () => {
+  it("loads the curated daily brief topics within the eight-item and search budgets", () => {
     const topics = parseNewsTopics(readFileSync(new URL("../news-topics.json", import.meta.url), "utf8"));
 
-    expect(topics.map(({ id }) => id)).toEqual(["technology", "politics"]);
-    expect(topics[0]).toMatchObject({
-      enabled: true,
-      label: "科技新闻",
-      sourcePolicy: "authoritative",
-    });
-    expect(topics[1]).toMatchObject({
-      enabled: true,
-      label: "政治新闻",
-      sourcePolicy: "official",
-    });
-    expect(topics.flatMap(({ queries }) => queries)).toHaveLength(6);
+    expect(topics.map(({ id }) => id)).toEqual([
+      "ai-agents",
+      "developer-tools",
+      "product-organization",
+      "infrastructure-reliability",
+      "tech-policy",
+      "capital-industry",
+    ]);
+    expect(topics.reduce((total, { maxItems }) => total + maxItems, 0)).toBe(8);
+    expect(topics.flatMap(({ queries }) => queries)).toHaveLength(7);
+    expect(topics.find(({ id }) => id === "tech-policy")?.sourcePolicy).toBe("official");
+    expect(topics.filter(({ id }) => id !== "tech-policy").every(({ sourcePolicy }) => sourcePolicy === "authoritative"))
+      .toBe(true);
   });
 
   it("rejects duplicate topic ids and empty queries", () => {
