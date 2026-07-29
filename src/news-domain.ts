@@ -32,6 +32,7 @@ export type SelectedNewsStory = NewsStory & {
 export type NewsTimeWindow = {
   since: number;
   until: number;
+  timezoneOffset?: string;
 };
 
 export function buildNewsStories(hits: NewsSearchHit[], window: NewsTimeWindow): NewsStory[] {
@@ -71,11 +72,19 @@ export function selectNewsStories(stories: NewsStory[], topics: NewsTopic[]): Se
 
 function isAcceptedHit(hit: NewsSearchHit, window: NewsTimeWindow): boolean {
   if (!hit.title.trim() || !hit.url.trim()) return false;
-  const publishedAt = hit.publishTime ? Date.parse(hit.publishTime) : Number.NaN;
+  const publishedAt = hit.publishTime
+    ? parseNewsPublishTime(hit.publishTime, window.timezoneOffset)
+    : Number.NaN;
   if (!Number.isFinite(publishedAt) || publishedAt < window.since || publishedAt >= window.until) return false;
   const authLevel = hit.authInfoLevel ?? 4;
   if (hit.sourcePolicy === "official") return authLevel === 1;
   return authLevel <= 2;
+}
+
+export function parseNewsPublishTime(value: string, timezoneOffset?: string): number {
+  const normalized = value.trim().replace(" ", "T");
+  const hasExplicitZone = /(?:Z|[+-]\d{2}:?\d{2})$/iu.test(normalized);
+  return Date.parse(!hasExplicitZone && timezoneOffset ? `${normalized}${timezoneOffset}` : normalized);
 }
 
 function toStory(canonicalUrl: string, matches: NewsSearchHit[]): NewsStory {

@@ -40,4 +40,23 @@ describe("news topics", () => {
       ),
     ).toThrow(/query/i);
   });
+
+  it("bounds custom topic policies before they can fan out paid searches", () => {
+    const queries = Array.from({ length: 9 }, (_, index) => `query-${index + 1}`);
+    expect(() =>
+      parseNewsTopics(
+        JSON.stringify([
+          { id: "technology", label: "科技", enabled: true, sourcePolicy: "authoritative", maxItems: 3, queries },
+        ]),
+      ),
+    ).toThrow(/at most 8 queries/i);
+
+    expect(() =>
+      parseNewsTopics(
+        JSON.stringify([
+          { id: "technology", label: "科技", enabled: true, sourcePolicy: "authoritative", maxItems: 11, queries: ["AI"] },
+        ]),
+      ),
+    ).toThrow(/maxItems.*10/i);
+  });
 });

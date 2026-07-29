@@ -144,9 +144,22 @@ NEWS_TOPICS_FILE=/path/to/rss-summary/news-topics.json
 RIVUS_RSS_DIGEST_TARGET=replace-with-union-id
 ```
 
-`news-topics.json` defines query sets, per-topic quotas, and source policy. The packaged policy selects at most three stories per topic and applies title-feature containment to collapse the same event when publishers use different URLs. Politics uses `official`, which requires `AuthInfoLevel=1`; technology uses `authoritative`, which accepts levels 1–2. The renderer removes duplicated search-result prefixes, limits each story to two sentences and 110 characters, links the headline directly, and keeps source plus time on one metadata line. `NEWS_SEARCH_COUNT_PER_QUERY` defaults to 10 and `NEWS_SEARCH_TIMEOUT_MS` defaults to 15000. If one query fails, the brief includes a source-status warning and continues with successful queries; if all queries fail, the Tool fails so Rivus can apply its normal failure handling.
+`news-topics.json` defines query sets, per-topic quotas, and source policy. The packaged policy selects at most three stories per topic and applies title-feature containment to collapse the same event when publishers use different URLs. Custom policies are bounded to 8 topics, 8 queries per topic, 32 queries overall, and 10 selected items per topic before any paid request starts. Politics uses `official`, which requires `AuthInfoLevel=1`; technology uses `authoritative`, which accepts levels 1–2. The renderer removes duplicated search-result prefixes, limits each story to two sentences and 110 characters, links the headline directly, and keeps source plus time on one metadata line. `NEWS_SEARCH_COUNT_PER_QUERY` defaults to 10 and `NEWS_SEARCH_TIMEOUT_MS` defaults to 15000. If one query fails, the brief includes a source-status warning and continues with successful queries; if all queries fail, the Tool fails so Rivus can apply its normal failure handling.
 
 Do not set `NOTIFY_WEBHOOK_URL` for the Plugin path; Rivus owns delivery. API keys, GitHub tokens, and browser storage remain local secrets and must not be committed.
+
+The news Tool reads `DOUBAO_SEARCH_API_KEY` from the Node process environment. Rivus' CLI `--env-file` supplies variables to the Host bootstrap but does not add them to `process.env`, so a service must also export the variables before Node starts. One reliable launch form is to let Node load the same private file, while retaining Rivus' flag for Host configuration:
+
+```bash
+cd /path/to/rivus-project
+node --env-file=/path/to/rivus-project/.env.local \
+  ./node_modules/@rivus/agent/dist/cli.js \
+  --env-file /path/to/rivus-project/.env.local \
+  --bootstrap ./src/bootstrap.ts \
+  --manifest ./rivus.config.json
+```
+
+Use the equivalent process-environment configuration in launchd or systemd. Treat a foreground Tool invocation as the credential acceptance check; `doctor` and `check-config` do not execute the external Tool.
 
 ## Verify
 
@@ -159,7 +172,11 @@ pnpm verify
 cd /path/to/rivus-project
 npm run doctor
 npm run check-config
-npm start
+node --env-file=/path/to/rivus-project/.env.local \
+  ./node_modules/@rivus/agent/dist/cli.js \
+  --env-file /path/to/rivus-project/.env.local \
+  --bootstrap ./src/bootstrap.ts \
+  --manifest ./rivus.config.json
 ```
 
 In the foreground run, invoke each template once and confirm the trace contains exactly its requested Tool call followed by unchanged Markdown. Verify the morning card is for the previous local day, the noon card starts at 00:00, the evening card starts at 12:30, and political links are level-1 sources. Only then enable the service manager and all three Automations.

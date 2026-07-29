@@ -32,7 +32,7 @@ export function resolveNewsEditionWindow(
   occurrence: string,
   timezoneOffset: string,
   edition: NewsBriefEdition,
-): { day: string; since: number; until: number; label: string } {
+): { day: string; since: number; until: number; label: string; timezoneOffset: string } {
   const until = Date.parse(occurrence);
   if (!Number.isFinite(until)) throw new Error("occurrence must be a valid date-time.");
   const day = calendarDayAtOffset(occurrence, timezoneOffset);
@@ -46,6 +46,7 @@ export function resolveNewsEditionWindow(
     since,
     until: windowEnd,
     label: `${edition === "noon" ? "00:00" : "12:30"}–${timeAtOffset(windowEnd, timezoneOffset)}`,
+    timezoneOffset,
   };
 }
 
@@ -121,7 +122,7 @@ function parseInput(value: unknown): RivusNewsBriefInput {
 }
 
 function createSearch(env: NodeJS.ProcessEnv): (input: DoubaoSearchInput) => Promise<DoubaoSearchPage> {
-  const apiKey = env.DOUBAO_SEARCH_API_KEY?.trim() || env.WEB_SEARCH_API_KEY?.trim();
+  const apiKey = env.DOUBAO_SEARCH_API_KEY?.trim();
   if (!apiKey) throw new Error("DOUBAO_SEARCH_API_KEY is required for news briefs.");
   const client = new DoubaoSearchClient({
     apiKey,

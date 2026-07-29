@@ -163,7 +163,7 @@ The 09:00 morning template summarizes the previous local calendar day's GitHub H
 
 Both Tools are observe-only. The feed Tool runs in dry-run mode, so it neither sends the generic webhook nor marks candidates as seen. Rivus owns scheduling and Feishu delivery for all three briefs.
 
-With `@rivus/agent@0.3.x`, proactive Feishu delivery renders that Markdown as one interactive card. `每日技术情报 · YYYY-MM-DD` becomes the blue card header; the source summary, ranked sections, and item links remain in the Markdown body.
+With `@rivus/agent@0.3.x`, proactive Feishu delivery renders that Markdown as one interactive card. `技术订阅日报 · YYYY-MM-DD` becomes the blue card header; the source summary, ranked sections, and item links remain in the Markdown body.
 
 Build this checkout before installing it into a Rivus deployment project:
 
