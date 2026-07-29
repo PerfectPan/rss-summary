@@ -159,7 +159,7 @@ This repository exports `rss-summary/rivus-plugin`, a real external Rivus Plugin
 - noon template: `rss-summary/noon-news-brief`
 - evening template: `rss-summary/evening-news-brief`
 
-The 09:00 morning template summarizes the previous local calendar day's GitHub Home and RSS items. The 12:30 and 19:00 templates search the current day's technology and political news. Noon covers local 00:00–12:30; evening covers local 12:30 through its occurrence, so the scheduled windows do not overlap. Political results require Doubao's very-authoritative source level; technology results accept authoritative sources. The packaged policy caps each topic at three stories. News cards link from each headline and keep every item to a compact two-sentence summary plus source and time. Topics and quotas live in the packaged `news-topics.json`.
+The 09:00 morning template summarizes the previous local calendar day's GitHub Home and RSS items. The 12:30 and 19:00 templates search the current day's technology and political news. Noon covers local 00:00–12:30; evening covers local 12:30 through its occurrence, so the scheduled windows do not overlap. Political results require Doubao's very-authoritative source level; technology results accept authoritative sources. The packaged policy caps each topic at three stories and collapses near-identical event headlines reported through different publisher URLs. News cards link from each headline and keep every item to a compact two-sentence summary plus source and time. Topics and quotas live in the packaged `news-topics.json`.
 
 Both Tools are observe-only. The feed Tool runs in dry-run mode, so it neither sends the generic webhook nor marks candidates as seen. Rivus owns scheduling and Feishu delivery for all three briefs.
 

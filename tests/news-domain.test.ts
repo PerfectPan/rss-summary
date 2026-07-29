@@ -53,6 +53,39 @@ describe("news domain", () => {
     expect(stories.map(({ id }) => id)).toEqual(["politics-official"]);
   });
 
+  it("deduplicates one event reported under different publisher URLs", () => {
+    const stories = buildNewsStories(
+      [
+        hit({
+          id: "apple-update-a",
+          title: "苹果呼吁用户尽快完成设备升级：一口气修复上百处安全隐患",
+          url: "https://news.example.com/apple-security-update",
+          rankScore: 0.91,
+        }),
+        hit({
+          id: "apple-update-b",
+          title: "苹果用户注意！请尽快完成设备升级，苹果一口气修复上百处安全隐患，覆盖手机、平板、电脑和手表",
+          url: "https://publisher.example.net/apple-upgrade-warning",
+          rankScore: 0.78,
+        }),
+        hit({
+          id: "qoder-team",
+          title: "5 人 7 天完成产品上线：Qoder 如何打造 AI Native 研发团队",
+          url: "https://news.example.com/qoder-team",
+          rankScore: 0.8,
+        }),
+      ],
+      {
+        since: Date.parse("2026-07-29T00:00:00+08:00"),
+        until: Date.parse("2026-07-29T12:30:00+08:00"),
+      },
+    );
+
+    const selected = selectNewsStories(stories, [topic({ maxItems: 3 })]);
+
+    expect(selected.map(({ id }) => id)).toEqual(["apple-update-a", "qoder-team"]);
+  });
+
   it("records the topic that selected a cross-topic story", () => {
     const stories = buildNewsStories(
       [
