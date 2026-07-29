@@ -112,7 +112,7 @@ describe("rss-summary Rivus Plugin", () => {
       );
 
       expect(result).toMatchObject({ edition: "evening", itemCount: 0 });
-      expect(fetch).toHaveBeenCalledTimes(6);
+      expect(fetch).toHaveBeenCalledTimes(7);
       expect(fetch.mock.calls[0]?.[1]?.headers).toMatchObject({ Authorization: "Bearer runtime-key" });
     } finally {
       vi.unstubAllEnvs();

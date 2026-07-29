@@ -139,12 +139,12 @@ GITHUB_HOME_STORAGE_STATE=/path/to/rss-summary/.state/github-home-storage.json
 GITHUB_USERNAME=PerfectPan
 RSS_FEEDS_FILE=/path/to/rss-summary/feeds.json
 DOUBAO_SEARCH_API_KEY=replace-with-doubao-search-api-key
-# Optional; the packaged default already contains technology and politics.
+# Optional; the packaged default already contains the six curated brief areas.
 NEWS_TOPICS_FILE=/path/to/rss-summary/news-topics.json
 RIVUS_RSS_DIGEST_TARGET=replace-with-union-id
 ```
 
-`news-topics.json` defines query sets, per-topic quotas, and source policy. The packaged policy selects at most three stories per topic and applies title-feature containment to collapse the same event when publishers use different URLs. Custom policies are bounded to 8 topics, 8 queries per topic, 32 queries overall, and 10 selected items per topic before any paid request starts. Politics uses `official`, which requires `AuthInfoLevel=1`; technology uses `authoritative`, which accepts levels 1–2. The renderer removes duplicated search-result prefixes, limits each story to two sentences and 110 characters, links the headline directly, and keeps source plus time on one metadata line. `NEWS_SEARCH_COUNT_PER_QUERY` defaults to 10 and `NEWS_SEARCH_TIMEOUT_MS` defaults to 15000. If one query fails, the brief includes a source-status warning and continues with successful queries; if all queries fail, the Tool fails so Rivus can apply its normal failure handling.
+`news-topics.json` defines query sets, per-topic quotas, and source policy. The packaged policy covers AI Agents and models, developer tools and open source, product and organization innovation, infrastructure and reliability, technology policy, and capital and industry signals. Their quotas total eight selected stories, while seven queries per run keep two daily briefs within roughly 420 searches in a 30-day month before manual verification. Title-feature containment collapses the same event when publishers use different URLs. Technology policy uses `official`, which requires `AuthInfoLevel=1`; the other areas use `authoritative`, which accepts levels 1–2. Custom policies are bounded to 8 topics, 8 queries per topic, 32 queries overall, and 10 selected items per topic before any paid request starts. The renderer removes duplicated search-result prefixes, limits each story to two sentences and 110 characters, links the headline directly, and keeps source plus time on one metadata line. `NEWS_SEARCH_COUNT_PER_QUERY` defaults to 10 and `NEWS_SEARCH_TIMEOUT_MS` defaults to 15000. If one query fails, the brief includes a source-status warning and continues with successful queries; if all queries fail, the Tool fails so Rivus can apply its normal failure handling.
 
 Do not set `NOTIFY_WEBHOOK_URL` for the Plugin path; Rivus owns delivery. API keys, GitHub tokens, and browser storage remain local secrets and must not be committed.
 
@@ -179,4 +179,4 @@ node --env-file=/path/to/rivus-project/.env.local \
   --manifest ./rivus.config.json
 ```
 
-In the foreground run, invoke each template once and confirm the trace contains exactly its requested Tool call followed by unchanged Markdown. Verify the morning card is for the previous local day, the noon card starts at 00:00, the evening card starts at 12:30, and political links are level-1 sources. Only then enable the service manager and all three Automations.
+In the foreground run, invoke each template once and confirm the trace contains exactly its requested Tool call followed by unchanged Markdown. Verify the morning card is for the previous local day, the noon card starts at 00:00, the evening card starts at 12:30, the brief contains at most eight stories, and technology-policy links are level-1 sources. Only then enable the service manager and all three Automations.
