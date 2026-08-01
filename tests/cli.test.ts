@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { isCliEntrypoint, runCliCommand } from "../src/cli.js";
 
@@ -50,5 +50,27 @@ describe("top-level CLI", () => {
     expect(output.join("")).toContain("rss-summary feeds remove --url <rss-url>");
     expect(output.join("")).toContain("rss-summary feeds delete --url <rss-url>");
     expect(output.join("")).toContain("rss-summary digest [--rss-only]");
+    expect(output.join("")).toContain("rss-summary signal [--day YYYY-MM-DD]");
+  });
+
+  it("routes the signal command and prints the generated markdown", async () => {
+    const output: string[] = [];
+    const generate = vi.fn(async (input: unknown) => ({
+      day: "2026-07-29",
+      generatedAt: "2026-07-29T11:00:00.000Z",
+      itemCount: 1,
+      markdown: "# 高信号速览 · 2026-07-29\n",
+      sections: { updates: 1, opensource: 0 },
+      warnings: [],
+    }));
+
+    const exitCode = await runCliCommand(["signal", "--day", "2026-07-29", "--dry-run"], {
+      stdout: { write: (chunk) => output.push(String(chunk)) },
+      signal: { generate },
+    });
+
+    expect(exitCode).toBe(0);
+    expect(generate).toHaveBeenCalledWith({ day: "2026-07-29" }, expect.anything());
+    expect(output.join("")).toContain("# 高信号速览 · 2026-07-29");
   });
 });

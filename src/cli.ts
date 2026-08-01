@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { run as runDigest } from "./main.js";
 import { runFeedsCommand } from "./feeds.js";
 import { runGithubHomeCommand } from "./github-home-cli.js";
+import { runSignalCommand } from "./signal-cli.js";
 
 type Writable = {
   write(chunk: string): unknown;
@@ -13,10 +14,14 @@ type Writable = {
 type CliDeps = {
   stdout?: Writable;
   stderr?: Writable;
+  signal?: {
+    generate?: (input: unknown, deps?: { env?: NodeJS.ProcessEnv }) => Promise<import("./signal-brief.js").SignalBriefResult>;
+  };
 };
 
 export async function runCliCommand(argv: string[] = process.argv.slice(2), deps: CliDeps = {}): Promise<number> {
   const stdout = deps.stdout ?? process.stdout;
+  const stderr = deps.stderr ?? process.stderr;
   const command = argv[0] ?? "help";
   const rest = argv.slice(1);
 
@@ -26,6 +31,10 @@ export async function runCliCommand(argv: string[] = process.argv.slice(2), deps
 
   if (command === "github-home") {
     return runGithubHomeCommand(rest, deps);
+  }
+
+  if (command === "signal") {
+    return runSignalCommand(rest, { stdout, stderr, generate: deps.signal?.generate });
   }
 
   if (command === "digest") {
@@ -51,6 +60,7 @@ function writeHelp(stdout: Writable): void {
   rss-summary feeds delete --url <rss-url>
   rss-summary feeds list
   rss-summary feeds test
+  rss-summary signal [--day YYYY-MM-DD] [--occurrence <iso-date-time>] [--dry-run]
 `);
 }
 
