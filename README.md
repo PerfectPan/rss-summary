@@ -2,7 +2,7 @@
 
 Scheduled GitHub Home, RSS, and authoritative web-news briefs for `PerfectPan`.
 
-The tool reads the GitHub Home feed plus optional RSS/Atom feeds, enriches interesting repositories and pull requests, ranks projects/articles by usefulness, then outputs a short Markdown digest. Its Rivus Plugin also builds bounded noon and evening briefs from Doubao web search. Source collection is read-only unless you wire a webhook notification endpoint for the CLI path.
+The tool reads the GitHub Home feed plus optional RSS/Atom feeds, enriches interesting repositories and pull requests, ranks projects/articles by usefulness, then outputs a short Markdown digest. Its Rivus Plugin also builds bounded noon and evening briefs from Doubao web search and a daily 高信号速览 from GitHub Search, Hacker News, and official-domain search. Source collection is read-only unless you wire a webhook notification endpoint for the CLI path.
 
 ## GitHub Home Exact Mode
 
@@ -138,6 +138,16 @@ Equivalent environment variables:
 - `FEED_TIMEZONE_OFFSET=+08:00`
 - `FEED_WINDOW_HOURS=36` for the legacy rolling-hour mode when `FEED_DAY` is not set
 
+## Signal brief dry run
+
+The daily 高信号速览 CLI is read-only and needs no state:
+
+```bash
+rss-summary signal --day "$(TZ=Asia/Shanghai date +%F)" --dry-run
+```
+
+`--dry-run` is accepted for parity with `digest`; the signal command never writes state or sends webhooks either way. Set `DOUBAO_SEARCH_API_KEY` for the official-search updates section (optional; Hacker News and GitHub Search still work without it) and `GH_FEED_TOKEN` to raise the GitHub Search rate limit.
+
 ## Schedule on another machine
 
 Install Node.js 24+, clone or copy this repository, run `pnpm install && pnpm build && pnpm setup && pnpm link --global`, run `rss-summary github-home login` once on that machine, then schedule:
@@ -150,18 +160,22 @@ Use the browser login from the account whose Home Feed should be summarized. The
 
 ## Rivus Agent Plugin
 
-This repository exports `rss-summary/rivus-plugin`, a real external Rivus Plugin with one Agent profile, two read-only Tools, and three production Automation templates:
+This repository exports `rss-summary/rivus-plugin`, a real external Rivus Plugin with one Agent profile, three read-only Tools, and four production Automation templates:
 
 - profile: `rss-digest`
 - feed Tool: `rss-summary/generate-digest`
 - news Tool: `rss-summary/generate-news-brief`
+- signal Tool: `rss-summary/generate-signal-brief`
 - morning template: `rss-summary/morning-feed-digest`
 - noon template: `rss-summary/noon-news-brief`
 - evening template: `rss-summary/evening-news-brief`
+- signal template: `rss-summary/daily-signal-brief`
 
 The 09:00 morning template summarizes the previous local calendar day's GitHub Home and RSS items. The 12:30 and 19:00 templates search six curated areas: AI Agents and models, developer tools and open source, product and organization innovation, infrastructure and reliability, technology policy, and capital and industry signals. Noon covers local 00:00–12:30; evening covers local 12:30 through its occurrence, so the scheduled windows do not overlap. Technology-policy results require Doubao's very-authoritative source level; the other areas accept authoritative sources. The packaged policy selects at most eight stories per brief and collapses near-identical event headlines reported through different publisher URLs. News cards link from each headline and keep every item to a compact two-sentence summary plus source and time. Topics and quotas live in the packaged `news-topics.json`.
 
-Both Tools are observe-only. The feed Tool runs in dry-run mode, so it neither sends the generic webhook nor marks candidates as seen. Rivus owns scheduling and Feishu delivery for all three briefs.
+The 21:00 signal template (高信号速览) answers “what shipped or rose in public AI×dev today” from GitHub Repository Search, Hacker News Algolia, and official-domain Doubao search. It renders at most two sections — 动态 (`模型`/`产品`) and 开源 (`上升` with age/stars/language) — omits empty sections, caps at 8 items, and never reads `feeds.json`. Tuning lives in the packaged `signal-sources.json`; see [docs/signal-brief-design.md](docs/signal-brief-design.md).
+
+All three Tools are observe-only. The feed Tool runs in dry-run mode, so it neither sends the generic webhook nor marks candidates as seen. Rivus owns scheduling and Feishu delivery for all four briefs.
 
 With `@rivus/agent@0.3.x`, proactive Feishu delivery renders that Markdown as one interactive card. `技术订阅日报 · YYYY-MM-DD` becomes the blue card header; the source summary, ranked sections, and item links remain in the Markdown body.
 
@@ -194,7 +208,7 @@ For the full architecture, data flow, and extension points, see [docs/architectu
 
 - `src/github-home.ts`: exact GitHub Home adapter using Playwright storage state, direct conduit HTML parsing, and rendered-browser fallback.
 - `src/github.ts`: read-only GitHub API client for received-events fallback, following list, repositories, and PR details.
-- `src/cli.ts`: package `bin` entrypoint for `rss-summary digest` and `rss-summary feeds`.
+- `src/cli.ts`: package `bin` entrypoint for `rss-summary digest`, `rss-summary feeds`, and `rss-summary signal`.
 - `src/rss.ts`: RSS 2.0 / Atom source adapter built on `fast-xml-parser`.
 - `src/feeds.ts`: CLI for adding, listing, and validating local RSS sources.
 - `src/feed-store.ts`: JSON file operations for feed subscriptions.
@@ -208,9 +222,15 @@ For the full architecture, data flow, and extension points, see [docs/architectu
 - `src/news-domain.ts`: validates time/source policy, canonicalizes URLs, deduplicates, ranks, and applies topic quotas.
 - `src/news-brief.ts`: orchestrates bounded noon/evening search windows and partial-failure handling.
 - `src/news-render.ts`: renders mobile-friendly noon/evening Feishu Markdown.
-- `src/rivus-plugin.ts`: registers the external Rivus profile, two Tools, and Automation templates.
+- `src/signal-sources.ts`: loads and validates `signal-sources.json` (quotas, frontend bias, scoring, source tuning).
+- `src/hacker-news.ts`: Hacker News Algolia adapter for builder-validated products/tools.
+- `src/github-search.ts`: GitHub Repository Search adapter and query builder.
+- `src/signal-domain.ts`: filters, scores, canonicalizes/dedupes, and applies signal quotas and soft model/product balance.
+- `src/signal-brief.ts`: orchestrates the daily signal window across Doubao official search, Hacker News, and GitHub Search.
+- `src/signal-render.ts`: renders the two-section 高信号速览 Markdown.
+- `src/rivus-plugin.ts`: registers the external Rivus profile, three Tools, and Automation templates.
 
-`feeds.json` is tracked as the shared RSS subscription list. `news-topics.json` is tracked as the web-news topic policy. `.state/` remains gitignored because it contains local run state.
+`feeds.json` is tracked as the shared RSS subscription list. `news-topics.json` is tracked as the web-news topic policy. `signal-sources.json` is tracked as the signal-brief tuning policy (not an RSS subscription list). `.state/` remains gitignored because it contains local run state.
 
 ## Research notes
 
