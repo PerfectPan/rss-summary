@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { loadConfig, parseFeedSubscriptions } from "../src/config.js";
+import { loadConfig, parseFeedSubscriptions } from "../src/infrastructure/config.js";
 
 describe("config", () => {
   it("loads RSS feed subscriptions from JSON", () => {

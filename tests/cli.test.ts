@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { isCliEntrypoint, runCliCommand } from "../src/cli.js";
+import { isCliEntrypoint, runCliCommand } from "../src/presentation/cli.js";
 
 describe("top-level CLI", () => {
   it("routes feeds subcommands through the bin entrypoint", async () => {

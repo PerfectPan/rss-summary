@@ -1,6 +1,5 @@
-import { DoubaoSearchClient, type DoubaoSearchInput, type DoubaoSearchPage } from "./doubao-search.js";
-import { HackerNewsClient, type HackerNewsSearchInput, type HackerNewsStory } from "./hacker-news.js";
-import { GitHubSearchClient, buildRepositorySearchQuery, type GitHubRepositorySearchInput, type GitHubSearchRepo } from "./github-search.js";
+import { Effect } from "effect";
+
 import {
   buildSignalRepos,
   buildSignalUpdates,
@@ -8,10 +7,20 @@ import {
   selectSignalItems,
   type SignalRepoHit,
   type SignalUpdateHit,
-} from "./signal-domain.js";
-import { renderSignalBrief } from "./signal-render.js";
-import { loadSignalSources, type SignalSourceConfig } from "./signal-sources.js";
-import { calendarDayAtOffset, shiftCalendarDay, startOfCalendarDay } from "./scheduled-date.js";
+} from "../domain/signal.js";
+import { calendarDayAtOffset, endOfCalendarDay, shiftCalendarDay, startOfCalendarDay } from "../domain/time.js";
+import { boundedInteger, hostnameOf } from "../infrastructure/parsing.js";
+import { loadSignalSources, type SignalSourceConfig } from "../infrastructure/signal-sources.js";
+import { DoubaoSearchClient, type DoubaoSearchInput, type DoubaoSearchPage } from "../infrastructure/doubao-search.js";
+import { HackerNewsClient, type HackerNewsSearchInput, type HackerNewsStory } from "../infrastructure/hacker-news.js";
+import {
+  GitHubSearchClient,
+  buildRepositorySearchQuery,
+  type GitHubRepositorySearchInput,
+  type GitHubSearchRepo,
+} from "../infrastructure/github-search.js";
+import { renderSignalBrief } from "../presentation/signal-render.js";
+import { attempt } from "./effect.js";
 
 export type SignalBriefInput = {
   day?: string;
@@ -36,84 +45,89 @@ type SignalBriefDependencies = {
   githubSearch?: (input: GitHubRepositorySearchInput) => Promise<GitHubSearchRepo[]>;
 };
 
-export async function generateSignalBrief(value: unknown, dependencies: SignalBriefDependencies = {}): Promise<SignalBriefResult> {
-  const input = parseInput(value);
-  const env = dependencies.env ?? process.env;
-  const config = dependencies.config ?? loadSignalSources(env.SIGNAL_SOURCES_FILE);
-  const timezoneOffset = env[config.timezoneOffsetEnv] ?? "+08:00";
-  const day = input.day ?? calendarDayAtOffset(input.occurrence!, timezoneOffset);
-  const window = {
-    day,
-    since: startOfCalendarDay(day, timezoneOffset),
-    until: startOfCalendarDay(day, timezoneOffset) + 86_400_000,
-    timezoneOffset,
-  };
+export function generateSignalBrief(
+  value: unknown,
+  dependencies: SignalBriefDependencies = {},
+): Effect.Effect<SignalBriefResult, Error> {
+  return Effect.gen(function* () {
+    const input = parseInput(value);
+    const env = dependencies.env ?? process.env;
+    const config = dependencies.config ?? loadSignalSources(env.SIGNAL_SOURCES_FILE);
+    const timezoneOffset = env[config.timezoneOffsetEnv] ?? "+08:00";
+    const day = input.day ?? calendarDayAtOffset(input.occurrence!, timezoneOffset);
+    const window = {
+      day,
+      since: startOfCalendarDay(day, timezoneOffset),
+      until: endOfCalendarDay(day, timezoneOffset),
+      timezoneOffset,
+    };
 
-  const timeoutMs = boundedInteger(env.SIGNAL_SEARCH_TIMEOUT_MS, 15_000, 1_000, 60_000);
-  const doubaoSearch = dependencies.doubaoSearch ?? createDoubaoSearch(env, timeoutMs);
-  const hackerNewsSearch = dependencies.hackerNewsSearch ?? createHackerNewsSearch(timeoutMs);
-  const githubSearch = dependencies.githubSearch ?? createGithubSearch(env, timeoutMs);
+    const timeoutMs = boundedInteger(env.SIGNAL_SEARCH_TIMEOUT_MS, 15_000, 1_000, 60_000);
+    const doubaoSearch = dependencies.doubaoSearch ?? createDoubaoSearch(env, timeoutMs);
+    const hackerNewsSearch = dependencies.hackerNewsSearch ?? createHackerNewsSearch(timeoutMs);
+    const githubSearch = dependencies.githubSearch ?? createGithubSearch(env, timeoutMs);
 
-  const [officialResult, hnResult, githubResult] = await Promise.allSettled([
-    fetchOfficialUpdates(config, doubaoSearch, window.day),
-    fetchHackerNews(config, hackerNewsSearch, window),
-    fetchGithubRepos(config, githubSearch, window.day),
-  ]);
+    const settled = yield* attempt(
+      Promise.allSettled([
+        fetchOfficialUpdates(config, doubaoSearch, window.day),
+        fetchHackerNews(config, hackerNewsSearch, window),
+        fetchGithubRepos(config, githubSearch, window.day),
+      ]),
+    );
+    const [officialResult, hnResult, githubResult] = settled;
 
-  const officialFailed =
-    officialResult.status === "rejected" ||
-    (config.officialSearch.intents.length > 0 && officialResult.value.warnings === config.officialSearch.intents.length);
-  if (officialFailed && hnResult.status === "rejected" && githubResult.status === "rejected") {
-    throw new Error("All signal sources failed.");
-  }
+    const officialFailed =
+      officialResult.status === "rejected" ||
+      (config.officialSearch.intents.length > 0 &&
+        officialResult.value.warnings === config.officialSearch.intents.length);
+    if (officialFailed && hnResult.status === "rejected" && githubResult.status === "rejected") {
+      throw new Error("All signal sources failed.");
+    }
 
-  const warnings: string[] = [];
-  if (officialFailed) {
-    warnings.push("官方搜索不可用");
-  } else if (officialResult.status === "fulfilled" && officialResult.value.warnings > 0) {
-    warnings.push(`官方搜索：${officialResult.value.warnings} 个查询暂不可用`);
-  }
-  if (hnResult.status === "rejected") warnings.push("Hacker News 暂不可用");
-  if (githubResult.status === "rejected") warnings.push("GitHub 搜索暂不可用");
+    const warnings: string[] = [];
+    if (officialFailed) {
+      warnings.push("官方搜索不可用");
+    } else if (officialResult.status === "fulfilled" && officialResult.value.warnings > 0) {
+      warnings.push(`官方搜索：${officialResult.value.warnings} 个查询暂不可用`);
+    }
+    if (hnResult.status === "rejected") warnings.push("Hacker News 暂不可用");
+    if (githubResult.status === "rejected") warnings.push("GitHub 搜索暂不可用");
 
-  const updateHits: SignalUpdateHit[] = [];
-  if (officialResult.status === "fulfilled") updateHits.push(...officialResult.value.hits);
-  if (hnResult.status === "fulfilled") updateHits.push(...hnResult.value);
+    const updateHits: SignalUpdateHit[] = [];
+    if (officialResult.status === "fulfilled") updateHits.push(...officialResult.value.hits);
+    if (hnResult.status === "fulfilled") updateHits.push(...hnResult.value);
 
-  const repoHits: SignalRepoHit[] = githubResult.status === "fulfilled" ? githubResult.value : [];
-  const updates = buildSignalUpdates(updateHits, {
-    window,
-    scoring: config.scoring,
-    frontendBias: config.frontendBias,
-    officialDomains: config.officialSearch.domains,
-    excludeNamePatterns: config.githubSearch.excludeNamePatterns,
-    createdWithinDays: config.githubSearch.createdWithinDays,
+    const repoHits: SignalRepoHit[] = githubResult.status === "fulfilled" ? githubResult.value : [];
+    const rules = {
+      window,
+      scoring: config.scoring,
+      frontendBias: config.frontendBias,
+      officialDomains: config.officialSearch.domains,
+      excludeNamePatterns: config.githubSearch.excludeNamePatterns,
+      createdWithinDays: config.githubSearch.createdWithinDays,
+    };
+    const selected = selectSignalItems(
+      buildSignalUpdates(updateHits, rules),
+      buildSignalRepos(repoHits, rules),
+      config.quotas,
+    );
+    const markdown = renderSignalBrief({
+      day,
+      updates: selected.updates,
+      opensource: selected.opensource,
+      warnings,
+      timezoneOffset,
+    });
+
+    return {
+      day,
+      generatedAt: (dependencies.now ?? (() => new Date()))().toISOString(),
+      itemCount: selected.updates.length + selected.opensource.length,
+      markdown,
+      sections: { updates: selected.updates.length, opensource: selected.opensource.length },
+      warnings,
+    };
   });
-  const repos = buildSignalRepos(repoHits, {
-    window,
-    scoring: config.scoring,
-    frontendBias: config.frontendBias,
-    officialDomains: config.officialSearch.domains,
-    excludeNamePatterns: config.githubSearch.excludeNamePatterns,
-    createdWithinDays: config.githubSearch.createdWithinDays,
-  });
-  const selected = selectSignalItems(updates, repos, config.quotas);
-  const markdown = renderSignalBrief({
-    day,
-    updates: selected.updates,
-    opensource: selected.opensource,
-    warnings,
-    timezoneOffset,
-  });
-
-  return {
-    day,
-    generatedAt: (dependencies.now ?? (() => new Date()))().toISOString(),
-    itemCount: selected.updates.length + selected.opensource.length,
-    markdown,
-    sections: { updates: selected.updates.length, opensource: selected.opensource.length },
-    warnings,
-  };
 }
 
 async function fetchOfficialUpdates(
@@ -143,7 +157,7 @@ async function fetchOfficialUpdates(
         url: searchResult.url,
         summary: searchResult.summary ?? searchResult.snippet,
         publishedAt: searchResult.publishTime,
-        sourceLabel: searchResult.siteName?.trim() || hostname(searchResult.url),
+        sourceLabel: searchResult.siteName?.trim() || hostnameOf(searchResult.url),
         kind: intent.kind,
         source: "official",
       });
@@ -237,11 +251,15 @@ function optionalString(value: unknown, name: string): string | undefined {
   return value.trim();
 }
 
-function createDoubaoSearch(env: NodeJS.ProcessEnv, timeoutMs: number): (input: DoubaoSearchInput) => Promise<DoubaoSearchPage> {
+function createDoubaoSearch(
+  env: NodeJS.ProcessEnv,
+  timeoutMs: number,
+): (input: DoubaoSearchInput) => Promise<DoubaoSearchPage> {
   const apiKey = env.DOUBAO_SEARCH_API_KEY?.trim();
-  if (!apiKey) return async () => {
-    throw new Error("DOUBAO_SEARCH_API_KEY is missing.");
-  };
+  if (!apiKey)
+    return async () => {
+      throw new Error("DOUBAO_SEARCH_API_KEY is missing.");
+    };
   const client = new DoubaoSearchClient({
     apiKey,
     baseUrl: env.DOUBAO_SEARCH_BASE_URL?.trim() || undefined,
@@ -255,23 +273,13 @@ function createHackerNewsSearch(timeoutMs: number): (input: HackerNewsSearchInpu
   return (input) => client.searchStories(input);
 }
 
-function createGithubSearch(env: NodeJS.ProcessEnv, timeoutMs: number): (input: GitHubRepositorySearchInput) => Promise<GitHubSearchRepo[]> {
-  const client = new GitHubSearchClient({ token: env.GH_FEED_TOKEN?.trim() || env.GITHUB_TOKEN?.trim(), timeoutMs });
+function createGithubSearch(
+  env: NodeJS.ProcessEnv,
+  timeoutMs: number,
+): (input: GitHubRepositorySearchInput) => Promise<GitHubSearchRepo[]> {
+  const client = new GitHubSearchClient({
+    token: env.GH_FEED_TOKEN?.trim() || env.GITHUB_TOKEN?.trim(),
+    timeoutMs,
+  });
   return (input) => client.searchRepositories(input);
-}
-
-function hostname(url: string): string {
-  try {
-    return new URL(url).hostname.replace(/^www\./u, "");
-  } catch {
-    return url;
-  }
-}
-
-function boundedInteger(value: string | undefined, fallback: number, min: number, max: number): number {
-  const parsed = value === undefined ? fallback : Number(value);
-  if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
-    throw new Error(`Numeric configuration must be an integer between ${min} and ${max}.`);
-  }
-  return parsed;
 }

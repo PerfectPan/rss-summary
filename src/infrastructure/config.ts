@@ -1,5 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 
+import { hostnameOf } from "./parsing.js";
+
 export type FeedSubscription = {
   name: string;
   url: string;
@@ -205,9 +207,5 @@ function requireString(value: unknown, label: string): string {
 }
 
 function nameFromUrl(url: string): string {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return url;
-  }
+  return hostnameOf(url);
 }

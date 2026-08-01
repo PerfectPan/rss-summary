@@ -206,29 +206,38 @@ pnpm verify
 
 For the full architecture, data flow, and extension points, see [docs/architecture.md](docs/architecture.md).
 
-- `src/github-home.ts`: exact GitHub Home adapter using Playwright storage state, direct conduit HTML parsing, and rendered-browser fallback.
-- `src/github.ts`: read-only GitHub API client for received-events fallback, following list, repositories, and PR details.
-- `src/cli.ts`: package `bin` entrypoint for `rss-summary digest`, `rss-summary feeds`, and `rss-summary signal`.
-- `src/rss.ts`: RSS 2.0 / Atom source adapter built on `fast-xml-parser`.
-- `src/feeds.ts`: CLI for adding, listing, and validating local RSS sources.
-- `src/feed-store.ts`: JSON file operations for feed subscriptions.
-- `src/domain.ts`: normalizes source events into activity cards, scores high-signal repos/articles, and records reasons.
-- `src/event-window.ts`: resolves rolling-hour or explicit calendar-day filtering windows.
-- `src/state.ts`: stores seen event IDs in `.state/feed-state.json` so daily runs can focus on new items.
-- `src/render.ts`: renders Markdown sections for project discovery, RSS articles, project activity, and releases.
-- `src/notifier.ts`: prints to stdout and optionally POSTs `{ "text": markdown }` to a generic webhook.
-- `src/rivus-digest.ts`: maps Rivus Tool input to the existing read-only feed workflow.
-- `src/doubao-search.ts`: calls the Doubao web-search API with exact-day and source-authority filters.
-- `src/news-domain.ts`: validates time/source policy, canonicalizes URLs, deduplicates, ranks, and applies topic quotas.
-- `src/news-brief.ts`: orchestrates bounded noon/evening search windows and partial-failure handling.
-- `src/news-render.ts`: renders mobile-friendly noon/evening Feishu Markdown.
-- `src/signal-sources.ts`: loads and validates `signal-sources.json` (quotas, frontend bias, scoring, source tuning).
-- `src/hacker-news.ts`: Hacker News Algolia adapter for builder-validated products/tools.
-- `src/github-search.ts`: GitHub Repository Search adapter and query builder.
-- `src/signal-domain.ts`: filters, scores, canonicalizes/dedupes, and applies signal quotas and soft model/product balance.
-- `src/signal-brief.ts`: orchestrates the daily signal window across Doubao official search, Hacker News, and GitHub Search.
-- `src/signal-render.ts`: renders the two-section 高信号速览 Markdown.
-- `src/rivus-plugin.ts`: registers the external Rivus profile, three Tools, and Automation templates.
+The source tree is layered domain → application → infrastructure → presentation:
+
+- `src/domain/digest.ts`: normalizes source events into activity cards, scores high-signal repos/articles, and records reasons.
+- `src/domain/news.ts`: validates time/source policy, canonicalizes URLs, deduplicates, ranks, and applies topic quotas.
+- `src/domain/signal.ts`: filters, scores, canonicalizes/dedupes, and applies signal quotas and soft model/product balance.
+- `src/domain/time.ts`: resolves rolling-hour or explicit calendar-day filtering windows.
+- `src/domain/text.ts`: shared URL canonicalization, publish-time parsing, summary compaction, and same-event collapse.
+- `src/application/digest.ts`: digest collection/enrichment/state orchestration (Effect-based use case).
+- `src/application/news-brief.ts`: orchestrates bounded noon/evening search windows and partial-failure handling.
+- `src/application/signal-brief.ts`: orchestrates the daily signal window across Doubao official search, Hacker News, and GitHub Search.
+- `src/infrastructure/config.ts`: reads env, args, and `feeds.json`.
+- `src/infrastructure/github-home.ts`: exact GitHub Home adapter using Playwright storage state, direct conduit HTML parsing, and rendered-browser fallback.
+- `src/infrastructure/github.ts`: read-only GitHub API client for received-events fallback, following list, repositories, and PR details.
+- `src/infrastructure/rss.ts`: RSS 2.0 / Atom source adapter built on `fast-xml-parser`.
+- `src/infrastructure/doubao-search.ts`: calls the Doubao web-search API with exact-day and source-authority filters.
+- `src/infrastructure/hacker-news.ts`: Hacker News Algolia adapter for builder-validated products/tools.
+- `src/infrastructure/github-search.ts`: GitHub Repository Search adapter and query builder.
+- `src/infrastructure/signal-sources.ts`: loads and validates `signal-sources.json` (quotas, frontend bias, scoring, source tuning).
+- `src/infrastructure/news-topics.ts`: loads and validates `news-topics.json`.
+- `src/infrastructure/feed-store.ts`: JSON file operations for feed subscriptions.
+- `src/infrastructure/state.ts`: stores seen event IDs in `.state/feed-state.json` so daily runs can focus on new items.
+- `src/infrastructure/notifier.ts`: prints to stdout and optionally POSTs `{ "text": markdown }` to a generic webhook.
+- `src/infrastructure/parsing.ts`: shared validation and JSON response helpers.
+- `src/presentation/cli.ts`: package `bin` entrypoint for `rss-summary digest`, `rss-summary feeds`, and `rss-summary signal`.
+- `src/presentation/feeds-cli.ts`: CLI for adding, listing, and validating local RSS sources.
+- `src/presentation/rivus-digest.ts`: maps Rivus Tool input to the existing read-only feed workflow.
+- `src/presentation/rivus-plugin.ts`: registers the external Rivus profile, three Tools, and Automation templates.
+- `src/presentation/render.ts`: renders Markdown sections for project discovery, RSS articles, project activity, and releases.
+- `src/presentation/news-render.ts`: renders mobile-friendly noon/evening Feishu Markdown.
+- `src/presentation/signal-render.ts`: renders the two-section 高信号速览 Markdown.
+
+Side effects are managed with [Effect](https://effect.website): application use cases return `Effect<Result, Error>` and presentation entrypoints run them via `Effect.runPromise`; domain rules stay framework-free and purely deterministic.
 
 `feeds.json` is tracked as the shared RSS subscription list. `news-topics.json` is tracked as the web-news topic policy. `signal-sources.json` is tracked as the signal-brief tuning policy (not an RSS subscription list). `.state/` remains gitignored because it contains local run state.
 

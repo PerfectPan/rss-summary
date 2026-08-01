@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseFeedXml, RssClient } from "../src/rss.js";
+import { parseFeedXml, RssClient } from "../src/infrastructure/rss.js";
 
 describe("RSS source", () => {
   it("parses RSS 2.0 items into activity cards", () => {

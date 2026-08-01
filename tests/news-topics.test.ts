@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { parseNewsTopics } from "../src/news-topics.js";
+import { parseNewsTopics } from "../src/infrastructure/news-topics.js";
 
 describe("news topics", () => {
   it("loads the curated daily brief topics within the eight-item and search budgets", () => {

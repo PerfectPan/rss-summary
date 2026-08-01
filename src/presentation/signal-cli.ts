@@ -1,4 +1,6 @@
-import { generateSignalBrief, type SignalBriefResult } from "./signal-brief.js";
+import { Effect } from "effect";
+
+import { generateSignalBrief, type SignalBriefResult } from "../application/signal-brief.js";
 
 type Writable = {
   write(chunk: string): unknown;
@@ -16,7 +18,7 @@ export async function runSignalCommand(argv: string[], deps: SignalCommandDeps =
   const stderr = deps.stderr ?? process.stderr;
   const env = deps.env ?? process.env;
   const args = parseArgs(argv);
-  const generate = deps.generate ?? generateSignalBrief;
+  const generate = deps.generate ?? ((input, options) => Effect.runPromise(generateSignalBrief(input, options)));
 
   if (argv.includes("--help") || argv.includes("-h")) {
     writeSignalHelp(stdout);

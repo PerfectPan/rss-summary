@@ -1,10 +1,11 @@
+import { Effect } from "effect";
 import { describe, expect, it, vi } from "vitest";
 
-import { generateRivusDigest } from "../src/rivus-digest.js";
+import { generateRivusDigest } from "../src/presentation/rivus-digest.js";
 
 describe("Rivus digest Tool adapter", () => {
   it("maps a scheduled occurrence to the configured local day without delivery or state writes", async () => {
-    const buildDigestDocument = vi.fn(async (config) => ({
+    const buildDigestDocument = vi.fn((config) => Effect.succeed({
       generatedAt: "2026-07-16T18:00:00.000Z",
       username: config.username,
       sourceMode: "rss" as const,
@@ -38,7 +39,7 @@ describe("Rivus digest Tool adapter", () => {
   });
 
   it("maps the morning Automation occurrence to the previous local calendar day", async () => {
-    const buildDigestDocument = vi.fn(async (config) => ({
+    const buildDigestDocument = vi.fn((config) => Effect.succeed({
       generatedAt: "2026-07-29T01:00:00.000Z",
       username: config.username,
       windowLabel: `${config.day} ${config.timezoneOffset}`,
@@ -77,7 +78,7 @@ describe("Rivus digest Tool adapter", () => {
   });
 
   it("lets explicit false Tool input override deployment environment defaults", async () => {
-    const buildDigestDocument = vi.fn(async (config) => ({
+    const buildDigestDocument = vi.fn((config) => Effect.succeed({
       generatedAt: "2026-07-17T02:00:00.000Z",
       username: config.username,
       candidates: [],

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { buildRepositorySearchQuery, GitHubSearchClient } from "../src/github-search.js";
+import { buildRepositorySearchQuery, GitHubSearchClient } from "../src/infrastructure/github-search.js";
 
 const fixture = {
   total_count: 1,

@@ -1,7 +1,8 @@
+import { Effect } from "effect";
 import { describe, expect, it, vi } from "vitest";
 
-import { generateSignalBrief } from "../src/signal-brief.js";
-import { parseSignalSources } from "../src/signal-sources.js";
+import { generateSignalBrief } from "../src/application/signal-brief.js";
+import { parseSignalSources } from "../src/infrastructure/signal-sources.js";
 
 const config = parseSignalSources(
   JSON.stringify({
@@ -96,9 +97,11 @@ describe("signal brief application service", () => {
       },
     ]);
 
-    const result = await generateSignalBrief(
-      { day: "2026-07-29" },
-      { env: { FEED_TIMEZONE_OFFSET: "+08:00" }, config, doubaoSearch, hackerNewsSearch, githubSearch },
+    const result = await Effect.runPromise(
+      generateSignalBrief(
+        { day: "2026-07-29" },
+        { env: { FEED_TIMEZONE_OFFSET: "+08:00" }, config, doubaoSearch, hackerNewsSearch, githubSearch },
+      ),
     );
 
     expect(doubaoSearch).toHaveBeenCalledTimes(2);
@@ -128,15 +131,17 @@ describe("signal brief application service", () => {
 
   it("derives the calendar day from the occurrence in the configured timezone", async () => {
     const doubaoSearch = vi.fn(async () => doubaoPage());
-    const result = await generateSignalBrief(
-      { occurrence: "2026-07-29T11:00:00.000Z" },
-      {
-        env: { FEED_TIMEZONE_OFFSET: "+08:00" },
-        config,
-        doubaoSearch,
-        hackerNewsSearch: async () => [],
-        githubSearch: async () => [],
-      },
+    const result = await Effect.runPromise(
+      generateSignalBrief(
+        { occurrence: "2026-07-29T11:00:00.000Z" },
+        {
+          env: { FEED_TIMEZONE_OFFSET: "+08:00" },
+          config,
+          doubaoSearch,
+          hackerNewsSearch: async () => [],
+          githubSearch: async () => [],
+        },
+      ),
     );
 
     expect(result.day).toBe("2026-07-29");
@@ -144,18 +149,20 @@ describe("signal brief application service", () => {
   });
 
   it("continues with warnings when some sources fail and fails when all fail", async () => {
-    const partial = await generateSignalBrief(
-      { day: "2026-07-29" },
-      {
-        env: { FEED_TIMEZONE_OFFSET: "+08:00" },
-        config,
-        doubaoSearch: async ({ query }: { query: string }) => {
-          if (query.includes("model")) throw new Error("down");
-          return doubaoPage();
+    const partial = await Effect.runPromise(
+      generateSignalBrief(
+        { day: "2026-07-29" },
+        {
+          env: { FEED_TIMEZONE_OFFSET: "+08:00" },
+          config,
+          doubaoSearch: async ({ query }: { query: string }) => {
+            if (query.includes("model")) throw new Error("down");
+            return doubaoPage();
+          },
+          hackerNewsSearch: async () => [],
+          githubSearch: async () => [],
         },
-        hackerNewsSearch: async () => [],
-        githubSearch: async () => [],
-      },
+      ),
     );
 
     expect(partial.warnings).toContain("官方搜索：1 个查询暂不可用");
@@ -163,27 +170,30 @@ describe("signal brief application service", () => {
     expect(partial.markdown).toContain("**动态 · 1**");
 
     await expect(
-      generateSignalBrief(
-        { day: "2026-07-29" },
-        {
-          env: { FEED_TIMEZONE_OFFSET: "+08:00" },
-          config,
-          doubaoSearch: async () => {
-            throw new Error("down");
+      Effect.runPromise(
+        generateSignalBrief(
+          { day: "2026-07-29" },
+          {
+            env: { FEED_TIMEZONE_OFFSET: "+08:00" },
+            config,
+            doubaoSearch: async () => {
+              throw new Error("down");
+            },
+            hackerNewsSearch: async () => {
+              throw new Error("down");
+            },
+            githubSearch: async () => {
+              throw new Error("down");
+            },
           },
-          hackerNewsSearch: async () => {
-            throw new Error("down");
-          },
-          githubSearch: async () => {
-            throw new Error("down");
-          },
-        },
-      ),
+        )),
     ).rejects.toThrow(/all.*signal/i);
   });
 
   it("requires day or occurrence and validates both", async () => {
-    await expect(generateSignalBrief({}, { config, env: {} })).rejects.toThrow(/day or occurrence/);
-    await expect(generateSignalBrief({ day: "07-29-2026" }, { config, env: {} })).rejects.toThrow(/YYYY-MM-DD/);
+    await expect(Effect.runPromise(generateSignalBrief({}, { config, env: {} }))).rejects.toThrow(/day or occurrence/);
+    await expect(Effect.runPromise(generateSignalBrief({ day: "07-29-2026" }, { config, env: {} }))).rejects.toThrow(
+      /YYYY-MM-DD/,
+    );
   });
 });

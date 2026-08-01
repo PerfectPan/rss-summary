@@ -1,7 +1,7 @@
-import type { FeedSubscription } from "./config.js";
-import { type ActivityCard } from "./domain.js";
-import { addFeedSubscription, loadFeedFile, removeFeedSubscription, saveFeedFile } from "./feed-store.js";
-import { RssClient } from "./rss.js";
+import type { FeedSubscription } from "../infrastructure/config.js";
+import { type ActivityCard } from "../domain/digest.js";
+import { addFeedSubscription, loadFeedFile, removeFeedSubscription, saveFeedFile } from "../infrastructure/feed-store.js";
+import { RssClient } from "../infrastructure/rss.js";
 
 type Writable = {
   write(chunk: string): unknown;

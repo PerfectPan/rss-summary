@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { renderJsonDigest, renderMarkdownDigest } from "../src/render.js";
+import { renderJsonDigest, renderMarkdownDigest } from "../src/presentation/render.js";
 
 describe("markdown digest renderer", () => {
   it("renders a concise project-focused digest", () => {

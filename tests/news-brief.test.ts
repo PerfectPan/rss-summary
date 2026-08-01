@@ -1,6 +1,7 @@
+import { Effect } from "effect";
 import { describe, expect, it, vi } from "vitest";
 
-import { generateRivusNewsBrief, resolveNewsEditionWindow } from "../src/news-brief.js";
+import { generateRivusNewsBrief, resolveNewsEditionWindow } from "../src/application/news-brief.js";
 
 describe("Rivus news brief Tool adapter", () => {
   it("resolves non-overlapping noon and evening windows in the configured offset", () => {
@@ -39,9 +40,10 @@ describe("Rivus news brief Tool adapter", () => {
       };
     });
 
-    const result = await generateRivusNewsBrief(
-      { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
-      {
+    const result = await Effect.runPromise(
+      generateRivusNewsBrief(
+        { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
+        {
         env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
         search,
         topics: [
@@ -63,6 +65,7 @@ describe("Rivus news brief Tool adapter", () => {
           },
         ],
       },
+      ),
     );
 
     expect(search).toHaveBeenCalledTimes(3);
@@ -97,29 +100,33 @@ describe("Rivus news brief Tool adapter", () => {
         queries: ["working", "broken"],
       },
     ];
-    const partial = await generateRivusNewsBrief(
-      { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
-      {
-        env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
-        topics,
-        search: async ({ query }) => {
-          if (query === "broken") throw new Error("temporary search failure");
-          return { logId: "ok", resultCount: 0, timeCostMs: 10, results: [] };
-        },
-      },
-    );
-    expect(partial.warnings).toEqual(["科技新闻：1 个查询暂不可用"]);
-
-    await expect(
+    const partial = await Effect.runPromise(
       generateRivusNewsBrief(
         { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
         {
           env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
           topics,
-          search: async () => {
-            throw new Error("down");
+          search: async ({ query }) => {
+            if (query === "broken") throw new Error("temporary search failure");
+            return { logId: "ok", resultCount: 0, timeCostMs: 10, results: [] };
           },
         },
+      ),
+    );
+    expect(partial.warnings).toEqual(["科技新闻：1 个查询暂不可用"]);
+
+    await expect(
+      Effect.runPromise(
+        generateRivusNewsBrief(
+          { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
+          {
+            env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
+            topics,
+            search: async () => {
+              throw new Error("down");
+            },
+          },
+        ),
       ),
     ).rejects.toThrow(/all.*search/i);
   });

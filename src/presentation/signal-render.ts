@@ -1,5 +1,6 @@
-import type { SignalItem } from "./signal-domain.js";
-import { startOfCalendarDay } from "./scheduled-date.js";
+import type { SignalItem } from "../domain/signal.js";
+import { endOfCalendarDay } from "../domain/time.js";
+import { displayTime, formatStarCount, markdownLinkText } from "./markdown.js";
 
 export type SignalBriefDocument = {
   day: string;
@@ -10,7 +11,7 @@ export type SignalBriefDocument = {
 };
 
 export function renderSignalBrief(document: SignalBriefDocument): string {
-  const dayEnd = startOfCalendarDay(document.day, document.timezoneOffset) + 86_400_000;
+  const dayEnd = endOfCalendarDay(document.day, document.timezoneOffset);
   const lines = [`# 高信号速览 · ${document.day}`, ""];
 
   if (document.updates.length > 0) {
@@ -36,7 +37,7 @@ function appendUpdate(lines: string[], item: SignalItem, index: number): void {
   lines.push(
     `${index}. **[${kindLabel(item.kind)}] [${markdownLinkText(item.title)}](${item.url})**`,
     item.summary,
-    `${item.sourceLabel}${displayTimeSuffix(item.publishedAt)}`,
+    `${item.sourceLabel}${timeSuffix(item.publishedAt)}`,
     "",
   );
 }
@@ -64,22 +65,12 @@ function repoMetricsLine(item: SignalItem, dayEnd: number): string {
     const ageDays = Math.max(0, Math.floor((dayEnd - Date.parse(createdAt)) / 86_400_000));
     parts.push(ageDays === 0 ? "今日" : `${ageDays}d`);
   }
-  if (item.metrics?.stars !== undefined) parts.push(`${formatStars(item.metrics.stars)}★`);
+  if (item.metrics?.stars !== undefined) parts.push(`${formatStarCount(item.metrics.stars)}★`);
   if (item.metrics?.language) parts.push(item.metrics.language);
   return parts.join(" · ") || "GitHub";
 }
 
-function displayTimeSuffix(publishedAt: string | undefined): string {
-  const match = /[T ](\d{2}:\d{2})/u.exec(publishedAt ?? "");
-  return match ? ` · ${match[1]}` : "";
-}
-
-function markdownLinkText(value: string): string {
-  return value.replace(/([\\\[\]])/gu, "\\$1");
-}
-
-function formatStars(value: number): string {
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}m`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
-  return String(value);
+function timeSuffix(publishedAt: string | undefined): string {
+  const time = displayTime(publishedAt);
+  return time ? ` · ${time}` : "";
 }

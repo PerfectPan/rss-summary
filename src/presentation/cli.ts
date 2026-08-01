@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { Effect } from "effect";
 
-import { run as runDigest } from "./main.js";
-import { runFeedsCommand } from "./feeds.js";
+import { run as runDigest } from "../application/digest.js";
+import { runFeedsCommand } from "./feeds-cli.js";
 import { runGithubHomeCommand } from "./github-home-cli.js";
 import { runSignalCommand } from "./signal-cli.js";
 
@@ -15,7 +16,7 @@ type CliDeps = {
   stdout?: Writable;
   stderr?: Writable;
   signal?: {
-    generate?: (input: unknown, deps?: { env?: NodeJS.ProcessEnv }) => Promise<import("./signal-brief.js").SignalBriefResult>;
+    generate?: (input: unknown, deps?: { env?: NodeJS.ProcessEnv }) => Promise<import("../application/signal-brief.js").SignalBriefResult>;
   };
 };
 
@@ -38,7 +39,7 @@ export async function runCliCommand(argv: string[] = process.argv.slice(2), deps
   }
 
   if (command === "digest") {
-    await runDigest();
+    await Effect.runPromise(runDigest());
     return 0;
   }
 

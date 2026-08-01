@@ -1,3 +1,5 @@
+import { asRecord, number, text } from "./parsing.js";
+
 export type HackerNewsStory = {
   id: string;
   title: string;
@@ -72,17 +74,4 @@ function parseStory(value: unknown): HackerNewsStory | undefined {
 
 function hnItemUrl(id: string): string {
   return `https://news.ycombinator.com/item?id=${encodeURIComponent(id)}`;
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
-}
-
-function text(value: unknown): string | undefined {
-  if (typeof value === "string" && value.trim() !== "") return value.trim();
-  return undefined;
-}
-
-function number(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }

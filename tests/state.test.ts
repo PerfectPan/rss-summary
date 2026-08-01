@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { CandidateProject } from "../src/domain.js";
+import type { CandidateProject } from "../src/domain/digest.js";
 import {
   createEmptyFeedState,
   filterNewCandidates,
@@ -8,7 +8,7 @@ import {
   markCandidateResearched,
   markCandidatesSeen,
   researchKeyForCandidate,
-} from "../src/state.js";
+} from "../src/infrastructure/state.js";
 
 describe("feed state", () => {
   it("keeps candidates with unseen events and filters fully seen candidates", () => {

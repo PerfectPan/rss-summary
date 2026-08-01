@@ -69,7 +69,7 @@ export type SignalSourceConfig = {
   officialSearch: SignalOfficialSearchConfig;
 };
 
-const defaultConfigFile = fileURLToPath(new URL("../signal-sources.json", import.meta.url));
+const defaultConfigFile = fileURLToPath(new URL("../../signal-sources.json", import.meta.url));
 
 export function loadSignalSources(filePath = defaultConfigFile): SignalSourceConfig {
   return parseSignalSources(readFileSync(filePath, "utf8"));

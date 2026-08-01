@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vitest";
 
-import { parseFeedSubscriptions } from "../src/config.js";
+import { parseFeedSubscriptions } from "../src/infrastructure/config.js";
 
 describe("repository feed configuration", () => {
   it("tracks one shared feeds.json file", () => {

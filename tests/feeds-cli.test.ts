@@ -4,8 +4,8 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import type { ActivityCard } from "../src/domain.js";
-import { runFeedsCommand } from "../src/feeds.js";
+import type { ActivityCard } from "../src/domain/digest.js";
+import { runFeedsCommand } from "../src/presentation/feeds-cli.js";
 
 describe("feeds CLI", () => {
   it("adds and lists RSS feeds through a file", async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { HackerNewsClient } from "../src/hacker-news.js";
+import { HackerNewsClient } from "../src/infrastructure/hacker-news.js";
 
 const fixture = {
   hits: [

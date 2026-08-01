@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { GitHubClient } from "../src/github.js";
+import { GitHubClient } from "../src/infrastructure/github.js";
 
 describe("GitHubClient", () => {
   it("fetches received events as the configured username with bearer auth", async () => {

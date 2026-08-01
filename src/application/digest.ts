@@ -1,38 +1,41 @@
-import { loadConfig, type AppConfig } from "./config.js";
-import { buildCandidateProjects, normalizeEvent, type ActivityCard, type RepositoryMetadata } from "./domain.js";
-import { isWithinEventWindow, resolveEventWindow } from "./event-window.js";
-import { GitHubClient } from "./github.js";
-import { GitHubHomeClient } from "./github-home.js";
-import { createNotifier } from "./notifier.js";
-import { renderJsonDigest, renderMarkdownDigest, type DigestDocument } from "./render.js";
-import { RssClient } from "./rss.js";
-import { filterNewCandidates, loadFeedState, markCandidatesSeen, saveFeedState } from "./state.js";
+import { Effect } from "effect";
 
-export async function run(): Promise<void> {
-  const config = loadConfig();
-  const { document, state } = await collectDigest(config);
-  const output = config.outputFormat === "json" ? renderJsonDigest(document) : renderMarkdownDigest(document);
+import { buildCandidateProjects, normalizeEvent, type ActivityCard, type RepositoryMetadata } from "../domain/digest.js";
+import { isWithinEventWindow, resolveEventWindow } from "../domain/time.js";
+import { loadConfig, type AppConfig } from "../infrastructure/config.js";
+import { GitHubClient } from "../infrastructure/github.js";
+import { GitHubHomeClient } from "../infrastructure/github-home.js";
+import { createNotifier } from "../infrastructure/notifier.js";
+import { RssClient } from "../infrastructure/rss.js";
+import { filterNewCandidates, loadFeedState, markCandidatesSeen, saveFeedState, type FeedState } from "../infrastructure/state.js";
+import { renderJsonDigest, renderMarkdownDigest, type DigestDocument } from "../presentation/render.js";
+import { attempt } from "./effect.js";
 
-  await createNotifier({ webhookUrl: config.webhookUrl }).send(output);
+export function run(): Effect.Effect<void, Error> {
+  return Effect.gen(function* () {
+    const config = loadConfig();
+    const { document, state } = yield* attempt(collectDigest(config));
+    const output = config.outputFormat === "json" ? renderJsonDigest(document) : renderMarkdownDigest(document);
 
-  if (config.onlyNew && !config.dryRun) {
-    markCandidatesSeen(state, document.candidates, document.generatedAt);
-    saveFeedState(config.stateFile, state);
-  }
+    yield* attempt(createNotifier({ webhookUrl: config.webhookUrl }).send(output));
+
+    if (config.onlyNew && !config.dryRun) {
+      markCandidatesSeen(state, document.candidates, document.generatedAt);
+      saveFeedState(config.stateFile, state);
+    }
+  });
 }
 
-export async function buildDigestDocument(config: AppConfig): Promise<DigestDocument> {
-  return (await collectDigest(config)).document;
+export function buildDigestDocument(config: AppConfig): Effect.Effect<DigestDocument, Error> {
+  return Effect.map(attempt(collectDigest(config)), ({ document }) => document);
 }
 
-async function collectDigest(config: AppConfig) {
+async function collectDigest(config: AppConfig): Promise<{ document: DigestDocument; state: FeedState }> {
   const client = new GitHubClient({ token: config.token });
   const rssClient = new RssClient();
 
   const [githubResult, rssResult] = await Promise.allSettled([
-    config.rssOnly
-      ? Promise.resolve([])
-      : fetchGithubEvents(config, client),
+    config.rssOnly ? Promise.resolve([]) : fetchGithubEvents(config, client),
     fetchRssEvents(rssClient, config.rssFeeds),
   ]);
   const githubEvents = githubResult.status === "fulfilled" ? githubResult.value : [];
@@ -72,10 +75,7 @@ async function collectDigest(config: AppConfig) {
   return { document, state };
 }
 
-async function fetchGithubEvents(
-  config: AppConfig,
-  client: GitHubClient,
-): Promise<ActivityCard[]> {
+async function fetchGithubEvents(config: AppConfig, client: GitHubClient): Promise<ActivityCard[]> {
   if (config.githubFeedSource === "home") {
     return new GitHubHomeClient({
       storageState: config.githubHomeStorageState,
@@ -157,8 +157,4 @@ async function enrichPullRequests(client: GitHubClient, events: ActivityCard[]):
       }
     }),
   );
-}
-
-if (import.meta.url === `file://${process.argv[1]}`) {
-  await run();
 }

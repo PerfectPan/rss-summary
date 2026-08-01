@@ -12,7 +12,7 @@ export type NewsTopic = {
   queries: string[];
 };
 
-const defaultTopicsFile = fileURLToPath(new URL("../news-topics.json", import.meta.url));
+const defaultTopicsFile = fileURLToPath(new URL("../../news-topics.json", import.meta.url));
 const topicIdPattern = /^[a-z][a-z0-9-]*$/u;
 const newsTopicLimits = {
   maxItemsPerTopic: 10,

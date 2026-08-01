@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isWithinEventWindow, resolveEventWindow } from "../src/event-window.js";
+import { isWithinEventWindow, resolveEventWindow } from "../src/domain/time.js";
 
 describe("event window", () => {
   it("uses an Asia/Shanghai calendar day when a day is configured", () => {

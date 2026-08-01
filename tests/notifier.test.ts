@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createNotifier } from "../src/notifier.js";
+import { createNotifier } from "../src/infrastructure/notifier.js";
 
 describe("notifier", () => {
   it("posts digest markdown to a generic webhook", async () => {

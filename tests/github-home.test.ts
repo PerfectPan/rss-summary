@@ -10,7 +10,7 @@ import {
   hasGitHubHomeFeedMarkup,
   normalizeHomeCardSnapshot,
   normalizeHomeCardSnapshots,
-} from "../src/github-home.js";
+} from "../src/infrastructure/github-home.js";
 
 describe("GitHub Home feed source", () => {
   it("normalizes a rendered Home merged pull request card", () => {

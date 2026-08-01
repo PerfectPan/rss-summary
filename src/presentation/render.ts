@@ -1,4 +1,4 @@
-import type { CandidateProject } from "./domain.js";
+import type { CandidateProject } from "../domain/digest.js";
 
 export type DigestDocument = {
   generatedAt: string;

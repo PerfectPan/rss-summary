@@ -2,13 +2,14 @@ import { existsSync } from "node:fs";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Effect } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { loadConfig } from "../src/config.js";
+import { loadConfig } from "../src/infrastructure/config.js";
 
 const sentOutputs: string[] = [];
 
-vi.mock("../src/github-home.js", () => ({
+vi.mock("../src/infrastructure/github-home.js", () => ({
   GitHubHomeClient: class {
     getHomeEvents(): Promise<never> {
       return Promise.reject(new Error("home unavailable"));
@@ -16,7 +17,7 @@ vi.mock("../src/github-home.js", () => ({
   },
 }));
 
-vi.mock("../src/rss.js", () => ({
+vi.mock("../src/infrastructure/rss.js", () => ({
   RssClient: class {
     getFeedEvents(): Promise<Array<Record<string, unknown>>> {
       return Promise.resolve([
@@ -39,7 +40,7 @@ vi.mock("../src/rss.js", () => ({
   },
 }));
 
-vi.mock("../src/notifier.js", () => ({
+vi.mock("../src/infrastructure/notifier.js", () => ({
   createNotifier: () => ({
     send: (output: string) => {
       sentOutputs.push(output);
@@ -72,9 +73,9 @@ describe("digest source isolation", () => {
     ];
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
-    const { run } = await import("../src/main.js");
+    const { run } = await import("../src/application/digest.js");
 
-    await run();
+    await Effect.runPromise(run());
 
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("GitHub feed unavailable"));
     expect(sentOutputs).toHaveLength(1);
@@ -103,9 +104,9 @@ describe("digest source isolation", () => {
           stateFile,
         ],
       );
-      const { buildDigestDocument } = await import("../src/main.js");
+      const { buildDigestDocument } = await import("../src/application/digest.js");
 
-      const document = await buildDigestDocument(config);
+      const document = await Effect.runPromise(buildDigestDocument(config));
 
       expect(document.candidates).toHaveLength(1);
       expect(sentOutputs).toHaveLength(0);

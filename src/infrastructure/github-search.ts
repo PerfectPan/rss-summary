@@ -1,3 +1,5 @@
+import { asRecord, number, text } from "./parsing.js";
+
 export type GitHubSearchRepo = {
   fullName: string;
   htmlUrl: string;
@@ -84,17 +86,4 @@ function parseRepo(value: unknown): GitHubSearchRepo | undefined {
     createdAt: text(item.created_at) ?? "",
     topics: Array.isArray(item.topics) ? item.topics.map(text).filter((topic): topic is string => topic !== undefined) : [],
   };
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
-}
-
-function text(value: unknown): string | undefined {
-  if (typeof value === "string" && value.trim() !== "") return value.trim();
-  return undefined;
-}
-
-function number(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }

@@ -1,8 +1,12 @@
-import { DoubaoSearchClient, type DoubaoSearchInput, type DoubaoSearchPage } from "./doubao-search.js";
-import { buildNewsStories, selectNewsStories, type NewsSearchHit } from "./news-domain.js";
-import { renderNewsBrief, type NewsBriefEdition } from "./news-render.js";
-import { loadNewsTopics, type NewsTopic } from "./news-topics.js";
-import { calendarDayAtOffset, startOfCalendarDay } from "./scheduled-date.js";
+import { Effect } from "effect";
+
+import { buildNewsStories, selectNewsStories, type NewsSearchHit } from "../domain/news.js";
+import { calendarDayAtOffset, startOfCalendarDay } from "../domain/time.js";
+import { boundedInteger } from "../infrastructure/parsing.js";
+import { loadNewsTopics, type NewsTopic } from "../infrastructure/news-topics.js";
+import { DoubaoSearchClient, type DoubaoSearchInput, type DoubaoSearchPage } from "../infrastructure/doubao-search.js";
+import { renderNewsBrief, type NewsBriefEdition } from "../presentation/news-render.js";
+import { attempt } from "./effect.js";
 
 export type RivusNewsBriefInput = {
   occurrence: string;
@@ -50,61 +54,63 @@ export function resolveNewsEditionWindow(
   };
 }
 
-export async function generateRivusNewsBrief(
+export function generateRivusNewsBrief(
   value: unknown,
   dependencies: NewsBriefDependencies = {},
-): Promise<RivusNewsBriefResult> {
-  const input = parseInput(value);
-  const env = dependencies.env ?? process.env;
-  const timezoneOffset = env.FEED_TIMEZONE_OFFSET ?? "+08:00";
-  const window = resolveNewsEditionWindow(input.occurrence, timezoneOffset, input.edition);
-  const topics = (dependencies.topics ?? loadNewsTopics(env.NEWS_TOPICS_FILE)).filter(({ enabled }) => enabled);
-  if (topics.length === 0) throw new Error("At least one news topic must be enabled.");
-  const count = boundedInteger(env.NEWS_SEARCH_COUNT_PER_QUERY, 10, 1, 50);
-  const search = dependencies.search ?? createSearch(env);
+): Effect.Effect<RivusNewsBriefResult, Error> {
+  return Effect.gen(function* () {
+    const input = parseInput(value);
+    const env = dependencies.env ?? process.env;
+    const timezoneOffset = env.FEED_TIMEZONE_OFFSET ?? "+08:00";
+    const window = resolveNewsEditionWindow(input.occurrence, timezoneOffset, input.edition);
+    const topics = (dependencies.topics ?? loadNewsTopics(env.NEWS_TOPICS_FILE)).filter(({ enabled }) => enabled);
+    if (topics.length === 0) throw new Error("At least one news topic must be enabled.");
+    const count = boundedInteger(env.NEWS_SEARCH_COUNT_PER_QUERY, 10, 1, 50);
+    const search = dependencies.search ?? createSearch(env);
 
-  const requests = topics.flatMap((topic) =>
-    topic.queries.map((query) => ({ query, topic, promise: search({ query, count, day: window.day, sourcePolicy: topic.sourcePolicy }) })),
-  );
-  const settled = await Promise.allSettled(requests.map(({ promise }) => promise));
-  const successful = settled.filter((result): result is PromiseFulfilledResult<DoubaoSearchPage> => result.status === "fulfilled");
-  if (successful.length === 0) throw new Error("All Doubao search queries failed.");
-
-  const warnings = topicWarnings(requests, settled);
-  const hits: NewsSearchHit[] = [];
-  settled.forEach((result, index) => {
-    if (result.status !== "fulfilled") return;
-    const request = requests[index]!;
-    hits.push(
-      ...result.value.results.map((searchResult) => ({
-        ...searchResult,
-        topicId: request.topic.id,
-        topicLabel: request.topic.label,
-        sourcePolicy: request.topic.sourcePolicy,
-        query: request.query,
-      })),
+    const requests = topics.flatMap((topic) =>
+      topic.queries.map((query) => ({ query, topic, promise: search({ query, count, day: window.day, sourcePolicy: topic.sourcePolicy }) })),
     );
+    const settled = yield* attempt(Promise.allSettled(requests.map(({ promise }) => promise)));
+    const successful = settled.filter((result): result is PromiseFulfilledResult<DoubaoSearchPage> => result.status === "fulfilled");
+    if (successful.length === 0) throw new Error("All Doubao search queries failed.");
+
+    const warnings = topicWarnings(requests, settled);
+    const hits: NewsSearchHit[] = [];
+    settled.forEach((result, index) => {
+      if (result.status !== "fulfilled") return;
+      const request = requests[index]!;
+      hits.push(
+        ...result.value.results.map((searchResult) => ({
+          ...searchResult,
+          topicId: request.topic.id,
+          topicLabel: request.topic.label,
+          sourcePolicy: request.topic.sourcePolicy,
+          query: request.query,
+        })),
+      );
+    });
+    const stories = selectNewsStories(buildNewsStories(hits, window), topics);
+    const generatedAt = (dependencies.now ?? (() => new Date()))().toISOString();
+    const document = {
+      day: window.day,
+      edition: input.edition,
+      generatedAt,
+      stories,
+      topics,
+      warnings,
+      windowLabel: window.label,
+    };
+    return {
+      day: window.day,
+      edition: input.edition,
+      generatedAt,
+      itemCount: stories.length,
+      markdown: renderNewsBrief(document),
+      warnings,
+      windowLabel: window.label,
+    };
   });
-  const stories = selectNewsStories(buildNewsStories(hits, window), topics);
-  const generatedAt = (dependencies.now ?? (() => new Date()))().toISOString();
-  const document = {
-    day: window.day,
-    edition: input.edition,
-    generatedAt,
-    stories,
-    topics,
-    warnings,
-    windowLabel: window.label,
-  };
-  return {
-    day: window.day,
-    edition: input.edition,
-    generatedAt,
-    itemCount: stories.length,
-    markdown: renderNewsBrief(document),
-    warnings,
-    windowLabel: window.label,
-  };
 }
 
 function parseInput(value: unknown): RivusNewsBriefInput {
@@ -145,14 +151,6 @@ function topicWarnings(
     failures.set(topic.id, current);
   });
   return [...failures.values()].map(({ label, count }) => `${label}：${count} 个查询暂不可用`);
-}
-
-function boundedInteger(value: string | undefined, fallback: number, min: number, max: number): number {
-  const parsed = value === undefined ? fallback : Number(value);
-  if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
-    throw new Error(`Numeric configuration must be an integer between ${min} and ${max}.`);
-  }
-  return parsed;
 }
 
 function timeAtOffset(instant: number, timezoneOffset: string): string {

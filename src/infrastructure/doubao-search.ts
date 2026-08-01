@@ -1,4 +1,5 @@
 import type { NewsSourcePolicy } from "./news-topics.js";
+import { asRecord, number, text } from "./parsing.js";
 
 export type DoubaoSearchInput = {
   query: string;
@@ -128,16 +129,3 @@ function parseResult(value: unknown): DoubaoSearchResult | undefined {
   };
 }
 
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
-}
-
-function text(value: unknown): string | undefined {
-  if (typeof value === "string" && value.trim() !== "") return value.trim();
-  if (typeof value === "number") return String(value);
-  return undefined;
-}
-
-function number(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}

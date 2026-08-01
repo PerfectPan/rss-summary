@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
+import { hostnameOf } from "./parsing.js";
 import { parseFeedSubscriptions, type FeedSubscription } from "./config.js";
 
 export type FeedSubscriptionInput = {
@@ -48,18 +49,10 @@ function normalizeFeedSubscription(input: FeedSubscriptionInput): FeedSubscripti
   if (!url) throw new Error("RSS feed url is required.");
 
   return {
-    name: input.name?.trim() || nameFromUrl(url),
+    name: input.name?.trim() || hostnameOf(url),
     url,
     tags: unique((input.tags ?? []).map((tag) => tag.trim()).filter(Boolean)),
   };
-}
-
-function nameFromUrl(url: string): string {
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return url;
-  }
 }
 
 function unique<T>(items: T[]): T[] {

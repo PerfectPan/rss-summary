@@ -1,5 +1,6 @@
-import type { SelectedNewsStory } from "./news-domain.js";
-import type { NewsTopic } from "./news-topics.js";
+import { displayTime, markdownLinkText } from "./markdown.js";
+import type { SelectedNewsStory } from "../domain/news.js";
+import type { NewsTopic } from "../infrastructure/news-topics.js";
 
 export type NewsBriefEdition = "noon" | "evening";
 
@@ -41,7 +42,7 @@ export function renderNewsBrief(document: NewsBriefDocument): string {
 function appendStory(lines: string[], story: SelectedNewsStory, index: number): void {
   lines.push(`**${index}. [${markdownLinkText(story.title)}](${story.canonicalUrl})**`);
   lines.push(story.summary);
-  lines.push(`${story.siteName} · ${displayTime(story.publishTime)}`, "");
+  lines.push(`${story.siteName} · ${displayTime(story.publishTime) ?? story.publishTime}`, "");
 }
 
 function topicIcon(topicId: string): string {
@@ -52,13 +53,4 @@ function topicIcon(topicId: string): string {
 
 function shortTopicLabel(value: string): string {
   return value.replace(/新闻$/u, "");
-}
-
-function markdownLinkText(value: string): string {
-  return value.replace(/([\\\[\]])/gu, "\\$1");
-}
-
-function displayTime(value: string): string {
-  const match = /[T ](\d{2}:\d{2})/u.exec(value);
-  return match?.[1] ?? value;
 }

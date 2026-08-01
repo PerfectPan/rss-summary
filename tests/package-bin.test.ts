@@ -17,11 +17,11 @@ describe("package CLI metadata", () => {
       scripts?: Record<string, string>;
     };
 
-    expect(pkg.bin?.["rss-summary"]).toBe("./dist/cli.js");
+    expect(pkg.bin?.["rss-summary"]).toBe("./dist/presentation/cli.js");
     expect(pkg.exports?.["./rivus-plugin"]).toEqual({
-      import: "./dist/rivus-plugin.js",
-      types: "./dist/rivus-plugin.d.ts",
-      default: "./dist/rivus-plugin.js",
+      import: "./dist/presentation/rivus-plugin.js",
+      types: "./dist/presentation/rivus-plugin.d.ts",
+      default: "./dist/presentation/rivus-plugin.js",
     });
     expect(pkg.peerDependencies?.["@rivus/agent"]).toBe(">=0.1.1 <0.4.0");
     expect(pkg.devDependencies?.["@rivus/agent"]).toBe("0.1.1");

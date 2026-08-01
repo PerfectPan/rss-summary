@@ -1,8 +1,10 @@
-import type { AppConfig } from "./config.js";
-import { loadConfig } from "./config.js";
-import { buildDigestDocument } from "./main.js";
+import { Effect } from "effect";
+
+import type { AppConfig } from "../infrastructure/config.js";
+import { loadConfig } from "../infrastructure/config.js";
+import { buildDigestDocument } from "../application/digest.js";
 import { renderMarkdownDigest, type DigestDocument } from "./render.js";
-import { calendarDayAtOffset, shiftCalendarDay } from "./scheduled-date.js";
+import { calendarDayAtOffset, shiftCalendarDay } from "../domain/time.js";
 
 export type RivusDigestInput = {
   day?: string;
@@ -20,7 +22,7 @@ export type RivusDigestResult = {
 };
 
 type RivusDigestDependencies = {
-  buildDigestDocument?: (config: AppConfig) => Promise<DigestDocument>;
+  buildDigestDocument?: (config: AppConfig) => Effect.Effect<DigestDocument, Error>;
   env?: NodeJS.ProcessEnv;
 };
 
@@ -54,7 +56,9 @@ export async function generateRivusDigest(
   const configEnv = { ...env };
   if (input.onlyNew !== undefined) configEnv.FEED_ONLY_NEW = String(input.onlyNew);
   if (input.rssOnly !== undefined) configEnv.FEED_RSS_ONLY = String(input.rssOnly);
-  const document = await (dependencies.buildDigestDocument ?? buildDigestDocument)(loadConfig(configEnv, argv));
+  const document = await Effect.runPromise(
+    (dependencies.buildDigestDocument ?? buildDigestDocument)(loadConfig(configEnv, argv)),
+  );
   return {
     candidateCount: document.candidates.length,
     generatedAt: document.generatedAt,

@@ -1,15 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { buildNewsStories, parseNewsPublishTime, selectNewsStories } from "../src/news-domain.js";
-import type { NewsSearchHit } from "../src/news-domain.js";
-import type { NewsTopic } from "../src/news-topics.js";
+import { buildNewsStories, selectNewsStories } from "../src/domain/news.js";
+import { parsePublishTime } from "../src/domain/text.js";
+import type { NewsSearchHit } from "../src/domain/news.js";
+import type { NewsTopic } from "../src/infrastructure/news-topics.js";
 
 describe("news domain", () => {
   it("interprets timezone-free publisher timestamps in the configured news timezone", () => {
-    expect(parseNewsPublishTime("2026-07-29 09:30:00", "+08:00")).toBe(
+    expect(parsePublishTime("2026-07-29 09:30:00", "+08:00")).toBe(
       Date.parse("2026-07-29T09:30:00+08:00"),
     );
-    expect(parseNewsPublishTime("2026-07-29T09:30:00Z", "+08:00")).toBe(
+    expect(parsePublishTime("2026-07-29T09:30:00Z", "+08:00")).toBe(
       Date.parse("2026-07-29T09:30:00Z"),
     );
   });

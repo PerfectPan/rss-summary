@@ -19,7 +19,7 @@ import rssSummaryPlugin, {
   RSS_SUMMARY_SIGNAL_AUTOMATION_ID,
   RSS_SUMMARY_SIGNAL_TOOL_ID,
   RSS_SUMMARY_TOOL_ID,
-} from "../src/rivus-plugin.js";
+} from "../src/presentation/rivus-plugin.js";
 
 describe("rss-summary Rivus Plugin", () => {
   it("conforms as an external Plugin with three narrow read-only Tools", async () => {

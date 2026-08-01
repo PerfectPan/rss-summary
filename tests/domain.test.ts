@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildCandidateProjects, normalizeEvent } from "../src/domain.js";
+import { buildCandidateProjects, normalizeEvent } from "../src/domain/digest.js";
 
 describe("github feed domain", () => {
   it("normalizes a merged pull request event into an activity card", () => {

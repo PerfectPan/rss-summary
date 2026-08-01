@@ -1,4 +1,4 @@
-import { saveGithubHomeStorageState } from "./github-home.js";
+import { saveGithubHomeStorageState } from "../infrastructure/github-home.js";
 
 type Writable = {
   write(chunk: string): unknown;

@@ -1,4 +1,4 @@
-import type { RepositoryMetadata } from "./domain.js";
+import type { RepositoryMetadata } from "../domain/digest.js";
 
 export type GitHubClientOptions = {
   token?: string;

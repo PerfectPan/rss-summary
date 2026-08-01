@@ -1,12 +1,12 @@
-import { canonicalizeUrl, isSameTitleEvent, parseNewsPublishTime } from "./news-domain.js";
-import { shiftCalendarDay, startOfCalendarDay } from "./scheduled-date.js";
+import { shiftCalendarDay, startOfCalendarDay } from "./time.js";
+import { canonicalizeUrl, compactSummary, isSameTitleEvent, parsePublishTime } from "./text.js";
 import type {
   SignalFrontendBias,
   SignalKind,
   SignalQuotas,
   SignalScoring,
   SignalSection,
-} from "./signal-sources.js";
+} from "../infrastructure/signal-sources.js";
 
 export type SignalItem = {
   id: string;
@@ -114,13 +114,16 @@ export function selectSignalItems(
     all.sort((left, right) => right.score - left.score || sectionOrder(right) - sectionOrder(left));
     all.length = quotas.maxTotal;
   }
-  return { updates: all.filter(({ section }) => section === "updates"), opensource: all.filter(({ section }) => section === "opensource") };
+  return {
+    updates: all.filter(({ section }) => section === "updates"),
+    opensource: all.filter(({ section }) => section === "opensource"),
+  };
 }
 
 function isAcceptedUpdateHit(hit: SignalUpdateHit, rules: SignalDomainRules): boolean {
   if (!hit.title.trim() || !hit.url.trim()) return false;
   const publishedAt = hit.publishedAt
-    ? parseNewsPublishTime(hit.publishedAt, rules.window.timezoneOffset)
+    ? parsePublishTime(hit.publishedAt, rules.window.timezoneOffset)
     : Number.NaN;
   return Number.isFinite(publishedAt) && publishedAt >= rules.window.since && publishedAt < rules.window.until;
 }
@@ -175,7 +178,8 @@ function toUpdateItem(canonicalUrl: string, matches: SignalUpdateHit[], rules: S
     reasons.push("时效");
   }
 
-  const crossSource = matches.some(({ source }) => source === "official") && matches.some(({ source }) => source === "hn");
+  const crossSource =
+    matches.some(({ source }) => source === "official") && matches.some(({ source }) => source === "hn");
   if (crossSource) {
     scoreParts.push({ label: "双源命中", value: rules.scoring.crossSourceBoost });
     reasons.push("双源命中");
@@ -211,9 +215,9 @@ function toRepoItem(hit: SignalRepoHit, rules: SignalDomainRules): SignalItem {
     reasons.push(`${ageDays} 天前创建`);
   }
 
-  const languageMatch = hit.language && rules.frontendBias.languages.some(
-    (language) => language.toLowerCase() === hit.language!.toLowerCase(),
-  );
+  const languageMatch =
+    hit.language &&
+    rules.frontendBias.languages.some((language) => language.toLowerCase() === hit.language!.toLowerCase());
   if (languageMatch) {
     scoreParts.push({ label: `语言 ${hit.language}`, value: rules.scoring.repoLanguageBoost });
     reasons.push(`语言 ${hit.language}`);
@@ -328,14 +332,6 @@ function recencyScore(publishedAt: string, rules: SignalDomainRules): number {
   const span = rules.window.until - rules.window.since;
   if (span <= 0) return 0;
   return (1 - (instant - rules.window.since) / span) * rules.scoring.recencyMaxScore;
-}
-
-function compactSummary(value: string, title: string): string {
-  let normalized = value.replace(/\s+/gu, " ").trim();
-  if (normalized.startsWith(title)) normalized = normalized.slice(title.length).replace(/^[：:·|—–\-，,。；;\s]+/u, "");
-  const sentences = normalized.match(/[^。！？!?]+[。！？!?]?/gu) ?? [];
-  const summary = sentences.slice(0, 2).join("").trim() || "暂无可用摘要。";
-  return summary.length <= 110 ? summary : `${summary.slice(0, 109).trimEnd()}…`;
 }
 
 function formatStars(value: number): string {

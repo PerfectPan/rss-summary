@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { addFeedSubscription, formatFeedSubscriptions, removeFeedSubscription } from "../src/feed-store.js";
+import { addFeedSubscription, formatFeedSubscriptions, removeFeedSubscription } from "../src/infrastructure/feed-store.js";
 
 describe("feed store", () => {
   it("adds a normalized feed subscription", () => {

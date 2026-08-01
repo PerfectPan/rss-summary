@@ -8,9 +8,9 @@ import {
   type SignalDomainRules,
   type SignalRepoHit,
   type SignalUpdateHit,
-} from "../src/signal-domain.js";
-import { renderSignalBrief } from "../src/signal-render.js";
-import type { SignalFrontendBias, SignalQuotas, SignalScoring } from "../src/signal-sources.js";
+} from "../src/domain/signal.js";
+import { renderSignalBrief } from "../src/presentation/signal-render.js";
+import type { SignalFrontendBias, SignalQuotas, SignalScoring } from "../src/infrastructure/signal-sources.js";
 
 const window = {
   day: "2026-07-29",

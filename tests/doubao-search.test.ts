@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { DoubaoSearchClient } from "../src/doubao-search.js";
+import { DoubaoSearchClient } from "../src/infrastructure/doubao-search.js";
 
 describe("Doubao search source", () => {
   it("requests an exact day with query rewrite and authoritative URL results", async () => {

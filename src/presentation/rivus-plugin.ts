@@ -3,10 +3,11 @@ import {
   type RivusPlugin,
   type RivusPluginRegistry,
 } from "@rivus/agent";
+import { Effect } from "effect";
 
-import { generateRivusNewsBrief, type RivusNewsBriefResult } from "./news-brief.js";
+import { generateRivusNewsBrief, type RivusNewsBriefResult } from "../application/news-brief.js";
+import { generateSignalBrief, type SignalBriefResult } from "../application/signal-brief.js";
 import { generateRivusDigest, type RivusDigestResult } from "./rivus-digest.js";
-import { generateSignalBrief, type SignalBriefResult } from "./signal-brief.js";
 
 export const RSS_SUMMARY_TOOL_ID = "rss-summary/generate-digest";
 export const RSS_SUMMARY_NEWS_TOOL_ID = "rss-summary/generate-news-brief";
@@ -26,8 +27,8 @@ type RssSummaryPluginDependencies = {
 
 export function createRssSummaryPlugin(dependencies: RssSummaryPluginDependencies = {}): RivusPlugin {
   const executeDigest = dependencies.generateDigest ?? generateRivusDigest;
-  const executeNewsBrief = dependencies.generateNewsBrief ?? generateRivusNewsBrief;
-  const executeSignalBrief = dependencies.generateSignalBrief ?? generateSignalBrief;
+  const executeNewsBrief = dependencies.generateNewsBrief ?? ((input: unknown) => Effect.runPromise(generateRivusNewsBrief(input)));
+  const executeSignalBrief = dependencies.generateSignalBrief ?? ((input: unknown) => Effect.runPromise(generateSignalBrief(input)));
 
   return {
     manifest: {

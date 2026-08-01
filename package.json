@@ -15,13 +15,13 @@
     "README.md"
   ],
   "bin": {
-    "rss-summary": "./dist/cli.js"
+    "rss-summary": "./dist/presentation/cli.js"
   },
   "exports": {
     "./rivus-plugin": {
-      "import": "./dist/rivus-plugin.js",
-      "types": "./dist/rivus-plugin.d.ts",
-      "default": "./dist/rivus-plugin.js"
+      "import": "./dist/presentation/rivus-plugin.js",
+      "types": "./dist/presentation/rivus-plugin.d.ts",
+      "default": "./dist/presentation/rivus-plugin.js"
     }
   },
   "scripts": {
@@ -42,6 +42,7 @@
   },
   "dependencies": {
     "cheerio": "^1.2.0",
+    "effect": "^3.22.1",
     "fast-xml-parser": "^5.9.3",
     "playwright": "^1.61.1"
   },

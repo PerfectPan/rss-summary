@@ -1,7 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
 
 import type { FeedSubscription } from "./config.js";
-import type { ActivityCard } from "./domain.js";
+import type { ActivityCard } from "../domain/digest.js";
 
 type RssClientOptions = {
   fetch?: typeof fetch;

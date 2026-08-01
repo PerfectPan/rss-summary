@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
-import type { CandidateProject } from "./domain.js";
+import type { CandidateProject } from "../domain/digest.js";
 
 export type FeedState = {
   seen: Record<string, string>;

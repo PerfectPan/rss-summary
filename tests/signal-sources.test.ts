@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseSignalSources } from "../src/signal-sources.js";
+import { parseSignalSources } from "../src/infrastructure/signal-sources.js";
 
 const minimalConfig = {
   timezoneOffsetEnv: "FEED_TIMEZONE_OFFSET",
