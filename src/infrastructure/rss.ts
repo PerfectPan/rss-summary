@@ -1,4 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
+import he from "he";
 import castArray from "lodash-es/castArray.js";
 
 import type { ActivityCard } from "../domain/digest.js";
@@ -139,24 +140,12 @@ function text(value: unknown): string | undefined {
 
 function cleanSummary(value: string | undefined): string | undefined {
   if (!value) return undefined;
+  // Strip markup first, then decode entities (&amp; → &, &#x…; → chars) via `he`.
   const stripped = value
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/giu, " ")
     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/giu, " ")
     .replace(/<[^>]+>/gu, " ")
     .replace(/\s+/gu, " ")
     .trim();
-  return decodeHtmlEntities(stripped);
-}
-
-function decodeHtmlEntities(value: string): string {
-  return value
-    .replace(/&amp;/gu, "&")
-    .replace(/&lt;/gu, "<")
-    .replace(/&gt;/gu, ">")
-    .replace(/&quot;/gu, '"')
-    .replace(/&#39;/gu, "'")
-    .replace(/&#(\d+);/gu, (_, codepoint: string) => String.fromCodePoint(Number(codepoint)))
-    .replace(/&#x([0-9a-f]+);/giu, (_, codepoint: string) =>
-      String.fromCodePoint(Number.parseInt(codepoint, 16)),
-    );
+  return he.decode(stripped);
 }
