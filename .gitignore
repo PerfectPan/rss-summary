@@ -1,5 +1,6 @@
 .omx/
 .state/
+coverage/
 node_modules/
 dist/
 .env

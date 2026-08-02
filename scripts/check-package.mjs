@@ -21,7 +21,7 @@ try {
   );
 
   const installed = join(consumer, "node_modules", "rss-summary");
-  requireFile(join(installed, "dist", "rivus-plugin.d.ts"));
+  requireFile(join(installed, "dist", "presentation", "rivus-plugin.d.ts"));
   requireFile(join(installed, "docs", "rivus-plugin.md"));
   requireFile(join(installed, "news-topics.json"));
   requireFile(join(installed, "signal-sources.json"));

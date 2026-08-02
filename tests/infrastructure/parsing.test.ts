@@ -1,0 +1,35 @@
+import { describe, expect, it } from "vite-plus/test";
+
+import {
+  asRecord,
+  asRecordOrNull,
+  boundedInteger,
+  hostnameOf,
+  number,
+  requireRecord,
+  text,
+} from "../../src/infrastructure/parsing.js";
+
+describe("infrastructure/parsing", () => {
+  it("bounds integer env values", () => {
+    expect(boundedInteger(undefined, 10, 1, 50)).toBe(10);
+    expect(boundedInteger("20", 10, 1, 50)).toBe(20);
+    expect(() => boundedInteger("0", 10, 1, 50)).toThrow(/integer between/i);
+  });
+
+  it("strips www. from hostnames and coerces JSON primitives", () => {
+    expect(hostnameOf("https://www.example.com/path")).toBe("example.com");
+    expect(hostnameOf("not-a-url")).toBe("not-a-url");
+    expect(asRecord({ a: 1 })).toEqual({ a: 1 });
+    expect(asRecord(null)).toEqual({});
+    expect(asRecordOrNull({ a: 1 })).toEqual({ a: 1 });
+    expect(asRecordOrNull([])).toBeNull();
+    expect(requireRecord({ a: 1 }, "x")).toEqual({ a: 1 });
+    expect(() => requireRecord([], "x")).toThrow(/must be an object/i);
+    expect(text("  hi  ")).toBe("hi");
+    expect(text(3)).toBe("3");
+    expect(text("")).toBeUndefined();
+    expect(number(1.5)).toBe(1.5);
+    expect(number(Number.NaN)).toBeUndefined();
+  });
+});

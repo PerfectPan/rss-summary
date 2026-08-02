@@ -1,0 +1,58 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
+
+import uniq from "lodash-es/uniq.js";
+
+import { hostnameOf } from "./parsing.js";
+import { parseFeedSubscriptions, type FeedSubscription } from "./config.js";
+
+export type FeedSubscriptionInput = {
+  name?: string;
+  url: string;
+  tags?: string[];
+};
+
+export function addFeedSubscription(
+  feeds: FeedSubscription[],
+  input: FeedSubscriptionInput,
+): FeedSubscription[] {
+  const next = normalizeFeedSubscription(input);
+  if (feeds.some((feed) => feed.url === next.url)) {
+    throw new Error(`RSS feed already exists: ${next.url}`);
+  }
+  return [...feeds, next];
+}
+
+export function removeFeedSubscription(feeds: FeedSubscription[], url: string): FeedSubscription[] {
+  const normalizedUrl = url.trim();
+  const next = feeds.filter((feed) => feed.url !== normalizedUrl);
+  if (next.length === feeds.length) {
+    throw new Error(`RSS feed not found: ${normalizedUrl}`);
+  }
+  return next;
+}
+
+export function loadFeedFile(path: string): FeedSubscription[] {
+  if (!existsSync(path)) return [];
+  return parseFeedSubscriptions(readFileSync(path, "utf8"));
+}
+
+export function saveFeedFile(path: string, feeds: FeedSubscription[]): void {
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, formatFeedSubscriptions(feeds));
+}
+
+export function formatFeedSubscriptions(feeds: FeedSubscription[]): string {
+  return `${JSON.stringify(feeds, null, 2)}\n`;
+}
+
+function normalizeFeedSubscription(input: FeedSubscriptionInput): FeedSubscription {
+  const url = input.url.trim();
+  if (!url) throw new Error("RSS feed url is required.");
+
+  return {
+    name: input.name?.trim() || hostnameOf(url),
+    url,
+    tags: uniq((input.tags ?? []).map((tag) => tag.trim()).filter(Boolean)),
+  };
+}

@@ -147,7 +147,7 @@ type SignalItem = {
 
 **Open source**
 
-- Example query shape: recent `created` window + `stars:>N` + preferred languages/topics.
+- Example query shape: recent `created` window + `stars:>N` + free-text topic OR terms (languages are a scoring bias, not search free-text — GitHub free-text language names are too broad).
 - Reject name patterns such as `awesome-` / `awesome_`.
 - Prefer non-empty description; penalize missing language when frontend bias is on.
 
@@ -236,17 +236,17 @@ Rules:
 
 ## Module Boundaries
 
-Aligned with existing separation of ingestion, ranking, render, and Rivus:
+Aligned with existing separation of ingestion, ranking, render, and Rivus (layered as `domain/` → `application/` → `infrastructure/` → `presentation/`):
 
 ```text
-src/signal-sources.ts     load/validate signal-sources.json
-src/hacker-news.ts        HN Algolia adapter
-src/github-search.ts      GitHub Search API adapter (or thin extension of github.ts)
-src/signal-domain.ts      filter, score, dedupe, quotas
-src/signal-brief.ts       window + fan-out sources + assemble document
-src/signal-render.ts      Markdown: two sections + kind labels
-src/rivus-plugin.ts       register Tool + Automation (no ranking logic inside Plugin)
-src/doubao-search.ts      reuse for official-domain / intent queries only
+src/infrastructure/signal-sources.ts  load/validate signal-sources.json
+src/infrastructure/hacker-news.ts     HN Algolia adapter
+src/infrastructure/github-search.ts   GitHub Search API adapter (or thin extension of github.ts)
+src/domain/signal.ts                  filter, score, dedupe, quotas
+src/application/signal-brief.ts       window + fan-out sources + assemble document
+src/presentation/signal-render.ts     Markdown: two sections + kind labels
+src/presentation/rivus-plugin.ts      register Tool + Automation (no ranking logic inside Plugin)
+src/infrastructure/doubao-search.ts   reuse for official-domain / intent queries only
 ```
 
 CLI (optional but useful for local dry runs):

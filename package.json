@@ -15,34 +15,48 @@
     "README.md"
   ],
   "bin": {
-    "rss-summary": "./dist/cli.js"
+    "rss-summary": "./dist/presentation/cli.js"
   },
   "exports": {
     "./rivus-plugin": {
-      "import": "./dist/rivus-plugin.js",
-      "types": "./dist/rivus-plugin.d.ts",
-      "default": "./dist/rivus-plugin.js"
+      "import": "./dist/presentation/rivus-plugin.js",
+      "types": "./dist/presentation/rivus-plugin.d.ts",
+      "default": "./dist/presentation/rivus-plugin.js"
     }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "digest": "tsx src/main.ts",
-    "feeds": "tsx src/feeds.ts",
+    "check": "vp check",
+    "digest": "tsx src/presentation/cli.ts digest",
+    "feeds": "tsx src/presentation/cli.ts feeds",
+    "fmt": "vp fmt",
+    "lint": "vp lint",
     "package:check": "node scripts/check-package.mjs",
-    "test": "vitest run",
+    "test": "vp test run",
+    "test:coverage": "vp test run --coverage",
+    "test:layout": "node scripts/check-test-layout.mjs",
     "typecheck": "tsc --noEmit",
-    "verify": "pnpm test && pnpm typecheck && pnpm build && pnpm package:check"
+    "verify": "pnpm test:layout && pnpm check && pnpm test && pnpm build && pnpm package:check"
   },
   "devDependencies": {
     "@rivus/agent": "0.1.1",
+    "@types/he": "^1.2.3",
+    "@types/lodash-es": "^4.17.12",
     "@types/node": "^24.0.0",
+    "@vitest/coverage-v8": "catalog:",
+    "@voidzero-dev/vite-plus-core": "^0.2.7",
     "tsx": "^4.20.0",
     "typescript": "^5.8.0",
-    "vitest": "^3.2.0"
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
+    "vitest": "catalog:"
   },
   "dependencies": {
     "cheerio": "^1.2.0",
+    "effect": "^3.22.1",
     "fast-xml-parser": "^5.9.3",
+    "he": "^1.2.0",
+    "lodash-es": "^4.18.1",
     "playwright": "^1.61.1"
   },
   "peerDependencies": {
