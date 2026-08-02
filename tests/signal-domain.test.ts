@@ -108,6 +108,33 @@ describe("signal domain", () => {
     expect(low.reasons).toContain("HN 100 分");
   });
 
+  it("scores fresher same-day updates higher on recency (时效)", () => {
+    const early = buildSignalUpdates(
+      [
+        updateHit({
+          id: "early",
+          url: "https://example.com/early",
+          publishedAt: "2026-07-29T01:00:00+08:00",
+        }),
+      ],
+      rules(),
+    )[0]!;
+    const late = buildSignalUpdates(
+      [
+        updateHit({
+          id: "late",
+          url: "https://example.com/late",
+          publishedAt: "2026-07-29T22:00:00+08:00",
+        }),
+      ],
+      rules(),
+    )[0]!;
+
+    expect(late.score).toBeGreaterThan(early.score);
+    expect(late.reasons).toContain("时效");
+    expect(early.reasons).toContain("时效");
+  });
+
   it("boosts items confirmed by both official search and Hacker News", () => {
     const single = buildSignalUpdates(
       [updateHit({ id: "one", source: "official", url: "https://openai.com/x" })],

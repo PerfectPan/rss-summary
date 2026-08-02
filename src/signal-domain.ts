@@ -327,7 +327,8 @@ function recencyScore(publishedAt: string, rules: SignalDomainRules): number {
   if (!Number.isFinite(instant)) return 0;
   const span = rules.window.until - rules.window.since;
   if (span <= 0) return 0;
-  return (1 - (instant - rules.window.since) / span) * rules.scoring.recencyMaxScore;
+  // Prefer newer items within the window: score approaches recencyMaxScore near `until`.
+  return ((instant - rules.window.since) / span) * rules.scoring.recencyMaxScore;
 }
 
 function compactSummary(value: string, title: string): string {
