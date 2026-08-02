@@ -70,7 +70,7 @@ describe("signal brief application service", () => {
       if (query.includes("model")) {
         return doubaoResult("https://openai.com/blog/gpt-5", "GPT-5 API model", "model");
       }
-      return doubaoResult("https://vercel.com/blog/sdk", "Vercel ships a new SDK", "product");
+      return doubaoResult("https://openai.com/blog/sdk", "OpenAI ships a new SDK", "product");
     });
     const hackerNewsSearch = vi.fn(async () => [
       {
@@ -105,7 +105,15 @@ describe("signal brief application service", () => {
     expect(doubaoSearch).toHaveBeenCalledWith(
       expect.objectContaining({ day: "2026-07-29", sourcePolicy: "official", count: 10 }),
     );
-    expect(hackerNewsSearch).toHaveBeenCalledWith({ minPoints: 80, includeShowHn: true, maxItems: 20 });
+    expect(hackerNewsSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        minPoints: 80,
+        includeShowHn: true,
+        maxItems: 20,
+        sinceUnix: expect.any(Number),
+        untilUnix: expect.any(Number),
+      }),
+    );
     expect(githubSearch).toHaveBeenCalledWith(
       expect.objectContaining({
         query: "created:>=2026-07-23 stars:>50 TypeScript OR ai",

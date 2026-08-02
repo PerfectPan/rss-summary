@@ -13,6 +13,10 @@ export type HackerNewsSearchInput = {
   minPoints: number;
   includeShowHn: boolean;
   maxItems: number;
+  /** Inclusive lower bound on story creation time (unix seconds). */
+  sinceUnix?: number;
+  /** Exclusive upper bound on story creation time (unix seconds). */
+  untilUnix?: number;
 };
 
 export type HackerNewsClientOptions = {
@@ -36,7 +40,7 @@ export class HackerNewsClient {
     const tags = input.includeShowHn ? "(story,show_hn)" : "story";
     const url = new URL(`${this.baseUrl}/search_by_date`);
     url.searchParams.set("tags", tags);
-    url.searchParams.set("numericFilters", `points>${input.minPoints}`);
+    url.searchParams.set("numericFilters", buildNumericFilters(input));
     url.searchParams.set("hitsPerPage", String(Math.min(Math.max(input.maxItems * 3, 20), 100)));
 
     const response = await this.fetchImpl(url, { signal: AbortSignal.timeout(this.timeoutMs) });
@@ -44,6 +48,14 @@ export class HackerNewsClient {
     const page = parsePage(await response.json());
     return page.hits;
   }
+}
+
+function buildNumericFilters(input: HackerNewsSearchInput): string {
+  // Config name is minPoints (inclusive); Algolia numericFilters use created_at_i in unix seconds.
+  const filters = [`points>=${input.minPoints}`];
+  if (input.sinceUnix !== undefined) filters.push(`created_at_i>=${input.sinceUnix}`);
+  if (input.untilUnix !== undefined) filters.push(`created_at_i<${input.untilUnix}`);
+  return filters.join(",");
 }
 
 function parsePage(value: unknown): { hits: HackerNewsStory[] } {

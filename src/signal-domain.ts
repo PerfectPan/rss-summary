@@ -107,18 +107,35 @@ export function selectSignalItems(
   repos: SignalItem[],
   quotas: SignalQuotas,
 ): { updates: SignalItem[]; opensource: SignalItem[] } {
-  const selectedUpdates = selectWithSoftBalance(updates, quotas.updates);
-  const selectedRepos = repos.slice(0, quotas.opensource);
-  const all = [...selectedUpdates, ...selectedRepos];
-  if (all.length > quotas.maxTotal) {
-    all.sort((left, right) => right.score - left.score || sectionOrder(right) - sectionOrder(left));
-    all.length = quotas.maxTotal;
+  // Section-cap first (soft balance for updates), then shrink budgets to fit maxTotal
+  // and re-run soft balance so a global re-sort cannot wipe a soft-balanced kind.
+  const sectionUpdates = selectWithSoftBalance(updates, quotas.updates);
+  const sectionRepos = repos.slice(0, quotas.opensource);
+  let updatesCap = sectionUpdates.length;
+  let opensourceCap = sectionRepos.length;
+  while (updatesCap + opensourceCap > quotas.maxTotal) {
+    if (updatesCap >= opensourceCap && updatesCap > 0) updatesCap -= 1;
+    else if (opensourceCap > 0) opensourceCap -= 1;
+    else break;
   }
-  return { updates: all.filter(({ section }) => section === "updates"), opensource: all.filter(({ section }) => section === "opensource") };
+  return {
+    updates: selectWithSoftBalance(updates, updatesCap),
+    opensource: repos.slice(0, opensourceCap),
+  };
+}
+
+/** Count update hits that fail the time-window filter (including missing publish time). */
+export function countOutOfWindowUpdateHits(hits: SignalUpdateHit[], rules: SignalDomainRules): number {
+  return hits.filter((hit) => hit.title.trim() && hit.url.trim() && !isWithinUpdateWindow(hit, rules)).length;
 }
 
 function isAcceptedUpdateHit(hit: SignalUpdateHit, rules: SignalDomainRules): boolean {
   if (!hit.title.trim() || !hit.url.trim()) return false;
+  if (hit.source === "official" && !isOfficialDomain(hit.url, rules.officialDomains)) return false;
+  return isWithinUpdateWindow(hit, rules);
+}
+
+function isWithinUpdateWindow(hit: SignalUpdateHit, rules: SignalDomainRules): boolean {
   const publishedAt = hit.publishedAt
     ? parseNewsPublishTime(hit.publishedAt, rules.window.timezoneOffset)
     : Number.NaN;
@@ -138,10 +155,11 @@ function isAcceptedRepoHit(hit: SignalRepoHit, rules: SignalDomainRules): boolea
 }
 
 function toUpdateItem(canonicalUrl: string, matches: SignalUpdateHit[], rules: SignalDomainRules): SignalItem {
-  const representative = [...matches].sort(
-    (left, right) => (right.points ?? 0) - (left.points ?? 0) || left.id.localeCompare(right.id),
-  )[0]!;
-  const publishedAt = representative.publishedAt ?? "";
+  // Prefer official hit for kind/title/summary/sourceLabel so dual-source does not flip labels to HN.
+  // Still take the best HN points (if any) for scoring.
+  const content = pickContentHit(matches);
+  const points = maxPoints(matches);
+  const publishedAt = content.publishedAt ?? "";
   const scoreParts: Array<{ label: string; value: number }> = [];
   const reasons: string[] = [];
 
@@ -151,7 +169,6 @@ function toUpdateItem(canonicalUrl: string, matches: SignalUpdateHit[], rules: S
     reasons.push("官方来源");
   }
 
-  const points = representative.points;
   if (points !== undefined) {
     const pointsScore = Math.min(Math.sqrt(points), rules.scoring.hnPointsMaxScore);
     scoreParts.push({ label: `HN ${points} 分`, value: pointsScore });
@@ -159,7 +176,7 @@ function toUpdateItem(canonicalUrl: string, matches: SignalUpdateHit[], rules: S
   }
 
   const keywordMatches = matchedKeywords(
-    `${representative.title} ${representative.summary ?? ""}`,
+    `${content.title} ${content.summary ?? ""}`,
     rules.frontendBias.updateKeywords,
     rules.scoring.frontendKeywordMaxHits,
   );
@@ -175,25 +192,45 @@ function toUpdateItem(canonicalUrl: string, matches: SignalUpdateHit[], rules: S
     reasons.push("时效");
   }
 
-  const crossSource = matches.some(({ source }) => source === "official") && matches.some(({ source }) => source === "hn");
+  const crossSource =
+    matches.some(({ source }) => source === "official") && matches.some(({ source }) => source === "hn");
   if (crossSource) {
     scoreParts.push({ label: "双源命中", value: rules.scoring.crossSourceBoost });
     reasons.push("双源命中");
   }
 
   return {
-    id: representative.id,
-    kind: representative.kind,
+    id: content.id,
+    kind: content.kind,
     section: "updates",
-    title: representative.title.trim(),
+    title: content.title.trim(),
     url: canonicalUrl,
-    summary: compactSummary(representative.summary ?? "暂无可用摘要。", representative.title),
-    sourceLabel: representative.sourceLabel,
+    summary: compactSummary(content.summary ?? "暂无可用摘要。", content.title),
+    sourceLabel: content.sourceLabel,
     publishedAt,
     metrics: points !== undefined ? { points } : undefined,
     score: Math.round(scoreParts.reduce((total, part) => total + part.value, 0) * 10) / 10,
     reasons,
   };
+}
+
+function pickContentHit(matches: SignalUpdateHit[]): SignalUpdateHit {
+  const official = matches
+    .filter(({ source }) => source === "official")
+    .sort((left, right) => left.id.localeCompare(right.id))[0];
+  if (official) return official;
+  return [...matches].sort(
+    (left, right) => (right.points ?? 0) - (left.points ?? 0) || left.id.localeCompare(right.id),
+  )[0]!;
+}
+
+function maxPoints(matches: SignalUpdateHit[]): number | undefined {
+  let best: number | undefined;
+  for (const hit of matches) {
+    if (hit.points === undefined) continue;
+    if (best === undefined || hit.points > best) best = hit.points;
+  }
+  return best;
 }
 
 function toRepoItem(hit: SignalRepoHit, rules: SignalDomainRules): SignalItem {
@@ -343,8 +380,4 @@ function formatStars(value: number): string {
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}m`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
   return String(value);
-}
-
-function sectionOrder(item: SignalItem): number {
-  return item.section === "updates" ? 0 : 1;
 }

@@ -58,7 +58,7 @@ function updateHit(overrides: Partial<SignalUpdateHit>): SignalUpdateHit {
   return {
     id: "hit-1",
     title: "Agent coding SDK shipped",
-    url: "https://example.com/agent-sdk",
+    url: "https://openai.com/blog/agent-sdk",
     summary: "A developer SDK for agent workflows.",
     publishedAt: "2026-07-29T09:00:00+08:00",
     sourceLabel: "Example",
@@ -88,7 +88,14 @@ describe("signal domain", () => {
     const items = buildSignalUpdates(
       [
         updateHit({ id: "official", title: "GPT-5 API announcement", url: "https://openai.com/blog/model", sourceLabel: "OpenAI" }),
-        updateHit({ id: "blog", title: "Third-party review of the model", url: "https://example.com/blog/model", sourceLabel: "Example" }),
+        updateHit({
+          id: "blog",
+          title: "Third-party review of the model",
+          url: "https://example.com/blog/model",
+          sourceLabel: "Hacker News",
+          source: "hn",
+          points: 80,
+        }),
       ],
       rules(),
     );
@@ -113,7 +120,7 @@ describe("signal domain", () => {
       [
         updateHit({
           id: "early",
-          url: "https://example.com/early",
+          url: "https://openai.com/blog/early",
           publishedAt: "2026-07-29T01:00:00+08:00",
         }),
       ],
@@ -123,7 +130,7 @@ describe("signal domain", () => {
       [
         updateHit({
           id: "late",
-          url: "https://example.com/late",
+          url: "https://openai.com/blog/late",
           publishedAt: "2026-07-29T22:00:00+08:00",
         }),
       ],
@@ -142,8 +149,16 @@ describe("signal domain", () => {
     )[0]!;
     const dual = buildSignalUpdates(
       [
-        updateHit({ id: "one", source: "official", url: "https://openai.com/x" }),
-        updateHit({ id: "two", source: "hn", points: 300, url: "https://openai.com/x?utm_source=hn" }),
+        updateHit({ id: "one", source: "official", url: "https://openai.com/x", kind: "model", title: "GPT-5 API" }),
+        updateHit({
+          id: "two",
+          source: "hn",
+          points: 300,
+          url: "https://openai.com/x?utm_source=hn",
+          kind: "product",
+          title: "Show HN: GPT-5",
+          sourceLabel: "Hacker News",
+        }),
       ],
       rules(),
     )[0]!;
@@ -151,15 +166,37 @@ describe("signal domain", () => {
     expect(dual.score).toBeGreaterThan(single.score);
     expect(dual.reasons).toContain("双源命中");
     expect(dual.url).toBe("https://openai.com/x");
+    expect(dual.kind).toBe("model");
+    expect(dual.sourceLabel).toBe("Example");
+    expect(dual.title).toBe("GPT-5 API");
+    expect(dual.metrics?.points).toBe(300);
+  });
+
+  it("rejects official-source hits outside the configured domain allowlist", () => {
+    const items = buildSignalUpdates(
+      [
+        updateHit({ id: "ok", title: "OpenAI ships agent SDK", url: "https://openai.com/blog/ok", source: "official" }),
+        updateHit({ id: "off", title: "Random blog post", url: "https://random-blog.example/x", source: "official" }),
+        updateHit({
+          id: "hn",
+          title: "Show HN: Agent harness",
+          url: "https://random-blog.example/y",
+          source: "hn",
+          points: 120,
+        }),
+      ],
+      rules(),
+    );
+    expect(items.map(({ id }) => id).sort()).toEqual(["hn", "ok"]);
   });
 
   it("deduplicates canonical URLs and collapses the same event across publishers", () => {
     const items = buildSignalUpdates(
       [
-        updateHit({ id: "a", url: "https://example.com/x?utm_source=one", title: "Claude 3.7 发布重大更新" }),
-        updateHit({ id: "b", url: "https://example.com/x?ref=two", title: "Claude 3.7 发布重大更新" }),
-        updateHit({ id: "c", url: "https://other.example.net/y", title: "Claude 3.7 重大更新发布详情" }),
-        updateHit({ id: "d", url: "https://example.com/z", title: "完全不同的另一件事" }),
+        updateHit({ id: "a", url: "https://example.com/x?utm_source=one", title: "Claude 3.7 发布重大更新", source: "hn", points: 100 }),
+        updateHit({ id: "b", url: "https://example.com/x?ref=two", title: "Claude 3.7 发布重大更新", source: "hn", points: 90 }),
+        updateHit({ id: "c", url: "https://other.example.net/y", title: "Claude 3.7 重大更新发布详情", source: "hn", points: 80 }),
+        updateHit({ id: "d", url: "https://example.com/z", title: "完全不同的另一件事", source: "hn", points: 70 }),
       ],
       rules(),
     );
@@ -205,9 +242,9 @@ describe("signal domain", () => {
   it("rejects updates outside the calendar day and repos outside the created window", () => {
     const updates = buildSignalUpdates(
       [
-        updateHit({ id: "stale", publishedAt: "2026-07-28T23:59:59+08:00" }),
-        updateHit({ id: "future", publishedAt: "2026-07-30T00:00:01+08:00" }),
-        updateHit({ id: "today", publishedAt: "2026-07-29T18:00:00+08:00" }),
+        updateHit({ id: "stale", publishedAt: "2026-07-28T23:59:59+08:00", url: "https://openai.com/stale" }),
+        updateHit({ id: "future", publishedAt: "2026-07-30T00:00:01+08:00", url: "https://openai.com/future" }),
+        updateHit({ id: "today", publishedAt: "2026-07-29T18:00:00+08:00", url: "https://openai.com/today" }),
       ],
       rules(),
     );
@@ -238,7 +275,7 @@ describe("signal domain", () => {
           id: `product-${index}`,
           title: `Product ${index} for developers`,
           kind: "product",
-          url: `https://example.com/product-${index}`,
+          url: `https://openai.com/product-${index}`,
         }),
       ),
     ];
@@ -258,7 +295,7 @@ describe("signal domain", () => {
   it("caps both sections and enforces the global total quota", () => {
     const updates = buildSignalUpdates(
       Array.from({ length: 7 }, (_, index) =>
-        updateHit({ id: `u-${index}`, title: `Update ${index}`, url: `https://example.com/u-${index}` }),
+        updateHit({ id: `u-${index}`, title: `Update ${index}`, url: `https://example.com/u-${index}`, source: "hn", points: 100 }),
       ),
       rules(),
     );
@@ -277,6 +314,42 @@ describe("signal domain", () => {
     expect(selected.opensource.length).toBeLessThanOrEqual(4);
   });
 
+  it("preserves soft model/product balance when maxTotal forces a section shrink", () => {
+    const hits: SignalUpdateHit[] = [
+      ...Array.from({ length: 5 }, (_, index) =>
+        updateHit({
+          id: `model-${index}`,
+          title: `GPT-${index} coding model`,
+          kind: "model",
+          url: `https://openai.com/blog/gpt-${index}`,
+        }),
+      ),
+      ...Array.from({ length: 3 }, (_, index) =>
+        updateHit({
+          id: `product-${index}`,
+          title: `Product ${index} for developers`,
+          kind: "product",
+          url: `https://openai.com/product-${index}`,
+        }),
+      ),
+    ];
+    const updates = buildSignalUpdates(hits, rules());
+    const repos = buildSignalRepos(
+      Array.from({ length: 4 }, (_, index) =>
+        repoHit({ id: `acme/r-${index}`, title: `acme/r-${index}`, url: `https://github.com/acme/r-${index}` }),
+      ),
+      rules(),
+    );
+    const selected = selectSignalItems(updates, repos, { maxTotal: 8, updates: 5, opensource: 4 });
+
+    expect(selected.updates.length + selected.opensource.length).toBe(8);
+    const modelCount = selected.updates.filter(({ kind }) => kind === "model").length;
+    const productCount = selected.updates.filter(({ kind }) => kind === "product").length;
+    expect(modelCount).toBeGreaterThan(0);
+    expect(productCount).toBeGreaterThan(0);
+    expect(Math.abs(modelCount - productCount)).toBeLessThanOrEqual(1);
+  });
+
   it("classifies model titles through config hints", () => {
     expect(classifyUpdateKind("Anthropic releases Claude Sonnet", frontendBias.modelTitleHints)).toBe("model");
     expect(classifyUpdateKind("Vercel ships new SDK", frontendBias.modelTitleHints)).toBe("product");
@@ -289,7 +362,15 @@ describe("signal render", () => {
     const updates = buildSignalUpdates(
       [
         updateHit({ id: "m", title: "GPT-5 API", kind: "model", sourceLabel: "OpenAI", url: "https://openai.com/blog/gpt-5" }),
-        updateHit({ id: "p", title: "Agent IDE", kind: "product", sourceLabel: "Hacker News", source: "hn", points: 210 }),
+        updateHit({
+          id: "p",
+          title: "Agent IDE",
+          kind: "product",
+          sourceLabel: "Hacker News",
+          source: "hn",
+          points: 210,
+          url: "https://example.com/agent-sdk",
+        }),
       ],
       rules(),
     );

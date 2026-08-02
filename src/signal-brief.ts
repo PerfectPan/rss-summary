@@ -5,7 +5,9 @@ import {
   buildSignalRepos,
   buildSignalUpdates,
   classifyUpdateKind,
+  countOutOfWindowUpdateHits,
   selectSignalItems,
+  type SignalDomainRules,
   type SignalRepoHit,
   type SignalUpdateHit,
 } from "./signal-domain.js";
@@ -81,22 +83,24 @@ export async function generateSignalBrief(value: unknown, dependencies: SignalBr
   if (hnResult.status === "fulfilled") updateHits.push(...hnResult.value);
 
   const repoHits: SignalRepoHit[] = githubResult.status === "fulfilled" ? githubResult.value : [];
-  const updates = buildSignalUpdates(updateHits, {
+  const rules: SignalDomainRules = {
     window,
     scoring: config.scoring,
     frontendBias: config.frontendBias,
     officialDomains: config.officialSearch.domains,
     excludeNamePatterns: config.githubSearch.excludeNamePatterns,
     createdWithinDays: config.githubSearch.createdWithinDays,
-  });
-  const repos = buildSignalRepos(repoHits, {
-    window,
-    scoring: config.scoring,
-    frontendBias: config.frontendBias,
-    officialDomains: config.officialSearch.domains,
-    excludeNamePatterns: config.githubSearch.excludeNamePatterns,
-    createdWithinDays: config.githubSearch.createdWithinDays,
-  });
+  };
+
+  if (officialResult.status === "fulfilled") {
+    const dropped = countOutOfWindowUpdateHits(officialResult.value.hits, rules);
+    if (dropped > 0) {
+      warnings.push(`官方搜索：${dropped} 条结果因缺少或超出发布时间被丢弃`);
+    }
+  }
+
+  const updates = buildSignalUpdates(updateHits, rules);
+  const repos = buildSignalRepos(repoHits, rules);
   const selected = selectSignalItems(updates, repos, config.quotas);
   const markdown = renderSignalBrief({
     day,
@@ -161,6 +165,8 @@ async function fetchHackerNews(
     minPoints: config.hackerNews.minPoints,
     includeShowHn: config.hackerNews.includeShowHn,
     maxItems: config.hackerNews.maxItems,
+    sinceUnix: Math.floor(window.since / 1000),
+    untilUnix: Math.floor(window.until / 1000),
   });
   return stories
     .filter((story) => {
