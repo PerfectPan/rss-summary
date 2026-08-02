@@ -7,6 +7,7 @@ import {
   saveFeedFile,
 } from "../infrastructure/feed-store.js";
 import { RssClient } from "../infrastructure/rss.js";
+import { errorMessage } from "../infrastructure/parsing.js";
 
 type Writable = {
   write(chunk: string): unknown;
@@ -63,7 +64,7 @@ export async function runFeedsCommand(
     writeHelp(stdout);
     return args.command === "help" ? 0 : 1;
   } catch (error) {
-    stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    stderr.write(`${errorMessage(error)}\n`);
     return 1;
   }
 }

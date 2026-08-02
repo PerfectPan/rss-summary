@@ -1,4 +1,5 @@
 import type { CandidateProject, DigestDocument } from "../domain/digest.js";
+import { formatCompactCount } from "../domain/text.js";
 
 export type { DigestDocument };
 
@@ -51,7 +52,7 @@ function appendSection(lines: string[], title: string, candidates: CandidateProj
     const language = repository?.language ? ` · ${repository.language}` : "";
     const stars =
       typeof repository?.stargazersCount === "number"
-        ? ` · ${formatCount(repository.stargazersCount)} stars`
+        ? ` · ${formatCompactCount(repository.stargazersCount)} stars`
         : "";
 
     lines.push(`**${index + 1}. ${label}**`);
@@ -71,11 +72,6 @@ function appendSection(lines: string[], title: string, candidates: CandidateProj
     }
     lines.push(`- [查看原文](${url})`, "");
   });
-}
-
-function formatCount(count: number): string {
-  if (count >= 1000) return `${(count / 1000).toFixed(count >= 10_000 ? 0 : 1)}k`;
-  return String(count);
 }
 
 function boundedText(value: string, limit: number): string {

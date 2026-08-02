@@ -2,6 +2,15 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import type { SignalFrontendBias, SignalQuotas, SignalScoring } from "../domain/signal.js";
+import {
+  optionalBoolean,
+  optionalString,
+  requireBoundedInteger,
+  requireBoundedNumber,
+  requiredString,
+  requireArray,
+  requireStringList,
+} from "./config-parse.js";
 import { requireRecord } from "./parsing.js";
 
 export type SignalHackerNewsConfig = {
@@ -81,9 +90,9 @@ export function parseSignalSources(value: string): SignalSourceConfig {
 }
 
 function parseQuotas(record: Record<string, unknown>): SignalQuotas {
-  const maxTotal = boundedInteger(record.maxTotal, 8, 1, 16, "quotas.maxTotal");
-  const updates = boundedInteger(record.updates, 5, 1, 12, "quotas.updates");
-  const opensource = boundedInteger(record.opensource, 4, 1, 12, "quotas.opensource");
+  const maxTotal = requireBoundedInteger(record.maxTotal, 8, 1, 16, "quotas.maxTotal");
+  const updates = requireBoundedInteger(record.updates, 5, 1, 12, "quotas.updates");
+  const opensource = requireBoundedInteger(record.opensource, 4, 1, 12, "quotas.opensource");
   if (updates > maxTotal || opensource > maxTotal) {
     throw new Error("quotas.updates and quotas.opensource must not exceed quotas.maxTotal.");
   }
@@ -92,82 +101,100 @@ function parseQuotas(record: Record<string, unknown>): SignalQuotas {
 
 function parseFrontendBias(record: Record<string, unknown>): SignalFrontendBias {
   return {
-    languages: stringList(record.languages, "frontendBias.languages"),
-    repoTopics: stringList(record.repoTopics, "frontendBias.repoTopics"),
-    updateKeywords: stringList(record.updateKeywords, "frontendBias.updateKeywords"),
-    modelTitleHints: stringList(record.modelTitleHints, "frontendBias.modelTitleHints"),
+    languages: requireStringList(record.languages, "frontendBias.languages"),
+    repoTopics: requireStringList(record.repoTopics, "frontendBias.repoTopics"),
+    updateKeywords: requireStringList(record.updateKeywords, "frontendBias.updateKeywords"),
+    modelTitleHints: requireStringList(record.modelTitleHints, "frontendBias.modelTitleHints"),
   };
 }
 
 function parseScoring(record: Record<string, unknown>): SignalScoring {
   return {
-    officialDomainBoost: boundedNumber(
+    officialDomainBoost: requireBoundedNumber(
       record.officialDomainBoost,
       30,
       0,
       500,
       "scoring.officialDomainBoost",
     ),
-    hnPointsMaxScore: boundedNumber(
+    hnPointsMaxScore: requireBoundedNumber(
       record.hnPointsMaxScore,
       30,
       0,
       500,
       "scoring.hnPointsMaxScore",
     ),
-    frontendKeywordBoost: boundedNumber(
+    frontendKeywordBoost: requireBoundedNumber(
       record.frontendKeywordBoost,
       8,
       0,
       100,
       "scoring.frontendKeywordBoost",
     ),
-    frontendKeywordMaxHits: boundedInteger(
+    frontendKeywordMaxHits: requireBoundedInteger(
       record.frontendKeywordMaxHits,
       3,
       1,
       10,
       "scoring.frontendKeywordMaxHits",
     ),
-    recencyMaxScore: boundedNumber(record.recencyMaxScore, 10, 0, 100, "scoring.recencyMaxScore"),
-    crossSourceBoost: boundedNumber(
+    recencyMaxScore: requireBoundedNumber(
+      record.recencyMaxScore,
+      10,
+      0,
+      100,
+      "scoring.recencyMaxScore",
+    ),
+    crossSourceBoost: requireBoundedNumber(
       record.crossSourceBoost,
       15,
       0,
       200,
       "scoring.crossSourceBoost",
     ),
-    repoStarMaxScore: boundedNumber(
+    repoStarMaxScore: requireBoundedNumber(
       record.repoStarMaxScore,
       50,
       0,
       500,
       "scoring.repoStarMaxScore",
     ),
-    repoNewnessWeight: boundedNumber(
+    repoNewnessWeight: requireBoundedNumber(
       record.repoNewnessWeight,
       2,
       0,
       100,
       "scoring.repoNewnessWeight",
     ),
-    repoLanguageBoost: boundedNumber(
+    repoLanguageBoost: requireBoundedNumber(
       record.repoLanguageBoost,
       10,
       0,
       100,
       "scoring.repoLanguageBoost",
     ),
-    repoTopicBoost: boundedNumber(record.repoTopicBoost, 5, 0, 100, "scoring.repoTopicBoost"),
-    repoTopicMaxHits: boundedInteger(record.repoTopicMaxHits, 3, 1, 10, "scoring.repoTopicMaxHits"),
-    repoMissingDescriptionPenalty: boundedNumber(
+    repoTopicBoost: requireBoundedNumber(
+      record.repoTopicBoost,
+      5,
+      0,
+      100,
+      "scoring.repoTopicBoost",
+    ),
+    repoTopicMaxHits: requireBoundedInteger(
+      record.repoTopicMaxHits,
+      3,
+      1,
+      10,
+      "scoring.repoTopicMaxHits",
+    ),
+    repoMissingDescriptionPenalty: requireBoundedNumber(
       record.repoMissingDescriptionPenalty,
       10,
       0,
       200,
       "scoring.repoMissingDescriptionPenalty",
     ),
-    repoMissingLanguagePenalty: boundedNumber(
+    repoMissingLanguagePenalty: requireBoundedNumber(
       record.repoMissingLanguagePenalty,
       5,
       0,
@@ -179,25 +206,25 @@ function parseScoring(record: Record<string, unknown>): SignalScoring {
 
 function parseHackerNews(record: Record<string, unknown>): SignalHackerNewsConfig {
   return {
-    minPoints: boundedInteger(record.minPoints, 80, 0, 10_000, "hackerNews.minPoints"),
+    minPoints: requireBoundedInteger(record.minPoints, 80, 0, 10_000, "hackerNews.minPoints"),
     includeShowHn: optionalBoolean(record.includeShowHn, true, "hackerNews.includeShowHn"),
-    maxItems: boundedInteger(record.maxItems, 20, 1, 100, "hackerNews.maxItems"),
+    maxItems: requireBoundedInteger(record.maxItems, 20, 1, 100, "hackerNews.maxItems"),
   };
 }
 
 function parseGithubSearch(record: Record<string, unknown>): SignalGithubSearchConfig {
   return {
-    createdWithinDays: boundedInteger(
+    createdWithinDays: requireBoundedInteger(
       record.createdWithinDays,
       7,
       1,
       30,
       "githubSearch.createdWithinDays",
     ),
-    minStars: boundedInteger(record.minStars, 50, 0, 1_000_000, "githubSearch.minStars"),
-    languages: stringList(record.languages, "githubSearch.languages"),
-    topics: stringList(record.topics, "githubSearch.topics"),
-    excludeNamePatterns: stringList(
+    minStars: requireBoundedInteger(record.minStars, 50, 0, 1_000_000, "githubSearch.minStars"),
+    languages: requireStringList(record.languages, "githubSearch.languages"),
+    topics: requireStringList(record.topics, "githubSearch.topics"),
+    excludeNamePatterns: requireStringList(
       record.excludeNamePatterns,
       "githubSearch.excludeNamePatterns",
     ).map((pattern, index) => {
@@ -209,15 +236,15 @@ function parseGithubSearch(record: Record<string, unknown>): SignalGithubSearchC
         );
       }
     }),
-    perPage: boundedInteger(record.perPage, 8, 1, 50, "githubSearch.perPage"),
+    perPage: requireBoundedInteger(record.perPage, 8, 1, 50, "githubSearch.perPage"),
   };
 }
 
 function parseOfficialSearch(record: Record<string, unknown>): SignalOfficialSearchConfig {
   const intents =
-    record.intents === undefined ? [] : asArray(record.intents, "officialSearch.intents");
+    record.intents === undefined ? [] : requireArray(record.intents, "officialSearch.intents");
   return {
-    domains: stringList(record.domains, "officialSearch.domains"),
+    domains: requireStringList(record.domains, "officialSearch.domains"),
     intents: intents.map((item, index) => {
       const intent = requireRecord(item, `officialSearch.intents[${index}]`);
       const kind = intent.kind;
@@ -229,68 +256,12 @@ function parseOfficialSearch(record: Record<string, unknown>): SignalOfficialSea
         query: requiredString(intent.query, `officialSearch.intents[${index}] query`),
       };
     }),
-    countPerQuery: boundedInteger(record.countPerQuery, 10, 1, 50, "officialSearch.countPerQuery"),
+    countPerQuery: requireBoundedInteger(
+      record.countPerQuery,
+      10,
+      1,
+      50,
+      "officialSearch.countPerQuery",
+    ),
   };
-}
-
-function asArray(value: unknown, label: string): unknown[] {
-  if (!Array.isArray(value)) throw new Error(`${label} must be an array.`);
-  return value;
-}
-
-function stringList(value: unknown, label: string): string[] {
-  const items = asArray(value, label);
-  return items.map((item, index) => {
-    if (typeof item !== "string" || item.trim() === "") {
-      throw new Error(`${label}[${index}] must be a non-empty string.`);
-    }
-    return item.trim();
-  });
-}
-
-function requiredString(value: unknown, label: string): string {
-  if (typeof value !== "string" || value.trim() === "")
-    throw new Error(`${label} must be a non-empty string.`);
-  return value.trim();
-}
-
-function optionalString(value: unknown, fallback: string, label: string): string {
-  if (value === undefined) return fallback;
-  if (typeof value !== "string" || value.trim() === "")
-    throw new Error(`${label} must be a non-empty string.`);
-  return value.trim();
-}
-
-function optionalBoolean(value: unknown, fallback: boolean, label: string): boolean {
-  if (value === undefined) return fallback;
-  if (typeof value !== "boolean") throw new Error(`${label} must be a boolean.`);
-  return value;
-}
-
-function boundedInteger(
-  value: unknown,
-  fallback: number,
-  min: number,
-  max: number,
-  label: string,
-): number {
-  if (value === undefined) return fallback;
-  if (!Number.isInteger(value) || Number(value) < min || Number(value) > max) {
-    throw new Error(`${label} must be an integer between ${min} and ${max}.`);
-  }
-  return Number(value);
-}
-
-function boundedNumber(
-  value: unknown,
-  fallback: number,
-  min: number,
-  max: number,
-  label: string,
-): number {
-  if (value === undefined) return fallback;
-  if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max) {
-    throw new Error(`${label} must be a number between ${min} and ${max}.`);
-  }
-  return value;
 }

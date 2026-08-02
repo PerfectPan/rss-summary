@@ -1,4 +1,5 @@
 import { saveGithubHomeStorageState } from "../infrastructure/github-home.js";
+import { errorMessage } from "../infrastructure/parsing.js";
 
 type Writable = {
   write(chunk: string): unknown;
@@ -31,7 +32,7 @@ export async function runGithubHomeCommand(
       stdout.write(`Saved GitHub Home storage state to ${storageState}\n`);
       return 0;
     } catch (error) {
-      stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+      stderr.write(`${errorMessage(error)}\n`);
       return 1;
     }
   }

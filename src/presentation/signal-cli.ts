@@ -2,6 +2,7 @@ import { Effect } from "effect";
 
 import { generateSignalBrief, type SignalBriefOutput } from "../application/signal-brief.js";
 import { withSignalMarkdown } from "./signal-render.js";
+import { errorMessage } from "../infrastructure/parsing.js";
 
 type Writable = {
   write(chunk: string): unknown;
@@ -25,7 +26,7 @@ export async function runSignalCommand(
   try {
     args = parseArgs(argv);
   } catch (error) {
-    stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    stderr.write(`${errorMessage(error)}\n`);
     return 1;
   }
   const generate =
@@ -50,7 +51,7 @@ export async function runSignalCommand(
     stdout.write(result.markdown);
     return 0;
   } catch (error) {
-    stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    stderr.write(`${errorMessage(error)}\n`);
     return 1;
   }
 }

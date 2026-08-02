@@ -1,3 +1,5 @@
+import uniq from "lodash-es/uniq.js";
+
 import { canonicalizeUrl, compactSummary, isSameTitleEvent, parsePublishTime } from "./text.js";
 
 export type NewsSourcePolicy = "authoritative" | "official";
@@ -115,9 +117,9 @@ function toStory(canonicalUrl: string, matches: NewsSearchHit[]): NewsStory {
   const representative = [...matches].sort(
     (left, right) => (right.rankScore ?? 0) - (left.rankScore ?? 0),
   )[0]!;
-  const queries = unique(matches.map(({ query }) => query));
-  const topicIds = unique(matches.map(({ topicId }) => topicId));
-  const topicLabels = unique(matches.map(({ topicLabel }) => topicLabel));
+  const queries = uniq(matches.map(({ query }) => query));
+  const topicIds = uniq(matches.map(({ topicId }) => topicId));
+  const topicLabels = uniq(matches.map(({ topicLabel }) => topicLabel));
   const authInfoLevel = Math.min(...matches.map(({ authInfoLevel }) => authInfoLevel ?? 4));
   const rankScore = Math.max(...matches.map(({ rankScore }) => rankScore ?? 0));
   const queryHits = queries.length;
@@ -142,8 +144,4 @@ function toStory(canonicalUrl: string, matches: NewsSearchHit[]): NewsStory {
     queryHits,
     score: Math.round(rankScore * 100 + authorityScore + Math.max(0, queryHits - 1) * 20),
   };
-}
-
-function unique<T>(items: T[]): T[] {
-  return [...new Set(items)];
 }

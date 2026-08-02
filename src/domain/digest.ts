@@ -1,3 +1,5 @@
+import uniq from "lodash-es/uniq.js";
+
 import { asRecord } from "./record.js";
 
 export type ActivitySource = "github" | "rss";
@@ -163,8 +165,8 @@ function scoreRepo(
   events: ActivityCard[],
   context: BuildCandidatesContext,
 ): CandidateProject {
-  const actors = unique(events.map((event) => event.actor).filter(Boolean));
-  const eventTypes = unique(events.map((event) => event.type));
+  const actors = uniq(events.map((event) => event.actor).filter(Boolean));
+  const eventTypes = uniq(events.map((event) => event.type));
   const repository = context.repositories.get(repo);
   const reasons = new Set<string>();
   let score = 0;
@@ -344,10 +346,6 @@ function tokenize(value: string): Set<string> {
 function daysSince(isoDate: string): number {
   const elapsed = Date.now() - new Date(isoDate).getTime();
   return elapsed / 86_400_000;
-}
-
-function unique<T>(items: T[]): T[] {
-  return [...new Set(items)];
 }
 
 function asString(value: unknown): string {

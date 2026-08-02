@@ -21,6 +21,7 @@ import {
   type FeedState,
 } from "../infrastructure/state.js";
 import { attempt } from "./effect.js";
+import { errorMessage } from "../infrastructure/parsing.js";
 
 export type { DigestDocument };
 
@@ -63,12 +64,12 @@ async function collectDigest(
   const rssEvents = rssResult.status === "fulfilled" ? rssResult.value : [];
   if (githubResult.status === "rejected") {
     console.error(
-      `GitHub feed unavailable; continuing with RSS events: ${formatError(githubResult.reason)}`,
+      `GitHub feed unavailable; continuing with RSS events: ${errorMessage(githubResult.reason)}`,
     );
   }
   if (rssResult.status === "rejected") {
     console.error(
-      `RSS feeds unavailable; continuing with GitHub events: ${formatError(rssResult.reason)}`,
+      `RSS feeds unavailable; continuing with GitHub events: ${errorMessage(rssResult.reason)}`,
     );
   }
   const eventWindow = resolveEventWindow(config);
@@ -117,10 +118,6 @@ async function fetchGithubEvents(config: AppConfig, client: GitHubClient): Promi
     pages: config.eventPages,
   });
   return rawEvents.map(normalizeEvent);
-}
-
-function formatError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 async function fetchRssEvents(

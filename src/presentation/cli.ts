@@ -8,6 +8,7 @@ import { renderJsonDigest, renderMarkdownDigest } from "./render.js";
 import { runFeedsCommand } from "./feeds-cli.js";
 import { runGithubHomeCommand } from "./github-home-cli.js";
 import { runSignalCommand } from "./signal-cli.js";
+import { errorMessage } from "../infrastructure/parsing.js";
 
 type Writable = {
   write(chunk: string): unknown;
@@ -54,7 +55,7 @@ export async function runCliCommand(
       );
       return 0;
     } catch (error) {
-      stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+      stderr.write(`${errorMessage(error)}\n`);
       return 1;
     }
   }

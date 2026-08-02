@@ -1,6 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
+import uniq from "lodash-es/uniq.js";
+
 import { hostnameOf } from "./parsing.js";
 import { parseFeedSubscriptions, type FeedSubscription } from "./config.js";
 
@@ -51,10 +53,6 @@ function normalizeFeedSubscription(input: FeedSubscriptionInput): FeedSubscripti
   return {
     name: input.name?.trim() || hostnameOf(url),
     url,
-    tags: unique((input.tags ?? []).map((tag) => tag.trim()).filter(Boolean)),
+    tags: uniq((input.tags ?? []).map((tag) => tag.trim()).filter(Boolean)),
   };
-}
-
-function unique<T>(items: T[]): T[] {
-  return [...new Set(items)];
 }

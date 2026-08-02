@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import type { NewsSourcePolicy, NewsTopic } from "../domain/news.js";
+import { optionalBoolean, requiredString, requirePositiveInteger } from "./config-parse.js";
 import { requireRecord } from "./parsing.js";
 
 const defaultTopicsFile = fileURLToPath(new URL("../../news-topics.json", import.meta.url));
@@ -37,7 +38,7 @@ export function parseNewsTopics(value: string): NewsTopic[] {
     const label = requiredString(record.label, `news topic ${id} label`);
     const enabled = optionalBoolean(record.enabled, true, `news topic ${id} enabled`);
     const sourcePolicy = parseSourcePolicy(record.sourcePolicy, id);
-    const maxItems = positiveInteger(record.maxItems, 5, `news topic ${id} maxItems`);
+    const maxItems = requirePositiveInteger(record.maxItems, 5, `news topic ${id} maxItems`);
     if (maxItems > newsTopicLimits.maxItemsPerTopic) {
       throw new Error(
         `News topic ${id} maxItems must not exceed ${newsTopicLimits.maxItemsPerTopic}.`,
@@ -69,23 +70,4 @@ export function parseNewsTopics(value: string): NewsTopic[] {
 function parseSourcePolicy(value: unknown, id: string): NewsSourcePolicy {
   if (value === "authoritative" || value === "official") return value;
   throw new Error(`News topic ${id} sourcePolicy must be authoritative or official.`);
-}
-
-function requiredString(value: unknown, label: string): string {
-  if (typeof value !== "string" || value.trim() === "")
-    throw new Error(`${label} must be a non-empty string.`);
-  return value.trim();
-}
-
-function optionalBoolean(value: unknown, fallback: boolean, label: string): boolean {
-  if (value === undefined) return fallback;
-  if (typeof value !== "boolean") throw new Error(`${label} must be a boolean.`);
-  return value;
-}
-
-function positiveInteger(value: unknown, fallback: number, label: string): number {
-  if (value === undefined) return fallback;
-  if (!Number.isInteger(value) || Number(value) <= 0)
-    throw new Error(`${label} must be a positive integer.`);
-  return Number(value);
 }

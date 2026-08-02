@@ -50,3 +50,8 @@ export function text(value: unknown): string | undefined {
 export function number(value: unknown): number | undefined {
   return isNumber(value) && isFinite(value) ? value : undefined;
 }
+
+/** CLI / logging: normalize thrown values to a single-line message. */
+export function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
