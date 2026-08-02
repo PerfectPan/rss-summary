@@ -24,6 +24,7 @@ Scope: what the repository uses, why, and when to revisit.
 | `cheerio` | `infrastructure/github-home.ts` | Conduit HTML snapshot extraction on the server side. | — |
 | `playwright` | `infrastructure/github-home.ts` | GitHub Home login flow and rendered-browser fallback. The browser-automation code is explicitly excluded from unit coverage (`/* v8 ignore start */`) and exercised manually. | A different Home source replaces it. |
 | `tsx` | dev only | Runs TS entrypoints directly (`pnpm digest`, `pnpm feeds`). | — |
+| `lodash-es` | `infrastructure/parsing.ts` (and similar helpers) | Named path imports (`lodash-es/isPlainObject.js`) for JSON coercion helpers; tree-shakeable for bundlers, small module graph under Node ESM. Prefer library helpers over one-off reinvention when semantics match. | — |
 
 ## Side Effects (Effect adoption level)
 
