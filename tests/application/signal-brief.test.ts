@@ -122,7 +122,8 @@ describe("signal brief application service", () => {
     );
     expect(githubSearch).toHaveBeenCalledWith(
       expect.objectContaining({
-        query: "created:>=2026-07-23 stars:>50 TypeScript OR ai",
+        // Topics as free-text OR; languages are scoring bias only.
+        query: "created:>=2026-07-23 stars:>50 ai",
         perPage: 8,
         sort: "stars",
       }),

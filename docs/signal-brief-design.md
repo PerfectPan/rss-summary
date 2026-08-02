@@ -147,7 +147,7 @@ type SignalItem = {
 
 **Open source**
 
-- Example query shape: recent `created` window + `stars:>N` + preferred languages/topics.
+- Example query shape: recent `created` window + `stars:>N` + free-text topic OR terms (languages are a scoring bias, not search free-text — GitHub free-text language names are too broad).
 - Reject name patterns such as `awesome-` / `awesome_`.
 - Prefer non-empty description; penalize missing language when frontend bias is on.
 

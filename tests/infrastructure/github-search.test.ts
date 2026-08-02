@@ -67,8 +67,14 @@ describe("buildRepositorySearchQuery", () => {
       buildRepositorySearchQuery({
         since: "2026-07-26",
         minStars: 50,
-        keywords: ["TypeScript", "ai", "mcp"],
+        keywords: ["ai", "llm", "mcp"],
       }),
-    ).toBe("created:>=2026-07-26 stars:>50 TypeScript OR ai OR mcp");
+    ).toBe("created:>=2026-07-26 stars:>50 ai OR llm OR mcp");
+  });
+
+  it("omits free-text terms when the keyword list is empty", () => {
+    expect(buildRepositorySearchQuery({ since: "2026-07-26", minStars: 50, keywords: [] })).toBe(
+      "created:>=2026-07-26 stars:>50",
+    );
   });
 });

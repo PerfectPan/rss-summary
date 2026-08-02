@@ -1,6 +1,7 @@
 import { shiftCalendarDay, startOfCalendarDay } from "./time.js";
 import { canonicalizeUrl, compactSummary, formatCompactCount, isSameTitleEvent, parsePublishTime } from "./text.js";
 
+/** `release` is reserved for optional v1.1 version-tag discovery; v1 never emits it. */
 export type SignalKind = "model" | "product" | "repo" | "release";
 export type SignalSection = "updates" | "opensource";
 
@@ -94,7 +95,9 @@ export type SignalDomainRules = {
 
 export function classifyUpdateKind(title: string, hints: string[]): "model" | "product" {
   const normalized = title.normalize("NFKC").toLowerCase();
-  return hints.some((hint) => normalized.includes(hint.normalize("NFKC").toLowerCase())) ? "model" : "product";
+  return hints.some((hint) => containsKeyword(normalized, hint.normalize("NFKC").toLowerCase()))
+    ? "model"
+    : "product";
 }
 
 export function buildSignalUpdates(hits: SignalUpdateHit[], rules: SignalDomainRules): SignalItem[] {
@@ -143,8 +146,12 @@ export function selectSignalItems(
     else if (opensourceCap > 0) opensourceCap -= 1;
     else break;
   }
+  // Soft balance only picks the set; re-sort by score so the brief still reads strongest-first.
+  const selectedUpdates = selectWithSoftBalance(updates, updatesCap).sort(
+    (left, right) => right.score - left.score || left.id.localeCompare(right.id),
+  );
   return {
-    updates: selectWithSoftBalance(updates, updatesCap),
+    updates: selectedUpdates,
     opensource: repos.slice(0, opensourceCap),
   };
 }
@@ -157,7 +164,20 @@ export function countOutOfWindowUpdateHits(hits: SignalUpdateHit[], rules: Signa
 function isAcceptedUpdateHit(hit: SignalUpdateHit, rules: SignalDomainRules): boolean {
   if (!hit.title.trim() || !hit.url.trim()) return false;
   if (hit.source === "official" && !isOfficialDomain(hit.url, rules.officialDomains)) return false;
+  // HN is a global front-page firehose; require AI×dev relevance or it floods the brief.
+  if (hit.source === "hn" && !isRelevantUpdate(hit, rules)) return false;
   return isWithinUpdateWindow(hit, rules);
+}
+
+/**
+ * HN items must match at least one frontend/AI keyword in the title
+ * (updateKeywords ∪ modelTitleHints). Do not use the synthetic HN summary
+ * (`author 分享 · N 条评论`) — author names produce false positives
+ * (e.g. "Kaizeras" matching bare "AI").
+ */
+function isRelevantUpdate(hit: SignalUpdateHit, rules: SignalDomainRules): boolean {
+  const keywords = [...rules.frontendBias.updateKeywords, ...rules.frontendBias.modelTitleHints];
+  return matchedKeywords(hit.title, keywords, 1).length > 0;
 }
 
 function isWithinUpdateWindow(hit: SignalUpdateHit, rules: SignalDomainRules): boolean {
@@ -366,9 +386,24 @@ function matchedKeywords(value: string, keywords: string[], cap: number): string
   const matches: string[] = [];
   for (const keyword of keywords) {
     if (matches.length >= cap) break;
-    if (normalized.includes(keyword.normalize("NFKC").toLowerCase())) matches.push(keyword);
+    const needle = keyword.normalize("NFKC").toLowerCase();
+    if (containsKeyword(normalized, needle)) matches.push(keyword);
   }
   return matches;
+}
+
+/**
+ * Prefer word-ish matches for ASCII tokens so short keywords like "AI" / "MCP"
+ * do not hit inside unrelated words ("Kaizeras", "email", "said").
+ * Multi-word or CJK phrases keep substring matching.
+ */
+function containsKeyword(haystack: string, needle: string): boolean {
+  if (needle.length === 0) return false;
+  if (/^[a-z0-9][a-z0-9.+#-]*$/u.test(needle)) {
+    const escaped = needle.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+    return new RegExp(`(?:^|[^a-z0-9])${escaped}(?:[^a-z0-9]|$)`, "u").test(haystack);
+  }
+  return haystack.includes(needle);
 }
 
 function isOfficialDomain(url: string, domains: string[]): boolean {

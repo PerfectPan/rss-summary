@@ -184,7 +184,17 @@ node --env-file=/path/to/rivus-project/.env.local \
 
 The signal Tool reads `SIGNAL_SOURCES_FILE` (defaults to the packaged `signal-sources.json`), `DOUBAO_SEARCH_API_KEY`, `GH_FEED_TOKEN` (optional; raises the unauthenticated GitHub Search quota from 10 to 30 requests/minute), and `SIGNAL_SEARCH_TIMEOUT_MS` (default 15000). It also reuses `FEED_TIMEZONE_OFFSET` through the config's `timezoneOffsetEnv`.
 
-`signal-sources.json` is not an RSS subscription list: it holds quotas (`maxTotal` 8, `updates` 5, `opensource` 4), the frontend bias taxonomy (languages, repo topics, update keywords, model-title hints), deterministic scoring weights, Hacker News thresholds (`minPoints`, `includeShowHn`, `maxItems`), GitHub Search tuning (`createdWithinDays`, `minStars`, languages/topics used as free-text OR terms, `excludeNamePatterns` such as `awesome-*`), and official-search domains plus one model and one product intent query. The Tool emits at most two sections — 动态 (`模型`/`产品` labels) and 开源 (`上升` label) — and omits a section entirely when it has no items. Updates are capped at 5 with a soft model/product balance; open source at 4; the brief at 8 items total. If a single source fails, the brief continues with a `数据源状态` warning; if all three fail, the Tool fails so Rivus can apply its normal failure handling.
+`signal-sources.json` is not an RSS subscription list: it holds quotas (`maxTotal` 8, `updates` 5, `opensource` 4), the frontend bias taxonomy (languages, repo topics, update keywords, model-title hints), deterministic scoring weights, Hacker News thresholds (`minPoints`, `includeShowHn`, `maxItems`), GitHub Search tuning, and official-search domains plus one model and one product intent query.
+
+GitHub Search fields have distinct roles:
+
+| Field | Role |
+| --- | --- |
+| `githubSearch.topics` | Free-text OR terms in the Search query (prefer product keywords: `ai`, `llm`, `agent`, `mcp`). |
+| `githubSearch.languages` | **Scoring bias only** in the domain layer (`repoLanguageBoost`). Not sent as free-text OR — a bare `TypeScript` term matches any TS repo and drowns AI×dev signal. Used as query fallback only when `topics` is empty. |
+| `frontendBias.languages` / `repoTopics` / `updateKeywords` | Domain scoring / HN relevance filter (word-boundary match for ASCII tokens). Bare words like `AI` / `model` are omitted from keywords to avoid generic media noise. |
+
+The Tool emits at most two sections — 动态 (`模型`/`产品` labels) and 开源 (`上升` label) — and omits a section entirely when it has no items. Updates are capped at 5 with a soft model/product balance (selection set), then re-sorted by score for display; open source at 4; the brief at 8 items total. If a single source fails, the brief continues with a `数据源状态` warning (missing `DOUBAO_SEARCH_API_KEY` is called out explicitly); if all three fail, the Tool fails so Rivus can apply its normal failure handling.
 
 Use the equivalent process-environment configuration in launchd or systemd. Treat a foreground Tool invocation as the credential acceptance check; `doctor` and `check-config` do not execute the external Tool.
 

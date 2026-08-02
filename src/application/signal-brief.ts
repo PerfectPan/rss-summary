@@ -97,7 +97,8 @@ export function generateSignalBrief(
 
     const warnings: string[] = [];
     if (officialFailed) {
-      warnings.push("官方搜索不可用");
+      const missingKey = !env.DOUBAO_SEARCH_API_KEY?.trim();
+      warnings.push(missingKey ? "官方搜索不可用（缺少 DOUBAO_SEARCH_API_KEY）" : "官方搜索不可用");
     } else if (officialResult.status === "fulfilled" && officialResult.value.warnings > 0) {
       warnings.push(`官方搜索：${officialResult.value.warnings} 个查询暂不可用`);
     }
@@ -219,10 +220,13 @@ async function fetchGithubRepos(
   day: string,
 ): Promise<SignalRepoHit[]> {
   const createdSince = shiftCalendarDay(day, -(config.githubSearch.createdWithinDays - 1));
+  // Topics as free-text OR; languages stay domain scoring bias (see buildRepositorySearchQuery).
+  const keywords =
+    config.githubSearch.topics.length > 0 ? config.githubSearch.topics : config.githubSearch.languages;
   const query = buildRepositorySearchQuery({
     since: createdSince,
     minStars: config.githubSearch.minStars,
-    keywords: [...config.githubSearch.languages, ...config.githubSearch.topics],
+    keywords,
   });
   const repos = await search({
     query,

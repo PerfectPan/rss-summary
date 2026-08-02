@@ -98,7 +98,7 @@ function parseScoring(record: Record<string, unknown>): SignalScoring {
     frontendKeywordMaxHits: boundedInteger(record.frontendKeywordMaxHits, 3, 1, 10, "scoring.frontendKeywordMaxHits"),
     recencyMaxScore: boundedNumber(record.recencyMaxScore, 10, 0, 100, "scoring.recencyMaxScore"),
     crossSourceBoost: boundedNumber(record.crossSourceBoost, 15, 0, 200, "scoring.crossSourceBoost"),
-    repoStarMaxScore: boundedNumber(record.repoStarMaxScore, 30, 0, 500, "scoring.repoStarMaxScore"),
+    repoStarMaxScore: boundedNumber(record.repoStarMaxScore, 50, 0, 500, "scoring.repoStarMaxScore"),
     repoNewnessWeight: boundedNumber(record.repoNewnessWeight, 2, 0, 100, "scoring.repoNewnessWeight"),
     repoLanguageBoost: boundedNumber(record.repoLanguageBoost, 10, 0, 100, "scoring.repoLanguageBoost"),
     repoTopicBoost: boundedNumber(record.repoTopicBoost, 5, 0, 100, "scoring.repoTopicBoost"),

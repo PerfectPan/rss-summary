@@ -62,9 +62,18 @@ export class GitHubSearchClient {
   }
 }
 
+/**
+ * Build a repository search query.
+ *
+ * GitHub rejects unparenthesized qualifier OR (`language:A OR language:B` → 422) and
+ * parenthesized qualifier groups often return empty hits, so free-text OR is used.
+ * Prefer topic terms over language names: free-text "TypeScript" matches any TS repo
+ * and drowns out AI×dev signal. Languages remain a scoring bias in the domain layer.
+ */
 export function buildRepositorySearchQuery(options: {
   since: string;
   minStars: number;
+  /** Free-text OR terms (prefer topics / product keywords, not language names). */
   keywords: string[];
 }): string {
   const qualifiers = [`created:>=${options.since}`, `stars:>${options.minStars}`];

@@ -89,7 +89,7 @@ describe("signal domain", () => {
         updateHit({ id: "official", title: "GPT-5 API announcement", url: "https://openai.com/blog/model", sourceLabel: "OpenAI" }),
         updateHit({
           id: "blog",
-          title: "Third-party review of the model",
+          title: "Third-party review of the coding agent SDK",
           url: "https://example.com/blog/model",
           sourceLabel: "Hacker News",
           source: "hn",
@@ -190,18 +190,74 @@ describe("signal domain", () => {
     expect(items.map(({ id }) => id).sort()).toEqual(["hn", "ok"]);
   });
 
+  it("rejects Hacker News hits that lack AI×dev relevance keywords", () => {
+    const items = buildSignalUpdates(
+      [
+        updateHit({
+          id: "noise",
+          title: "How Google helped destroy adoption of RSS feeds",
+          url: "https://example.com/rss-history",
+          source: "hn",
+          points: 400,
+          summary: "A historical essay about syndication.",
+        }),
+        updateHit({
+          id: "author-false-positive",
+          title: "The Silicon Valley Founder Meat Grinder",
+          url: "https://example.com/meat",
+          source: "hn",
+          points: 300,
+          // Synthetic HN summary embeds the author; "Kaizeras" must not match "AI".
+          summary: "Kaizeras 分享 · 148 条评论",
+        }),
+        updateHit({
+          id: "relevant",
+          title: "Show HN: Agent IDE for TypeScript",
+          url: "https://example.com/agent-ide",
+          source: "hn",
+          points: 120,
+          summary: "A coding agent harness.",
+        }),
+        updateHit({
+          id: "ai-word",
+          title: "AI financial advice is surprisingly good",
+          url: "https://example.com/ai-finance",
+          source: "hn",
+          points: 200,
+        }),
+        updateHit({
+          id: "official-ok",
+          title: "Vendor ships unrelated appliance",
+          url: "https://openai.com/blog/appliance",
+          source: "official",
+          summary: "Hardware note without coding keywords.",
+        }),
+      ],
+      rules({
+        frontendBias: {
+          ...frontendBias,
+          // No bare "AI"/"model" — generic media titles must not enter the updates section.
+          updateKeywords: ["agent", "IDE", "TypeScript", "coding", "SDK", "LLM"],
+        },
+      }),
+    );
+
+    expect(items.map(({ id }) => id).sort()).toEqual(["official-ok", "relevant"]);
+  });
+
   it("deduplicates canonical URLs and collapses the same event across publishers", () => {
     const items = buildSignalUpdates(
       [
         updateHit({ id: "a", url: "https://example.com/x?utm_source=one", title: "Claude 3.7 发布重大更新", source: "hn", points: 100 }),
         updateHit({ id: "b", url: "https://example.com/x?ref=two", title: "Claude 3.7 发布重大更新", source: "hn", points: 90 }),
         updateHit({ id: "c", url: "https://other.example.net/y", title: "Claude 3.7 重大更新发布详情", source: "hn", points: 80 }),
-        updateHit({ id: "d", url: "https://example.com/z", title: "完全不同的另一件事", source: "hn", points: 70 }),
+        updateHit({ id: "d", url: "https://example.com/z", title: "Agent coding SDK 完全不同的另一件事", source: "hn", points: 70 }),
       ],
       rules(),
     );
 
-    expect(items.map(({ id }) => id)).toEqual(["a", "d"]);
+    // "d" has more updateKeywords hits so ranks above the Claude-only title after relevance filter.
+    expect(items.map(({ id }) => id)).toEqual(["d", "a"]);
   });
 
   it("excludes awesome lists and missing-description repos, and biases toward TypeScript topics", () => {
@@ -290,12 +346,22 @@ describe("signal domain", () => {
     expect(modelCount).toBe(3);
     expect(productCount).toBe(2);
     expect(Math.abs(modelCount - productCount)).toBeLessThanOrEqual(1);
+    // Display order is score-desc after soft-balance selection (not interleave order).
+    for (let index = 1; index < selected.length; index += 1) {
+      expect(selected[index - 1]!.score).toBeGreaterThanOrEqual(selected[index]!.score);
+    }
   });
 
   it("caps both sections and enforces the global total quota", () => {
     const updates = buildSignalUpdates(
       Array.from({ length: 7 }, (_, index) =>
-        updateHit({ id: `u-${index}`, title: `Update ${index}`, url: `https://example.com/u-${index}`, source: "hn", points: 100 }),
+        updateHit({
+          id: `u-${index}`,
+          title: `Agent coding SDK update ${index}`,
+          url: `https://example.com/u-${index}`,
+          source: "hn",
+          points: 100,
+        }),
       ),
       rules(),
     );
