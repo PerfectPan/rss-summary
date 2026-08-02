@@ -2,7 +2,7 @@
 
 `rss-summary` is a local TypeScript CLI, a small set of portable Codex skills, and an external Rivus Plugin. It is not a daemon or hosted service. Scheduling is handled outside the repo by cron, launchd, systemd, Codex automation, or a Rivus deployment daemon.
 
-The runtime goal is simple: produce a previous-day technical subscription digest from GitHub Home and RSS, plus bounded noon/evening headline briefs from authoritative web search. Collection and ranking stay independent from Rivus scheduling and Feishu delivery.
+The runtime goal is simple: produce a previous-day technical subscription digest from GitHub Home and RSS, plus bounded noon/evening headline briefs from authoritative web search, plus a once-per-day high-signal brief (高信号速览) from public GitHub Search, Hacker News, and official-domain search. Collection and ranking stay independent from Rivus scheduling and Feishu delivery.
 
 ## High-Level Flow
 
@@ -36,6 +36,13 @@ flowchart TD
   Doubao --> NewsDomain["src/news-domain.ts validate + dedupe + rank"]
   NewsDomain --> NewsRender["src/news-render.ts mobile Markdown"]
 
+  SignalSources["signal-sources.json"] --> SignalBrief["src/signal-brief.ts signal application service"]
+  SignalBrief --> HackerNews["src/hacker-news.ts HN Algolia"]
+  SignalBrief --> GithubSearch["src/github-search.ts GitHub Search API"]
+  SignalBrief --> Doubao
+  SignalBrief --> SignalDomain["src/signal-domain.ts filter + score + quotas"]
+  SignalDomain --> SignalRender["src/signal-render.ts two-section Markdown"]
+
   FeedsCommand --> FeedStore["src/feed-store.ts feeds.json"]
 ```
 
@@ -48,7 +55,8 @@ flowchart TD
 - Local persistence: `src/feed-store.ts` manages RSS subscriptions. `src/state.ts` manages local digest state.
 - Presentation and delivery: `src/render.ts` formats Markdown/JSON. `src/notifier.ts` prints to stdout and optionally posts a generic webhook payload.
 - News application/domain: `src/news-brief.ts` defines noon/evening windows and orchestrates queries. `src/news-domain.ts` independently rechecks publication time and source authority, canonicalizes URLs, merges duplicate hits, ranks stories, and applies quotas. `src/news-render.ts` owns the mobile Markdown layout.
-- Rivus boundary: `src/rivus-plugin.ts` registers one profile, two observe-only Tools, and the morning/noon/evening templates. `src/rivus-digest.ts` and `src/news-brief.ts` validate Tool input and call their application workflows; neither owns scheduling or Feishu delivery.
+- Signal application/domain: `src/signal-brief.ts` defines the once-per-day calendar window and fans out to the three public sources. `src/signal-sources.ts` loads and validates `signal-sources.json` (quotas, frontend bias, scoring weights, source settings); the file is intentionally not an RSS subscription list. `src/signal-domain.ts` filters and scores updates and repos, canonicalizes URLs, collapses duplicate events, and applies per-section plus global quotas. `src/signal-render.ts` emits the two-section Markdown (动态 + 开源) and omits empty sections. The signal pipeline never reads `feeds.json` or calls `RssClient`.
+- Rivus boundary: `src/rivus-plugin.ts` registers one profile, three observe-only Tools, and the morning/noon/evening/signal templates. `src/rivus-digest.ts`, `src/news-brief.ts`, and `src/signal-brief.ts` validate Tool input and call their application workflows; neither owns scheduling or Feishu delivery.
 - Skills: `skills/*` describe how Codex should configure, run, research, or manage feeds using this repo.
 
 ## Domain Model
@@ -98,6 +106,20 @@ FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --only-new
 
 Without `FEED_DAY` or `--day`, the CLI uses the compatibility rolling window from `FEED_WINDOW_HOURS`, defaulting to 36 hours.
 
+## Signal Brief Workflow
+
+`rss-summary signal` (or the Rivus Tool `rss-summary/generate-signal-brief`) answers “what shipped or rose in public AI×dev today”:
+
+1. `src/signal-sources.ts` loads `signal-sources.json`; env overrides: `SIGNAL_SOURCES_FILE`, `SIGNAL_SEARCH_TIMEOUT_MS`.
+2. `src/signal-brief.ts` resolves the local calendar day (from `occurrence` or explicit `day`) and fans out in parallel:
+   - Doubao official search (`sourcePolicy: "official"`, one query per configured intent, kind `model` or `product`),
+   - Hacker News Algolia (`search_by_date`, `points>minPoints`, optional `show_hn` tag), filtered to the day and re-ranked by points,
+   - GitHub Repository Search (`created:>=`, `stars:>`, free-text keyword `OR`), sorted by stars.
+3. `src/signal-domain.ts` rechecks publication windows, canonicalizes URLs, collapses the same event across publishers, scores deterministically (official-domain, HN points, frontend keywords, recency, cross-source agreement for updates; stars, newness, language/topic match, description/language penalties for repos), and applies quotas (`maxTotal` 8, `updates` 5 with soft model/product balance, `opensource` 4).
+4. `src/signal-render.ts` emits `# 高信号速览 · YYYY-MM-DD` with two optional sections and omits empty ones.
+
+There is no persistent `.state` for signal briefs; dedupe is in-run only. The CLI is inherently dry-run (read-only, no webhook).
+
 ## Feed Management Workflow
 
 RSS/Atom sources are maintained in the tracked `feeds.json` file. The CLI manages that shared subscription list through `src/feeds.ts`:
@@ -145,6 +167,8 @@ Keep `GH_FEED_TOKEN`, `.env`, and `.state/` out of git. `feeds.json` is intentio
 - Add delivery channels: extend `src/notifier.ts` or add notifier adapters for Feishu, Slack, Telegram, email, or other targets.
 - Add Rivus capabilities: register narrow Tools in `src/rivus-plugin.ts` and delegate them to application-level functions instead of copying source or ranking logic into the Plugin.
 - Add content deduplication: cluster RSS/article candidates by canonical URL, title, or content fingerprint before scoring.
+- Add signal sources (later tiers): Hugging Face, Product Hunt, or GitHub Trending HTML adapters feed `SignalRepoHit`-shaped candidates into `src/signal-domain.ts`.
+- Add persistent signal state: introduce a `.state/signal-state.json` seen-set so repos/URLs are not re-pushed within N days; keep it behind an explicit flag.
 
 ## Current Gaps
 

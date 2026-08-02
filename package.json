@@ -11,6 +11,7 @@
     "dist",
     "docs/rivus-plugin.md",
     "news-topics.json",
+    "signal-sources.json",
     "README.md"
   ],
   "bin": {

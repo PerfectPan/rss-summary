@@ -65,7 +65,7 @@ export function selectNewsStories(stories: NewsStory[], topics: NewsTopic[]): Se
     for (const story of matches) {
       if (count >= topic.maxItems || selected.length >= maxNewsBriefItems) break;
       if (selectedUrls.has(story.canonicalUrl)) continue;
-      if (selected.some((candidate) => isSameNewsEvent(candidate, story))) continue;
+      if (selected.some((candidate) => isSameTitleEvent(candidate, story))) continue;
       selected.push({ ...story, selectedTopicId: topic.id });
       selectedUrls.add(story.canonicalUrl);
       count += 1;
@@ -159,7 +159,7 @@ function stripLeadingLiteral(value: string, literal: string | undefined): string
   return value.slice(prefix.length).replace(/^[：:·|—–\-，,。；;\s]+/u, "");
 }
 
-function isSameNewsEvent(left: NewsStory, right: NewsStory): boolean {
+export function isSameTitleEvent(left: { title: string }, right: { title: string }): boolean {
   const leftFeatures = titleFeatures(left.title);
   const rightFeatures = titleFeatures(right.title);
   const smallerSize = Math.min(leftFeatures.size, rightFeatures.size);
