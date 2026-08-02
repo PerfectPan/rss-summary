@@ -30,4 +30,30 @@ describe("notifier", () => {
     ]);
     expect(stdout).toBe("# Digest\n");
   });
+
+  it("appends a trailing newline when markdown has none", async () => {
+    let stdout = "";
+    const notifier = createNotifier({
+      stdout: {
+        write: (chunk: string | Uint8Array) => {
+          stdout += String(chunk);
+          return true;
+        },
+      },
+    });
+
+    await notifier.send("# Digest");
+
+    expect(stdout).toBe("# Digest\n");
+  });
+
+  it("fails when the webhook responds non-OK", async () => {
+    const notifier = createNotifier({
+      webhookUrl: "https://example.test/webhook",
+      stdout: { write: () => true },
+      fetch: async () => new Response("boom", { status: 500 }),
+    });
+
+    await expect(notifier.send("# Digest")).rejects.toThrow(/500 boom/);
+  });
 });

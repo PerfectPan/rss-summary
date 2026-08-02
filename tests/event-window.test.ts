@@ -52,4 +52,30 @@ describe("event window", () => {
       label: "2026-06-27T09:00:00+08:00 to 2026-06-28T09:00:00+08:00",
     });
   });
+
+  it("rejects malformed or contradictory window inputs", () => {
+    expect(() =>
+      resolveEventWindow({ since: "2026-06-27T09:00:00+08:00", timezoneOffset: "+08:00", windowHours: 36 }),
+    ).toThrow(/set together/);
+    expect(() =>
+      resolveEventWindow({ since: "nonsense", until: "2026-06-28T09:00:00+08:00", timezoneOffset: "+08:00", windowHours: 36 }),
+    ).toThrow(/FEED_SINCE/);
+    expect(() =>
+      resolveEventWindow({ since: "2026-06-28T09:00:00+08:00", until: "nonsense", timezoneOffset: "+08:00", windowHours: 36 }),
+    ).toThrow(/FEED_UNTIL/);
+    expect(() =>
+      resolveEventWindow({
+        since: "2026-06-28T09:00:00+08:00",
+        until: "2026-06-27T09:00:00+08:00",
+        timezoneOffset: "+08:00",
+        windowHours: 36,
+      }),
+    ).toThrow(/must be after/);
+    expect(() => resolveEventWindow({ day: "06-27-2026", timezoneOffset: "+08:00", windowHours: 36 })).toThrow(
+      /FEED_DAY/,
+    );
+    expect(() => resolveEventWindow({ day: "2026-06-27", timezoneOffset: "bad", windowHours: 36 })).toThrow(
+      /FEED_TIMEZONE_OFFSET/,
+    );
+  });
 });

@@ -73,4 +73,12 @@ describe("top-level CLI", () => {
     expect(generate).toHaveBeenCalledWith({ day: "2026-07-29" }, expect.anything());
     expect(output.join("")).toContain("# 高信号速览 · 2026-07-29");
   });
+
+  it("returns an error exit code for unknown commands", async () => {
+    const exitCode = await runCliCommand(["frobnicate"], {
+      stdout: { write: () => undefined },
+    });
+
+    expect(exitCode).toBe(1);
+  });
 });

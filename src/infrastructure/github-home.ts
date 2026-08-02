@@ -77,6 +77,7 @@ export class GitHubHomeClient {
     }
   }
 
+  /* v8 ignore start -- Playwright browser automation, exercised manually */
   private async getConduitSnapshots(): Promise<HomeFeedCardSnapshot[]> {
     const playwright = await import("playwright");
     const requestContext = await playwright.request.newContext({
@@ -131,8 +132,10 @@ export class GitHubHomeClient {
       await browser.close();
     }
   }
+  /* v8 ignore stop */
 }
 
+/* v8 ignore start -- Playwright login flow, exercised manually */
 export async function saveGithubHomeStorageState(options: {
   storageState: string;
   browserChannel?: string;
@@ -167,6 +170,7 @@ export async function saveGithubHomeStorageState(options: {
     await browser.close();
   }
 }
+/* v8 ignore stop */
 
 export function normalizeHomeCardSnapshots(cards: HomeFeedCardSnapshot[]): ActivityCard[] {
   return cards.map(normalizeHomeCardSnapshot).filter((card) => card.type !== "other");
@@ -349,6 +353,7 @@ function absoluteGithubHref(href: string): string {
   }
 }
 
+/* v8 ignore start -- Playwright browser helpers, exercised manually */
 async function launchBrowser(
   playwright: PlaywrightModule,
   options: { headless: boolean; browserChannel?: string },
@@ -393,3 +398,4 @@ function extractHomeFeedSnapshots(): HomeFeedCardSnapshot[] {
 function hasGitHubHomeFeedDom(): boolean {
   return document.querySelector("feed-container") !== null && document.querySelector("#conduit-feed-frame") !== null;
 }
+/* v8 ignore stop */
