@@ -35,7 +35,10 @@ export type AppConfig = {
   rssFeeds: FeedSubscription[];
 };
 
-export function loadConfig(env: NodeJS.ProcessEnv = process.env, argv: string[] = process.argv.slice(2)): AppConfig {
+export function loadConfig(
+  env: NodeJS.ProcessEnv = process.env,
+  argv: string[] = process.argv.slice(2),
+): AppConfig {
   const args = parseArgs(argv);
   const username = args.username ?? env.GITHUB_USERNAME ?? env.GH_USERNAME ?? "PerfectPan";
   const token = env.GH_FEED_TOKEN ?? env.GITHUB_TOKEN;
@@ -46,7 +49,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, argv: string[] 
     token,
     githubFeedSource: parseGithubFeedSource(args.githubFeedSource ?? env.GITHUB_FEED_SOURCE),
     githubHomeFetch: parseGithubHomeFetch(args.githubHomeFetch ?? env.GITHUB_HOME_FETCH),
-    githubHomeStorageState: args.githubHomeStorageState ?? env.GITHUB_HOME_STORAGE_STATE ?? ".state/github-home-storage.json",
+    githubHomeStorageState:
+      args.githubHomeStorageState ??
+      env.GITHUB_HOME_STORAGE_STATE ??
+      ".state/github-home-storage.json",
     webhookUrl: dryRun ? undefined : env.NOTIFY_WEBHOOK_URL,
     outputFormat: args.json || env.FEED_OUTPUT_FORMAT === "json" ? "json" : "markdown",
     eventPages: numberFrom(args.pages ?? env.FEED_EVENT_PAGES, 3),
@@ -145,7 +151,7 @@ export function parseFeedSubscriptions(value: string): FeedSubscription[] {
   return parsed.map((item) => {
     if (typeof item === "string") {
       return {
-        name: nameFromUrl(item),
+        name: hostnameOf(item),
         url: item,
         tags: [],
       };
@@ -157,7 +163,8 @@ export function parseFeedSubscriptions(value: string): FeedSubscription[] {
 
     const record = item as Record<string, unknown>;
     const url = requireString(record.url, "RSS feed url");
-    const name = typeof record.name === "string" && record.name.trim() ? record.name.trim() : nameFromUrl(url);
+    const name =
+      typeof record.name === "string" && record.name.trim() ? record.name.trim() : hostnameOf(url);
     const tags = Array.isArray(record.tags)
       ? record.tags.map((tag) => (typeof tag === "string" ? tag.trim() : "")).filter(Boolean)
       : [];
@@ -191,7 +198,10 @@ function parseGithubHomeFetch(value: string | undefined): GithubHomeFetch {
   throw new Error("GITHUB_HOME_FETCH must be either 'conduit' or 'browser'.");
 }
 
-function loadFeedSubscriptions(env: NodeJS.ProcessEnv, configuredFile: string | undefined): FeedSubscription[] {
+function loadFeedSubscriptions(
+  env: NodeJS.ProcessEnv,
+  configuredFile: string | undefined,
+): FeedSubscription[] {
   if (env.RSS_FEEDS) return parseFeedSubscriptions(env.RSS_FEEDS);
 
   const feedsFile = configuredFile ?? env.RSS_FEEDS_FILE ?? "feeds.json";
@@ -204,8 +214,4 @@ function requireString(value: unknown, label: string): string {
     throw new Error(`${label} is required.`);
   }
   return value.trim();
-}
-
-function nameFromUrl(url: string): string {
-  return hostnameOf(url);
 }

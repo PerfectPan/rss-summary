@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import type { CandidateProject } from "../../src/domain/digest.js";
 import {
@@ -26,7 +26,11 @@ describe("feed state", () => {
   it("marks candidate events as seen", () => {
     const state = createEmptyFeedState();
 
-    markCandidatesSeen(state, [candidate("new/repo", ["event-1", "event-2"])], "2026-06-24T08:00:00Z");
+    markCandidatesSeen(
+      state,
+      [candidate("new/repo", ["event-1", "event-2"])],
+      "2026-06-24T08:00:00Z",
+    );
 
     expect(state.seen).toEqual({
       "event-1": "2026-06-24T08:00:00Z",

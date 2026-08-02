@@ -35,15 +35,27 @@ export function saveFeedState(path: string, state: FeedState): void {
   writeFileSync(path, `${JSON.stringify(state, null, 2)}\n`);
 }
 
-export function filterNewCandidates(candidates: CandidateProject[], state: FeedState): CandidateProject[] {
-  return candidates.filter((candidate) => candidate.events.some((event) => event.id && !state.seen[event.id]));
+export function filterNewCandidates(
+  candidates: CandidateProject[],
+  state: FeedState,
+): CandidateProject[] {
+  return candidates.filter((candidate) =>
+    candidate.events.some((event) => event.id && !state.seen[event.id]),
+  );
 }
 
-export function filterUnresearchedCandidates(candidates: CandidateProject[], state: FeedState): CandidateProject[] {
+export function filterUnresearchedCandidates(
+  candidates: CandidateProject[],
+  state: FeedState,
+): CandidateProject[] {
   return candidates.filter((candidate) => !state.researched[researchKeyForCandidate(candidate)]);
 }
 
-export function markCandidatesSeen(candidatesState: FeedState, candidates: CandidateProject[], seenAt: string): void {
+export function markCandidatesSeen(
+  candidatesState: FeedState,
+  candidates: CandidateProject[],
+  seenAt: string,
+): void {
   for (const candidate of candidates) {
     for (const event of candidate.events) {
       if (event.id) {

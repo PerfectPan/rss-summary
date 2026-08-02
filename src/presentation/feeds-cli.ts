@@ -1,6 +1,11 @@
 import type { FeedSubscription } from "../infrastructure/config.js";
 import { type ActivityCard } from "../domain/digest.js";
-import { addFeedSubscription, loadFeedFile, removeFeedSubscription, saveFeedFile } from "../infrastructure/feed-store.js";
+import {
+  addFeedSubscription,
+  loadFeedFile,
+  removeFeedSubscription,
+  saveFeedFile,
+} from "../infrastructure/feed-store.js";
 import { RssClient } from "../infrastructure/rss.js";
 
 type Writable = {

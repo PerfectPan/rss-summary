@@ -20,7 +20,9 @@ export function parseNewsTopics(value: string): NewsTopic[] {
   const parsed: unknown = JSON.parse(value);
   if (!Array.isArray(parsed)) throw new Error("News topic configuration must be a JSON array.");
   if (parsed.length > newsTopicLimits.maxTopics) {
-    throw new Error(`News topic configuration supports at most ${newsTopicLimits.maxTopics} topics.`);
+    throw new Error(
+      `News topic configuration supports at most ${newsTopicLimits.maxTopics} topics.`,
+    );
   }
 
   const ids = new Set<string>();
@@ -36,7 +38,9 @@ export function parseNewsTopics(value: string): NewsTopic[] {
     const sourcePolicy = parseSourcePolicy(record.sourcePolicy, id);
     const maxItems = positiveInteger(record.maxItems, 5, `news topic ${id} maxItems`);
     if (maxItems > newsTopicLimits.maxItemsPerTopic) {
-      throw new Error(`News topic ${id} maxItems must not exceed ${newsTopicLimits.maxItemsPerTopic}.`);
+      throw new Error(
+        `News topic ${id} maxItems must not exceed ${newsTopicLimits.maxItemsPerTopic}.`,
+      );
     }
     if (!Array.isArray(record.queries) || record.queries.length === 0) {
       throw new Error(`News topic ${id} must define at least one query.`);
@@ -54,7 +58,9 @@ export function parseNewsTopics(value: string): NewsTopic[] {
   });
   const totalQueries = topics.reduce((total, topic) => total + topic.queries.length, 0);
   if (totalQueries > newsTopicLimits.maxTotalQueries) {
-    throw new Error(`News topic configuration supports at most ${newsTopicLimits.maxTotalQueries} queries.`);
+    throw new Error(
+      `News topic configuration supports at most ${newsTopicLimits.maxTotalQueries} queries.`,
+    );
   }
   return topics;
 }
@@ -65,12 +71,14 @@ function parseSourcePolicy(value: unknown, id: string): NewsSourcePolicy {
 }
 
 function asRecord(value: unknown, label: string): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${label} must be an object.`);
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error(`${label} must be an object.`);
   return value as Record<string, unknown>;
 }
 
 function requiredString(value: unknown, label: string): string {
-  if (typeof value !== "string" || value.trim() === "") throw new Error(`${label} must be a non-empty string.`);
+  if (typeof value !== "string" || value.trim() === "")
+    throw new Error(`${label} must be a non-empty string.`);
   return value.trim();
 }
 
@@ -82,6 +90,7 @@ function optionalBoolean(value: unknown, fallback: boolean, label: string): bool
 
 function positiveInteger(value: unknown, fallback: number, label: string): number {
   if (value === undefined) return fallback;
-  if (!Number.isInteger(value) || Number(value) <= 0) throw new Error(`${label} must be a positive integer.`);
+  if (!Number.isInteger(value) || Number(value) <= 0)
+    throw new Error(`${label} must be a positive integer.`);
   return Number(value);
 }

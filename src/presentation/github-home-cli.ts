@@ -9,14 +9,20 @@ type GithubHomeCommandDeps = {
   stderr?: Writable;
 };
 
-export async function runGithubHomeCommand(argv: string[], deps: GithubHomeCommandDeps = {}): Promise<number> {
+export async function runGithubHomeCommand(
+  argv: string[],
+  deps: GithubHomeCommandDeps = {},
+): Promise<number> {
   const stdout = deps.stdout ?? process.stdout;
   const stderr = deps.stderr ?? process.stderr;
   const command = argv[0] ?? "help";
   const args = parseArgs(argv.slice(1));
 
   if (command === "login") {
-    const storageState = args.storageState ?? process.env.GITHUB_HOME_STORAGE_STATE ?? ".state/github-home-storage.json";
+    const storageState =
+      args.storageState ??
+      process.env.GITHUB_HOME_STORAGE_STATE ??
+      ".state/github-home-storage.json";
     try {
       await saveGithubHomeStorageState({
         storageState,

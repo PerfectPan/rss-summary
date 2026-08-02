@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import { generateSignalBrief } from "../../src/application/signal-brief.js";
 import { parseSignalSources } from "../../src/infrastructure/signal-sources.js";
@@ -36,7 +36,11 @@ const config = parseSignalSources(
   }),
 );
 
-function doubaoResult(url: string, title: string, kind: "model" | "product"): ReturnType<typeof doubaoPage> {
+function doubaoResult(
+  url: string,
+  title: string,
+  kind: "model" | "product",
+): ReturnType<typeof doubaoPage> {
   return doubaoPage({
     id: `${kind}-${url}`,
     title,
@@ -102,7 +106,13 @@ describe("signal brief application service", () => {
       await Effect.runPromise(
         generateSignalBrief(
           { day: "2026-07-29" },
-          { env: { FEED_TIMEZONE_OFFSET: "+08:00" }, config, doubaoSearch, hackerNewsSearch, githubSearch },
+          {
+            env: { FEED_TIMEZONE_OFFSET: "+08:00" },
+            config,
+            doubaoSearch,
+            hackerNewsSearch,
+            githubSearch,
+          },
         ),
       ),
     );
@@ -136,9 +146,13 @@ describe("signal brief application service", () => {
     });
     expect(result.markdown).toContain("# 高信号速览 · 2026-07-29");
     expect(result.markdown).toContain("**动态 · 3**");
-    expect(result.markdown).toContain("**[模型] [GPT-5 API model](https://openai.com/blog/gpt-5)**");
+    expect(result.markdown).toContain(
+      "**[模型] [GPT-5 API model](https://openai.com/blog/gpt-5)**",
+    );
     expect(result.markdown).toContain("**开源 · 1**");
-    expect(result.markdown).toContain("**[上升] [acme/agent-kit](https://github.com/acme/agent-kit)**");
+    expect(result.markdown).toContain(
+      "**[上升] [acme/agent-kit](https://github.com/acme/agent-kit)**",
+    );
   });
 
   it("derives the calendar day from the occurrence in the configured timezone", async () => {
@@ -198,14 +212,17 @@ describe("signal brief application service", () => {
               throw new Error("down");
             },
           },
-        )),
+        ),
+      ),
     ).rejects.toThrow(/all.*signal/i);
   });
 
   it("requires day or occurrence and validates both", async () => {
-    await expect(Effect.runPromise(generateSignalBrief({}, { config, env: {} }))).rejects.toThrow(/day or occurrence/);
-    await expect(Effect.runPromise(generateSignalBrief({ day: "07-29-2026" }, { config, env: {} }))).rejects.toThrow(
-      /YYYY-MM-DD/,
+    await expect(Effect.runPromise(generateSignalBrief({}, { config, env: {} }))).rejects.toThrow(
+      /day or occurrence/,
     );
+    await expect(
+      Effect.runPromise(generateSignalBrief({ day: "07-29-2026" }, { config, env: {} })),
+    ).rejects.toThrow(/YYYY-MM-DD/);
   });
 });

@@ -31,7 +31,8 @@ export class RssClient {
     const response = await this.fetchImpl(feed.url, {
       signal: AbortSignal.timeout(this.timeoutMs),
       headers: {
-        accept: "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.8",
+        accept:
+          "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.8",
         "user-agent": "rss-summary/0.1",
       },
     });
@@ -147,7 +148,9 @@ function decodeHtmlEntities(value: string): string {
     .replace(/&quot;/gu, '"')
     .replace(/&#39;/gu, "'")
     .replace(/&#(\d+);/gu, (_, codepoint: string) => String.fromCodePoint(Number(codepoint)))
-    .replace(/&#x([0-9a-f]+);/giu, (_, codepoint: string) => String.fromCodePoint(Number.parseInt(codepoint, 16)));
+    .replace(/&#x([0-9a-f]+);/giu, (_, codepoint: string) =>
+      String.fromCodePoint(Number.parseInt(codepoint, 16)),
+    );
 }
 
 function toArray(value: unknown): unknown[] {

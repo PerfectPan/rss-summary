@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import { HackerNewsClient } from "../../src/infrastructure/hacker-news.js";
 
@@ -72,23 +72,32 @@ describe("HackerNewsClient", () => {
       return new Response(JSON.stringify({ hits: [], nbHits: 0 }), { status: 200 });
     });
 
-    await new HackerNewsClient({ fetch }).searchStories({ minPoints: 80, includeShowHn: false, maxItems: 20 });
+    await new HackerNewsClient({ fetch }).searchStories({
+      minPoints: 80,
+      includeShowHn: false,
+      maxItems: 20,
+    });
   });
 
   it("rejects non-OK responses and drops unparseable hits", async () => {
     const failing = new HackerNewsClient({
       fetch: async () => new Response("rate limited", { status: 429 }),
     });
-    await expect(failing.searchStories({ minPoints: 80, includeShowHn: true, maxItems: 20 })).rejects.toThrow(
-      /HTTP 429/,
-    );
+    await expect(
+      failing.searchStories({ minPoints: 80, includeShowHn: true, maxItems: 20 }),
+    ).rejects.toThrow(/HTTP 429/);
 
     const partial = new HackerNewsClient({
       fetch: async () =>
-        new Response(JSON.stringify({ hits: [{ title: "missing id" }, { objectID: "ok", title: "Fine" }] }), {
-          status: 200,
-        }),
+        new Response(
+          JSON.stringify({ hits: [{ title: "missing id" }, { objectID: "ok", title: "Fine" }] }),
+          {
+            status: 200,
+          },
+        ),
     });
-    await expect(partial.searchStories({ minPoints: 80, includeShowHn: true, maxItems: 20 })).resolves.toHaveLength(1);
+    await expect(
+      partial.searchStories({ minPoints: 80, includeShowHn: true, maxItems: 20 }),
+    ).resolves.toHaveLength(1);
   });
 });

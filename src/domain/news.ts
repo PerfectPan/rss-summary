@@ -72,7 +72,10 @@ export function buildNewsStories(hits: NewsSearchHit[], window: NewsTimeWindow):
 
   return [...groups.entries()]
     .map(([canonicalUrl, matches]) => toStory(canonicalUrl, matches))
-    .sort((left, right) => right.score - left.score || right.publishTime.localeCompare(left.publishTime));
+    .sort(
+      (left, right) =>
+        right.score - left.score || right.publishTime.localeCompare(left.publishTime),
+    );
 }
 
 export function selectNewsStories(stories: NewsStory[], topics: NewsTopic[]): SelectedNewsStory[] {
@@ -101,7 +104,8 @@ function isAcceptedHit(hit: NewsSearchHit, window: NewsTimeWindow): boolean {
   const publishedAt = hit.publishTime
     ? parsePublishTime(hit.publishTime, window.timezoneOffset)
     : Number.NaN;
-  if (!Number.isFinite(publishedAt) || publishedAt < window.since || publishedAt >= window.until) return false;
+  if (!Number.isFinite(publishedAt) || publishedAt < window.since || publishedAt >= window.until)
+    return false;
   const authLevel = hit.authInfoLevel ?? 4;
   if (hit.sourcePolicy === "official") return authLevel === 1;
   return authLevel <= 2;

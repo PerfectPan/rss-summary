@@ -13,7 +13,13 @@ import { GitHubClient } from "../infrastructure/github.js";
 import { GitHubHomeClient } from "../infrastructure/github-home.js";
 import { createNotifier } from "../infrastructure/notifier.js";
 import { RssClient } from "../infrastructure/rss.js";
-import { filterNewCandidates, loadFeedState, markCandidatesSeen, saveFeedState, type FeedState } from "../infrastructure/state.js";
+import {
+  filterNewCandidates,
+  loadFeedState,
+  markCandidatesSeen,
+  saveFeedState,
+  type FeedState,
+} from "../infrastructure/state.js";
 import { attempt } from "./effect.js";
 
 export type { DigestDocument };
@@ -43,7 +49,9 @@ export function buildDigestDocument(config: AppConfig): Effect.Effect<DigestDocu
   return Effect.map(attempt(collectDigest(config)), ({ document }) => document);
 }
 
-async function collectDigest(config: AppConfig): Promise<{ document: DigestDocument; state: FeedState }> {
+async function collectDigest(
+  config: AppConfig,
+): Promise<{ document: DigestDocument; state: FeedState }> {
   const client = new GitHubClient({ token: config.token });
   const rssClient = new RssClient();
 
@@ -54,15 +62,22 @@ async function collectDigest(config: AppConfig): Promise<{ document: DigestDocum
   const githubEvents = githubResult.status === "fulfilled" ? githubResult.value : [];
   const rssEvents = rssResult.status === "fulfilled" ? rssResult.value : [];
   if (githubResult.status === "rejected") {
-    console.error(`GitHub feed unavailable; continuing with RSS events: ${formatError(githubResult.reason)}`);
+    console.error(
+      `GitHub feed unavailable; continuing with RSS events: ${formatError(githubResult.reason)}`,
+    );
   }
   if (rssResult.status === "rejected") {
-    console.error(`RSS feeds unavailable; continuing with GitHub events: ${formatError(rssResult.reason)}`);
+    console.error(
+      `RSS feeds unavailable; continuing with GitHub events: ${formatError(rssResult.reason)}`,
+    );
   }
   const eventWindow = resolveEventWindow(config);
-  const events = [...githubEvents, ...rssEvents].filter((event) => isWithinEventWindow(event, eventWindow));
+  const events = [...githubEvents, ...rssEvents].filter((event) =>
+    isWithinEventWindow(event, eventWindow),
+  );
 
-  const followees = config.token && !config.rssOnly ? await client.getFollowing() : new Set<string>();
+  const followees =
+    config.token && !config.rssOnly ? await client.getFollowing() : new Set<string>();
   const repositories = config.rssOnly
     ? new Map<string, RepositoryMetadata>()
     : await fetchRepositoryMetadata(client, events, config.maxRepos);
@@ -156,7 +171,9 @@ async function fetchRepositoryMetadata(
 }
 
 async function enrichPullRequests(client: GitHubClient, events: ActivityCard[]): Promise<void> {
-  const pullRequests = events.filter((event) => event.type === "pull_request" && event.prNumber && !event.title).slice(0, 20);
+  const pullRequests = events
+    .filter((event) => event.type === "pull_request" && event.prNumber && !event.title)
+    .slice(0, 20);
 
   await Promise.all(
     pullRequests.map(async (event) => {

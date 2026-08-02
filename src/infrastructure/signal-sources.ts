@@ -57,11 +57,17 @@ export function parseSignalSources(value: string): SignalSourceConfig {
     const modelCount = officialSearch.intents.filter(({ kind }) => kind === "model").length;
     const productCount = officialSearch.intents.filter(({ kind }) => kind === "product").length;
     if (modelCount === 0 || productCount === 0) {
-      throw new Error("officialSearch.intents must include at least one model and one product intent.");
+      throw new Error(
+        "officialSearch.intents must include at least one model and one product intent.",
+      );
     }
   }
   return {
-    timezoneOffsetEnv: optionalString(parsed.timezoneOffsetEnv, "FEED_TIMEZONE_OFFSET", "timezoneOffsetEnv"),
+    timezoneOffsetEnv: optionalString(
+      parsed.timezoneOffsetEnv,
+      "FEED_TIMEZONE_OFFSET",
+      "timezoneOffsetEnv",
+    ),
     quotas,
     frontendBias,
     scoring,
@@ -92,15 +98,63 @@ function parseFrontendBias(record: Record<string, unknown>): SignalFrontendBias 
 
 function parseScoring(record: Record<string, unknown>): SignalScoring {
   return {
-    officialDomainBoost: boundedNumber(record.officialDomainBoost, 30, 0, 500, "scoring.officialDomainBoost"),
-    hnPointsMaxScore: boundedNumber(record.hnPointsMaxScore, 30, 0, 500, "scoring.hnPointsMaxScore"),
-    frontendKeywordBoost: boundedNumber(record.frontendKeywordBoost, 8, 0, 100, "scoring.frontendKeywordBoost"),
-    frontendKeywordMaxHits: boundedInteger(record.frontendKeywordMaxHits, 3, 1, 10, "scoring.frontendKeywordMaxHits"),
+    officialDomainBoost: boundedNumber(
+      record.officialDomainBoost,
+      30,
+      0,
+      500,
+      "scoring.officialDomainBoost",
+    ),
+    hnPointsMaxScore: boundedNumber(
+      record.hnPointsMaxScore,
+      30,
+      0,
+      500,
+      "scoring.hnPointsMaxScore",
+    ),
+    frontendKeywordBoost: boundedNumber(
+      record.frontendKeywordBoost,
+      8,
+      0,
+      100,
+      "scoring.frontendKeywordBoost",
+    ),
+    frontendKeywordMaxHits: boundedInteger(
+      record.frontendKeywordMaxHits,
+      3,
+      1,
+      10,
+      "scoring.frontendKeywordMaxHits",
+    ),
     recencyMaxScore: boundedNumber(record.recencyMaxScore, 10, 0, 100, "scoring.recencyMaxScore"),
-    crossSourceBoost: boundedNumber(record.crossSourceBoost, 15, 0, 200, "scoring.crossSourceBoost"),
-    repoStarMaxScore: boundedNumber(record.repoStarMaxScore, 50, 0, 500, "scoring.repoStarMaxScore"),
-    repoNewnessWeight: boundedNumber(record.repoNewnessWeight, 2, 0, 100, "scoring.repoNewnessWeight"),
-    repoLanguageBoost: boundedNumber(record.repoLanguageBoost, 10, 0, 100, "scoring.repoLanguageBoost"),
+    crossSourceBoost: boundedNumber(
+      record.crossSourceBoost,
+      15,
+      0,
+      200,
+      "scoring.crossSourceBoost",
+    ),
+    repoStarMaxScore: boundedNumber(
+      record.repoStarMaxScore,
+      50,
+      0,
+      500,
+      "scoring.repoStarMaxScore",
+    ),
+    repoNewnessWeight: boundedNumber(
+      record.repoNewnessWeight,
+      2,
+      0,
+      100,
+      "scoring.repoNewnessWeight",
+    ),
+    repoLanguageBoost: boundedNumber(
+      record.repoLanguageBoost,
+      10,
+      0,
+      100,
+      "scoring.repoLanguageBoost",
+    ),
     repoTopicBoost: boundedNumber(record.repoTopicBoost, 5, 0, 100, "scoring.repoTopicBoost"),
     repoTopicMaxHits: boundedInteger(record.repoTopicMaxHits, 3, 1, 10, "scoring.repoTopicMaxHits"),
     repoMissingDescriptionPenalty: boundedNumber(
@@ -130,25 +184,35 @@ function parseHackerNews(record: Record<string, unknown>): SignalHackerNewsConfi
 
 function parseGithubSearch(record: Record<string, unknown>): SignalGithubSearchConfig {
   return {
-    createdWithinDays: boundedInteger(record.createdWithinDays, 7, 1, 30, "githubSearch.createdWithinDays"),
+    createdWithinDays: boundedInteger(
+      record.createdWithinDays,
+      7,
+      1,
+      30,
+      "githubSearch.createdWithinDays",
+    ),
     minStars: boundedInteger(record.minStars, 50, 0, 1_000_000, "githubSearch.minStars"),
     languages: stringList(record.languages, "githubSearch.languages"),
     topics: stringList(record.topics, "githubSearch.topics"),
-    excludeNamePatterns: stringList(record.excludeNamePatterns, "githubSearch.excludeNamePatterns").map(
-      (pattern, index) => {
-        try {
-          return new RegExp(pattern, "u");
-        } catch {
-          throw new Error(`githubSearch.excludeNamePatterns[${index}] is not a valid regular expression: ${pattern}`);
-        }
-      },
-    ),
+    excludeNamePatterns: stringList(
+      record.excludeNamePatterns,
+      "githubSearch.excludeNamePatterns",
+    ).map((pattern, index) => {
+      try {
+        return new RegExp(pattern, "u");
+      } catch {
+        throw new Error(
+          `githubSearch.excludeNamePatterns[${index}] is not a valid regular expression: ${pattern}`,
+        );
+      }
+    }),
     perPage: boundedInteger(record.perPage, 8, 1, 50, "githubSearch.perPage"),
   };
 }
 
 function parseOfficialSearch(record: Record<string, unknown>): SignalOfficialSearchConfig {
-  const intents = record.intents === undefined ? [] : asArray(record.intents, "officialSearch.intents");
+  const intents =
+    record.intents === undefined ? [] : asArray(record.intents, "officialSearch.intents");
   return {
     domains: stringList(record.domains, "officialSearch.domains"),
     intents: intents.map((item, index) => {
@@ -157,7 +221,10 @@ function parseOfficialSearch(record: Record<string, unknown>): SignalOfficialSea
       if (kind !== "model" && kind !== "product") {
         throw new Error(`officialSearch.intents[${index}] kind must be model or product.`);
       }
-      return { kind, query: requiredString(intent.query, `officialSearch.intents[${index}] query`) };
+      return {
+        kind,
+        query: requiredString(intent.query, `officialSearch.intents[${index}] query`),
+      };
     }),
     countPerQuery: boundedInteger(record.countPerQuery, 10, 1, 50, "officialSearch.countPerQuery"),
   };
@@ -179,18 +246,21 @@ function stringList(value: unknown, label: string): string[] {
 }
 
 function asRecord(value: unknown, label: string): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${label} must be an object.`);
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error(`${label} must be an object.`);
   return value as Record<string, unknown>;
 }
 
 function requiredString(value: unknown, label: string): string {
-  if (typeof value !== "string" || value.trim() === "") throw new Error(`${label} must be a non-empty string.`);
+  if (typeof value !== "string" || value.trim() === "")
+    throw new Error(`${label} must be a non-empty string.`);
   return value.trim();
 }
 
 function optionalString(value: unknown, fallback: string, label: string): string {
   if (value === undefined) return fallback;
-  if (typeof value !== "string" || value.trim() === "") throw new Error(`${label} must be a non-empty string.`);
+  if (typeof value !== "string" || value.trim() === "")
+    throw new Error(`${label} must be a non-empty string.`);
   return value.trim();
 }
 
@@ -200,7 +270,13 @@ function optionalBoolean(value: unknown, fallback: boolean, label: string): bool
   return value;
 }
 
-function boundedInteger(value: unknown, fallback: number, min: number, max: number, label: string): number {
+function boundedInteger(
+  value: unknown,
+  fallback: number,
+  min: number,
+  max: number,
+  label: string,
+): number {
   if (value === undefined) return fallback;
   if (!Number.isInteger(value) || Number(value) < min || Number(value) > max) {
     throw new Error(`${label} must be an integer between ${min} and ${max}.`);
@@ -208,7 +284,13 @@ function boundedInteger(value: unknown, fallback: number, min: number, max: numb
   return Number(value);
 }
 
-function boundedNumber(value: unknown, fallback: number, min: number, max: number, label: string): number {
+function boundedNumber(
+  value: unknown,
+  fallback: number,
+  min: number,
+  max: number,
+  label: string,
+): number {
   if (value === undefined) return fallback;
   if (typeof value !== "number" || !Number.isFinite(value) || value < min || value > max) {
     throw new Error(`${label} must be a number between ${min} and ${max}.`);

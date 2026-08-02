@@ -10,15 +10,16 @@ Scope: what the repository uses, why, and when to revisit.
 | --- | --- | --- |
 | Language | TypeScript, `strict`, ES2022, NodeNext ESM | The repository is a local CLI + portable skills; ESM keeps `import.meta.url`-based asset resolution and the Rivus plugin exports straightforward. |
 | Node version | `^24.11.0` | Current LTS line; `AbortSignal.timeout`, native `fetch`, `URL` are all baseline. |
-| Package manager | pnpm 11.7 (single workspace) | One package is correct at this size; pnpm gives a frozen lockfile for CI and content-addressed installs. |
-| Build | `tsc` (two configs: `noEmit` typecheck + declaration build) | No bundler: the Rivus plugin is consumed as a compiled ESM directory, and `dist` is shipped whole. |
+| Package manager | pnpm 11.7 (single workspace), invoked via Corepack or `vp install` | One package is correct at this size; pnpm gives a frozen lockfile for CI and content-addressed installs. Vite+ wraps the declared package manager. |
+| Build | `tsc` (two configs: `noEmit` typecheck + declaration build) | Library/CLI ship is still plain `tsc` `dist/` for the Rivus plugin export surface. Vite+ does not replace the publish layout yet (`vp pack` is optional later). |
+| Toolchain | **Vite+** (`vp`) | Unified check/test/lint/fmt; Oxlint replaces ESLint; Vitest runs through `vp test`. |
 
 ## Libraries
 
 | Library | Where | Why | Revisit when |
 | --- | --- | --- | --- |
 | `effect` 3.x | `application/` use cases + entrypoint boundaries | Typed `Effect<Result, Error>` channels, `Effect.tryPromise` at ports, `Effect.runPromise` at entrypoints. Adoption is deliberately shallow (no `Context`/`Layer`). | A fourth product line appears, or use cases need shared retry/limit/logging services; then move to `Context`/`Layer` (see below). |
-| `vitest` + `@vitest/coverage-v8` | `tests/` | Fast watch + v8 coverage with thresholds enforced in CI. | — |
+| Vite+ / Vitest 4 | `tests/`, `vite.config.ts` | `vp test` + v8 coverage thresholds; imports use `vite-plus/test`. | — |
 | `fast-xml-parser` | `infrastructure/rss.ts` | RSS 2.0 / Atom parsing; small, dependency-light. | — |
 | `cheerio` | `infrastructure/github-home.ts` | Conduit HTML snapshot extraction on the server side. | — |
 | `playwright` | `infrastructure/github-home.ts` | GitHub Home login flow and rendered-browser fallback. The browser-automation code is explicitly excluded from unit coverage (`/* v8 ignore start */`) and exercised manually. | A different Home source replaces it. |
@@ -64,13 +65,15 @@ Alternatives considered and rejected:
 - **Application**: use cases tested with injected fake ports (deps objects), including failure isolation and quota/warning behavior.
 - **Infrastructure**: adapters tested with fixture payloads through injected `fetch`; never live network in CI. Browser automation is manually exercised and excluded from coverage.
 - **Presentation**: CLI commands and the Rivus Plugin tested through injected executors and mocked modules.
-- **Coverage gate**: `vitest --coverage` with v8 thresholds — statements ≥85%, branches ≥75%, functions ≥90%, lines ≥85% — enforced as the `Coverage` CI check on every PR (also runs `test:layout`).
+- **Coverage gate**: `vp test run --coverage` with v8 thresholds — statements ≥85%, branches ≥75%, functions ≥90%, lines ≥85% — enforced as the `Coverage` CI check on every PR (also runs `test:layout`).
 
-## Lint
+## Lint / format (Vite+)
 
-- **ESLint 9** flat config (`eslint.config.js`) + `typescript-eslint` recommended.
-- Architecture import guards: `domain/**` cannot import outer layers / Effect / `node:*`; `application/**` cannot import `presentation/**`.
-- Invoked as `pnpm lint` and included in `pnpm verify`.
+- **Vite+** (`vite-plus` + `@voidzero-dev/vite-plus-core`) is the project toolchain entry.
+- **Oxlint** (via `vp lint` / `vp check`) replaces ESLint; config lives in `vite.config.ts` `lint` block (type-aware).
+- **Oxfmt** via `vp fmt` / included in `vp check`.
+- Architecture import guards remain: `domain/**` cannot import outer layers / Effect / `node:*`; `application/**` cannot import `presentation/**`.
+- `pnpm verify` runs `pnpm check` (`vp check`) after `test:layout`.
 
 ## CI Gates
 
@@ -78,8 +81,8 @@ Alternatives considered and rejected:
 
 | Job | Command | Fails when |
 | --- | --- | --- |
-| `Verify` | `pnpm verify` | layout mismatch, lint error, test failure, typecheck error, build failure, or packed-package contract break |
-| `Coverage` | `pnpm test:layout && pnpm test:coverage` | missing mirrored tests or coverage below the thresholds in `vitest.config.ts` |
+| `Verify` | `pnpm verify` | layout mismatch, check (fmt/lint/type) failure, test failure, build failure, or packed-package contract break |
+| `Coverage` | `pnpm test:layout && pnpm test:coverage` | missing mirrored tests or coverage below the thresholds in `vite.config.ts` |
 
 Both jobs are intended to be required checks in the branch protection rule for `main` (configure in GitHub → Settings → Branches → Branch protection rules; this cannot be expressed in the workflow file itself).
 

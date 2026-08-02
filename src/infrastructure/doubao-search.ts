@@ -84,7 +84,8 @@ function validateInput(input: DoubaoSearchInput): void {
   if (!Number.isInteger(input.count) || input.count < 1 || input.count > 50) {
     throw new Error("Doubao web search count must be between 1 and 50.");
   }
-  if (!/^\d{4}-\d{2}-\d{2}$/u.test(input.day)) throw new Error("Doubao search day must use YYYY-MM-DD.");
+  if (!/^\d{4}-\d{2}-\d{2}$/u.test(input.day))
+    throw new Error("Doubao search day must use YYYY-MM-DD.");
 }
 
 function parseResponse(value: unknown): DoubaoSearchPage {
@@ -99,7 +100,9 @@ function parseResponse(value: unknown): DoubaoSearchPage {
 
   const result = asRecord(root.Result);
   const results = Array.isArray(result.WebResults)
-    ? result.WebResults.map(parseResult).filter((item): item is DoubaoSearchResult => item !== undefined)
+    ? result.WebResults.map(parseResult).filter(
+        (item): item is DoubaoSearchResult => item !== undefined,
+      )
     : [];
   return {
     logId: text(result.LogId),
@@ -128,4 +131,3 @@ function parseResult(value: unknown): DoubaoSearchResult | undefined {
     authInfoLevel: number(item.AuthInfoLevel),
   };
 }
-

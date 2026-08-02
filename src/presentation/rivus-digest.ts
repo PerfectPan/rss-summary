@@ -41,10 +41,14 @@ export async function generateRivusDigest(
   if (input.window && !input.occurrence) {
     throw new Error("window requires occurrence.");
   }
-  const occurrenceDay = input.occurrence ? calendarDayAtOffset(input.occurrence, timezoneOffset) : undefined;
-  const day = input.day ?? (input.window === "previous-calendar-day" && occurrenceDay
-    ? shiftCalendarDay(occurrenceDay, -1)
-    : occurrenceDay);
+  const occurrenceDay = input.occurrence
+    ? calendarDayAtOffset(input.occurrence, timezoneOffset)
+    : undefined;
+  const day =
+    input.day ??
+    (input.window === "previous-calendar-day" && occurrenceDay
+      ? shiftCalendarDay(occurrenceDay, -1)
+      : occurrenceDay);
   if (day && !/^\d{4}-\d{2}-\d{2}$/u.test(day)) {
     throw new Error("day must use YYYY-MM-DD format.");
   }
@@ -86,7 +90,8 @@ function parseInput(value: unknown): RivusDigestInput {
 
 function optionalString(value: unknown, name: string): string | undefined {
   if (value === undefined) return undefined;
-  if (typeof value !== "string" || value.length === 0) throw new Error(`${name} must be a non-empty string.`);
+  if (typeof value !== "string" || value.length === 0)
+    throw new Error(`${name} must be a non-empty string.`);
   return value;
 }
 

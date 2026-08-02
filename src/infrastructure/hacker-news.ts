@@ -62,7 +62,9 @@ function buildNumericFilters(input: HackerNewsSearchInput): string {
 
 function parsePage(value: unknown): { hits: HackerNewsStory[] } {
   const root = asRecord(value);
-  const hits = Array.isArray(root.hits) ? root.hits.map(parseStory).filter((item): item is HackerNewsStory => item !== undefined) : [];
+  const hits = Array.isArray(root.hits)
+    ? root.hits.map(parseStory).filter((item): item is HackerNewsStory => item !== undefined)
+    : [];
   return { hits };
 }
 

@@ -1,6 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
-import { addFeedSubscription, formatFeedSubscriptions, removeFeedSubscription } from "../../src/infrastructure/feed-store.js";
+import {
+  addFeedSubscription,
+  formatFeedSubscriptions,
+  removeFeedSubscription,
+} from "../../src/infrastructure/feed-store.js";
 
 describe("feed store", () => {
   it("adds a normalized feed subscription", () => {
@@ -37,7 +41,9 @@ describe("feed store", () => {
           tags: ["github", "ai"],
         },
       ]),
-    ).toBe('[\n  {\n    "name": "GitHub Blog",\n    "url": "https://github.blog/feed",\n    "tags": [\n      "github",\n      "ai"\n    ]\n  }\n]\n');
+    ).toBe(
+      '[\n  {\n    "name": "GitHub Blog",\n    "url": "https://github.blog/feed",\n    "tags": [\n      "github",\n      "ai"\n    ]\n  }\n]\n',
+    );
   });
 
   it("removes a feed subscription by URL", () => {

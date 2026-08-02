@@ -1,11 +1,17 @@
 import { existsSync, readFileSync } from "node:fs";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 describe("research contract documentation", () => {
   it("requires starred repo research to inspect code architecture and quality", () => {
-    const skill = readFileSync(new URL("../../skills/feed-research-digest/SKILL.md", import.meta.url), "utf8");
-    const researchDoc = readFileSync(new URL("../../docs/digest-delivery-research.md", import.meta.url), "utf8");
+    const skill = readFileSync(
+      new URL("../../skills/feed-research-digest/SKILL.md", import.meta.url),
+      "utf8",
+    );
+    const researchDoc = readFileSync(
+      new URL("../../docs/digest-delivery-research.md", import.meta.url),
+      "utf8",
+    );
 
     expect(skill).toContain("Code architecture and quality checks");
     expect(skill).toContain("top-level tree");
@@ -24,7 +30,10 @@ describe("research contract documentation", () => {
     const promptUrl = new URL("../../prompts/feed-research.md", import.meta.url);
     expect(existsSync(promptUrl)).toBe(true);
 
-    const skill = readFileSync(new URL("../../skills/feed-research-digest/SKILL.md", import.meta.url), "utf8");
+    const skill = readFileSync(
+      new URL("../../skills/feed-research-digest/SKILL.md", import.meta.url),
+      "utf8",
+    );
     const prompt = readFileSync(promptUrl, "utf8");
 
     expect(skill).toContain("prompts/feed-research.md");

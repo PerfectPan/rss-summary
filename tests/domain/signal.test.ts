@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import {
   buildSignalRepos,
@@ -86,7 +86,12 @@ describe("signal domain", () => {
   it("ranks official-domain updates above ordinary sources", () => {
     const items = buildSignalUpdates(
       [
-        updateHit({ id: "official", title: "GPT-5 API announcement", url: "https://openai.com/blog/model", sourceLabel: "OpenAI" }),
+        updateHit({
+          id: "official",
+          title: "GPT-5 API announcement",
+          url: "https://openai.com/blog/model",
+          sourceLabel: "OpenAI",
+        }),
         updateHit({
           id: "blog",
           title: "Third-party review of the coding agent SDK",
@@ -148,7 +153,13 @@ describe("signal domain", () => {
     )[0]!;
     const dual = buildSignalUpdates(
       [
-        updateHit({ id: "one", source: "official", url: "https://openai.com/x", kind: "model", title: "GPT-5 API" }),
+        updateHit({
+          id: "one",
+          source: "official",
+          url: "https://openai.com/x",
+          kind: "model",
+          title: "GPT-5 API",
+        }),
         updateHit({
           id: "two",
           source: "hn",
@@ -175,8 +186,18 @@ describe("signal domain", () => {
   it("rejects official-source hits outside the configured domain allowlist", () => {
     const items = buildSignalUpdates(
       [
-        updateHit({ id: "ok", title: "OpenAI ships agent SDK", url: "https://openai.com/blog/ok", source: "official" }),
-        updateHit({ id: "off", title: "Random blog post", url: "https://random-blog.example/x", source: "official" }),
+        updateHit({
+          id: "ok",
+          title: "OpenAI ships agent SDK",
+          url: "https://openai.com/blog/ok",
+          source: "official",
+        }),
+        updateHit({
+          id: "off",
+          title: "Random blog post",
+          url: "https://random-blog.example/x",
+          source: "official",
+        }),
         updateHit({
           id: "hn",
           title: "Show HN: Agent harness",
@@ -248,10 +269,34 @@ describe("signal domain", () => {
   it("deduplicates canonical URLs and collapses the same event across publishers", () => {
     const items = buildSignalUpdates(
       [
-        updateHit({ id: "a", url: "https://example.com/x?utm_source=one", title: "Claude 3.7 发布重大更新", source: "hn", points: 100 }),
-        updateHit({ id: "b", url: "https://example.com/x?ref=two", title: "Claude 3.7 发布重大更新", source: "hn", points: 90 }),
-        updateHit({ id: "c", url: "https://other.example.net/y", title: "Claude 3.7 重大更新发布详情", source: "hn", points: 80 }),
-        updateHit({ id: "d", url: "https://example.com/z", title: "Agent coding SDK 完全不同的另一件事", source: "hn", points: 70 }),
+        updateHit({
+          id: "a",
+          url: "https://example.com/x?utm_source=one",
+          title: "Claude 3.7 发布重大更新",
+          source: "hn",
+          points: 100,
+        }),
+        updateHit({
+          id: "b",
+          url: "https://example.com/x?ref=two",
+          title: "Claude 3.7 发布重大更新",
+          source: "hn",
+          points: 90,
+        }),
+        updateHit({
+          id: "c",
+          url: "https://other.example.net/y",
+          title: "Claude 3.7 重大更新发布详情",
+          source: "hn",
+          points: 80,
+        }),
+        updateHit({
+          id: "d",
+          url: "https://example.com/z",
+          title: "Agent coding SDK 完全不同的另一件事",
+          source: "hn",
+          points: 70,
+        }),
       ],
       rules(),
     );
@@ -264,7 +309,13 @@ describe("signal domain", () => {
     const items = buildSignalRepos(
       [
         repoHit({ id: "acme/awesome-agents", title: "acme/awesome-agents", stars: 9000 }),
-        repoHit({ id: "acme/rust-ai", title: "acme/rust-ai", language: "Rust", topics: [], stars: 9000 }),
+        repoHit({
+          id: "acme/rust-ai",
+          title: "acme/rust-ai",
+          language: "Rust",
+          topics: [],
+          stars: 9000,
+        }),
         repoHit({
           id: "acme/agent-kit",
           title: "acme/agent-kit",
@@ -298,9 +349,21 @@ describe("signal domain", () => {
   it("rejects updates outside the calendar day and repos outside the created window", () => {
     const updates = buildSignalUpdates(
       [
-        updateHit({ id: "stale", publishedAt: "2026-07-28T23:59:59+08:00", url: "https://openai.com/stale" }),
-        updateHit({ id: "future", publishedAt: "2026-07-30T00:00:01+08:00", url: "https://openai.com/future" }),
-        updateHit({ id: "today", publishedAt: "2026-07-29T18:00:00+08:00", url: "https://openai.com/today" }),
+        updateHit({
+          id: "stale",
+          publishedAt: "2026-07-28T23:59:59+08:00",
+          url: "https://openai.com/stale",
+        }),
+        updateHit({
+          id: "future",
+          publishedAt: "2026-07-30T00:00:01+08:00",
+          url: "https://openai.com/future",
+        }),
+        updateHit({
+          id: "today",
+          publishedAt: "2026-07-29T18:00:00+08:00",
+          url: "https://openai.com/today",
+        }),
       ],
       rules(),
     );
@@ -367,7 +430,11 @@ describe("signal domain", () => {
     );
     const repos = buildSignalRepos(
       Array.from({ length: 6 }, (_, index) =>
-        repoHit({ id: `acme/r-${index}`, title: `acme/r-${index}`, url: `https://github.com/acme/r-${index}` }),
+        repoHit({
+          id: `acme/r-${index}`,
+          title: `acme/r-${index}`,
+          url: `https://github.com/acme/r-${index}`,
+        }),
       ),
       rules(),
     );
@@ -402,7 +469,11 @@ describe("signal domain", () => {
     const updates = buildSignalUpdates(hits, rules());
     const repos = buildSignalRepos(
       Array.from({ length: 4 }, (_, index) =>
-        repoHit({ id: `acme/r-${index}`, title: `acme/r-${index}`, url: `https://github.com/acme/r-${index}` }),
+        repoHit({
+          id: `acme/r-${index}`,
+          title: `acme/r-${index}`,
+          url: `https://github.com/acme/r-${index}`,
+        }),
       ),
       rules(),
     );
@@ -418,8 +489,12 @@ describe("signal domain", () => {
   });
 
   it("classifies model titles through config hints", () => {
-    expect(classifyUpdateKind("Anthropic releases Claude Sonnet", frontendBias.modelTitleHints)).toBe("model");
-    expect(classifyUpdateKind("Vercel ships new SDK", frontendBias.modelTitleHints)).toBe("product");
+    expect(
+      classifyUpdateKind("Anthropic releases Claude Sonnet", frontendBias.modelTitleHints),
+    ).toBe("model");
+    expect(classifyUpdateKind("Vercel ships new SDK", frontendBias.modelTitleHints)).toBe(
+      "product",
+    );
     expect(classifyUpdateKind("OpenAI 发布新模型", frontendBias.modelTitleHints)).toBe("model");
   });
 });

@@ -8,10 +8,18 @@ import {
   type NewsTopic,
   type SelectedNewsStory,
 } from "../domain/news.js";
-import { calendarDayAtOffset, parseOffsetMilliseconds, startOfCalendarDay } from "../domain/time.js";
+import {
+  calendarDayAtOffset,
+  parseOffsetMilliseconds,
+  startOfCalendarDay,
+} from "../domain/time.js";
 import { boundedInteger } from "../infrastructure/parsing.js";
 import { loadNewsTopics } from "../infrastructure/news-topics.js";
-import { DoubaoSearchClient, type DoubaoSearchInput, type DoubaoSearchPage } from "../infrastructure/doubao-search.js";
+import {
+  DoubaoSearchClient,
+  type DoubaoSearchInput,
+  type DoubaoSearchPage,
+} from "../infrastructure/doubao-search.js";
 import { attempt } from "./effect.js";
 
 export type { NewsBriefEdition };
@@ -57,7 +65,8 @@ export function resolveNewsEditionWindow(
   const noonCutoff = dayStart + noonCutoffMinutes * 60_000;
   const since = edition === "noon" ? dayStart : noonCutoff;
   const windowEnd = edition === "noon" ? Math.min(until, noonCutoff) : until;
-  if (windowEnd <= since) throw new Error(`${edition} news occurrence is earlier than its delivery window.`);
+  if (windowEnd <= since)
+    throw new Error(`${edition} news occurrence is earlier than its delivery window.`);
   return {
     day,
     since,
@@ -82,7 +91,9 @@ export function generateRivusNewsBrief(
       try: () => resolveNewsEditionWindow(input.occurrence, timezoneOffset, input.edition),
       catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
     });
-    const topics = (dependencies.topics ?? loadNewsTopics(env.NEWS_TOPICS_FILE)).filter(({ enabled }) => enabled);
+    const topics = (dependencies.topics ?? loadNewsTopics(env.NEWS_TOPICS_FILE)).filter(
+      ({ enabled }) => enabled,
+    );
     if (topics.length === 0) {
       return yield* Effect.fail(new Error("At least one news topic must be enabled."));
     }
@@ -151,7 +162,9 @@ function parseInput(value: unknown): RivusNewsBriefInput {
   return { edition: input.edition, occurrence: input.occurrence };
 }
 
-function createSearch(env: NodeJS.ProcessEnv): (input: DoubaoSearchInput) => Promise<DoubaoSearchPage> {
+function createSearch(
+  env: NodeJS.ProcessEnv,
+): (input: DoubaoSearchInput) => Promise<DoubaoSearchPage> {
   const apiKey = env.DOUBAO_SEARCH_API_KEY?.trim();
   if (!apiKey) throw new Error("DOUBAO_SEARCH_API_KEY is required for news briefs.");
   const client = new DoubaoSearchClient({

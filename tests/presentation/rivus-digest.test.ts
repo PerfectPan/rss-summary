@@ -1,17 +1,19 @@
 import { Effect } from "effect";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import { generateRivusDigest } from "../../src/presentation/rivus-digest.js";
 
 describe("Rivus digest Tool adapter", () => {
   it("maps a scheduled occurrence to the configured local day without delivery or state writes", async () => {
-    const buildDigestDocument = vi.fn((config) => Effect.succeed({
-      generatedAt: "2026-07-16T18:00:00.000Z",
-      username: config.username,
-      sourceMode: "rss" as const,
-      windowLabel: `${config.day} ${config.timezoneOffset}`,
-      candidates: [],
-    }));
+    const buildDigestDocument = vi.fn((config) =>
+      Effect.succeed({
+        generatedAt: "2026-07-16T18:00:00.000Z",
+        username: config.username,
+        sourceMode: "rss" as const,
+        windowLabel: `${config.day} ${config.timezoneOffset}`,
+        candidates: [],
+      }),
+    );
 
     const result = await generateRivusDigest(
       { occurrence: "2026-07-16T18:00:00.000Z", onlyNew: true, rssOnly: true },
@@ -39,12 +41,14 @@ describe("Rivus digest Tool adapter", () => {
   });
 
   it("maps the morning Automation occurrence to the previous local calendar day", async () => {
-    const buildDigestDocument = vi.fn((config) => Effect.succeed({
-      generatedAt: "2026-07-29T01:00:00.000Z",
-      username: config.username,
-      windowLabel: `${config.day} ${config.timezoneOffset}`,
-      candidates: [],
-    }));
+    const buildDigestDocument = vi.fn((config) =>
+      Effect.succeed({
+        generatedAt: "2026-07-29T01:00:00.000Z",
+        username: config.username,
+        windowLabel: `${config.day} ${config.timezoneOffset}`,
+        candidates: [],
+      }),
+    );
 
     const result = await generateRivusDigest(
       {
@@ -58,7 +62,9 @@ describe("Rivus digest Tool adapter", () => {
       },
     );
 
-    expect(buildDigestDocument).toHaveBeenCalledWith(expect.objectContaining({ day: "2026-07-28" }));
+    expect(buildDigestDocument).toHaveBeenCalledWith(
+      expect.objectContaining({ day: "2026-07-28" }),
+    );
     expect(result.markdown).toMatch(/^# 技术订阅日报 · 2026-07-28\n/u);
   });
 
@@ -78,11 +84,13 @@ describe("Rivus digest Tool adapter", () => {
   });
 
   it("lets explicit false Tool input override deployment environment defaults", async () => {
-    const buildDigestDocument = vi.fn((config) => Effect.succeed({
-      generatedAt: "2026-07-17T02:00:00.000Z",
-      username: config.username,
-      candidates: [],
-    }));
+    const buildDigestDocument = vi.fn((config) =>
+      Effect.succeed({
+        generatedAt: "2026-07-17T02:00:00.000Z",
+        username: config.username,
+        candidates: [],
+      }),
+    );
 
     await generateRivusDigest(
       { onlyNew: false, rssOnly: false },

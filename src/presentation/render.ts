@@ -44,7 +44,10 @@ function appendSection(lines: string[], title: string, candidates: CandidateProj
     const repository = candidate.repository;
     const url = candidate.url ?? repository?.htmlUrl ?? `https://github.com/${candidate.repo}`;
     const label = candidate.label ?? candidate.repo;
-    const description = boundedText(candidate.description ?? repository?.description ?? "暂无可用简介。", 240);
+    const description = boundedText(
+      candidate.description ?? repository?.description ?? "暂无可用简介。",
+      240,
+    );
     const language = repository?.language ? ` · ${repository.language}` : "";
     const stars =
       typeof repository?.stargazersCount === "number"
@@ -53,13 +56,17 @@ function appendSection(lines: string[], title: string, candidates: CandidateProj
 
     lines.push(`**${index + 1}. ${label}**`);
     lines.push(`- 简介：${description}${language}${stars}`);
-    lines.push(`- 信号：${candidate.actors.join(", ")} · ${candidate.eventTypes.map(eventTypeLabel).join(", ")}`);
+    lines.push(
+      `- 信号：${candidate.actors.join(", ")} · ${candidate.eventTypes.map(eventTypeLabel).join(", ")}`,
+    );
     lines.push(`- 为什么看：${candidate.reasons.slice(0, 3).map(reasonLabel).join("；")}`);
 
     const featured = candidate.events[0];
     if (featured?.title) {
       const eventUrl = featured.htmlUrl ?? url;
-      lines.push(`- 事件：${featured.action ?? eventTypeLabel(featured.type)} · ${boundedText(featured.title, 120)}`);
+      lines.push(
+        `- 事件：${featured.action ?? eventTypeLabel(featured.type)} · ${boundedText(featured.title, 120)}`,
+      );
       if (eventUrl !== url) lines.push(`- [查看事件](${eventUrl})`);
     }
     lines.push(`- [查看原文](${url})`, "");
@@ -108,8 +115,10 @@ function reasonLabel(value: string): string {
     "recently active repository": "项目近期保持活跃",
   };
   if (exact[value]) return exact[value];
-  if (value.startsWith("followed actor: ")) return `关注者：${value.slice("followed actor: ".length)}`;
-  if (value.startsWith("matches interest: ")) return `匹配关注方向：${value.slice("matches interest: ".length)}`;
+  if (value.startsWith("followed actor: "))
+    return `关注者：${value.slice("followed actor: ".length)}`;
+  if (value.startsWith("matches interest: "))
+    return `匹配关注方向：${value.slice("matches interest: ".length)}`;
   if (value.startsWith("rss feed: ")) return `RSS 来源：${value.slice("rss feed: ".length)}`;
   return value;
 }

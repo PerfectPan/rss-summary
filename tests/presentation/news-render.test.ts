@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import type { SelectedNewsStory } from "../../src/domain/news.js";
 import { renderNewsBrief } from "../../src/presentation/news-render.js";

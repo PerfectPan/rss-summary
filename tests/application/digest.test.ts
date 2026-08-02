@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Effect } from "effect";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { loadConfig } from "../../src/infrastructure/config.js";
 
@@ -74,10 +74,13 @@ describe("digest source isolation", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const { run } = await import("../../src/application/digest.js");
-    const { renderMarkdownDigest, renderJsonDigest } = await import("../../src/presentation/render.js");
+    const { renderMarkdownDigest, renderJsonDigest } =
+      await import("../../src/presentation/render.js");
 
     await Effect.runPromise(
-      run((document, format) => (format === "json" ? renderJsonDigest(document) : renderMarkdownDigest(document))),
+      run((document, format) =>
+        format === "json" ? renderJsonDigest(document) : renderMarkdownDigest(document),
+      ),
     );
 
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("GitHub feed unavailable"));
@@ -95,7 +98,9 @@ describe("digest source isolation", () => {
       const config = loadConfig(
         {
           GITHUB_USERNAME: "PerfectPan",
-          RSS_FEEDS: JSON.stringify([{ name: "Example Feed", url: "https://example.com/feed", tags: ["ai"] }]),
+          RSS_FEEDS: JSON.stringify([
+            { name: "Example Feed", url: "https://example.com/feed", tags: ["ai"] },
+          ]),
         },
         [
           "--only-new",

@@ -30,7 +30,8 @@ export function shiftCalendarDay(day: string, delta: number): string {
 export function startOfCalendarDay(day: string, timezoneOffset: string): number {
   parseOffsetMilliseconds(timezoneOffset);
   const instant = Date.parse(`${day}T00:00:00${timezoneOffset}`);
-  if (!Number.isFinite(instant)) throw new Error(`Unable to parse calendar day: ${day} ${timezoneOffset}`);
+  if (!Number.isFinite(instant))
+    throw new Error(`Unable to parse calendar day: ${day} ${timezoneOffset}`);
   return instant;
 }
 
@@ -43,7 +44,8 @@ export function parseOffsetMilliseconds(timezoneOffset: string): number {
   if (!match) throw new Error("FEED_TIMEZONE_OFFSET must use +HH:MM or -HH:MM format.");
   const hours = Number(match[2]);
   const minutes = Number(match[3]);
-  if (hours > 23 || minutes > 59) throw new Error("FEED_TIMEZONE_OFFSET is outside the valid range.");
+  if (hours > 23 || minutes > 59)
+    throw new Error("FEED_TIMEZONE_OFFSET is outside the valid range.");
   const direction = match[1] === "+" ? 1 : -1;
   return direction * (hours * 60 + minutes) * 60_000;
 }
@@ -75,7 +77,9 @@ function resolveCalendarDayWindow(day: string, timezoneOffset: string): EventWin
     throw new Error(`FEED_DAY/--day must use YYYY-MM-DD, received: ${day}`);
   }
   if (!offsetPattern.test(timezoneOffset)) {
-    throw new Error(`FEED_TIMEZONE_OFFSET/--timezone-offset must use +HH:MM or -HH:MM, received: ${timezoneOffset}`);
+    throw new Error(
+      `FEED_TIMEZONE_OFFSET/--timezone-offset must use +HH:MM or -HH:MM, received: ${timezoneOffset}`,
+    );
   }
 
   const since = Date.parse(`${day}T00:00:00${timezoneOffset}`);
@@ -90,7 +94,10 @@ function resolveCalendarDayWindow(day: string, timezoneOffset: string): EventWin
   };
 }
 
-function resolveExplicitWindow(sinceValue: string | undefined, untilValue: string | undefined): EventWindow {
+function resolveExplicitWindow(
+  sinceValue: string | undefined,
+  untilValue: string | undefined,
+): EventWindow {
   if (!sinceValue || !untilValue) {
     throw new Error("FEED_SINCE/--since and FEED_UNTIL/--until must be set together.");
   }

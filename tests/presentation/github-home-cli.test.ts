@@ -1,6 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
-import { runGithubHomeCommand, writeGithubHomeHelp } from "../../src/presentation/github-home-cli.js";
+import {
+  runGithubHomeCommand,
+  writeGithubHomeHelp,
+} from "../../src/presentation/github-home-cli.js";
 
 vi.mock("../../src/infrastructure/github-home.js", () => ({
   saveGithubHomeStorageState: vi.fn(),
@@ -35,10 +38,13 @@ describe("github-home CLI command", () => {
     const errors: string[] = [];
     vi.mocked(saveGithubHomeStorageState).mockRejectedValueOnce(new Error("browser unavailable"));
 
-    const exitCode = await runGithubHomeCommand(["login", "--storage-state", ".state/storage.json"], {
-      stdout: { write: (chunk) => output.push(String(chunk)) },
-      stderr: { write: (chunk) => errors.push(String(chunk)) },
-    });
+    const exitCode = await runGithubHomeCommand(
+      ["login", "--storage-state", ".state/storage.json"],
+      {
+        stdout: { write: (chunk) => output.push(String(chunk)) },
+        stderr: { write: (chunk) => errors.push(String(chunk)) },
+      },
+    );
 
     expect(exitCode).toBe(1);
     expect(errors.join("")).toContain("browser unavailable");

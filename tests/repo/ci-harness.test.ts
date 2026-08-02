@@ -1,19 +1,23 @@
 import { existsSync, readFileSync } from "node:fs";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 describe("CI harness", () => {
   it("exposes one local verify command for CI and humans", () => {
-    const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as {
+    const pkg = JSON.parse(
+      readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+    ) as {
       scripts?: Record<string, string>;
     };
 
     expect(pkg.scripts?.verify).toBe(
-      "pnpm test:layout && pnpm lint && pnpm test && pnpm typecheck && pnpm build && pnpm package:check",
+      "pnpm test:layout && pnpm check && pnpm test && pnpm build && pnpm package:check",
     );
-    expect(pkg.scripts?.lint).toBe("eslint src tests");
+    expect(pkg.scripts?.check).toBe("vp check");
+    expect(pkg.scripts?.lint).toBe("vp lint");
+    expect(pkg.scripts?.test).toBe("vp test run");
     expect(pkg.scripts?.["test:layout"]).toBe("node scripts/check-test-layout.mjs");
-    expect(pkg.scripts?.["test:coverage"]).toBe("vitest run --coverage");
+    expect(pkg.scripts?.["test:coverage"]).toBe("vp test run --coverage");
   });
 
   it("runs the verify command on pull requests and main pushes", () => {
@@ -31,15 +35,16 @@ describe("CI harness", () => {
     expect(workflow).toContain("pnpm test:layout && pnpm test:coverage");
   });
 
-  it("mirrors src layers under tests/ and keeps coverage thresholds", () => {
-    const vitest = readFileSync(new URL("../../vitest.config.ts", import.meta.url), "utf8");
-    expect(vitest).toContain('include: ["tests/**/*.test.ts"]');
-    expect(vitest).toContain("statements: 85");
-    expect(vitest).toContain("branches: 75");
-    expect(vitest).toContain("functions: 90");
-    expect(vitest).toContain("lines: 85");
+  it("mirrors src layers under tests/ and keeps Vite+ coverage thresholds", () => {
+    const viteConfig = readFileSync(new URL("../../vite.config.ts", import.meta.url), "utf8");
+    expect(viteConfig).toContain('include: ["tests/**/*.test.ts"]');
+    expect(viteConfig).toContain("statements: 85");
+    expect(viteConfig).toContain("branches: 75");
+    expect(viteConfig).toContain("functions: 90");
+    expect(viteConfig).toContain("lines: 85");
+    expect(viteConfig).toContain('plugins: ["oxc", "typescript", "unicorn"]');
     expect(existsSync(new URL("../../scripts/check-test-layout.mjs", import.meta.url))).toBe(true);
-    expect(existsSync(new URL("../../eslint.config.js", import.meta.url))).toBe(true);
+    expect(existsSync(new URL("../../eslint.config.js", import.meta.url))).toBe(false);
   });
 
   it("documents the protected-branch collaboration workflow for agents", () => {

@@ -90,7 +90,7 @@ It is **onion / inward dependencies**: outer layers may use inner ones; **domain
 | **infrastructure** | domain (types / shapes) | application, presentation |
 | **presentation** | application, domain, infrastructure (as composition root) | — (outermost) |
 
-Import guards for domain purity and `application ↛ presentation` are enforced by ESLint (`eslint.config.js`) plus `pnpm test:layout` for the mirrored test tree.
+Import guards for domain purity and `application ↛ presentation` are enforced by Oxlint via Vite+ (`vite.config.ts` lint overrides) plus `pnpm test:layout` for the mirrored test tree.
 
 ### Runtime vs import direction
 

@@ -6,7 +6,7 @@ import type {
   RivusToolDescriptor,
   RivusToolExecutionContext,
 } from "@rivus/agent";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import rssSummaryPlugin, {
   createRssSummaryPlugin,
@@ -31,7 +31,9 @@ describe("rss-summary Rivus Plugin", () => {
           pluginId: "rss-summary",
           profileId: RSS_SUMMARY_PROFILE_ID,
           skills: { allow: [] },
-          tools: { allow: [RSS_SUMMARY_TOOL_ID, RSS_SUMMARY_NEWS_TOOL_ID, RSS_SUMMARY_SIGNAL_TOOL_ID] },
+          tools: {
+            allow: [RSS_SUMMARY_TOOL_ID, RSS_SUMMARY_NEWS_TOOL_ID, RSS_SUMMARY_SIGNAL_TOOL_ID],
+          },
         },
         plugin: rssSummaryPlugin,
       }),
@@ -52,13 +54,12 @@ describe("rss-summary Rivus Plugin", () => {
     const registrations = register(createRssSummaryPlugin({ generateDigest }));
     const tool = registrations.tools.get(RSS_SUMMARY_TOOL_ID)!;
 
-    const result = await tool.createExecutor({
-      toolId: RSS_SUMMARY_TOOL_ID,
-      toolVersion: "1.0.0",
-    }).execute(
-      { day: "2026-07-17", onlyNew: true },
-      executionContext(),
-    );
+    const result = await tool
+      .createExecutor({
+        toolId: RSS_SUMMARY_TOOL_ID,
+        toolVersion: "1.0.0",
+      })
+      .execute({ day: "2026-07-17", onlyNew: true }, executionContext());
 
     expect(generateDigest).toHaveBeenCalledWith({ day: "2026-07-17", onlyNew: true });
     expect(result).toMatchObject({ candidateCount: 1, markdown: "# Feed Digest\n" });
@@ -80,13 +81,15 @@ describe("rss-summary Rivus Plugin", () => {
     const registrations = register(createRssSummaryPlugin({ generateNewsBrief }));
     const tool = registrations.tools.get(RSS_SUMMARY_NEWS_TOOL_ID)!;
 
-    const result = await tool.createExecutor({
-      toolId: RSS_SUMMARY_NEWS_TOOL_ID,
-      toolVersion: "1.0.0",
-    }).execute(
-      { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
-      executionContext(RSS_SUMMARY_NEWS_TOOL_ID),
-    );
+    const result = await tool
+      .createExecutor({
+        toolId: RSS_SUMMARY_NEWS_TOOL_ID,
+        toolVersion: "1.0.0",
+      })
+      .execute(
+        { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
+        executionContext(RSS_SUMMARY_NEWS_TOOL_ID),
+      );
 
     expect(generateNewsBrief).toHaveBeenCalledWith({
       edition: "noon",
@@ -99,25 +102,32 @@ describe("rss-summary Rivus Plugin", () => {
   it("uses the Node process environment when the Host invokes the packaged news Tool", async () => {
     vi.stubEnv("DOUBAO_SEARCH_API_KEY", "runtime-key");
     vi.stubEnv("FEED_TIMEZONE_OFFSET", "+08:00");
-    const fetch = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) =>
-      new Response(JSON.stringify({ ResponseMetadata: {}, Result: { WebResults: [] } }), { status: 200 }),
+    const fetch = vi.fn(
+      async (_url: string | URL | Request, _init?: RequestInit) =>
+        new Response(JSON.stringify({ ResponseMetadata: {}, Result: { WebResults: [] } }), {
+          status: 200,
+        }),
     );
     vi.stubGlobal("fetch", fetch);
 
     try {
       const registrations = register(rssSummaryPlugin);
       const tool = registrations.tools.get(RSS_SUMMARY_NEWS_TOOL_ID)!;
-      const result = await tool.createExecutor({
-        toolId: RSS_SUMMARY_NEWS_TOOL_ID,
-        toolVersion: "1.0.0",
-      }).execute(
-        { edition: "evening", occurrence: "2026-07-29T11:00:00.000Z" },
-        executionContext(RSS_SUMMARY_NEWS_TOOL_ID),
-      );
+      const result = await tool
+        .createExecutor({
+          toolId: RSS_SUMMARY_NEWS_TOOL_ID,
+          toolVersion: "1.0.0",
+        })
+        .execute(
+          { edition: "evening", occurrence: "2026-07-29T11:00:00.000Z" },
+          executionContext(RSS_SUMMARY_NEWS_TOOL_ID),
+        );
 
       expect(result).toMatchObject({ edition: "evening", itemCount: 0 });
       expect(fetch).toHaveBeenCalledTimes(7);
-      expect(fetch.mock.calls[0]?.[1]?.headers).toMatchObject({ Authorization: "Bearer runtime-key" });
+      expect(fetch.mock.calls[0]?.[1]?.headers).toMatchObject({
+        Authorization: "Bearer runtime-key",
+      });
     } finally {
       vi.unstubAllEnvs();
       vi.unstubAllGlobals();
@@ -139,13 +149,15 @@ describe("rss-summary Rivus Plugin", () => {
     const registrations = register(createRssSummaryPlugin({ generateSignalBrief }));
     const tool = registrations.tools.get(RSS_SUMMARY_SIGNAL_TOOL_ID)!;
 
-    const result = await tool.createExecutor({
-      toolId: RSS_SUMMARY_SIGNAL_TOOL_ID,
-      toolVersion: "1.0.0",
-    }).execute(
-      { occurrence: "2026-07-29T11:00:00.000Z" },
-      executionContext(RSS_SUMMARY_SIGNAL_TOOL_ID),
-    );
+    const result = await tool
+      .createExecutor({
+        toolId: RSS_SUMMARY_SIGNAL_TOOL_ID,
+        toolVersion: "1.0.0",
+      })
+      .execute(
+        { occurrence: "2026-07-29T11:00:00.000Z" },
+        executionContext(RSS_SUMMARY_SIGNAL_TOOL_ID),
+      );
 
     expect(generateSignalBrief).toHaveBeenCalledWith({ occurrence: "2026-07-29T11:00:00.000Z" });
     expect(result).toMatchObject({ itemCount: 2, markdown: "# 高信号速览 · 2026-07-29\n" });
@@ -174,7 +186,9 @@ describe("rss-summary Rivus Plugin", () => {
     expect(morning.createInput({ occurrence }).text).toContain('"window":"previous-calendar-day"');
     expect(noon.createInput({ occurrence }).text).toContain('"edition":"noon"');
     expect(evening.createInput({ occurrence }).text).toContain('"edition":"evening"');
-    expect(signal.createInput({ occurrence }).text).toContain('"occurrence":"2026-07-29T04:30:00.000Z"');
+    expect(signal.createInput({ occurrence }).text).toContain(
+      '"occurrence":"2026-07-29T04:30:00.000Z"',
+    );
     expect(noon.createInput({ occurrence }).text).toContain("原样返回");
   });
 });
@@ -193,7 +207,8 @@ function register(plugin: { register(registry: RivusPluginRegistry): void }): {
     registerSkill: () => undefined,
     registerTool: (tool) => tools.push(tool),
   });
-  if (!profiles[0] || !tools[0] || !automations[0]) throw new Error("Plugin registration is incomplete");
+  if (!profiles[0] || !tools[0] || !automations[0])
+    throw new Error("Plugin registration is incomplete");
   return {
     automations: new Map(automations.map((automation) => [automation.id, automation])),
     profile: profiles[0],

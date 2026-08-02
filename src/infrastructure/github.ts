@@ -32,13 +32,22 @@ export class GitHubClient {
     return pages.flat();
   }
 
-  async getFollowing(pagination: PaginationOptions = { perPage: 100, pages: 3 }): Promise<Set<string>> {
+  async getFollowing(
+    pagination: PaginationOptions = { perPage: 100, pages: 3 },
+  ): Promise<Set<string>> {
     const pages = await Promise.all(
       Array.from({ length: pagination.pages }, (_, index) =>
-        this.getJson<Array<{ login?: string }>>(`/user/following?per_page=${pagination.perPage}&page=${index + 1}`),
+        this.getJson<Array<{ login?: string }>>(
+          `/user/following?per_page=${pagination.perPage}&page=${index + 1}`,
+        ),
       ),
     );
-    return new Set(pages.flat().map((item) => item.login).filter((login): login is string => Boolean(login)));
+    return new Set(
+      pages
+        .flat()
+        .map((item) => item.login)
+        .filter((login): login is string => Boolean(login)),
+    );
   }
 
   async getRepository(fullName: string): Promise<RepositoryMetadata> {
@@ -63,7 +72,10 @@ export class GitHubClient {
     };
   }
 
-  async getPullRequest(fullName: string, number: number): Promise<{ title: string; htmlUrl: string; body: string | null }> {
+  async getPullRequest(
+    fullName: string,
+    number: number,
+  ): Promise<{ title: string; htmlUrl: string; body: string | null }> {
     const raw = await this.getJson<{ title: string; html_url: string; body: string | null }>(
       `/repos/${fullName}/pulls/${number}`,
     );

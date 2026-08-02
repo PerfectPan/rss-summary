@@ -1,7 +1,11 @@
 import { Effect } from "effect";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
-import { generateRivusNewsBrief, resolveNewsEditionWindow, type RivusNewsBriefResult } from "../../src/application/news-brief.js";
+import {
+  generateRivusNewsBrief,
+  resolveNewsEditionWindow,
+  type RivusNewsBriefResult,
+} from "../../src/application/news-brief.js";
 import { renderNewsBrief } from "../../src/presentation/news-render.js";
 
 function withNewsMarkdown(result: RivusNewsBriefResult) {
@@ -26,11 +30,13 @@ describe("Rivus news brief Tool adapter", () => {
       since: Date.parse("2026-07-29T00:00:00+08:00"),
       until: Date.parse("2026-07-29T12:30:00+08:00"),
     });
-    expect(resolveNewsEditionWindow("2026-07-29T11:00:00.000Z", "+08:00", "evening")).toMatchObject({
-      day: "2026-07-29",
-      since: Date.parse("2026-07-29T12:30:00+08:00"),
-      until: Date.parse("2026-07-29T19:00:00+08:00"),
-    });
+    expect(resolveNewsEditionWindow("2026-07-29T11:00:00.000Z", "+08:00", "evening")).toMatchObject(
+      {
+        day: "2026-07-29",
+        since: Date.parse("2026-07-29T12:30:00+08:00"),
+        until: Date.parse("2026-07-29T19:00:00+08:00"),
+      },
+    );
   });
 
   it("searches every enabled topic query and renders one bounded mobile brief", async () => {

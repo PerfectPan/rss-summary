@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { attempt } from "../../src/application/effect.js";
 
@@ -9,7 +9,11 @@ describe("application/effect attempt", () => {
   });
 
   it("maps thrown values onto the typed Error channel", async () => {
-    await expect(Effect.runPromise(attempt(Promise.reject(new Error("boom"))))).rejects.toThrow("boom");
-    await expect(Effect.runPromise(attempt(Promise.reject("string-cause")))).rejects.toThrow("string-cause");
+    await expect(Effect.runPromise(attempt(Promise.reject(new Error("boom"))))).rejects.toThrow(
+      "boom",
+    );
+    await expect(Effect.runPromise(attempt(Promise.reject("string-cause")))).rejects.toThrow(
+      "string-cause",
+    );
   });
 });

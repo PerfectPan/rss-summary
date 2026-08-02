@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { buildCandidateProjects, normalizeEvent } from "../../src/domain/digest.js";
 
@@ -219,9 +219,9 @@ describe("github feed domain", () => {
       },
     );
 
-    expect(candidates.find((candidate) => candidate.repo === "simplex-chat/simplex-chat")?.reasons).toContain(
-      "GitHub Home trending repository",
-    );
+    expect(
+      candidates.find((candidate) => candidate.repo === "simplex-chat/simplex-chat")?.reasons,
+    ).toContain("GitHub Home trending repository");
     expect(candidates.find((candidate) => candidate.repo === "onnx/onnx")?.reasons).toContain(
       "GitHub Home recommendation",
     );

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { parseSignalSources } from "../../src/infrastructure/signal-sources.js";
 
@@ -64,16 +64,19 @@ describe("signal sources configuration", () => {
       parseSignalSources(
         JSON.stringify({
           ...minimalConfig,
-          officialSearch: { ...minimalConfig.officialSearch, intents: [{ kind: "model", query: "x" }] },
+          officialSearch: {
+            ...minimalConfig.officialSearch,
+            intents: [{ kind: "model", query: "x" }],
+          },
         }),
       ),
     ).toThrow(/one model and one product/);
   });
 
   it("rejects out-of-range numeric values and bad regex patterns", () => {
-    expect(() => parseSignalSources(JSON.stringify({ ...minimalConfig, quotas: { maxTotal: 99 } }))).toThrow(
-      /between/,
-    );
+    expect(() =>
+      parseSignalSources(JSON.stringify({ ...minimalConfig, quotas: { maxTotal: 99 } })),
+    ).toThrow(/between/);
     expect(() =>
       parseSignalSources(
         JSON.stringify({

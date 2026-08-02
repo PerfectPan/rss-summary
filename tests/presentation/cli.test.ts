@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import { isCliEntrypoint, runCliCommand } from "../../src/presentation/cli.js";
 
@@ -13,7 +13,16 @@ describe("top-level CLI", () => {
     const output: string[] = [];
 
     const exitCode = await runCliCommand(
-      ["feeds", "add", "--file", file, "--url", "https://github.blog/feed", "--name", "GitHub Blog"],
+      [
+        "feeds",
+        "add",
+        "--file",
+        file,
+        "--url",
+        "https://github.blog/feed",
+        "--name",
+        "GitHub Blog",
+      ],
       { stdout: { write: (chunk) => output.push(String(chunk)) } },
     );
 

@@ -14,7 +14,10 @@ type SignalCommandDeps = {
   generate?: (input: unknown, deps?: { env?: NodeJS.ProcessEnv }) => Promise<SignalBriefOutput>;
 };
 
-export async function runSignalCommand(argv: string[], deps: SignalCommandDeps = {}): Promise<number> {
+export async function runSignalCommand(
+  argv: string[],
+  deps: SignalCommandDeps = {},
+): Promise<number> {
   const stdout = deps.stdout ?? process.stdout;
   const stderr = deps.stderr ?? process.stderr;
   const env = deps.env ?? process.env;

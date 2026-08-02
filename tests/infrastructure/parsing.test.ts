@@ -1,6 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
-import { asRecord, boundedInteger, hostnameOf, number, text } from "../../src/infrastructure/parsing.js";
+import {
+  asRecord,
+  boundedInteger,
+  hostnameOf,
+  number,
+  text,
+} from "../../src/infrastructure/parsing.js";
 
 describe("infrastructure/parsing", () => {
   it("bounds integer env values", () => {

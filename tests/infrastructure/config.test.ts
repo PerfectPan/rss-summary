@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { loadConfig, parseFeedSubscriptions } from "../../src/infrastructure/config.js";
 
@@ -27,7 +27,9 @@ describe("config", () => {
 
   it("includes RSS feeds from the repository feeds.json by default", () => {
     const config = loadConfig({}, ["--dry-run"]);
-    const expectedFeeds = parseFeedSubscriptions(readFileSync(new URL("../../feeds.json", import.meta.url), "utf8"));
+    const expectedFeeds = parseFeedSubscriptions(
+      readFileSync(new URL("../../feeds.json", import.meta.url), "utf8"),
+    );
 
     expect(config.rssFeeds).toEqual(expectedFeeds);
   });
@@ -35,7 +37,8 @@ describe("config", () => {
   it("allows RSS feed subscriptions from env", () => {
     const config = loadConfig(
       {
-        RSS_FEEDS: '[{"name":"Vercel Blog","url":"https://vercel.com/blog/rss.xml","tags":["nextjs"]}]',
+        RSS_FEEDS:
+          '[{"name":"Vercel Blog","url":"https://vercel.com/blog/rss.xml","tags":["nextjs"]}]',
       },
       ["--dry-run"],
     );
@@ -50,7 +53,14 @@ describe("config", () => {
   });
 
   it("loads state and output options from args", () => {
-    const config = loadConfig({}, ["--json", "--only-new", "--rss-only", "--state-file", ".state/test.json", "--dry-run"]);
+    const config = loadConfig({}, [
+      "--json",
+      "--only-new",
+      "--rss-only",
+      "--state-file",
+      ".state/test.json",
+      "--dry-run",
+    ]);
 
     expect(config.outputFormat).toBe("json");
     expect(config.onlyNew).toBe(true);
@@ -65,17 +75,26 @@ describe("config", () => {
   });
 
   it("loads a calendar-day window from args", () => {
-    const config = loadConfig({}, ["--day", "2026-06-27", "--timezone-offset", "+08:00", "--dry-run"]);
+    const config = loadConfig({}, [
+      "--day",
+      "2026-06-27",
+      "--timezone-offset",
+      "+08:00",
+      "--dry-run",
+    ]);
 
     expect((config as { day?: string }).day).toBe("2026-06-27");
     expect((config as { timezoneOffset?: string }).timezoneOffset).toBe("+08:00");
   });
 
   it("loads an explicit window from args", () => {
-    const config = loadConfig(
-      {},
-      ["--since", "2026-06-27T09:00:00+08:00", "--until", "2026-06-28T09:00:00+08:00", "--dry-run"],
-    );
+    const config = loadConfig({}, [
+      "--since",
+      "2026-06-27T09:00:00+08:00",
+      "--until",
+      "2026-06-28T09:00:00+08:00",
+      "--dry-run",
+    ]);
 
     expect(config.since).toBe("2026-06-27T09:00:00+08:00");
     expect(config.until).toBe("2026-06-28T09:00:00+08:00");

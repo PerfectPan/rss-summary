@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -24,8 +24,7 @@ describe("GitHub Home feed source", () => {
         resource_type: "PULL_REQUEST",
         gatherer: "pullrequest_for_you_feed_mysql",
       },
-      text:
-        "dai-shi contributed to wakujs/waku June 27, 2026 21:51 refactor: static etag #2171 Merged dai-shi merged 1 commit Motivation Static-ness was encoded as the etag value",
+      text: "dai-shi contributed to wakujs/waku June 27, 2026 21:51 refactor: static etag #2171 Merged dai-shi merged 1 commit Motivation Static-ness was encoded as the etag value",
       links: [
         { text: "dai-shi", href: "https://github.com/dai-shi" },
         { text: "wakujs/waku", href: "https://github.com/wakujs/waku" },
@@ -60,11 +59,13 @@ describe("GitHub Home feed source", () => {
           resource_type: "REPO",
           gatherer: "trending_repositories",
         },
-        text:
-          "Trending repositories simplex-chat/simplex-chat SimpleX - the first messaging network operating without user identifiers",
+        text: "Trending repositories simplex-chat/simplex-chat SimpleX - the first messaging network operating without user identifiers",
         links: [
           { text: "See more", href: "https://github.com/trending" },
-          { text: "simplex-chat/simplex-chat", href: "https://github.com/simplex-chat/simplex-chat" },
+          {
+            text: "simplex-chat/simplex-chat",
+            href: "https://github.com/simplex-chat/simplex-chat",
+          },
         ],
       },
       {
@@ -136,7 +137,9 @@ describe("GitHub Home feed source", () => {
       storageState: ".state/missing-github-home-storage.json",
     });
 
-    await expect(client.getHomeEvents()).rejects.toThrow("Run 'rss-summary github-home login' first");
+    await expect(client.getHomeEvents()).rejects.toThrow(
+      "Run 'rss-summary github-home login' first",
+    );
   });
 
   it("extracts Home card snapshots from conduit HTML", () => {
@@ -169,10 +172,14 @@ describe("GitHub Home feed source", () => {
   });
 
   it("detects whether HTML contains the logged-in GitHub Home feed surface", () => {
-    expect(hasGitHubHomeFeedMarkup('<feed-container><turbo-frame id="conduit-feed-frame"></turbo-frame></feed-container>')).toBe(
-      true,
-    );
-    expect(hasGitHubHomeFeedMarkup("<main><h1>Build and ship software on a single platform</h1></main>")).toBe(false);
+    expect(
+      hasGitHubHomeFeedMarkup(
+        '<feed-container><turbo-frame id="conduit-feed-frame"></turbo-frame></feed-container>',
+      ),
+    ).toBe(true);
+    expect(
+      hasGitHubHomeFeedMarkup("<main><h1>Build and ship software on a single platform</h1></main>"),
+    ).toBe(false);
   });
 
   it("uses conduit snapshots before rendered browser snapshots", async () => {
@@ -185,7 +192,12 @@ describe("GitHub Home feed source", () => {
           id: "feed-item-0",
           card: { card_type: "TRENDING_REPOSITORY", created_at: "2026-06-27T04:08:52.000-07:00" },
           text: "Trending repositories simplex-chat/simplex-chat",
-          links: [{ text: "simplex-chat/simplex-chat", href: "https://github.com/simplex-chat/simplex-chat" }],
+          links: [
+            {
+              text: "simplex-chat/simplex-chat",
+              href: "https://github.com/simplex-chat/simplex-chat",
+            },
+          ],
         },
       ],
       browserFetcher: async () => {
@@ -238,7 +250,10 @@ describe("GitHub Home feed source", () => {
       browserFetcher: async () => [
         {
           id: "feed-item-0",
-          card: { card_type: "REPOSITORY_RECOMMENDATION", created_at: "2026-06-26T17:00:00.000-07:00" },
+          card: {
+            card_type: "REPOSITORY_RECOMMENDATION",
+            created_at: "2026-06-26T17:00:00.000-07:00",
+          },
           text: "Popular projects among people you follow onnx/onnx",
           links: [{ text: "onnx/onnx", href: "https://github.com/onnx/onnx" }],
         },

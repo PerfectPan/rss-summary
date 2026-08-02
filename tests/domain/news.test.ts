@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { buildNewsStories, selectNewsStories } from "../../src/domain/news.js";
 import { parsePublishTime } from "../../src/domain/text.js";
@@ -51,8 +51,18 @@ describe("news domain", () => {
       [
         hit({ id: "stale", publishTime: "2026-07-28T23:59:59+08:00" }),
         hit({ id: "future", publishTime: "2026-07-29T12:31:00+08:00" }),
-        hit({ id: "politics-low-quality", topicId: "politics", sourcePolicy: "official", authInfoLevel: 2 }),
-        hit({ id: "politics-official", topicId: "politics", sourcePolicy: "official", authInfoLevel: 1 }),
+        hit({
+          id: "politics-low-quality",
+          topicId: "politics",
+          sourcePolicy: "official",
+          authInfoLevel: 2,
+        }),
+        hit({
+          id: "politics-official",
+          topicId: "politics",
+          sourcePolicy: "official",
+          authInfoLevel: 1,
+        }),
       ],
       {
         since: Date.parse("2026-07-29T00:00:00+08:00"),
@@ -74,7 +84,8 @@ describe("news domain", () => {
         }),
         hit({
           id: "apple-update-b",
-          title: "苹果用户注意！请尽快完成设备升级，苹果一口气修复上百处安全隐患，覆盖手机、平板、电脑和手表",
+          title:
+            "苹果用户注意！请尽快完成设备升级，苹果一口气修复上百处安全隐患，覆盖手机、平板、电脑和手表",
           url: "https://publisher.example.net/apple-upgrade-warning",
           rankScore: 0.78,
         }),

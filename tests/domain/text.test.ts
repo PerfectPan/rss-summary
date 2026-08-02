@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import {
   canonicalizeUrl,
@@ -10,19 +10,30 @@ import {
 
 describe("domain/text", () => {
   it("canonicalizes URLs by stripping tracking params and trailing slashes", () => {
-    expect(canonicalizeUrl("https://example.com/path/?utm_source=x&ref=1#hash")).toBe("https://example.com/path");
+    expect(canonicalizeUrl("https://example.com/path/?utm_source=x&ref=1#hash")).toBe(
+      "https://example.com/path",
+    );
     expect(canonicalizeUrl("not a url")).toBeUndefined();
   });
 
   it("parses publish times with optional timezone offset", () => {
-    expect(parsePublishTime("2026-07-29T09:00:00+08:00")).toBe(Date.parse("2026-07-29T09:00:00+08:00"));
-    expect(parsePublishTime("2026-07-29 09:00:00", "+08:00")).toBe(Date.parse("2026-07-29T09:00:00+08:00"));
+    expect(parsePublishTime("2026-07-29T09:00:00+08:00")).toBe(
+      Date.parse("2026-07-29T09:00:00+08:00"),
+    );
+    expect(parsePublishTime("2026-07-29 09:00:00", "+08:00")).toBe(
+      Date.parse("2026-07-29T09:00:00+08:00"),
+    );
   });
 
   it("compacts summaries and detects same-title events", () => {
-    expect(compactSummary("Title. First sentence. Second sentence. Third.", "Title")).toContain("First sentence");
+    expect(compactSummary("Title. First sentence. Second sentence. Third.", "Title")).toContain(
+      "First sentence",
+    );
     expect(
-      isSameTitleEvent({ title: "Claude 3.7 发布重大更新" }, { title: "Claude 3.7 重大更新发布详情" }),
+      isSameTitleEvent(
+        { title: "Claude 3.7 发布重大更新" },
+        { title: "Claude 3.7 重大更新发布详情" },
+      ),
     ).toBe(true);
     expect(isSameTitleEvent({ title: "A" }, { title: "B" })).toBe(false);
   });

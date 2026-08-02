@@ -1,13 +1,17 @@
 import { readFileSync } from "node:fs";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 describe("package CLI metadata", () => {
   it("exposes a built rss-summary bin entry", () => {
-    const buildConfig = JSON.parse(readFileSync(new URL("../../tsconfig.build.json", import.meta.url), "utf8")) as {
+    const buildConfig = JSON.parse(
+      readFileSync(new URL("../../tsconfig.build.json", import.meta.url), "utf8"),
+    ) as {
       compilerOptions?: { declaration?: boolean };
     };
-    const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as {
+    const pkg = JSON.parse(
+      readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+    ) as {
       bin?: Record<string, string>;
       devDependencies?: Record<string, string>;
       engines?: Record<string, string>;
@@ -26,11 +30,17 @@ describe("package CLI metadata", () => {
     expect(pkg.peerDependencies?.["@rivus/agent"]).toBe(">=0.1.1 <0.4.0");
     expect(pkg.devDependencies?.["@rivus/agent"]).toBe("0.1.1");
     expect(pkg.engines?.node).toBe("^24.11.0");
-    expect(pkg.files).toEqual(["dist", "docs/rivus-plugin.md", "news-topics.json", "signal-sources.json", "README.md"]);
+    expect(pkg.files).toEqual([
+      "dist",
+      "docs/rivus-plugin.md",
+      "news-topics.json",
+      "signal-sources.json",
+      "README.md",
+    ]);
     expect(pkg.scripts?.build).toBe("tsc -p tsconfig.build.json");
     expect(pkg.scripts?.["package:check"]).toBe("node scripts/check-package.mjs");
     expect(pkg.scripts?.verify).toBe(
-      "pnpm test:layout && pnpm lint && pnpm test && pnpm typecheck && pnpm build && pnpm package:check",
+      "pnpm test:layout && pnpm check && pnpm test && pnpm build && pnpm package:check",
     );
     expect(buildConfig.compilerOptions?.declaration).toBe(true);
   });

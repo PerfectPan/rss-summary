@@ -120,7 +120,9 @@ export class GitHubHomeClient {
       }
 
       try {
-        await page.waitForSelector("#conduit-feed-frame article.js-feed-item-component", { timeout: this.timeoutMs });
+        await page.waitForSelector("#conduit-feed-frame article.js-feed-item-component", {
+          timeout: this.timeoutMs,
+        });
       } catch (error) {
         throw new Error(
           `GitHub Home feed did not render. Refresh ${this.storageState} with 'rss-summary github-home login'.`,
@@ -208,9 +210,13 @@ export function normalizeHomeCardSnapshot(snapshot: HomeFeedCardSnapshot): Activ
   const cardType = stringField(snapshot.card, "card_type");
   const createdAt = stringField(snapshot.card, "created_at");
   const pullRequest = findPullRequestLink(snapshot.links);
-  const repository = pullRequest?.repo ? { fullName: pullRequest.repo, htmlUrl: repoUrl(pullRequest.repo) } : findRepositoryLink(snapshot.links);
+  const repository = pullRequest?.repo
+    ? { fullName: pullRequest.repo, htmlUrl: repoUrl(pullRequest.repo) }
+    : findRepositoryLink(snapshot.links);
   const normalized = normalizeHomeCardType(cardType);
-  const actor = usesSyntheticActor(normalized.type) ? "GitHub Home" : findActor(snapshot.links) ?? "GitHub Home";
+  const actor = usesSyntheticActor(normalized.type)
+    ? "GitHub Home"
+    : (findActor(snapshot.links) ?? "GitHub Home");
 
   return {
     id: snapshot.id || fallbackId(cardType, repository?.fullName, createdAt),
@@ -234,7 +240,8 @@ function normalizeHomeCardType(cardType: string): { type: ActivityType; action: 
   if (cardType === "CREATED_REPOSITORY") return { type: "create", action: "created" };
   if (cardType === "STARRED_REPOSITORY") return { type: "watch", action: "started" };
   if (cardType === "TRENDING_REPOSITORY") return { type: "trending", action: "trending" };
-  if (cardType === "REPOSITORY_RECOMMENDATION") return { type: "recommendation", action: "recommended" };
+  if (cardType === "REPOSITORY_RECOMMENDATION")
+    return { type: "recommendation", action: "recommended" };
   if (cardType === "FOLLOWED_USER") return { type: "follow", action: "followed" };
   if (cardType === "ANNOUNCEMENT") return { type: "announcement", action: "announced" };
   if (cardType === "RELEASE") return { type: "release", action: "published" };
@@ -262,7 +269,9 @@ function findPullRequestLink(links: HomeFeedLinkSnapshot[]):
   return undefined;
 }
 
-function findRepositoryLink(links: HomeFeedLinkSnapshot[]): { fullName: string; htmlUrl: string } | undefined {
+function findRepositoryLink(
+  links: HomeFeedLinkSnapshot[],
+): { fullName: string; htmlUrl: string } | undefined {
   for (const link of links) {
     const parsed = parseGithubUrl(link.href);
     if (!parsed || parsed.kind !== "repo") continue;
@@ -287,7 +296,9 @@ function usesSyntheticActor(type: ActivityType): boolean {
   return type === "trending" || type === "recommendation";
 }
 
-function parseGithubUrl(href: string):
+function parseGithubUrl(
+  href: string,
+):
   | { kind: "repo"; repo: string }
   | { kind: "pull"; repo: string; number: number }
   | { kind: "user"; login: string }
@@ -342,7 +353,9 @@ function parseHydroFeedCard(value: string | undefined): Record<string, unknown> 
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
 }
 
 function absoluteGithubHref(href: string): string {
@@ -370,7 +383,9 @@ async function launchBrowser(
 }
 
 function extractHomeFeedSnapshots(): HomeFeedCardSnapshot[] {
-  return Array.from(document.querySelectorAll("#conduit-feed-frame article.js-feed-item-component")).map((article) => {
+  return Array.from(
+    document.querySelectorAll("#conduit-feed-frame article.js-feed-item-component"),
+  ).map((article) => {
     let card: Record<string, unknown> | null = null;
     try {
       const hydro = JSON.parse(article.getAttribute("data-hydro-view") || "null") as {
@@ -396,6 +411,9 @@ function extractHomeFeedSnapshots(): HomeFeedCardSnapshot[] {
 }
 
 function hasGitHubHomeFeedDom(): boolean {
-  return document.querySelector("feed-container") !== null && document.querySelector("#conduit-feed-frame") !== null;
+  return (
+    document.querySelector("feed-container") !== null &&
+    document.querySelector("#conduit-feed-frame") !== null
+  );
 }
 /* v8 ignore stop */

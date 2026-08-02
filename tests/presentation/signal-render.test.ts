@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import {
   buildSignalRepos,
@@ -87,7 +87,13 @@ describe("signal render", () => {
   it("omits empty sections and renders kind labels plus repo metrics", () => {
     const updates = buildSignalUpdates(
       [
-        updateHit({ id: "m", title: "GPT-5 API", kind: "model", sourceLabel: "OpenAI", url: "https://openai.com/blog/gpt-5" }),
+        updateHit({
+          id: "m",
+          title: "GPT-5 API",
+          kind: "model",
+          sourceLabel: "OpenAI",
+          url: "https://openai.com/blog/gpt-5",
+        }),
         updateHit({
           id: "p",
           title: "Agent IDE",
@@ -101,7 +107,14 @@ describe("signal render", () => {
       rules(),
     );
     const repos = buildSignalRepos(
-      [repoHit({ id: "acme/agent-kit", title: "acme/agent-kit", stars: 1234, language: "TypeScript" })],
+      [
+        repoHit({
+          id: "acme/agent-kit",
+          title: "acme/agent-kit",
+          stars: 1234,
+          language: "TypeScript",
+        }),
+      ],
       rules(),
     );
     const selected = selectSignalItems(updates, repos, { maxTotal: 8, updates: 5, opensource: 4 });

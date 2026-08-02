@@ -25,7 +25,10 @@ export function renderNewsBrief(document: NewsBriefDocument): string {
   for (const topic of document.topics.filter(({ enabled }) => enabled)) {
     const stories = document.stories.filter(({ selectedTopicId }) => selectedTopicId === topic.id);
     if (stories.length === 0) continue;
-    lines.push(`**${topicIcon(topic.id)} ${shortTopicLabel(topic.label)} · ${stories.length}**`, "");
+    lines.push(
+      `**${topicIcon(topic.id)} ${shortTopicLabel(topic.label)} · ${stories.length}**`,
+      "",
+    );
     stories.forEach((story, index) => appendStory(lines, story, index + 1));
   }
 

@@ -48,7 +48,9 @@ export class GitHubSearchClient {
     if (!response.ok) throw new Error(`GitHub Search API ${response.status}`);
     const page = await response.json();
     const items = asRecord(page).items;
-    return Array.isArray(items) ? items.map(parseRepo).filter((item): item is GitHubSearchRepo => item !== undefined) : [];
+    return Array.isArray(items)
+      ? items.map(parseRepo).filter((item): item is GitHubSearchRepo => item !== undefined)
+      : [];
   }
 
   private headers(): Record<string, string> {
@@ -93,6 +95,8 @@ function parseRepo(value: unknown): GitHubSearchRepo | undefined {
     language: text(item.language),
     stars: number(item.stargazers_count) ?? 0,
     createdAt: text(item.created_at) ?? "",
-    topics: Array.isArray(item.topics) ? item.topics.map(text).filter((topic): topic is string => topic !== undefined) : [],
+    topics: Array.isArray(item.topics)
+      ? item.topics.map(text).filter((topic): topic is string => topic !== undefined)
+      : [],
   };
 }

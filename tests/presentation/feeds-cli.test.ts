@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import type { ActivityCard } from "../../src/domain/digest.js";
 import { runFeedsCommand } from "../../src/presentation/feeds-cli.js";
@@ -13,7 +13,17 @@ describe("feeds CLI", () => {
     const output: string[] = [];
 
     const exitCode = await runFeedsCommand(
-      ["add", "--file", file, "--name", "GitHub Blog", "--url", "https://github.blog/feed", "--tags", "github,ai"],
+      [
+        "add",
+        "--file",
+        file,
+        "--name",
+        "GitHub Blog",
+        "--url",
+        "https://github.blog/feed",
+        "--tags",
+        "github,ai",
+      ],
       { stdout: { write: (chunk) => output.push(String(chunk)) } },
     );
 
@@ -36,9 +46,12 @@ describe("feeds CLI", () => {
 
   it("tests configured feeds without mutating the file", async () => {
     const file = join(mkdtempSync(join(tmpdir(), "rss-summary-feeds-")), "feeds.json");
-    await runFeedsCommand(["add", "--file", file, "--name", "GitHub Blog", "--url", "https://github.blog/feed"], {
-      stdout: { write: () => undefined },
-    });
+    await runFeedsCommand(
+      ["add", "--file", file, "--name", "GitHub Blog", "--url", "https://github.blog/feed"],
+      {
+        stdout: { write: () => undefined },
+      },
+    );
     const before = readFileSync(file, "utf8");
     const output: string[] = [];
 
@@ -69,10 +82,19 @@ describe("feeds CLI", () => {
     const file = join(mkdtempSync(join(tmpdir(), "rss-summary-feeds-")), "feeds.json");
     const silent = { stdout: { write: () => undefined } };
 
-    await runFeedsCommand(["add", "--file", file, "--name", "GitHub Blog", "--url", "https://github.blog/feed"], silent);
-    await runFeedsCommand(["add", "--file", file, "--name", "Deno Blog", "--url", "https://deno.com/feed"], silent);
+    await runFeedsCommand(
+      ["add", "--file", file, "--name", "GitHub Blog", "--url", "https://github.blog/feed"],
+      silent,
+    );
+    await runFeedsCommand(
+      ["add", "--file", file, "--name", "Deno Blog", "--url", "https://deno.com/feed"],
+      silent,
+    );
 
-    const removeExitCode = await runFeedsCommand(["remove", "--file", file, "--url", "https://github.blog/feed"], silent);
+    const removeExitCode = await runFeedsCommand(
+      ["remove", "--file", file, "--url", "https://github.blog/feed"],
+      silent,
+    );
     expect(removeExitCode).toBe(0);
     expect(JSON.parse(readFileSync(file, "utf8"))).toEqual([
       {
@@ -82,7 +104,10 @@ describe("feeds CLI", () => {
       },
     ]);
 
-    const deleteExitCode = await runFeedsCommand(["delete", "--file", file, "--url", "https://deno.com/feed"], silent);
+    const deleteExitCode = await runFeedsCommand(
+      ["delete", "--file", file, "--url", "https://deno.com/feed"],
+      silent,
+    );
     expect(deleteExitCode).toBe(0);
     expect(JSON.parse(readFileSync(file, "utf8"))).toEqual([]);
   });

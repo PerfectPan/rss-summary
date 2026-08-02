@@ -1,35 +1,36 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import { DoubaoSearchClient } from "../../src/infrastructure/doubao-search.js";
 
 describe("Doubao search source", () => {
   it("requests an exact day with query rewrite and authoritative URL results", async () => {
-    const fetch = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) =>
-      new Response(
-        JSON.stringify({
-          ResponseMetadata: { RequestId: "request-1" },
-          Result: {
-            LogId: "log-1",
-            ResultCount: 1,
-            TimeCost: 42,
-            WebResults: [
-              {
-                Id: "result-1",
-                SortId: 1,
-                Title: "Agent platform release",
-                SiteName: "Example News",
-                Url: "https://example.com/agent?utm_source=search",
-                Summary: "A new agent platform was released.",
-                PublishTime: "2026-07-29T09:30:00+08:00",
-                RankScore: 0.95,
-                AuthInfoDes: "正常权威",
-                AuthInfoLevel: 2,
-              },
-            ],
-          },
-        }),
-        { status: 200 },
-      ),
+    const fetch = vi.fn(
+      async (_url: string | URL | Request, _init?: RequestInit) =>
+        new Response(
+          JSON.stringify({
+            ResponseMetadata: { RequestId: "request-1" },
+            Result: {
+              LogId: "log-1",
+              ResultCount: 1,
+              TimeCost: 42,
+              WebResults: [
+                {
+                  Id: "result-1",
+                  SortId: 1,
+                  Title: "Agent platform release",
+                  SiteName: "Example News",
+                  Url: "https://example.com/agent?utm_source=search",
+                  Summary: "A new agent platform was released.",
+                  PublishTime: "2026-07-29T09:30:00+08:00",
+                  RankScore: 0.95,
+                  AuthInfoDes: "正常权威",
+                  AuthInfoLevel: 2,
+                },
+              ],
+            },
+          }),
+          { status: 200 },
+        ),
     );
     const client = new DoubaoSearchClient({ apiKey: "test-key", fetch });
 
@@ -58,8 +59,11 @@ describe("Doubao search source", () => {
   });
 
   it("uses the API's official-only filter for political news", async () => {
-    const fetch = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) =>
-      new Response(JSON.stringify({ ResponseMetadata: {}, Result: { WebResults: [] } }), { status: 200 }),
+    const fetch = vi.fn(
+      async (_url: string | URL | Request, _init?: RequestInit) =>
+        new Response(JSON.stringify({ ResponseMetadata: {}, Result: { WebResults: [] } }), {
+          status: 200,
+        }),
     );
     const client = new DoubaoSearchClient({ apiKey: "test-key", fetch });
 
@@ -80,16 +84,29 @@ describe("Doubao search source", () => {
       apiKey: "secret-key",
       fetch: async () =>
         new Response(
-          JSON.stringify({ ResponseMetadata: { Error: { Code: "10406", Message: "quota exhausted" } }, Result: null }),
+          JSON.stringify({
+            ResponseMetadata: { Error: { Code: "10406", Message: "quota exhausted" } },
+            Result: null,
+          }),
           { status: 200 },
         ),
     });
 
     await expect(
-      client.search({ query: "科技新闻", count: 10, day: "2026-07-29", sourcePolicy: "authoritative" }),
+      client.search({
+        query: "科技新闻",
+        count: 10,
+        day: "2026-07-29",
+        sourcePolicy: "authoritative",
+      }),
     ).rejects.toThrow(/10406.*quota exhausted/i);
     await expect(
-      client.search({ query: "科技新闻", count: 10, day: "2026-07-29", sourcePolicy: "authoritative" }),
+      client.search({
+        query: "科技新闻",
+        count: 10,
+        day: "2026-07-29",
+        sourcePolicy: "authoritative",
+      }),
     ).rejects.not.toThrow(/secret-key/i);
   });
 });

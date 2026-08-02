@@ -177,7 +177,8 @@ function scoreRepo(
     if (event.type === "create") reasons.add("new repository created");
     if (event.type === "follow") reasons.add("follow relationship from GitHub Home");
     if (event.type === "announcement") reasons.add("GitHub Home announcement");
-    if (event.type === "pull_request" && event.action === "merged") reasons.add("important PR merged");
+    if (event.type === "pull_request" && event.action === "merged")
+      reasons.add("important PR merged");
     if (context.followees.has(event.actor)) {
       score += 30;
       reasons.add(`followed actor: ${event.actor}`);
@@ -286,7 +287,9 @@ function matchEventInterests(events: ActivityCard[], interests: string[]): strin
 }
 
 function sourceFor(events: ActivityCard[]): ActivitySource {
-  return events.some((event) => event.source === "rss" || event.type === "article") ? "rss" : "github";
+  return events.some((event) => event.source === "rss" || event.type === "article")
+    ? "rss"
+    : "github";
 }
 
 function labelFor(repo: string, events: ActivityCard[]): string | undefined {
@@ -300,7 +303,9 @@ function urlFor(
   repository: RepositoryMetadata | undefined,
 ): string | undefined {
   const article = events.find((event) => event.type === "article");
-  return article?.htmlUrl ?? article?.sourceUrl ?? repository?.htmlUrl ?? `https://github.com/${repo}`;
+  return (
+    article?.htmlUrl ?? article?.sourceUrl ?? repository?.htmlUrl ?? `https://github.com/${repo}`
+  );
 }
 
 function descriptionFor(events: ActivityCard[]): string | undefined {
@@ -311,12 +316,11 @@ function matchInterests(repository: RepositoryMetadata | undefined, interests: s
   if (!repository) return [];
   const tokens = tokenize(
     [
-    repository.fullName,
-    repository.description ?? "",
-    repository.language ?? "",
-    ...repository.topics,
-  ]
-      .join(" "),
+      repository.fullName,
+      repository.description ?? "",
+      repository.language ?? "",
+      ...repository.topics,
+    ].join(" "),
   );
 
   return interests.filter((interest) => {

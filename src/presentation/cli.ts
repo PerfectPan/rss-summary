@@ -24,7 +24,10 @@ type CliDeps = {
   };
 };
 
-export async function runCliCommand(argv: string[] = process.argv.slice(2), deps: CliDeps = {}): Promise<number> {
+export async function runCliCommand(
+  argv: string[] = process.argv.slice(2),
+  deps: CliDeps = {},
+): Promise<number> {
   const stdout = deps.stdout ?? process.stdout;
   const stderr = deps.stderr ?? process.stderr;
   const command = argv[0] ?? "help";

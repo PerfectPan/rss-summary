@@ -1,5 +1,11 @@
 import { shiftCalendarDay, startOfCalendarDay } from "./time.js";
-import { canonicalizeUrl, compactSummary, formatCompactCount, isSameTitleEvent, parsePublishTime } from "./text.js";
+import {
+  canonicalizeUrl,
+  compactSummary,
+  formatCompactCount,
+  isSameTitleEvent,
+  parsePublishTime,
+} from "./text.js";
 
 /** `release` is reserved for optional v1.1 version-tag discovery; v1 never emits it. */
 export type SignalKind = "model" | "product" | "repo" | "release";
@@ -100,7 +106,10 @@ export function classifyUpdateKind(title: string, hints: string[]): "model" | "p
     : "product";
 }
 
-export function buildSignalUpdates(hits: SignalUpdateHit[], rules: SignalDomainRules): SignalItem[] {
+export function buildSignalUpdates(
+  hits: SignalUpdateHit[],
+  rules: SignalDomainRules,
+): SignalItem[] {
   const groups = new Map<string, SignalUpdateHit[]>();
   for (const hit of hits) {
     if (!isAcceptedUpdateHit(hit, rules)) continue;
@@ -157,8 +166,13 @@ export function selectSignalItems(
 }
 
 /** Count update hits that fail the time-window filter (including missing publish time). */
-export function countOutOfWindowUpdateHits(hits: SignalUpdateHit[], rules: SignalDomainRules): number {
-  return hits.filter((hit) => hit.title.trim() && hit.url.trim() && !isWithinUpdateWindow(hit, rules)).length;
+export function countOutOfWindowUpdateHits(
+  hits: SignalUpdateHit[],
+  rules: SignalDomainRules,
+): number {
+  return hits.filter(
+    (hit) => hit.title.trim() && hit.url.trim() && !isWithinUpdateWindow(hit, rules),
+  ).length;
 }
 
 function isAcceptedUpdateHit(hit: SignalUpdateHit, rules: SignalDomainRules): boolean {
@@ -184,7 +198,11 @@ function isWithinUpdateWindow(hit: SignalUpdateHit, rules: SignalDomainRules): b
   const publishedAt = hit.publishedAt
     ? parsePublishTime(hit.publishedAt, rules.window.timezoneOffset)
     : Number.NaN;
-  return Number.isFinite(publishedAt) && publishedAt >= rules.window.since && publishedAt < rules.window.until;
+  return (
+    Number.isFinite(publishedAt) &&
+    publishedAt >= rules.window.since &&
+    publishedAt < rules.window.until
+  );
 }
 
 function isAcceptedRepoHit(hit: SignalRepoHit, rules: SignalDomainRules): boolean {
@@ -199,7 +217,11 @@ function isAcceptedRepoHit(hit: SignalRepoHit, rules: SignalDomainRules): boolea
   return createdAt >= createdSince && createdAt < rules.window.until;
 }
 
-function toUpdateItem(canonicalUrl: string, matches: SignalUpdateHit[], rules: SignalDomainRules): SignalItem {
+function toUpdateItem(
+  canonicalUrl: string,
+  matches: SignalUpdateHit[],
+  rules: SignalDomainRules,
+): SignalItem {
   // Prefer official hit for kind/title/summary/sourceLabel so dual-source does not flip labels to HN.
   // Still take the best HN points (if any) for scoring.
   const content = pickContentHit(matches);
@@ -238,7 +260,8 @@ function toUpdateItem(canonicalUrl: string, matches: SignalUpdateHit[], rules: S
   }
 
   const crossSource =
-    matches.some(({ source }) => source === "official") && matches.some(({ source }) => source === "hn");
+    matches.some(({ source }) => source === "official") &&
+    matches.some(({ source }) => source === "hn");
   if (crossSource) {
     scoreParts.push({ label: "双源命中", value: rules.scoring.crossSourceBoost });
     reasons.push("双源命中");
@@ -286,16 +309,24 @@ function toRepoItem(hit: SignalRepoHit, rules: SignalDomainRules): SignalItem {
   scoreParts.push({ label: `${hit.stars}★`, value: starScore });
   reasons.push(`${formatCompactCount(hit.stars)} 星`);
 
-  const ageDays = Math.max(0, Math.floor((rules.window.until - Date.parse(hit.createdAt)) / 86_400_000));
+  const ageDays = Math.max(
+    0,
+    Math.floor((rules.window.until - Date.parse(hit.createdAt)) / 86_400_000),
+  );
   const newness = Math.max(0, rules.createdWithinDays - ageDays) * rules.scoring.repoNewnessWeight;
   if (newness > 0) {
-    scoreParts.push({ label: `新增 ${new Date(hit.createdAt).toISOString().slice(0, 10)}`, value: newness });
+    scoreParts.push({
+      label: `新增 ${new Date(hit.createdAt).toISOString().slice(0, 10)}`,
+      value: newness,
+    });
     reasons.push(`${ageDays} 天前创建`);
   }
 
   const languageMatch =
     hit.language &&
-    rules.frontendBias.languages.some((language) => language.toLowerCase() === hit.language!.toLowerCase());
+    rules.frontendBias.languages.some(
+      (language) => language.toLowerCase() === hit.language!.toLowerCase(),
+    );
   if (languageMatch) {
     scoreParts.push({ label: `语言 ${hit.language}`, value: rules.scoring.repoLanguageBoost });
     reasons.push(`语言 ${hit.language}`);
@@ -354,18 +385,23 @@ function selectWithSoftBalance(items: SignalItem[], cap: number): SignalItem[] {
     current.push(item);
     byKind.set(item.kind, current);
   }
-  for (const kindItems of byKind.values()) kindItems.sort((left, right) => right.score - left.score);
+  for (const kindItems of byKind.values())
+    kindItems.sort((left, right) => right.score - left.score);
 
   const selected: SignalItem[] = [];
   while (selected.length < cap) {
     const kinds = [...byKind.keys()].filter((kind) => (byKind.get(kind)?.length ?? 0) > 0);
     if (kinds.length === 0) break;
-    const counts = new Map(kinds.map((kind) => [kind, selected.filter((item) => item.kind === kind).length]));
+    const counts = new Map(
+      kinds.map((kind) => [kind, selected.filter((item) => item.kind === kind).length]),
+    );
     const minimum = Math.min(...counts.values());
     const candidates = kinds
       .filter((kind) => counts.get(kind)! === minimum)
       .map((kind) => ({ kind, score: byKind.get(kind)![0]!.score }));
-    candidates.sort((left, right) => right.score - left.score || left.kind.localeCompare(right.kind));
+    candidates.sort(
+      (left, right) => right.score - left.score || left.kind.localeCompare(right.kind),
+    );
     const chosen = candidates[0]!;
     selected.push(byKind.get(chosen.kind)!.shift()!);
   }

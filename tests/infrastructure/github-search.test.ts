@@ -1,6 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
-import { buildRepositorySearchQuery, GitHubSearchClient } from "../../src/infrastructure/github-search.js";
+import {
+  buildRepositorySearchQuery,
+  GitHubSearchClient,
+} from "../../src/infrastructure/github-search.js";
 
 const fixture = {
   total_count: 1,
@@ -50,14 +53,19 @@ describe("GitHubSearchClient", () => {
 
   it("rejects non-OK responses and drops items without identity", async () => {
     const client = new GitHubSearchClient({
-      fetch: async () => new Response(JSON.stringify({ items: [{ description: "no identity" }] }), { status: 200 }),
+      fetch: async () =>
+        new Response(JSON.stringify({ items: [{ description: "no identity" }] }), { status: 200 }),
     });
-    await expect(client.searchRepositories({ query: "stars:>50", perPage: 8 })).resolves.toEqual([]);
+    await expect(client.searchRepositories({ query: "stars:>50", perPage: 8 })).resolves.toEqual(
+      [],
+    );
 
     const failing = new GitHubSearchClient({
       fetch: async () => new Response("rate limited", { status: 403 }),
     });
-    await expect(failing.searchRepositories({ query: "stars:>50", perPage: 8 })).rejects.toThrow(/403/);
+    await expect(failing.searchRepositories({ query: "stars:>50", perPage: 8 })).rejects.toThrow(
+      /403/,
+    );
   });
 });
 

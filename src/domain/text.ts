@@ -2,6 +2,7 @@ export function canonicalizeUrl(value: string): string | undefined {
   try {
     const url = new URL(value);
     url.hash = "";
+    // Snapshot keys before deleting: mutating searchParams during iteration skips entries.
     for (const key of [...url.searchParams.keys()]) {
       if (/^utm_/iu.test(key) || ["from", "source", "ref", "spm"].includes(key.toLowerCase())) {
         url.searchParams.delete(key);
@@ -17,14 +18,19 @@ export function canonicalizeUrl(value: string): string | undefined {
 export function parsePublishTime(value: string, timezoneOffset?: string): number {
   const normalized = value.trim().replace(" ", "T");
   const hasExplicitZone = /(?:Z|[+-]\d{2}:?\d{2})$/iu.test(normalized);
-  return Date.parse(!hasExplicitZone && timezoneOffset ? `${normalized}${timezoneOffset}` : normalized);
+  return Date.parse(
+    !hasExplicitZone && timezoneOffset ? `${normalized}${timezoneOffset}` : normalized,
+  );
 }
 
 export function compactSummary(value: string, title: string, siteName?: string): string {
   let normalized = value.replace(/\s+/gu, " ").trim();
   normalized = stripLeadingLiteral(normalized, title);
   normalized = stripLeadingLiteral(normalized, siteName);
-  normalized = normalized.replace(/^20\d{2}[-/.年]\d{1,2}[-/.月]\d{1,2}(?:日)?(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?\s*/u, "");
+  normalized = normalized.replace(
+    /^20\d{2}[-/.年]\d{1,2}[-/.月]\d{1,2}(?:日)?(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?\s*/u,
+    "",
+  );
   normalized = stripLeadingLiteral(normalized, title);
   normalized = normalized.replace(/^[：:·|—–\-，,。；;\s]+/u, "");
 

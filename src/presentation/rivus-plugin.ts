@@ -1,8 +1,4 @@
-import {
-  RIVUS_PLUGIN_API_VERSION,
-  type RivusPlugin,
-  type RivusPluginRegistry,
-} from "@rivus/agent";
+import { RIVUS_PLUGIN_API_VERSION, type RivusPlugin, type RivusPluginRegistry } from "@rivus/agent";
 import { Effect } from "effect";
 
 import {
@@ -46,14 +42,18 @@ function withNewsMarkdown(result: RivusNewsBriefResult): RivusNewsBriefOutput {
   };
 }
 
-export function createRssSummaryPlugin(dependencies: RssSummaryPluginDependencies = {}): RivusPlugin {
+export function createRssSummaryPlugin(
+  dependencies: RssSummaryPluginDependencies = {},
+): RivusPlugin {
   const executeDigest = dependencies.generateDigest ?? generateRivusDigest;
   const executeNewsBrief =
     dependencies.generateNewsBrief ??
-    (async (input: unknown) => withNewsMarkdown(await Effect.runPromise(generateRivusNewsBrief(input))));
+    (async (input: unknown) =>
+      withNewsMarkdown(await Effect.runPromise(generateRivusNewsBrief(input))));
   const executeSignalBrief =
     dependencies.generateSignalBrief ??
-    (async (input: unknown) => withSignalMarkdown(await Effect.runPromise(generateSignalBrief(input))));
+    (async (input: unknown) =>
+      withSignalMarkdown(await Effect.runPromise(generateSignalBrief(input))));
 
   return {
     manifest: {
@@ -64,15 +64,24 @@ export function createRssSummaryPlugin(dependencies: RssSummaryPluginDependencie
     register(registry: RivusPluginRegistry): void {
       registry.registerTool({
         createExecutor: () => ({ execute: (input) => executeDigest(input) }),
-        description: "Generate a read-only Markdown digest from the configured GitHub Home and RSS sources",
+        description:
+          "Generate a read-only Markdown digest from the configured GitHub Home and RSS sources",
         digest: "sha256:rss-summary-generate-digest-v1",
         id: RSS_SUMMARY_TOOL_ID,
         idempotency: "none",
         inputSchema: {
           additionalProperties: false,
           properties: {
-            day: { description: "Local calendar day in YYYY-MM-DD format", pattern: "^\\d{4}-\\d{2}-\\d{2}$", type: "string" },
-            occurrence: { description: "Scheduled occurrence as an ISO date-time", format: "date-time", type: "string" },
+            day: {
+              description: "Local calendar day in YYYY-MM-DD format",
+              pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+              type: "string",
+            },
+            occurrence: {
+              description: "Scheduled occurrence as an ISO date-time",
+              format: "date-time",
+              type: "string",
+            },
             onlyNew: { default: true, type: "boolean" },
             rssOnly: { default: false, type: "boolean" },
             window: { enum: ["previous-calendar-day"], type: "string" },
@@ -116,7 +125,8 @@ export function createRssSummaryPlugin(dependencies: RssSummaryPluginDependencie
           additionalProperties: false,
           properties: {
             day: {
-              description: "Explicit local calendar day in YYYY-MM-DD format; defaults to the occurrence's day",
+              description:
+                "Explicit local calendar day in YYYY-MM-DD format; defaults to the occurrence's day",
               pattern: "^\\d{4}-\\d{2}-\\d{2}$",
               type: "string",
             },
@@ -140,7 +150,9 @@ export function createRssSummaryPlugin(dependencies: RssSummaryPluginDependencie
         skills: { allow: [] },
         systemPrompt:
           "Generate scheduled briefs only through the rss-summary Tool named in the task. Return its markdown field unchanged and do not add commentary.",
-        tools: { allow: [RSS_SUMMARY_TOOL_ID, RSS_SUMMARY_NEWS_TOOL_ID, RSS_SUMMARY_SIGNAL_TOOL_ID] },
+        tools: {
+          allow: [RSS_SUMMARY_TOOL_ID, RSS_SUMMARY_NEWS_TOOL_ID, RSS_SUMMARY_SIGNAL_TOOL_ID],
+        },
       });
       registry.registerAutomation({
         createInput: ({ occurrence }) => ({

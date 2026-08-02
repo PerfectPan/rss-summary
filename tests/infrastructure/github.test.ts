@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 import { GitHubClient } from "../../src/infrastructure/github.js";
 
@@ -79,12 +79,15 @@ describe("GitHubClient", () => {
     const client = new GitHubClient({
       fetch: async (url, _init) => {
         const page = new URL(String(url)).searchParams.get("page");
-        const logins = page === "1" ? [{ login: "a" }, { login: "b" }] : [{ login: "b" }, { login: "c" }];
+        const logins =
+          page === "1" ? [{ login: "a" }, { login: "b" }] : [{ login: "b" }, { login: "c" }];
         return new Response(JSON.stringify(logins), { status: 200 });
       },
     });
 
-    await expect(client.getFollowing({ perPage: 100, pages: 2 })).resolves.toEqual(new Set(["a", "b", "c"]));
+    await expect(client.getFollowing({ perPage: 100, pages: 2 })).resolves.toEqual(
+      new Set(["a", "b", "c"]),
+    );
   });
 
   it("fails with the truncated API body on non-OK responses", async () => {

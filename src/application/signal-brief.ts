@@ -10,11 +10,24 @@ import {
   type SignalRepoHit,
   type SignalUpdateHit,
 } from "../domain/signal.js";
-import { calendarDayAtOffset, endOfCalendarDay, shiftCalendarDay, startOfCalendarDay } from "../domain/time.js";
+import {
+  calendarDayAtOffset,
+  endOfCalendarDay,
+  shiftCalendarDay,
+  startOfCalendarDay,
+} from "../domain/time.js";
 import { boundedInteger, hostnameOf } from "../infrastructure/parsing.js";
 import { loadSignalSources, type SignalSourceConfig } from "../infrastructure/signal-sources.js";
-import { DoubaoSearchClient, type DoubaoSearchInput, type DoubaoSearchPage } from "../infrastructure/doubao-search.js";
-import { HackerNewsClient, type HackerNewsSearchInput, type HackerNewsStory } from "../infrastructure/hacker-news.js";
+import {
+  DoubaoSearchClient,
+  type DoubaoSearchInput,
+  type DoubaoSearchPage,
+} from "../infrastructure/doubao-search.js";
+import {
+  HackerNewsClient,
+  type HackerNewsSearchInput,
+  type HackerNewsStory,
+} from "../infrastructure/hacker-news.js";
 import {
   GitHubSearchClient,
   buildRepositorySearchQuery,
@@ -222,7 +235,9 @@ async function fetchGithubRepos(
   const createdSince = shiftCalendarDay(day, -(config.githubSearch.createdWithinDays - 1));
   // Topics as free-text OR; languages stay domain scoring bias (see buildRepositorySearchQuery).
   const keywords =
-    config.githubSearch.topics.length > 0 ? config.githubSearch.topics : config.githubSearch.languages;
+    config.githubSearch.topics.length > 0
+      ? config.githubSearch.topics
+      : config.githubSearch.languages;
   const query = buildRepositorySearchQuery({
     since: createdSince,
     minStars: config.githubSearch.minStars,
@@ -268,7 +283,8 @@ function optionalDay(value: unknown): string | undefined {
 
 function optionalString(value: unknown, name: string): string | undefined {
   if (value === undefined) return undefined;
-  if (typeof value !== "string" || value.trim() === "") throw new Error(`${name} must be a non-empty string.`);
+  if (typeof value !== "string" || value.trim() === "")
+    throw new Error(`${name} must be a non-empty string.`);
   return value.trim();
 }
 
@@ -289,7 +305,9 @@ function createDoubaoSearch(
   return (input) => client.search(input);
 }
 
-function createHackerNewsSearch(timeoutMs: number): (input: HackerNewsSearchInput) => Promise<HackerNewsStory[]> {
+function createHackerNewsSearch(
+  timeoutMs: number,
+): (input: HackerNewsSearchInput) => Promise<HackerNewsStory[]> {
   const client = new HackerNewsClient({ timeoutMs });
   return (input) => client.searchStories(input);
 }

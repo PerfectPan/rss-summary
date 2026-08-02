@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import { runSignalCommand, writeSignalHelp } from "../../src/presentation/signal-cli.js";
 
@@ -42,7 +42,10 @@ describe("signal CLI command", () => {
 
     await runSignalCommand([], { stdout: { write: () => undefined }, generate });
 
-    expect(generate).toHaveBeenCalledWith(expect.objectContaining({ occurrence: expect.any(String) }), expect.anything());
+    expect(generate).toHaveBeenCalledWith(
+      expect.objectContaining({ occurrence: expect.any(String) }),
+      expect.anything(),
+    );
   });
 
   it("prints help and exits cleanly for --help", async () => {
