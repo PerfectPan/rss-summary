@@ -2,7 +2,19 @@
 
 `rss-summary` is a local TypeScript CLI, a small set of portable Codex skills, and an external Rivus Plugin. It is not a daemon or hosted service. Scheduling is handled outside the repo by cron, launchd, systemd, Codex automation, or a Rivus deployment daemon.
 
-The runtime goal is simple: produce a previous-day technical subscription digest from GitHub Home and RSS, plus bounded noon/evening headline briefs from authoritative web search, plus a once-per-day high-signal brief (高信号速览) from public GitHub Search, Hacker News, and official-domain search. Collection and ranking stay independent from Rivus scheduling and Feishu delivery.
+The runtime goal is simple: produce a previous-day technical subscription digest from GitHub Home and RSS, bounded noon/evening headline briefs from authoritative web search, and a once-per-day high-signal brief (高信号速览) from public GitHub Search, Hacker News, and official-domain search. Collection and ranking stay independent from Rivus scheduling and Feishu delivery.
+
+## Products
+
+Three independent products share one codebase, one Rivus profile, and one delivery surface:
+
+| Product | CLI / Tool | Sources | Config | State |
+| --- | --- | --- | --- | --- |
+| Morning digest (技术订阅日报) | `rss-summary digest` / `rss-summary/generate-digest` | GitHub Home + `feeds.json` | env + `feeds.json` | `.state/feed-state.json` (only-new) |
+| Noon/evening news (午间/晚间热点) | `rss-summary/generate-news-brief` | Doubao web search | `news-topics.json` | none |
+| Signal brief (高信号速览) | `rss-summary signal` / `rss-summary/generate-signal-brief` | GitHub Search + HN Algolia + official-domain Doubao | `signal-sources.json` | none (in-run dedupe) |
+
+Personal RSS answers "what did sources I trust publish?"; signal answers "what rose or shipped in public AI×dev?"; news answers "what happened in the last hours?". They do not share a subscription list.
 
 ## High-Level Flow
 
@@ -12,6 +24,7 @@ flowchart TD
   RivusSchedule["Rivus Automation"] --> Plugin["src/presentation/rivus-plugin.ts"]
   Plugin --> FeedAdapter["src/presentation/rivus-digest.ts feed adapter"]
   Plugin --> NewsBrief["src/application/news-brief.ts news application service"]
+  Plugin --> SignalBrief["src/application/signal-brief.ts signal application service"]
   FeedAdapter --> Digest
   CLI --> Digest["src/application/digest.ts digest workflow"]
   CLI --> FeedsCommand["src/presentation/feeds-cli.ts feed management"]
@@ -36,7 +49,7 @@ flowchart TD
   Doubao --> NewsDomain["src/domain/news.ts validate + dedupe + rank"]
   NewsDomain --> NewsRender["src/presentation/news-render.ts mobile Markdown"]
 
-  SignalSources["signal-sources.json"] --> SignalBrief["src/application/signal-brief.ts signal application service"]
+  SignalSources["signal-sources.json"] --> SignalBrief
   SignalBrief --> HackerNews["src/infrastructure/hacker-news.ts HN Algolia"]
   SignalBrief --> GithubSearch["src/infrastructure/github-search.ts GitHub Search API"]
   SignalBrief --> Doubao
@@ -46,52 +59,74 @@ flowchart TD
   FeedsCommand --> FeedStore["src/infrastructure/feed-store.ts feeds.json"]
 ```
 
-## Runtime Boundaries
+## Layered Structure
 
-The source tree is organized into four layers (domain → application → infrastructure → presentation). Dependencies point inward: domain has no IO and imports nothing outside `domain/`; application composes use cases over ports and adapters; presentation owns entrypoints (CLI, Rivus Plugin) and rendering.
+The source tree is organized into four layers. **Dependencies point inward**: `presentation` and `infrastructure` may import `application` and `domain`; `application` may import `domain` and (for default wiring) `infrastructure`; `domain` imports nothing outside `domain/`.
 
-- **Domain** (`src/domain/`): pure rules and models, zero IO, no Effect. `digest.ts` normalizes GitHub events and ranks `CandidateProject` records; `news.ts` validates time/source authority, canonicalizes URLs, merges duplicate hits, and applies topic quotas; `signal.ts` filters and scores updates and repos, collapses duplicate events, and applies signal quotas with soft model/product balance; `time.ts` owns calendar-day and rolling windows; `text.ts` is the shared text/URL kernel (canonicalization, publish-time parsing, summary compaction, same-event collapse).
-- **Application** (`src/application/`): use cases return `Effect<Result, Error>` (`Effect.gen` + `Effect.tryPromise` at port boundaries via `src/application/effect.ts`). `digest.ts` owns collection/enrichment/state orchestration; `news-brief.ts` defines noon/evening windows and fans out bounded queries; `signal-brief.ts` resolves the daily window and fans out to the three public sources. Use cases accept injectable port functions (deps objects) and default to real adapters.
-- **Infrastructure** (`src/infrastructure/`): adapters and IO. `github-home.ts`, `github.ts`, `rss.ts`, `doubao-search.ts`, `hacker-news.ts`, `github-search.ts` are source clients; `config.ts` reads env/args/`feeds.json`; `news-topics.ts` and `signal-sources.ts` load and validate the tracked JSON policies; `state.ts`, `feed-store.ts`, `notifier.ts` persist/notify; `parsing.ts` holds shared validation/JSON helpers.
-- **Presentation** (`src/presentation/`): entrypoints and output. `cli.ts` routes `rss-summary digest|feeds|github-home|signal`; `rivus-plugin.ts` registers one profile, three observe-only Tools, and four Automation templates; `rivus-digest.ts`, `feeds-cli.ts`, `signal-cli.ts`, `github-home-cli.ts` are thin command adapters; `render.ts`, `news-render.ts`, `signal-render.ts` format Markdown/JSON over the shared `markdown.ts` helpers. Presentation owns the `Effect.runPromise` boundary.
+```
+src/
+  domain/          pure rules and models, zero IO, no Effect, no infra imports
+    digest.ts      ActivityCard normalization + CandidateProject ranking
+    news.ts        NewsTopic policy + story validate/dedupe/rank
+    signal.ts      SignalItem contract + filter/score/dedupe/quotas
+    time.ts        calendar-day + rolling + explicit windows (shared kernel)
+    text.ts        URL canonicalization, publish-time parsing, summary
+                   compaction, same-event title collapse (shared kernel)
+  application/     use cases; return Effect<Result, Error>
+    digest.ts      collection/enrichment/state orchestration (run + buildDigestDocument)
+    news-brief.ts  noon/evening windows + bounded query fan-out
+    signal-brief.ts daily window + three-source fan-out
+    effect.ts      attempt(): lifts promise ports into the typed Error channel
+  infrastructure/  adapters and IO
+    github-home.ts, github.ts, github-search.ts, hacker-news.ts,
+    doubao-search.ts, rss.ts, config.ts, news-topics.ts, signal-sources.ts,
+    state.ts, feed-store.ts, notifier.ts, parsing.ts (shared helpers)
+  presentation/    entrypoints and rendering
+    cli.ts, feeds-cli.ts, signal-cli.ts, github-home-cli.ts,
+    rivus-plugin.ts, rivus-digest.ts,
+    render.ts, news-render.ts, signal-render.ts, markdown.ts (shared helpers)
+```
 
-Side-effect management: application and presentation use `effect` (Effect 3). Domain stays framework-free, so every rule is directly unit-testable. The `attempt` helper (`src/application/effect.ts`) lifts promise-returning ports into the typed `Error` channel; entrypoints run effects with `Effect.runPromise`.
+Layer rules (enforced by convention, not a tool):
 
-- Source adapters: `src/infrastructure/github-home.ts`, `github.ts`, and `rss.ts` feed the technical digest. `src/infrastructure/doubao-search.ts` is the bounded web-news adapter; it requests an exact calendar day, query rewrite, URLs, and the required source-authority level.
-- Local persistence: `src/infrastructure/feed-store.ts` manages RSS subscriptions. `src/infrastructure/state.ts` manages local digest state.
-- Rivus boundary: `src/presentation/rivus-plugin.ts` registers one profile, three observe-only Tools, and the morning/noon/evening/signal templates. `src/presentation/rivus-digest.ts`, `src/application/news-brief.ts`, and `src/application/signal-brief.ts` validate Tool input and call their application workflows; neither owns scheduling or Feishu delivery.
-- Skills: `skills/*` describe how Codex should configure, run, research, or manage feeds using this repo.
+- **Domain is pure.** No IO, no Effect, no `process`, no imports outside `domain/`. Every rule is a pure function over plain data, which keeps the 123+ unit tests under two seconds with zero network.
+- **Application owns orchestration.** Use cases accept injectable port functions (deps objects) and default to real adapters; they never talk to Rivus or Feishu.
+- **Infrastructure owns adapters.** Clients stay imperative async classes; shared JSON/validation helpers live in `parsing.ts`.
+- **Presentation owns entrypoints.** CLI commands and the Rivus Plugin wrap application effects with `Effect.runPromise`; renderers only format already-selected data.
 
-## Domain Model
+## Side-Effect Management (Effect)
 
-`ActivityCard` is the normalized input unit. GitHub events and RSS items both become activity cards with a source, actor, repository-like identifier, timestamp, title, summary, and link fields.
+[Effect](https://effect.website) (3.x) manages side effects at the application boundary:
 
-`CandidateProject` is the ranked output unit. It groups related cards by repository or article identity, records actors and event types, assigns a category, and explains why the item is worth attention.
+- Application use cases return `Effect<Result, Error>`; failures are typed as `Error`.
+- `attempt()` in `application/effect.ts` lifts promise-returning ports into the `Error` channel via `Effect.tryPromise`; per-source failure isolation keeps the existing `Promise.allSettled` semantics.
+- Domain rules stay framework-free; the `Error` channel exists only at the application layer.
+- Entrypoints run effects with `Effect.runPromise`.
 
-Current candidate categories:
+Adoption is deliberately shallow: deps-object injection (not `Context`/`Layer` services), no retry/clock/logging services. See `docs/technology-decisions.md` for when to deepen it.
 
-- `discovery`: stars, forks, newly created repositories, trending repositories, recommendations, and follows.
-- `activity`: pull request activity and other project movement.
-- `release`: release events.
-- `article`: RSS/Atom items.
+## Data-Flow View
 
-Current high-signal event types:
+Every product is the same pipeline with different steps: **ingest → filter → rank → select → render → deliver**. The layered structure is a "layered pipeline": domain steps are pure, application wires them with IO, presentation renders.
 
-- GitHub Home rendered cards as `pull_request`, `fork`, `create`, `watch`, `trending`, `recommendation`, `follow`, `announcement`, or `release`.
-- GitHub `WatchEvent` as `watch`.
-- GitHub `PullRequestEvent` as `pull_request`.
-- GitHub `ReleaseEvent` as `release`.
-- GitHub `ForkEvent` as `fork`.
-- GitHub repository `CreateEvent` as `create`.
-- RSS/Atom entries as `article`.
+| Stage | Digest | News brief | Signal brief |
+| --- | --- | --- | --- |
+| Ingest | GitHub Home/events + RSS | Doubao queries per topic | Doubao official intents + HN + GitHub Search |
+| Filter | `domain/time.ts` window | time + authority + window | time window + awesome exclusion + window |
+| Rank | `domain/digest.ts` scores | `domain/news.ts` scores | `domain/signal.ts` scores |
+| Select | state `onlyNew` | per-topic + 8 cap | quotas + soft model/product balance |
+| Render | `presentation/render.ts` | `presentation/news-render.ts` | `presentation/signal-render.ts` |
+| Deliver | notifier / webhook | Rivus card | Rivus card |
+
+The three pipelines intentionally do not share an abstraction: digest has state and GitHub-specific enrichment, news has topic quotas and authority checks, signal has multi-source agreement and repo metrics. A unified pipeline framework would buy nothing and cost configurability.
 
 ## Digest Workflow
 
-`rss-summary digest` currently runs this sequence:
+`rss-summary digest` runs this sequence:
 
 1. `src/infrastructure/config.ts` reads environment variables, CLI flags, optional `feeds.json`, and default interests.
-2. `src/application/digest.ts` fetches GitHub Home cards and RSS/Atom feeds in parallel. If `GITHUB_HOME_FETCH=conduit`, it directly fetches `/conduit/for_you_feed?requested_from_filter_event=true` with the saved web session and falls back to rendered browser parsing. If `GITHUB_FEED_SOURCE=events`, it fetches REST `received_events` instead. If `--rss-only` or `FEED_RSS_ONLY=true` is set, GitHub fetching is skipped.
-3. `src/domain/time.ts` filters events by either an explicit calendar day or a rolling hour window.
+2. `src/application/digest.ts` fetches GitHub Home cards and RSS/Atom feeds in parallel. With `GITHUB_HOME_FETCH=conduit` it fetches `/conduit/for_you_feed?requested_from_filter_event=true` with the saved web session and falls back to rendered browser parsing. With `GITHUB_FEED_SOURCE=events` it fetches REST `received_events`. With `--rss-only` / `FEED_RSS_ONLY=true`, GitHub fetching is skipped.
+3. `src/domain/time.ts` filters events by an explicit calendar day or a rolling hour window.
 4. `src/infrastructure/github.ts` optionally fetches followed accounts, repository metadata, and up to 20 pull request details.
 5. `src/domain/digest.ts` builds ranked `CandidateProject` records from normalized events.
 6. `src/infrastructure/state.ts` filters previously seen event IDs when `--only-new` is set.
@@ -99,7 +134,7 @@ Current high-signal event types:
 8. `src/infrastructure/notifier.ts` writes to stdout and optionally sends `{ "text": markdown }` to `NOTIFY_WEBHOOK_URL`.
 9. If `--only-new` is set and the run is not `--dry-run`, `.state/feed-state.json` is updated with seen event IDs.
 
-`buildDigestDocument` exposes steps 1–6 as a delivery-free application boundary. The CLI renders and delivers the returned document, while the Rivus adapter renders it as Markdown and forces dry-run mode. Rivus `0.3.x` promotes the first Markdown heading into a proactive Feishu card header and owns the card delivery. Both entrypoints therefore share one collection and ranking implementation without importing Feishu concerns into this repository.
+`buildDigestDocument` exposes steps 1–6 as a delivery-free application boundary. The CLI renders and delivers; the Rivus adapter renders as Markdown and forces dry-run mode. Rivus `0.3.x` promotes the first Markdown heading into a proactive Feishu card header and owns delivery. Both entrypoints share one collection and ranking implementation.
 
 For scheduled daily summaries, prefer explicit calendar-day mode:
 
@@ -109,9 +144,21 @@ FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --only-new
 
 Without `FEED_DAY` or `--day`, the CLI uses the compatibility rolling window from `FEED_WINDOW_HOURS`, defaulting to 36 hours.
 
+## News Brief Workflow
+
+The Rivus Tool `rss-summary/generate-news-brief` (or tests calling `generateRivusNewsBrief`) runs this sequence:
+
+1. `src/infrastructure/news-topics.ts` loads `news-topics.json`; env overrides: `NEWS_TOPICS_FILE`, `NEWS_SEARCH_COUNT_PER_QUERY`, `NEWS_SEARCH_TIMEOUT_MS`.
+2. `src/application/news-brief.ts` resolves the non-overlapping noon (00:00–12:30) or evening (12:30–occurrence) window from the occurrence and `FEED_TIMEZONE_OFFSET`.
+3. One bounded Doubao search runs per enabled topic query (`sourcePolicy: "official"` requires `AuthInfoLevel=1`; `authoritative` accepts 1–2), each scoped to the local calendar day.
+4. `src/domain/news.ts` independently rechecks publication time and authority, canonicalizes URLs, merges duplicate hits, collapses the same event across publishers, ranks stories, and applies per-topic quotas with a hard 8-story cap.
+5. `src/presentation/news-render.ts` emits `# 午间热点 · YYYY-MM-DD` / `# 晚间热点 · YYYY-MM-DD` with two-sentence summaries, source, and time.
+
+Partial query failures produce a `数据源状态` warning; if every query fails, the Tool fails so Rivus can apply its normal failure handling.
+
 ## Signal Brief Workflow
 
-`rss-summary signal` (or the Rivus Tool `rss-summary/generate-signal-brief`) answers “what shipped or rose in public AI×dev today”:
+`rss-summary signal` (or the Rivus Tool `rss-summary/generate-signal-brief`) answers "what shipped or rose in public AI×dev today":
 
 1. `src/infrastructure/signal-sources.ts` loads `signal-sources.json`; env overrides: `SIGNAL_SOURCES_FILE`, `SIGNAL_SEARCH_TIMEOUT_MS`.
 2. `src/application/signal-brief.ts` resolves the local calendar day (from `occurrence` or explicit `day`) and fans out in parallel:
@@ -121,11 +168,11 @@ Without `FEED_DAY` or `--day`, the CLI uses the compatibility rolling window fro
 3. `src/domain/signal.ts` rechecks publication windows, canonicalizes URLs, collapses the same event across publishers, scores deterministically (official-domain, HN points, frontend keywords, recency, cross-source agreement for updates; stars, newness, language/topic match, description/language penalties for repos), and applies quotas (`maxTotal` 8, `updates` 5 with soft model/product balance, `opensource` 4).
 4. `src/presentation/signal-render.ts` emits `# 高信号速览 · YYYY-MM-DD` with two optional sections and omits empty ones.
 
-There is no persistent `.state` for signal briefs; dedupe is in-run only. The CLI is inherently dry-run (read-only, no webhook).
+There is no persistent `.state` for signal briefs; dedupe is in-run only. The CLI is inherently dry-run (read-only, no webhook). The pipeline never reads `feeds.json` and never calls `RssClient`.
 
 ## Feed Management Workflow
 
-RSS/Atom sources are maintained in the tracked `feeds.json` file. The CLI manages that shared subscription list through `src/presentation/feeds-cli.ts` and `src/infrastructure/feed-store.ts`:
+RSS/Atom sources are maintained in the tracked `feeds.json` file. `src/presentation/feeds-cli.ts` manages the shared subscription list over `src/infrastructure/feed-store.ts`:
 
 ```bash
 rss-summary feeds add --url "https://example.com/feed.xml" --name "Example" --tags "ai,agent"
@@ -136,19 +183,23 @@ rss-summary feeds remove --url "https://example.com/feed.xml"
 
 Commit intentional `feeds.json` changes through the pull request workflow. The digest command always uses the tracked `feeds.json` as its RSS source list.
 
+## Domain Model
+
+`ActivityCard` is the normalized input unit for the digest. GitHub events and RSS items both become activity cards with a source, actor, repository-like identifier, timestamp, title, summary, and link fields.
+
+`CandidateProject` is the ranked output unit. It groups related cards by repository or article identity, records actors and event types, assigns a category, and explains why the item is worth attention (`reasons`).
+
+`NewsStory` / `SignalItem` are the ranked output units of their products, each carrying enough explainable metadata (score + reasons; for signal also metrics like stars/age/language) to render without re-deriving domain logic.
+
 ## Research Workflow
 
-Deep research is currently a Codex skill workflow, not a deterministic CLI subcommand.
-
-The CLI can emit machine-readable candidates:
+Deep research is a Codex skill workflow, not a deterministic CLI subcommand. The CLI can emit machine-readable candidates:
 
 ```bash
 rss-summary digest --json --only-new --dry-run
 ```
 
-`skills/feed-research-digest` consumes those candidates and instructs Codex to inspect the relevant repository, PR, release, README, docs, or article page before deciding whether an item is worth attention.
-
-The state file already has a `researched` field, but the CLI does not yet write or filter by it. Today, `--only-new` tracks seen event IDs. A future research-cache feature should wire `state.researched` into the research workflow so previously researched repositories/articles are skipped or summarized differently.
+`skills/feed-research-digest` consumes those candidates and instructs Codex to inspect the relevant repository, PR, release, README, docs, or article page before deciding whether an item is worth attention. The state file has a `researched` field the CLI does not yet write or filter by.
 
 ## GitHub Identity And Visibility
 
@@ -181,4 +232,5 @@ Keep `GH_FEED_TOKEN`, `.env`, and `.state/` out of git. `feeds.json` is intentio
 - `researched` state exists in the schema but is not yet used by the CLI.
 - Webhook delivery is generic only.
 - RSS deduplication is based on generated item IDs, not content similarity.
+- Doubao official-search hits with a missing/unparseable `PublishTime` are dropped by the window filter without a warning (query is day-scoped, so impact is bounded).
 - This repository has no built-in daemon; a consuming Rivus deployment can host the exported Automation.
