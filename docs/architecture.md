@@ -61,7 +61,77 @@ flowchart TD
 
 ## Layered Structure
 
-The source tree is organized into four layers. **Dependencies point inward**: `presentation` and `infrastructure` may import `application` and `domain`; `application` may import `domain` and (for default wiring) `infrastructure`; `domain` imports nothing outside `domain/`.
+Four folders under `src/` split **jobs**, not a forced run order. Think of them as four drawers:
+
+| Layer | Job (plain language) | May touch network / files? |
+| --- | --- | --- |
+| **domain** | Rules: score, dedupe, quotas — the **referee** | No |
+| **application** | Workflow: who to call today, how to degrade — the **director** | Only by calling others |
+| **infrastructure** | Adapters: HTTP clients, JSON loaders — the **runners** | Yes |
+| **presentation** | Entrypoints + layout: CLI / Rivus / Markdown — the **front desk + typesetter** | Entrypoint wiring only |
+
+This is **not** a linear dependency chain `domain → application → infrastructure → presentation`.  
+It is **onion / inward dependencies**: outer layers may use inner ones; **domain depends on nothing outside itself**.
+
+```text
+              presentation          (CLI, Rivus, Markdown)
+             /      |      \
+            v       v       v
+     application  domain  infrastructure
+            \       ^       /
+             \      |      /
+              ------+------
+```
+
+| Layer | May import | Must not import |
+| --- | --- | --- |
+| **domain** | only `domain/*` | application, infrastructure, presentation, Effect, Node IO |
+| **application** | domain; infrastructure for default wiring | **presentation** (render is injected or done at the entrypoint) |
+| **infrastructure** | domain (types / shapes) | application, presentation |
+| **presentation** | application, domain, infrastructure (as composition root) | — (outermost) |
+
+Import guards for domain purity and `application ↛ presentation` are enforced by ESLint (`eslint.config.js`) plus `pnpm test:layout` for the mirrored test tree.
+
+### Runtime vs import direction
+
+Easy to mix up:
+
+| Concept | Direction |
+| --- | --- |
+| **Imports (compile-time)** | Outer → inner (presentation / application / infrastructure → domain) |
+| **Data flow (run-time)** | roughly ingest (infra) → filter/rank/select (domain) → render (presentation), **orchestrated by application** |
+
+So application is the **director**, infrastructure the **runners**, domain the **referee**, presentation the **front desk + typesetter** — not “domain first, then application, then infra, then presentation” as a single cascade of imports.
+
+### Walkthrough: `rss-summary signal --day …`
+
+1. **presentation** `signal-cli.ts` — parse `--day`, call application, write markdown to stdout.  
+2. **application** `signal-brief.ts` — resolve the calendar day; fan out to Doubao / HN / GitHub Search; record per-source warnings; hand candidates to domain.  
+3. **domain** `signal.ts` — pure filter / score / dedupe / soft balance / quotas → `SignalItem[]` (still data, not Markdown).  
+4. **presentation** `signal-render.ts` — format `# 高信号速览 · day` sections.  
+
+Swap CLI for Rivus (`rivus-plugin.ts`) and the same application + domain path runs; only the entrypoint changes.
+
+### Why four drawers (test angle)
+
+| You want to prove… | Test which layer | Need live network? |
+| --- | --- | --- |
+| “awesome-* repos are dropped” | domain | No — fake hits |
+| “HN down still yields 开源” | application | Mock the three search ports |
+| “Algolia query string is correct” | infrastructure | Mock `fetch` |
+| “`--day` without a value exits 1” | presentation | Mock `generate` |
+
+### What this is *not* (full tactical DDD)
+
+The layout is **DDD-inspired layered architecture**, deliberately thin:
+
+- No Aggregate / Repository interface layer; application may construct concrete infrastructure clients (deps-object injection for tests).
+- Domain is mostly **pure functions over DTOs**, not long-lived entities.
+- Shared kernels (`domain/text.ts`, `domain/time.ts`) serve all three products in one package.
+
+Deepening toward ports-only application + interface implementations is documented as a future option in `docs/technology-decisions.md`, not a current requirement.
+
+### Tree map
 
 ```
 src/
@@ -87,12 +157,12 @@ src/
     render.ts, news-render.ts, signal-render.ts, markdown.ts (shared helpers)
 ```
 
-Layer rules (enforced by convention, not a tool):
+Layer rules (summary):
 
-- **Domain is pure.** No IO, no Effect, no `process`, no imports outside `domain/`. Every rule is a pure function over plain data, which keeps the 123+ unit tests under two seconds with zero network.
-- **Application owns orchestration.** Use cases accept injectable port functions (deps objects) and default to real adapters; they never talk to Rivus or Feishu.
+- **Domain is pure.** No IO, no Effect, no `process`, no imports outside `domain/`. Rules are pure functions over plain data so the unit suite stays network-free and fast.
+- **Application owns orchestration.** Use cases accept injectable deps objects and default to real adapters; they never talk to Rivus or Feishu, and they do not import presentation renderers.
 - **Infrastructure owns adapters.** Clients stay imperative async classes; shared JSON/validation helpers live in `parsing.ts`.
-- **Presentation owns entrypoints.** CLI commands and the Rivus Plugin wrap application effects with `Effect.runPromise`; renderers only format already-selected data.
+- **Presentation owns entrypoints.** CLI / Rivus wrap application effects with `Effect.runPromise`; renderers only format already-selected data.
 
 ## Side-Effect Management (Effect)
 
@@ -165,7 +235,7 @@ Partial query failures produce a `数据源状态` warning; if every query fails
    - Doubao official search (`sourcePolicy: "official"`, one query per configured intent, kind `model` or `product`),
    - Hacker News Algolia (`search_by_date`, `points>minPoints`, optional `show_hn` tag), filtered to the day and re-ranked by points,
    - GitHub Repository Search (`created:>=`, `stars:>`, free-text keyword `OR`), sorted by stars.
-3. `src/domain/signal.ts` rechecks publication windows, canonicalizes URLs, collapses the same event across publishers, scores deterministically (official-domain, HN points, frontend keywords, recency, cross-source agreement for updates; stars, newness, language/topic match, description/language penalties for repos), and applies quotas (`maxTotal` 8, `updates` 5 with soft model/product balance, `opensource` 4).
+3. `src/domain/signal.ts` rechecks publication windows, applies HN AI×dev title relevance (word-boundary keywords), canonicalizes URLs, collapses the same event across publishers, scores deterministically (official-domain, HN points, frontend keywords, recency, cross-source agreement for updates; stars, newness, language/topic match, description/language penalties for repos), and applies quotas (`maxTotal` 8, `updates` 5 with soft model/product balance then score-desc display order, `opensource` 4). GitHub Search free-text uses `topics` (languages are a domain scoring bias only).
 4. `src/presentation/signal-render.ts` emits `# 高信号速览 · YYYY-MM-DD` with two optional sections and omits empty ones.
 
 There is no persistent `.state` for signal briefs; dedupe is in-run only. The CLI is inherently dry-run (read-only, no webhook). The pipeline never reads `feeds.json` and never calls `RssClient`.

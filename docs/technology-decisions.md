@@ -43,7 +43,9 @@ Deliberately not adopted yet:
 
 ## Architecture Organization
 
-Chosen: **layered DDD (domain → application → infrastructure → presentation) with pipeline-shaped use cases** (see `docs/architecture.md`).
+Chosen: **DDD-inspired layered architecture with pipeline-shaped use cases** (see `docs/architecture.md` § Layered Structure).
+
+Dependencies are **inward** (onion), not a linear `domain → application → infrastructure → presentation` import chain: domain is the pure center; application directs workflows; infrastructure runs adapters; presentation is the entrypoint and renderer. Plain-language roles: referee / director / runners / front desk.
 
 Alternatives considered and rejected:
 
