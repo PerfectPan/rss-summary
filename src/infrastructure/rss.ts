@@ -1,7 +1,9 @@
 import { XMLParser } from "fast-xml-parser";
+import castArray from "lodash-es/castArray.js";
 
-import type { FeedSubscription } from "./config.js";
 import type { ActivityCard } from "../domain/digest.js";
+import type { FeedSubscription } from "./config.js";
+import { asRecord } from "./parsing.js";
 
 type RssClientOptions = {
   fetch?: typeof fetch;
@@ -48,12 +50,12 @@ export function parseFeedXml(xml: string, feed: FeedSubscription): ActivityCard[
   const root = asRecord(parser.parse(xml));
   const rssChannel = asRecord(asRecord(root.rss).channel);
   if (Object.keys(rssChannel).length > 0) {
-    return toArray(rssChannel.item).map((item) => normalizeRssItem(asRecord(item), feed));
+    return xmlChildren(rssChannel.item).map((item) => normalizeRssItem(asRecord(item), feed));
   }
 
   const atomFeed = asRecord(root.feed);
   if (Object.keys(atomFeed).length > 0) {
-    return toArray(atomFeed.entry).map((entry) => normalizeAtomEntry(asRecord(entry), feed));
+    return xmlChildren(atomFeed.entry).map((entry) => normalizeAtomEntry(asRecord(entry), feed));
   }
 
   return [];
@@ -108,11 +110,17 @@ function normalizeAtomEntry(entry: XmlRecord, feed: FeedSubscription): ActivityC
 }
 
 function atomLink(value: unknown): string | undefined {
-  const links = toArray(value);
+  const links = xmlChildren(value);
   const alternate = links
-    .map(asRecord)
+    .map((link) => asRecord(link))
     .find((link) => text(link["@_rel"]) === "alternate" || !text(link["@_rel"]));
   return text(alternate?.["@_href"]) ?? text(value);
+}
+
+/** XML nodes: missing → [], single → [node], list → list (lodash castArray + undefined guard). */
+function xmlChildren(value: unknown): unknown[] {
+  if (value === undefined) return [];
+  return castArray(value);
 }
 
 function normalizeDate(value: string | undefined): string {
@@ -151,13 +159,4 @@ function decodeHtmlEntities(value: string): string {
     .replace(/&#x([0-9a-f]+);/giu, (_, codepoint: string) =>
       String.fromCodePoint(Number.parseInt(codepoint, 16)),
     );
-}
-
-function toArray(value: unknown): unknown[] {
-  if (Array.isArray(value)) return value;
-  return value === undefined ? [] : [value];
-}
-
-function asRecord(value: unknown): XmlRecord {
-  return value && typeof value === "object" ? (value as XmlRecord) : {};
 }

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import type { NewsSourcePolicy, NewsTopic } from "../domain/news.js";
+import { requireRecord } from "./parsing.js";
 
 const defaultTopicsFile = fileURLToPath(new URL("../../news-topics.json", import.meta.url));
 const topicIdPattern = /^[a-z][a-z0-9-]*$/u;
@@ -27,7 +28,7 @@ export function parseNewsTopics(value: string): NewsTopic[] {
 
   const ids = new Set<string>();
   const topics = parsed.map((item, index) => {
-    const record = asRecord(item, `news topic ${index + 1}`);
+    const record = requireRecord(item, `news topic ${index + 1}`);
     const id = requiredString(record.id, `news topic ${index + 1} id`);
     if (!topicIdPattern.test(id)) throw new Error(`News topic id must use kebab-case: ${id}`);
     if (ids.has(id)) throw new Error(`Duplicate news topic id: ${id}`);
@@ -68,12 +69,6 @@ export function parseNewsTopics(value: string): NewsTopic[] {
 function parseSourcePolicy(value: unknown, id: string): NewsSourcePolicy {
   if (value === "authoritative" || value === "official") return value;
   throw new Error(`News topic ${id} sourcePolicy must be authoritative or official.`);
-}
-
-function asRecord(value: unknown, label: string): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error(`${label} must be an object.`);
-  return value as Record<string, unknown>;
 }
 
 function requiredString(value: unknown, label: string): string {

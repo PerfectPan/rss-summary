@@ -2,9 +2,11 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   asRecord,
+  asRecordOrNull,
   boundedInteger,
   hostnameOf,
   number,
+  requireRecord,
   text,
 } from "../../src/infrastructure/parsing.js";
 
@@ -20,6 +22,10 @@ describe("infrastructure/parsing", () => {
     expect(hostnameOf("not-a-url")).toBe("not-a-url");
     expect(asRecord({ a: 1 })).toEqual({ a: 1 });
     expect(asRecord(null)).toEqual({});
+    expect(asRecordOrNull({ a: 1 })).toEqual({ a: 1 });
+    expect(asRecordOrNull([])).toBeNull();
+    expect(requireRecord({ a: 1 }, "x")).toEqual({ a: 1 });
+    expect(() => requireRecord([], "x")).toThrow(/must be an object/i);
     expect(text("  hi  ")).toBe("hi");
     expect(text(3)).toBe("3");
     expect(text("")).toBeUndefined();

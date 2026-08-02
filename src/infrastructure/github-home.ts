@@ -5,6 +5,7 @@ import { createInterface } from "node:readline/promises";
 import { load } from "cheerio";
 
 import type { ActivityCard, ActivityType } from "../domain/digest.js";
+import { asRecordOrNull } from "./parsing.js";
 
 export type HomeFeedLinkSnapshot = {
   text: string;
@@ -346,16 +347,10 @@ function parseHydroFeedCard(value: string | undefined): Record<string, unknown> 
   if (!value) return null;
   try {
     const parsed = JSON.parse(value) as { payload?: { feed_card?: unknown } };
-    return asRecord(parsed.payload?.feed_card);
+    return asRecordOrNull(parsed.payload?.feed_card);
   } catch {
     return null;
   }
-}
-
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
 }
 
 function absoluteGithubHref(href: string): string {

@@ -1,3 +1,5 @@
+import { asRecord } from "./record.js";
+
 export type ActivitySource = "github" | "rss";
 
 export type ActivityType =
@@ -359,8 +361,4 @@ function optionalString(value: unknown): string | undefined {
 
 function optionalNumber(value: unknown): number | undefined {
   return typeof value === "number" ? value : undefined;
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }

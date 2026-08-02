@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import type { SignalFrontendBias, SignalQuotas, SignalScoring } from "../domain/signal.js";
+import { requireRecord } from "./parsing.js";
 
 export type SignalHackerNewsConfig = {
   minPoints: number;
@@ -46,13 +47,15 @@ export function loadSignalSources(filePath = defaultConfigFile): SignalSourceCon
 }
 
 export function parseSignalSources(value: string): SignalSourceConfig {
-  const parsed = asRecord(JSON.parse(value), "signal source configuration");
-  const quotas = parseQuotas(asRecord(parsed.quotas, "quotas"));
-  const frontendBias = parseFrontendBias(asRecord(parsed.frontendBias, "frontendBias"));
-  const scoring = parseScoring(asRecord(parsed.scoring, "scoring"));
-  const hackerNews = parseHackerNews(asRecord(parsed.hackerNews, "hackerNews"));
-  const githubSearch = parseGithubSearch(asRecord(parsed.githubSearch, "githubSearch"));
-  const officialSearch = parseOfficialSearch(asRecord(parsed.officialSearch, "officialSearch"));
+  const parsed = requireRecord(JSON.parse(value), "signal source configuration");
+  const quotas = parseQuotas(requireRecord(parsed.quotas, "quotas"));
+  const frontendBias = parseFrontendBias(requireRecord(parsed.frontendBias, "frontendBias"));
+  const scoring = parseScoring(requireRecord(parsed.scoring, "scoring"));
+  const hackerNews = parseHackerNews(requireRecord(parsed.hackerNews, "hackerNews"));
+  const githubSearch = parseGithubSearch(requireRecord(parsed.githubSearch, "githubSearch"));
+  const officialSearch = parseOfficialSearch(
+    requireRecord(parsed.officialSearch, "officialSearch"),
+  );
   if (officialSearch.intents.length > 0) {
     const modelCount = officialSearch.intents.filter(({ kind }) => kind === "model").length;
     const productCount = officialSearch.intents.filter(({ kind }) => kind === "product").length;
@@ -216,7 +219,7 @@ function parseOfficialSearch(record: Record<string, unknown>): SignalOfficialSea
   return {
     domains: stringList(record.domains, "officialSearch.domains"),
     intents: intents.map((item, index) => {
-      const intent = asRecord(item, `officialSearch.intents[${index}]`);
+      const intent = requireRecord(item, `officialSearch.intents[${index}]`);
       const kind = intent.kind;
       if (kind !== "model" && kind !== "product") {
         throw new Error(`officialSearch.intents[${index}] kind must be model or product.`);
@@ -243,12 +246,6 @@ function stringList(value: unknown, label: string): string[] {
     }
     return item.trim();
   });
-}
-
-function asRecord(value: unknown, label: string): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new Error(`${label} must be an object.`);
-  return value as Record<string, unknown>;
 }
 
 function requiredString(value: unknown, label: string): string {

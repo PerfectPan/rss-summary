@@ -1,9 +1,21 @@
 import isFinite from "lodash-es/isFinite.js";
 import isNumber from "lodash-es/isNumber.js";
-import isPlainObject from "lodash-es/isPlainObject.js";
 import isString from "lodash-es/isString.js";
 import toString from "lodash-es/toString.js";
 import trim from "lodash-es/trim.js";
+
+import { asRecord, isRecord } from "../domain/record.js";
+
+export { asRecord, isRecord };
+
+export function requireRecord(value: unknown, label: string): Record<string, unknown> {
+  if (!isRecord(value)) throw new Error(`${label} must be an object.`);
+  return value;
+}
+
+export function asRecordOrNull(value: unknown): Record<string, unknown> | null {
+  return isRecord(value) ? value : null;
+}
 
 export function boundedInteger(
   value: string | undefined,
@@ -24,10 +36,6 @@ export function hostnameOf(value: string): string {
   } catch {
     return value;
   }
-}
-
-export function asRecord(value: unknown): Record<string, unknown> {
-  return isPlainObject(value) ? (value as Record<string, unknown>) : {};
 }
 
 export function text(value: unknown): string | undefined {
