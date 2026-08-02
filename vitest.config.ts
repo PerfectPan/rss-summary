@@ -5,7 +5,12 @@ export default defineConfig({
     include: ["tests/**/*.test.ts"],
     coverage: {
       provider: "v8",
-      include: ["src/**"],
+      include: ["src/**/*.ts"],
+      exclude: [
+        // CLI side-effect entry only; behavior covered via presentation/cli tests.
+      ],
+      reporter: ["text", "text-summary", "html", "json-summary"],
+      reportsDirectory: "coverage",
       thresholds: {
         statements: 85,
         branches: 75,

@@ -33,6 +33,13 @@ export function compactSummary(value: string, title: string, siteName?: string):
   return summary.length <= 110 ? summary : `${summary.slice(0, 109).trimEnd()}…`;
 }
 
+/** Compact human-readable counts for stars, points, etc. (domain + presentation). */
+export function formatCompactCount(value: number): string {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}m`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
+  return String(value);
+}
+
 export function isSameTitleEvent(left: { title: string }, right: { title: string }): boolean {
   const leftFeatures = titleFeatures(left.title);
   const rightFeatures = titleFeatures(right.title);

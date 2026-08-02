@@ -1,5 +1,5 @@
 import { shiftCalendarDay, startOfCalendarDay } from "./time.js";
-import { canonicalizeUrl, compactSummary, isSameTitleEvent, parsePublishTime } from "./text.js";
+import { canonicalizeUrl, compactSummary, formatCompactCount, isSameTitleEvent, parsePublishTime } from "./text.js";
 
 export type SignalKind = "model" | "product" | "repo" | "release";
 export type SignalSection = "updates" | "opensource";
@@ -264,7 +264,7 @@ function toRepoItem(hit: SignalRepoHit, rules: SignalDomainRules): SignalItem {
 
   const starScore = Math.min(Math.sqrt(hit.stars), rules.scoring.repoStarMaxScore);
   scoreParts.push({ label: `${hit.stars}★`, value: starScore });
-  reasons.push(`${formatStars(hit.stars)} 星`);
+  reasons.push(`${formatCompactCount(hit.stars)} 星`);
 
   const ageDays = Math.max(0, Math.floor((rules.window.until - Date.parse(hit.createdAt)) / 86_400_000));
   const newness = Math.max(0, rules.createdWithinDays - ageDays) * rules.scoring.repoNewnessWeight;
@@ -391,10 +391,4 @@ function recencyScore(publishedAt: string, rules: SignalDomainRules): number {
   if (span <= 0) return 0;
   // Prefer newer items within the window: score approaches recencyMaxScore near `until`.
   return ((instant - rules.window.since) / span) * rules.scoring.recencyMaxScore;
-}
-
-function formatStars(value: number): string {
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}m`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
-  return String(value);
 }

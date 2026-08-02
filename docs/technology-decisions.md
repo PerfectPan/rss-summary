@@ -57,11 +57,18 @@ Alternatives considered and rejected:
 
 ## Testing Strategy
 
+- **Layout**: `tests/` mirrors `src/` by layer (`domain/`, `application/`, `infrastructure/`, `presentation/`). Each `src/<layer>/<name>.ts` has `tests/<layer>/<name>.test.ts`. Repo/package harness lives under `tests/repo/`. Enforced by `pnpm test:layout` (`scripts/check-test-layout.mjs`).
 - **Domain**: pure-function unit tests only — deterministic, no network, <2s for the whole suite.
 - **Application**: use cases tested with injected fake ports (deps objects), including failure isolation and quota/warning behavior.
 - **Infrastructure**: adapters tested with fixture payloads through injected `fetch`; never live network in CI. Browser automation is manually exercised and excluded from coverage.
 - **Presentation**: CLI commands and the Rivus Plugin tested through injected executors and mocked modules.
-- **Coverage gate**: `vitest --coverage` with v8 thresholds — statements ≥85%, branches ≥75%, functions ≥90%, lines ≥85% — enforced as the `Coverage` CI check on every PR.
+- **Coverage gate**: `vitest --coverage` with v8 thresholds — statements ≥85%, branches ≥75%, functions ≥90%, lines ≥85% — enforced as the `Coverage` CI check on every PR (also runs `test:layout`).
+
+## Lint
+
+- **ESLint 9** flat config (`eslint.config.js`) + `typescript-eslint` recommended.
+- Architecture import guards: `domain/**` cannot import outer layers / Effect / `node:*`; `application/**` cannot import `presentation/**`.
+- Invoked as `pnpm lint` and included in `pnpm verify`.
 
 ## CI Gates
 
@@ -69,8 +76,8 @@ Alternatives considered and rejected:
 
 | Job | Command | Fails when |
 | --- | --- | --- |
-| `Verify` | `pnpm verify` | any test failure, typecheck error, build failure, or packed-package contract break |
-| `Coverage` | `pnpm test:coverage` | coverage drops below the thresholds in `vitest.config.ts` |
+| `Verify` | `pnpm verify` | layout mismatch, lint error, test failure, typecheck error, build failure, or packed-package contract break |
+| `Coverage` | `pnpm test:layout && pnpm test:coverage` | missing mirrored tests or coverage below the thresholds in `vitest.config.ts` |
 
 Both jobs are intended to be required checks in the branch protection rule for `main` (configure in GitHub → Settings → Branches → Branch protection rules; this cannot be expressed in the workflow file itself).
 
