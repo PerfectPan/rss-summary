@@ -1,37 +1,13 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-export type SignalKind = "model" | "product" | "repo" | "release";
-export type SignalSection = "updates" | "opensource";
-
-export type SignalQuotas = {
-  maxTotal: number;
-  updates: number;
-  opensource: number;
-};
-
-export type SignalFrontendBias = {
-  languages: string[];
-  repoTopics: string[];
-  updateKeywords: string[];
-  modelTitleHints: string[];
-};
-
-export type SignalScoring = {
-  officialDomainBoost: number;
-  hnPointsMaxScore: number;
-  frontendKeywordBoost: number;
-  frontendKeywordMaxHits: number;
-  recencyMaxScore: number;
-  crossSourceBoost: number;
-  repoStarMaxScore: number;
-  repoNewnessWeight: number;
-  repoLanguageBoost: number;
-  repoTopicBoost: number;
-  repoTopicMaxHits: number;
-  repoMissingDescriptionPenalty: number;
-  repoMissingLanguagePenalty: number;
-};
+import type {
+  SignalFrontendBias,
+  SignalKind,
+  SignalQuotas,
+  SignalScoring,
+  SignalSection,
+} from "../domain/signal.js";
 
 export type SignalHackerNewsConfig = {
   minPoints: number;

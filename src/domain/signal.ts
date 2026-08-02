@@ -1,12 +1,37 @@
 import { shiftCalendarDay, startOfCalendarDay } from "./time.js";
 import { canonicalizeUrl, compactSummary, isSameTitleEvent, parsePublishTime } from "./text.js";
-import type {
-  SignalFrontendBias,
-  SignalKind,
-  SignalQuotas,
-  SignalScoring,
-  SignalSection,
-} from "../infrastructure/signal-sources.js";
+
+export type SignalKind = "model" | "product" | "repo" | "release";
+export type SignalSection = "updates" | "opensource";
+
+export type SignalQuotas = {
+  maxTotal: number;
+  updates: number;
+  opensource: number;
+};
+
+export type SignalFrontendBias = {
+  languages: string[];
+  repoTopics: string[];
+  updateKeywords: string[];
+  modelTitleHints: string[];
+};
+
+export type SignalScoring = {
+  officialDomainBoost: number;
+  hnPointsMaxScore: number;
+  frontendKeywordBoost: number;
+  frontendKeywordMaxHits: number;
+  recencyMaxScore: number;
+  crossSourceBoost: number;
+  repoStarMaxScore: number;
+  repoNewnessWeight: number;
+  repoLanguageBoost: number;
+  repoTopicBoost: number;
+  repoTopicMaxHits: number;
+  repoMissingDescriptionPenalty: number;
+  repoMissingLanguagePenalty: number;
+};
 
 export type SignalItem = {
   id: string;

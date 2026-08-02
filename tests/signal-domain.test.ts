@@ -10,7 +10,7 @@ import {
   type SignalUpdateHit,
 } from "../src/domain/signal.js";
 import { renderSignalBrief } from "../src/presentation/signal-render.js";
-import type { SignalFrontendBias, SignalQuotas, SignalScoring } from "../src/infrastructure/signal-sources.js";
+import type { SignalFrontendBias, SignalQuotas, SignalScoring } from "../src/domain/signal.js";
 
 const window = {
   day: "2026-07-29",

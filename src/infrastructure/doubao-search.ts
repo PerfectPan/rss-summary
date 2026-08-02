@@ -1,4 +1,4 @@
-import type { NewsSourcePolicy } from "./news-topics.js";
+import type { NewsSourcePolicy } from "../domain/news.js";
 import { asRecord, number, text } from "./parsing.js";
 
 export type DoubaoSearchInput = {

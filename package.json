@@ -26,8 +26,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
-    "digest": "tsx src/main.ts",
-    "feeds": "tsx src/feeds.ts",
+    "digest": "tsx src/presentation/cli.ts digest",
+    "feeds": "tsx src/presentation/cli.ts feeds",
     "package:check": "node scripts/check-package.mjs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",

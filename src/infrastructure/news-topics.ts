@@ -1,16 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-export type NewsSourcePolicy = "authoritative" | "official";
-
-export type NewsTopic = {
-  id: string;
-  label: string;
-  enabled: boolean;
-  sourcePolicy: NewsSourcePolicy;
-  maxItems: number;
-  queries: string[];
-};
+import type { NewsSourcePolicy, NewsTopic } from "../domain/news.js";
 
 const defaultTopicsFile = fileURLToPath(new URL("../../news-topics.json", import.meta.url));
 const topicIdPattern = /^[a-z][a-z0-9-]*$/u;

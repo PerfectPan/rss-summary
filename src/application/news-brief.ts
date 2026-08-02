@@ -1,9 +1,10 @@
 import { Effect } from "effect";
 
 import { buildNewsStories, selectNewsStories, type NewsSearchHit } from "../domain/news.js";
-import { calendarDayAtOffset, startOfCalendarDay } from "../domain/time.js";
+import { calendarDayAtOffset, parseOffsetMilliseconds, startOfCalendarDay } from "../domain/time.js";
 import { boundedInteger } from "../infrastructure/parsing.js";
-import { loadNewsTopics, type NewsTopic } from "../infrastructure/news-topics.js";
+import { loadNewsTopics } from "../infrastructure/news-topics.js";
+import type { NewsTopic } from "../domain/news.js";
 import { DoubaoSearchClient, type DoubaoSearchInput, type DoubaoSearchPage } from "../infrastructure/doubao-search.js";
 import { renderNewsBrief, type NewsBriefEdition } from "../presentation/news-render.js";
 import { attempt } from "./effect.js";
@@ -154,8 +155,6 @@ function topicWarnings(
 }
 
 function timeAtOffset(instant: number, timezoneOffset: string): string {
-  const sign = timezoneOffset.startsWith("-") ? -1 : 1;
-  const [hours, minutes] = timezoneOffset.slice(1).split(":").map(Number);
-  const shifted = new Date(instant + sign * ((hours ?? 0) * 60 + (minutes ?? 0)) * 60_000);
+  const shifted = new Date(instant + parseOffsetMilliseconds(timezoneOffset));
   return shifted.toISOString().slice(11, 16);
 }

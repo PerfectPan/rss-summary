@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { buildNewsStories, selectNewsStories } from "../src/domain/news.js";
 import { parsePublishTime } from "../src/domain/text.js";
 import type { NewsSearchHit } from "../src/domain/news.js";
-import type { NewsTopic } from "../src/infrastructure/news-topics.js";
+import type { NewsTopic } from "../src/domain/news.js";
 
 describe("news domain", () => {
   it("interprets timezone-free publisher timestamps in the configured news timezone", () => {

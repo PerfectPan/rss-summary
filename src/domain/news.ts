@@ -1,8 +1,27 @@
 import { canonicalizeUrl, compactSummary, isSameTitleEvent, parsePublishTime } from "./text.js";
-import type { NewsSourcePolicy, NewsTopic } from "../infrastructure/news-topics.js";
-import type { DoubaoSearchResult } from "../infrastructure/doubao-search.js";
 
-export type NewsSearchHit = DoubaoSearchResult & {
+export type NewsSourcePolicy = "authoritative" | "official";
+
+export type NewsTopic = {
+  id: string;
+  label: string;
+  enabled: boolean;
+  sourcePolicy: NewsSourcePolicy;
+  maxItems: number;
+  queries: string[];
+};
+
+export type NewsSearchHit = {
+  id: string;
+  title: string;
+  siteName?: string;
+  url: string;
+  snippet?: string;
+  summary?: string;
+  publishTime?: string;
+  rankScore?: number;
+  authInfoDescription?: string;
+  authInfoLevel?: number;
   topicId: string;
   topicLabel: string;
   sourcePolicy: NewsSourcePolicy;
