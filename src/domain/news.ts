@@ -2,6 +2,8 @@ import { canonicalizeUrl, compactSummary, isSameTitleEvent, parsePublishTime } f
 
 export type NewsSourcePolicy = "authoritative" | "official";
 
+export type NewsBriefEdition = "noon" | "evening";
+
 export type NewsTopic = {
   id: string;
   label: string;

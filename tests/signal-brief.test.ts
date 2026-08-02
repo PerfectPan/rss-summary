@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { generateSignalBrief } from "../src/application/signal-brief.js";
 import { parseSignalSources } from "../src/infrastructure/signal-sources.js";
+import { withSignalMarkdown } from "../src/presentation/signal-render.js";
 
 const config = parseSignalSources(
   JSON.stringify({
@@ -71,7 +72,7 @@ describe("signal brief application service", () => {
       if (query.includes("model")) {
         return doubaoResult("https://openai.com/blog/gpt-5", "GPT-5 API model", "model");
       }
-      return doubaoResult("https://vercel.com/blog/sdk", "Vercel ships a new SDK", "product");
+      return doubaoResult("https://openai.com/blog/sdk", "OpenAI ships a new SDK", "product");
     });
     const hackerNewsSearch = vi.fn(async () => [
       {
@@ -97,10 +98,12 @@ describe("signal brief application service", () => {
       },
     ]);
 
-    const result = await Effect.runPromise(
-      generateSignalBrief(
-        { day: "2026-07-29" },
-        { env: { FEED_TIMEZONE_OFFSET: "+08:00" }, config, doubaoSearch, hackerNewsSearch, githubSearch },
+    const result = withSignalMarkdown(
+      await Effect.runPromise(
+        generateSignalBrief(
+          { day: "2026-07-29" },
+          { env: { FEED_TIMEZONE_OFFSET: "+08:00" }, config, doubaoSearch, hackerNewsSearch, githubSearch },
+        ),
       ),
     );
 
@@ -108,7 +111,15 @@ describe("signal brief application service", () => {
     expect(doubaoSearch).toHaveBeenCalledWith(
       expect.objectContaining({ day: "2026-07-29", sourcePolicy: "official", count: 10 }),
     );
-    expect(hackerNewsSearch).toHaveBeenCalledWith({ minPoints: 80, includeShowHn: true, maxItems: 20 });
+    expect(hackerNewsSearch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        minPoints: 80,
+        includeShowHn: true,
+        maxItems: 20,
+        sinceUnix: expect.any(Number),
+        untilUnix: expect.any(Number),
+      }),
+    );
     expect(githubSearch).toHaveBeenCalledWith(
       expect.objectContaining({
         query: "created:>=2026-07-23 stars:>50 TypeScript OR ai",
@@ -167,7 +178,7 @@ describe("signal brief application service", () => {
 
     expect(partial.warnings).toContain("官方搜索：1 个查询暂不可用");
     expect(partial.itemCount).toBe(1);
-    expect(partial.markdown).toContain("**动态 · 1**");
+    expect(withSignalMarkdown(partial).markdown).toContain("**动态 · 1**");
 
     await expect(
       Effect.runPromise(

@@ -74,8 +74,11 @@ describe("digest source isolation", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const { run } = await import("../src/application/digest.js");
+    const { renderMarkdownDigest, renderJsonDigest } = await import("../src/presentation/render.js");
 
-    await Effect.runPromise(run());
+    await Effect.runPromise(
+      run((document, format) => (format === "json" ? renderJsonDigest(document) : renderMarkdownDigest(document))),
+    );
 
     expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("GitHub feed unavailable"));
     expect(sentOutputs).toHaveLength(1);

@@ -62,6 +62,9 @@ describe("top-level CLI", () => {
       markdown: "# 高信号速览 · 2026-07-29\n",
       sections: { updates: 1, opensource: 0 },
       warnings: [],
+      updates: [],
+      opensource: [],
+      timezoneOffset: "+08:00",
     }));
 
     const exitCode = await runCliCommand(["signal", "--day", "2026-07-29", "--dry-run"], {

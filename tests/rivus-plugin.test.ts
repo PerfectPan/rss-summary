@@ -74,6 +74,8 @@ describe("rss-summary Rivus Plugin", () => {
       markdown: "# 午间热点 · 2026-07-29\n",
       warnings: [],
       windowLabel: "00:00–12:30",
+      stories: [],
+      topics: [],
     }));
     const registrations = register(createRssSummaryPlugin({ generateNewsBrief }));
     const tool = registrations.tools.get(RSS_SUMMARY_NEWS_TOOL_ID)!;
@@ -130,6 +132,9 @@ describe("rss-summary Rivus Plugin", () => {
       markdown: "# 高信号速览 · 2026-07-29\n",
       sections: { updates: 1, opensource: 1 },
       warnings: [],
+      updates: [],
+      opensource: [],
+      timezoneOffset: "+08:00",
     }));
     const registrations = register(createRssSummaryPlugin({ generateSignalBrief }));
     const tool = registrations.tools.get(RSS_SUMMARY_SIGNAL_TOOL_ID)!;

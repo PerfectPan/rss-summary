@@ -56,6 +56,16 @@ export type CandidateProject = {
   description?: string;
 };
 
+/** Pure digest document assembled by the application layer; rendered in presentation. */
+export type DigestDocument = {
+  generatedAt: string;
+  displayDate?: string;
+  username: string;
+  sourceMode?: "mixed" | "rss";
+  windowLabel?: string;
+  candidates: CandidateProject[];
+};
+
 export type BuildCandidatesContext = {
   followees: Set<string>;
   interests: string[];

@@ -1,8 +1,7 @@
 import { displayTime, markdownLinkText } from "./markdown.js";
-import type { SelectedNewsStory } from "../domain/news.js";
-import type { NewsTopic } from "../domain/news.js";
+import type { NewsBriefEdition, NewsTopic, SelectedNewsStory } from "../domain/news.js";
 
-export type NewsBriefEdition = "noon" | "evening";
+export type { NewsBriefEdition };
 
 export type NewsBriefDocument = {
   day: string;

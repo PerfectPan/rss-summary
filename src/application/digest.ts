@@ -1,6 +1,12 @@
 import { Effect } from "effect";
 
-import { buildCandidateProjects, normalizeEvent, type ActivityCard, type RepositoryMetadata } from "../domain/digest.js";
+import {
+  buildCandidateProjects,
+  normalizeEvent,
+  type ActivityCard,
+  type DigestDocument,
+  type RepositoryMetadata,
+} from "../domain/digest.js";
 import { isWithinEventWindow, resolveEventWindow } from "../domain/time.js";
 import { loadConfig, type AppConfig } from "../infrastructure/config.js";
 import { GitHubClient } from "../infrastructure/github.js";
@@ -8,14 +14,21 @@ import { GitHubHomeClient } from "../infrastructure/github-home.js";
 import { createNotifier } from "../infrastructure/notifier.js";
 import { RssClient } from "../infrastructure/rss.js";
 import { filterNewCandidates, loadFeedState, markCandidatesSeen, saveFeedState, type FeedState } from "../infrastructure/state.js";
-import { renderJsonDigest, renderMarkdownDigest, type DigestDocument } from "../presentation/render.js";
 import { attempt } from "./effect.js";
 
-export function run(): Effect.Effect<void, Error> {
+export type { DigestDocument };
+
+/**
+ * Full digest workflow. Presentation injects `render` so application never imports
+ * presentation modules (dependency rule: application ↛ presentation).
+ */
+export function run(
+  render: (document: DigestDocument, format: AppConfig["outputFormat"]) => string,
+): Effect.Effect<void, Error> {
   return Effect.gen(function* () {
     const config = loadConfig();
     const { document, state } = yield* attempt(collectDigest(config));
-    const output = config.outputFormat === "json" ? renderJsonDigest(document) : renderMarkdownDigest(document);
+    const output = render(document, config.outputFormat);
 
     yield* attempt(createNotifier({ webhookUrl: config.webhookUrl }).send(output));
 

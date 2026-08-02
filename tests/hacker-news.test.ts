@@ -30,11 +30,13 @@ const fixture = {
 };
 
 describe("HackerNewsClient", () => {
-  it("queries Algolia with OR tags and a points filter, and parses stories", async () => {
+  it("queries Algolia with OR tags, inclusive points, and optional created_at_i bounds", async () => {
     const fetch = vi.fn(async (url: string | URL | Request) => {
       const parsed = new URL(String(url));
       expect(parsed.searchParams.get("tags")).toBe("(story,show_hn)");
-      expect(parsed.searchParams.get("numericFilters")).toBe("points>80");
+      expect(parsed.searchParams.get("numericFilters")).toBe(
+        "points>=80,created_at_i>=1722470400,created_at_i<1722556800",
+      );
       expect(parsed.searchParams.get("hitsPerPage")).toBe("60");
       return new Response(JSON.stringify(fixture), { status: 200 });
     });
@@ -43,6 +45,8 @@ describe("HackerNewsClient", () => {
       minPoints: 80,
       includeShowHn: true,
       maxItems: 20,
+      sinceUnix: 1_722_470_400,
+      untilUnix: 1_722_556_800,
     });
 
     expect(fetch).toHaveBeenCalledTimes(1);

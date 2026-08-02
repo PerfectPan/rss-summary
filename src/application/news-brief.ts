@@ -1,28 +1,40 @@
 import { Effect } from "effect";
 
-import { buildNewsStories, selectNewsStories, type NewsSearchHit } from "../domain/news.js";
+import {
+  buildNewsStories,
+  selectNewsStories,
+  type NewsBriefEdition,
+  type NewsSearchHit,
+  type NewsTopic,
+  type SelectedNewsStory,
+} from "../domain/news.js";
 import { calendarDayAtOffset, parseOffsetMilliseconds, startOfCalendarDay } from "../domain/time.js";
 import { boundedInteger } from "../infrastructure/parsing.js";
 import { loadNewsTopics } from "../infrastructure/news-topics.js";
-import type { NewsTopic } from "../domain/news.js";
 import { DoubaoSearchClient, type DoubaoSearchInput, type DoubaoSearchPage } from "../infrastructure/doubao-search.js";
-import { renderNewsBrief, type NewsBriefEdition } from "../presentation/news-render.js";
 import { attempt } from "./effect.js";
+
+export type { NewsBriefEdition };
 
 export type RivusNewsBriefInput = {
   occurrence: string;
   edition: NewsBriefEdition;
 };
 
+/** Application result: pure document fields. Presentation adds `markdown`. */
 export type RivusNewsBriefResult = {
   day: string;
   edition: NewsBriefEdition;
   generatedAt: string;
   itemCount: number;
-  markdown: string;
   warnings: string[];
   windowLabel: string;
+  stories: SelectedNewsStory[];
+  topics: NewsTopic[];
 };
+
+/** Tool shape after presentation renders Markdown. */
+export type RivusNewsBriefOutput = RivusNewsBriefResult & { markdown: string };
 
 type NewsBriefDependencies = {
   env?: NodeJS.ProcessEnv;
@@ -60,21 +72,40 @@ export function generateRivusNewsBrief(
   dependencies: NewsBriefDependencies = {},
 ): Effect.Effect<RivusNewsBriefResult, Error> {
   return Effect.gen(function* () {
-    const input = parseInput(value);
+    const input = yield* Effect.try({
+      try: () => parseInput(value),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+    });
     const env = dependencies.env ?? process.env;
     const timezoneOffset = env.FEED_TIMEZONE_OFFSET ?? "+08:00";
-    const window = resolveNewsEditionWindow(input.occurrence, timezoneOffset, input.edition);
+    const window = yield* Effect.try({
+      try: () => resolveNewsEditionWindow(input.occurrence, timezoneOffset, input.edition),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+    });
     const topics = (dependencies.topics ?? loadNewsTopics(env.NEWS_TOPICS_FILE)).filter(({ enabled }) => enabled);
-    if (topics.length === 0) throw new Error("At least one news topic must be enabled.");
+    if (topics.length === 0) {
+      return yield* Effect.fail(new Error("At least one news topic must be enabled."));
+    }
     const count = boundedInteger(env.NEWS_SEARCH_COUNT_PER_QUERY, 10, 1, 50);
-    const search = dependencies.search ?? createSearch(env);
+    const search = yield* Effect.try({
+      try: () => dependencies.search ?? createSearch(env),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+    });
 
     const requests = topics.flatMap((topic) =>
-      topic.queries.map((query) => ({ query, topic, promise: search({ query, count, day: window.day, sourcePolicy: topic.sourcePolicy }) })),
+      topic.queries.map((query) => ({
+        query,
+        topic,
+        promise: search({ query, count, day: window.day, sourcePolicy: topic.sourcePolicy }),
+      })),
     );
     const settled = yield* attempt(Promise.allSettled(requests.map(({ promise }) => promise)));
-    const successful = settled.filter((result): result is PromiseFulfilledResult<DoubaoSearchPage> => result.status === "fulfilled");
-    if (successful.length === 0) throw new Error("All Doubao search queries failed.");
+    const successful = settled.filter(
+      (result): result is PromiseFulfilledResult<DoubaoSearchPage> => result.status === "fulfilled",
+    );
+    if (successful.length === 0) {
+      return yield* Effect.fail(new Error("All Doubao search queries failed."));
+    }
 
     const warnings = topicWarnings(requests, settled);
     const hits: NewsSearchHit[] = [];
@@ -93,23 +124,15 @@ export function generateRivusNewsBrief(
     });
     const stories = selectNewsStories(buildNewsStories(hits, window), topics);
     const generatedAt = (dependencies.now ?? (() => new Date()))().toISOString();
-    const document = {
-      day: window.day,
-      edition: input.edition,
-      generatedAt,
-      stories,
-      topics,
-      warnings,
-      windowLabel: window.label,
-    };
     return {
       day: window.day,
       edition: input.edition,
       generatedAt,
       itemCount: stories.length,
-      markdown: renderNewsBrief(document),
       warnings,
       windowLabel: window.label,
+      stories,
+      topics,
     };
   });
 }

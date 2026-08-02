@@ -1,9 +1,10 @@
 import { Effect } from "effect";
 
+import type { DigestDocument } from "../domain/digest.js";
 import type { AppConfig } from "../infrastructure/config.js";
 import { loadConfig } from "../infrastructure/config.js";
 import { buildDigestDocument } from "../application/digest.js";
-import { renderMarkdownDigest, type DigestDocument } from "./render.js";
+import { renderMarkdownDigest } from "./render.js";
 import { calendarDayAtOffset, shiftCalendarDay } from "../domain/time.js";
 
 export type RivusDigestInput = {

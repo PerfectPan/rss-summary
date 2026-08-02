@@ -1,5 +1,6 @@
 import type { SignalItem } from "../domain/signal.js";
 import { endOfCalendarDay } from "../domain/time.js";
+import type { SignalBriefOutput, SignalBriefResult } from "../application/signal-brief.js";
 import { displayTime, formatStarCount, markdownLinkText } from "./markdown.js";
 
 export type SignalBriefDocument = {
@@ -9,6 +10,20 @@ export type SignalBriefDocument = {
   warnings: string[];
   timezoneOffset: string;
 };
+
+/** Attach Markdown to an application-layer signal brief result. */
+export function withSignalMarkdown(result: SignalBriefResult): SignalBriefOutput {
+  return {
+    ...result,
+    markdown: renderSignalBrief({
+      day: result.day,
+      updates: result.updates,
+      opensource: result.opensource,
+      warnings: result.warnings,
+      timezoneOffset: result.timezoneOffset,
+    }),
+  };
+}
 
 export function renderSignalBrief(document: SignalBriefDocument): string {
   const dayEnd = endOfCalendarDay(document.day, document.timezoneOffset);

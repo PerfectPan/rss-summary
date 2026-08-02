@@ -1,13 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import type {
-  SignalFrontendBias,
-  SignalKind,
-  SignalQuotas,
-  SignalScoring,
-  SignalSection,
-} from "../domain/signal.js";
+import type { SignalFrontendBias, SignalQuotas, SignalScoring } from "../domain/signal.js";
 
 export type SignalHackerNewsConfig = {
   minPoints: number;

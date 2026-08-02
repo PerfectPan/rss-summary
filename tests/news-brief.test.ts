@@ -1,7 +1,23 @@
 import { Effect } from "effect";
 import { describe, expect, it, vi } from "vitest";
 
-import { generateRivusNewsBrief, resolveNewsEditionWindow } from "../src/application/news-brief.js";
+import { generateRivusNewsBrief, resolveNewsEditionWindow, type RivusNewsBriefResult } from "../src/application/news-brief.js";
+import { renderNewsBrief } from "../src/presentation/news-render.js";
+
+function withNewsMarkdown(result: RivusNewsBriefResult) {
+  return {
+    ...result,
+    markdown: renderNewsBrief({
+      day: result.day,
+      edition: result.edition,
+      generatedAt: result.generatedAt,
+      stories: result.stories,
+      topics: result.topics,
+      warnings: result.warnings,
+      windowLabel: result.windowLabel,
+    }),
+  };
+}
 
 describe("Rivus news brief Tool adapter", () => {
   it("resolves non-overlapping noon and evening windows in the configured offset", () => {
@@ -40,31 +56,33 @@ describe("Rivus news brief Tool adapter", () => {
       };
     });
 
-    const result = await Effect.runPromise(
-      generateRivusNewsBrief(
-        { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
-        {
-        env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
-        search,
-        topics: [
+    const result = withNewsMarkdown(
+      await Effect.runPromise(
+        generateRivusNewsBrief(
+          { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
           {
-            id: "technology",
-            label: "科技新闻",
-            enabled: true,
-            sourcePolicy: "authoritative",
-            maxItems: 3,
-            queries: ["AI Agent", "开发工具"],
+            env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
+            search,
+            topics: [
+              {
+                id: "technology",
+                label: "科技新闻",
+                enabled: true,
+                sourcePolicy: "authoritative",
+                maxItems: 3,
+                queries: ["AI Agent", "开发工具"],
+              },
+              {
+                id: "politics",
+                label: "政治新闻",
+                enabled: true,
+                sourcePolicy: "official",
+                maxItems: 3,
+                queries: ["中国重要政策"],
+              },
+            ],
           },
-          {
-            id: "politics",
-            label: "政治新闻",
-            enabled: true,
-            sourcePolicy: "official",
-            maxItems: 3,
-            queries: ["中国重要政策"],
-          },
-        ],
-      },
+        ),
       ),
     );
 

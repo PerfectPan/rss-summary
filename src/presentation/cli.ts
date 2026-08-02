@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { Effect } from "effect";
 
 import { run as runDigest } from "../application/digest.js";
+import { renderJsonDigest, renderMarkdownDigest } from "./render.js";
 import { runFeedsCommand } from "./feeds-cli.js";
 import { runGithubHomeCommand } from "./github-home-cli.js";
 import { runSignalCommand } from "./signal-cli.js";
@@ -16,7 +17,10 @@ type CliDeps = {
   stdout?: Writable;
   stderr?: Writable;
   signal?: {
-    generate?: (input: unknown, deps?: { env?: NodeJS.ProcessEnv }) => Promise<import("../application/signal-brief.js").SignalBriefResult>;
+    generate?: (
+      input: unknown,
+      deps?: { env?: NodeJS.ProcessEnv },
+    ) => Promise<import("../application/signal-brief.js").SignalBriefOutput>;
   };
 };
 
@@ -39,8 +43,17 @@ export async function runCliCommand(argv: string[] = process.argv.slice(2), deps
   }
 
   if (command === "digest") {
-    await Effect.runPromise(runDigest());
-    return 0;
+    try {
+      await Effect.runPromise(
+        runDigest((document, format) =>
+          format === "json" ? renderJsonDigest(document) : renderMarkdownDigest(document),
+        ),
+      );
+      return 0;
+    } catch (error) {
+      stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+      return 1;
+    }
   }
 
   if (command === "help" || command === "--help" || command === "-h") {

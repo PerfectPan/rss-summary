@@ -4,7 +4,9 @@ import {
   buildSignalRepos,
   buildSignalUpdates,
   classifyUpdateKind,
+  countOutOfWindowUpdateHits,
   selectSignalItems,
+  type SignalItem,
   type SignalRepoHit,
   type SignalUpdateHit,
 } from "../domain/signal.js";
@@ -19,7 +21,6 @@ import {
   type GitHubRepositorySearchInput,
   type GitHubSearchRepo,
 } from "../infrastructure/github-search.js";
-import { renderSignalBrief } from "../presentation/signal-render.js";
 import { attempt } from "./effect.js";
 
 export type SignalBriefInput = {
@@ -27,14 +28,20 @@ export type SignalBriefInput = {
   occurrence?: string;
 };
 
+/** Application result: pure document fields. Presentation adds `markdown`. */
 export type SignalBriefResult = {
   day: string;
   generatedAt: string;
   itemCount: number;
-  markdown: string;
   sections: { updates: number; opensource: number };
   warnings: string[];
+  updates: SignalItem[];
+  opensource: SignalItem[];
+  timezoneOffset: string;
 };
+
+/** Tool/CLI shape after presentation renders Markdown. */
+export type SignalBriefOutput = SignalBriefResult & { markdown: string };
 
 type SignalBriefDependencies = {
   env?: NodeJS.ProcessEnv;
@@ -50,7 +57,10 @@ export function generateSignalBrief(
   dependencies: SignalBriefDependencies = {},
 ): Effect.Effect<SignalBriefResult, Error> {
   return Effect.gen(function* () {
-    const input = parseInput(value);
+    const input = yield* Effect.try({
+      try: () => parseInput(value),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+    });
     const env = dependencies.env ?? process.env;
     const config = dependencies.config ?? loadSignalSources(env.SIGNAL_SOURCES_FILE);
     const timezoneOffset = env[config.timezoneOffsetEnv] ?? "+08:00";
@@ -79,9 +89,10 @@ export function generateSignalBrief(
     const officialFailed =
       officialResult.status === "rejected" ||
       (config.officialSearch.intents.length > 0 &&
+        officialResult.status === "fulfilled" &&
         officialResult.value.warnings === config.officialSearch.intents.length);
     if (officialFailed && hnResult.status === "rejected" && githubResult.status === "rejected") {
-      throw new Error("All signal sources failed.");
+      return yield* Effect.fail(new Error("All signal sources failed."));
     }
 
     const warnings: string[] = [];
@@ -106,26 +117,30 @@ export function generateSignalBrief(
       excludeNamePatterns: config.githubSearch.excludeNamePatterns,
       createdWithinDays: config.githubSearch.createdWithinDays,
     };
+
+    if (officialResult.status === "fulfilled") {
+      const officialHits = officialResult.value.hits;
+      const dropped = countOutOfWindowUpdateHits(officialHits, rules);
+      if (dropped > 0) {
+        warnings.push(`官方搜索：${dropped} 条结果因缺少或超出发布时间被丢弃`);
+      }
+    }
+
     const selected = selectSignalItems(
       buildSignalUpdates(updateHits, rules),
       buildSignalRepos(repoHits, rules),
       config.quotas,
     );
-    const markdown = renderSignalBrief({
-      day,
-      updates: selected.updates,
-      opensource: selected.opensource,
-      warnings,
-      timezoneOffset,
-    });
 
     return {
       day,
       generatedAt: (dependencies.now ?? (() => new Date()))().toISOString(),
       itemCount: selected.updates.length + selected.opensource.length,
-      markdown,
       sections: { updates: selected.updates.length, opensource: selected.opensource.length },
       warnings,
+      updates: selected.updates,
+      opensource: selected.opensource,
+      timezoneOffset,
     };
   });
 }
@@ -175,6 +190,8 @@ async function fetchHackerNews(
     minPoints: config.hackerNews.minPoints,
     includeShowHn: config.hackerNews.includeShowHn,
     maxItems: config.hackerNews.maxItems,
+    sinceUnix: Math.floor(window.since / 1000),
+    untilUnix: Math.floor(window.until / 1000),
   });
   return stories
     .filter((story) => {

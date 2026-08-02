@@ -1,13 +1,6 @@
-import type { CandidateProject } from "../domain/digest.js";
+import type { CandidateProject, DigestDocument } from "../domain/digest.js";
 
-export type DigestDocument = {
-  generatedAt: string;
-  displayDate?: string;
-  username: string;
-  sourceMode?: "mixed" | "rss";
-  windowLabel?: string;
-  candidates: CandidateProject[];
-};
+export type { DigestDocument };
 
 export function renderMarkdownDigest(document: DigestDocument): string {
   const date = document.displayDate ?? document.generatedAt.slice(0, 10);

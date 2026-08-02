@@ -5,9 +5,15 @@ import {
 } from "@rivus/agent";
 import { Effect } from "effect";
 
-import { generateRivusNewsBrief, type RivusNewsBriefResult } from "../application/news-brief.js";
-import { generateSignalBrief, type SignalBriefResult } from "../application/signal-brief.js";
+import {
+  generateRivusNewsBrief,
+  type RivusNewsBriefOutput,
+  type RivusNewsBriefResult,
+} from "../application/news-brief.js";
+import { generateSignalBrief, type SignalBriefOutput } from "../application/signal-brief.js";
 import { generateRivusDigest, type RivusDigestResult } from "./rivus-digest.js";
+import { renderNewsBrief } from "./news-render.js";
+import { withSignalMarkdown } from "./signal-render.js";
 
 export const RSS_SUMMARY_TOOL_ID = "rss-summary/generate-digest";
 export const RSS_SUMMARY_NEWS_TOOL_ID = "rss-summary/generate-news-brief";
@@ -21,14 +27,33 @@ export const RSS_SUMMARY_SIGNAL_AUTOMATION_ID = "rss-summary/daily-signal-brief"
 
 type RssSummaryPluginDependencies = {
   generateDigest?: (input: unknown) => Promise<RivusDigestResult>;
-  generateNewsBrief?: (input: unknown) => Promise<RivusNewsBriefResult>;
-  generateSignalBrief?: (input: unknown) => Promise<SignalBriefResult>;
+  generateNewsBrief?: (input: unknown) => Promise<RivusNewsBriefOutput>;
+  generateSignalBrief?: (input: unknown) => Promise<SignalBriefOutput>;
 };
+
+function withNewsMarkdown(result: RivusNewsBriefResult): RivusNewsBriefOutput {
+  return {
+    ...result,
+    markdown: renderNewsBrief({
+      day: result.day,
+      edition: result.edition,
+      generatedAt: result.generatedAt,
+      stories: result.stories,
+      topics: result.topics,
+      warnings: result.warnings,
+      windowLabel: result.windowLabel,
+    }),
+  };
+}
 
 export function createRssSummaryPlugin(dependencies: RssSummaryPluginDependencies = {}): RivusPlugin {
   const executeDigest = dependencies.generateDigest ?? generateRivusDigest;
-  const executeNewsBrief = dependencies.generateNewsBrief ?? ((input: unknown) => Effect.runPromise(generateRivusNewsBrief(input)));
-  const executeSignalBrief = dependencies.generateSignalBrief ?? ((input: unknown) => Effect.runPromise(generateSignalBrief(input)));
+  const executeNewsBrief =
+    dependencies.generateNewsBrief ??
+    (async (input: unknown) => withNewsMarkdown(await Effect.runPromise(generateRivusNewsBrief(input))));
+  const executeSignalBrief =
+    dependencies.generateSignalBrief ??
+    (async (input: unknown) => withSignalMarkdown(await Effect.runPromise(generateSignalBrief(input))));
 
   return {
     manifest: {

@@ -12,6 +12,9 @@ describe("signal CLI command", () => {
       markdown: "# 高信号速览 · 2026-07-29\n",
       sections: { updates: 1, opensource: 0 },
       warnings: [],
+      updates: [],
+      opensource: [],
+      timezoneOffset: "+08:00",
     }));
 
     const exitCode = await runSignalCommand(["--day", "2026-07-29"], {
@@ -32,6 +35,9 @@ describe("signal CLI command", () => {
       markdown: "# 高信号速览 · 2026-07-29\n",
       sections: { updates: 0, opensource: 0 },
       warnings: [],
+      updates: [],
+      opensource: [],
+      timezoneOffset: "+08:00",
     }));
 
     await runSignalCommand([], { stdout: { write: () => undefined }, generate });
@@ -64,6 +70,17 @@ describe("signal CLI command", () => {
 
     expect(exitCode).toBe(1);
     expect(errors.join("")).toContain("All signal sources failed.");
+  });
+
+  it("rejects --day / --occurrence without a value", async () => {
+    const errors: string[] = [];
+    const exitCode = await runSignalCommand(["--day"], {
+      stdout: { write: () => undefined },
+      stderr: { write: (chunk) => errors.push(String(chunk)) },
+      generate: vi.fn(),
+    });
+    expect(exitCode).toBe(1);
+    expect(errors.join("")).toContain("--day requires a value");
   });
 });
 
