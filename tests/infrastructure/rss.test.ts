@@ -126,6 +126,23 @@ describe("RSS source", () => {
     expect(taggedEvents[0]?.type).toBe("paper");
   });
 
+  it("classifies first-party release feeds as releases", () => {
+    const events = parseFeedXml(
+      `<feed><entry>
+        <id>release-1</id>
+        <title>Version 1.0</title>
+        <link href="https://example.com/releases/1.0" />
+      </entry></feed>`,
+      {
+        name: "Example Releases",
+        url: "https://example.com/releases.atom",
+        tags: ["Releases"],
+      },
+    );
+
+    expect(events[0]).toMatchObject({ type: "release", title: "Version 1.0" });
+  });
+
   it("uses Atom published time before updated time", () => {
     const events = parseFeedXml(
       `<?xml version="1.0"?>

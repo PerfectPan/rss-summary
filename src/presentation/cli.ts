@@ -10,7 +10,7 @@ import { renderJsonIndustryBrief, renderMarkdownIndustryBrief } from "./industry
 import { runFeedsCommand } from "./feeds-cli.js";
 import { runGithubHomeCommand } from "./github-home-cli.js";
 import { runResearchCommand } from "./research-cli.js";
-import { runSignalCommand } from "./signal-cli.js";
+import { runRunsCommand } from "./runs-cli.js";
 import { errorMessage } from "../infrastructure/parsing.js";
 
 type Writable = {
@@ -20,12 +20,6 @@ type Writable = {
 type CliDeps = {
   stdout?: Writable;
   stderr?: Writable;
-  signal?: {
-    generate?: (
-      input: unknown,
-      deps?: { env?: NodeJS.ProcessEnv },
-    ) => Promise<import("../application/signal-brief.js").SignalBriefOutput>;
-  };
 };
 
 export async function runCliCommand(
@@ -45,12 +39,12 @@ export async function runCliCommand(
     return runGithubHomeCommand(rest, deps);
   }
 
-  if (command === "signal") {
-    return runSignalCommand(rest, { stdout, stderr, generate: deps.signal?.generate });
-  }
-
   if (command === "research") {
     return runResearchCommand(rest, { stdout, stderr });
+  }
+
+  if (command === "runs") {
+    return runRunsCommand(rest, { stdout, stderr });
   }
 
   if (command === "industry") {
@@ -102,8 +96,9 @@ function writeHelp(stdout: Writable): void {
   rss-summary feeds list
   rss-summary feeds test
   rss-summary research add [--file <path>] [--state-file .state/feed-state.json]
+  rss-summary runs list|failures
+  rss-summary runs show <artifact-path-or-label>
   rss-summary industry [--json] [--day YYYY-MM-DD] [--only-new] [--dry-run]
-  rss-summary signal [--day YYYY-MM-DD] [--occurrence <iso-date-time>] [--dry-run]
 `);
 }
 

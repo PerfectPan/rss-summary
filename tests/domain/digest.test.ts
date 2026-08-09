@@ -169,6 +169,32 @@ describe("github feed domain", () => {
     expect(candidates[0]?.reasons).toContain("matches interest: deno");
   });
 
+  it("preserves title, link, and summary for RSS release candidates", () => {
+    const candidates = buildCandidateProjects(
+      [
+        {
+          id: "release-1",
+          type: "release",
+          source: "rss",
+          actor: "Vendor Releases",
+          repo: "rss:https://example.com/releases/1.0",
+          createdAt: "2026-08-09T00:00:00.000Z",
+          title: "Version 1.0",
+          htmlUrl: "https://example.com/releases/1.0",
+          summary: "A major release.",
+        },
+      ],
+      { followees: new Set(), interests: [], repositories: new Map() },
+    );
+
+    expect(candidates[0]).toMatchObject({
+      category: "release",
+      label: "Version 1.0",
+      url: "https://example.com/releases/1.0",
+      description: "A major release.",
+    });
+  });
+
   it("uses feed URL when an RSS article has no item link", () => {
     const candidates = buildCandidateProjects(
       [

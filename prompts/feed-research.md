@@ -1,112 +1,68 @@
 # Feed 调研 Prompt
 
-你正在准备 PerfectPan 的每日 GitHub Home 和 RSS 简报。输入也可能来自独立的 RSS 行业简报。你的任务不是总结每一条动态，而是选出少数真正值得注意的项目、PR、release、文章或论文，完成必要调研后输出面向决策的中文日报。
+你在生成两种内容之一：
+
+- `我的订阅`：用户明确关注的 GitHub Home 与个人博客，默认保留新内容。
+- `行业前沿`：精选厂商/项目的官方 Blog、News、Changelog、Release 与研究源，帮助用户知道值得关注的变化。
+
+输入来自 `rss-summary digest --json --only-new --dry-run` 或 `rss-summary industry --json --only-new --dry-run`。
 
 ## 输入
 
-运行模型前替换下面的占位内容：
-
 ```text
 CANDIDATES_JSON=
-<粘贴 `rss-summary digest --json --only-new --dry-run` 或 `rss-summary industry --json --only-new --dry-run` 的输出>
+<粘贴 CLI JSON>
 
 FEED_STATE_JSON=
-<个人简报使用 `.state/feed-state.json`；行业简报使用 `.state/industry-state.json`；没有就填 `{}`>
+<订阅用 .state/feed-state.json；行业前沿用 .state/industry-state.json；没有则填 {}>
 ```
 
-`CANDIDATES_JSON.candidates` 是已经排序的候选动态。`FEED_STATE_JSON.researched` 是项目/文章的调研缓存。GitHub 仓库调研使用 `state.researched["github:owner/repo"]` 作为去重键。
+先检查 `CANDIDATES_JSON.audit.sources`。如果重要来源失败，必须在最终简报加一行简短的 `数据源状态`；不能把部分抓取误报成“今天没有内容”。
 
-## 调研策略
+## 分层消费
 
-只调研最可能有价值的非论文候选项，默认选 5 到 8 条。论文使用独立研究预算：进入输入的论文已经经过 abstract 兴趣匹配和硬配额筛选；逐篇核验最多 8 篇，最终只推荐 2 到 3 篇，不占用前述 5 到 8 条预算。不要输出原始 candidate JSON，也不要输出平铺时间线。
+不要把每条内容都写成小报告：
 
-对每个候选项：
+1. 普通更新：保留为一句具体事实 + 原文链接。
+2. 高价值更新：只选少量真正值得展开的内容，打开原始仓库、PR、release 或文章后给出摘要和行动建议。
+3. 论文：必须核验原始 abstract，必要时读取正文；未完成核验不得发布标题。
 
-1. 明显低价值的候选项可以跳过，但要记下跳过原因。
-2. 打开做判断所需的原始仓库、PR、release、README、文档、文章或代码文件。
-3. 对 GitHub `watch` / star 和 `discovery` 候选项，先检查 `state.researched["github:owner/repo"]`。
-4. 如果这个仓库已经调研过，不要再次深挖；复用缓存中的 repo 级结论，只把新事件当作新的社交信号。
-5. 如果这是未知仓库，把它当作一次轻量代码审查来调研，不要停留在 README 摘要。
+优先展开 release、多个独立信号、明确兴趣匹配、重要 API/行为/安全变化，以及对 agent、tooling、frontend、Rust、TypeScript 实践有直接影响的内容。不要用热度本身作为价值结论。
 
-## Star 和 Discovery 调研
+## 核验要求
 
-对未知的 starred/discovery 仓库，检查：
-
-- top-level tree 和 package/workspace 文件。
-- 入口：`bin`、app/server 文件、library exports、examples、extension 或 plugin manifest。
-- dependency/runtime choices，以及这些选择是否匹配项目要解决的问题。
-- tests/CI、typechecking、linting、fixtures、examples 或其他可信度信号。
-- recent commits、PRs 或 releases。
-- 代码质量信号：模块是否内聚、public API 是否有类型约束、错误路径是否清楚、集成面是否克制、文档是否和代码一致、是否有明显废弃脚手架或巨大无关文件。
-
-如果只检查了公开 metadata 和关键文件，要明确这是表层判断。不要过度断言。
-
-## Merged PR 调研
-
-对 merged PR 候选项，回答：
-
-- 这是什么项目？
-- 今天具体变了什么？
-- 这个变化是否值得注意？
-- 它为什么和 PerfectPan 关注的 agent、tooling、frontend、Rust、TypeScript 相关？
-
-不要把 "important PR merged" 当成最终理由。要说清楚具体变化，例如 router 行为变化、agent 写入路径加固、parser 兼容性修复、纯文档改动或 release 风险。
-
-## RSS 文章调研
-
-文章页面可访问时必须打开原文。总结核心观点、证据质量和实践相关性。除非原文不可访问，不要只依赖 feed excerpt。
-
-## 论文调研
-
-论文必须经过两段式漏斗，不能只根据标题或 feed excerpt 决定是否推荐：
-
-1. 第一层已经由 CLI 使用 feed abstract 做兴趣匹配并限制候选量；先检查 candidate 的 `summary` 和 `matches paper abstract` 理由是否一致。
-2. 第二层必须打开 `arxiv.org/abs/<id>` abstract HTML，核对作者、机构、研究问题、方法、关键结果、限制和 code/project 链接。
-3. 只有 abstract 不足以判断且论文很可能进入最终 2 到 3 篇时，才进一步读取正文；优先使用 `https://ar5iv.labs.arxiv.org/html/<id>`，不要默认下载和解析 PDF。
-4. 判断它与 agent、LLM、tooling、frontend 或工程实践的真实关系；仅仅出现热门关键词不构成推荐理由。
-5. 明确区分作者声称的结果与论文实际提供的证据。没有对照实验、复现材料或公开代码时要降低可信度，不得补写论文没有给出的结论。
-
-最终推荐的论文使用以下字段：
-
-- 研究问题：
-- 方法与证据：
-- 可信度与限制：
-- 实践相关性：
-- 建议动作：`read`、`track`、`save` 或 `skip`
+- GitHub 项目：检查 README、top-level tree、entrypoints、依赖与 runtime、tests/CI、近期 commits/releases。展开项必须给出简短的代码质量判断；仅看公开 metadata 和关键文件时说明是表层判断。
+- PR：说清项目是什么、具体改了什么、是否值得注意，不能只写“重要 PR 已合并”。
+- Release：核对 breaking changes、迁移成本与是否需要行动。
+- 文章：原文可访问时必须打开；提炼核心观点、证据质量和实践相关性。
+- 论文：候选队列最多 8 篇；逐篇打开 `arxiv.org/abs/<id>`，核对作者/机构、问题、方法、结果、限制和代码链接。只有很可能进入最终 2–3 篇时才读取 `ar5iv.labs.arxiv.org/html/<id>` 正文。
+- 已研究 GitHub repo 复用 `state.researched["github:owner/repo"]`，但新的订阅事件仍可作为一句话更新出现。
 
 ## 输出
 
-输出一份聊天/移动端友好的中文 Markdown 日报。标题和小节标题必须加粗，正文分块要短；不要使用 Markdown 表格、复杂标题层级或内嵌链接，链接单独一行写成 `链接：https://...`。
+使用聊天/移动端友好的中文 Markdown，不使用表格：
 
 ```text
-**每日 Feed 简报 - YYYY-MM-DD**
+**我的订阅 | 行业前沿 - YYYY-MM-DD**
 
-**今日最值得看**
+**重点摘要 | 值得展开**
 
-**owner/repo or title - try|track|read|save|skip**
-- 项目是什么：
-- 今天为什么出现：        # for star/discovery
-- 今天发生了什么：        # for merged PR/release/article when more natural
-- 代码质量判断：          # required for star/discovery repos
-- 为什么值得你看：
-- 建议动作：
-- 链接：https://...
+**标题 - track|read|try|save|skip**
+具体摘要（短、可验证；GitHub 项目含代码质量判断）
+为什么值得看：...
+建议动作：...
+链接：https://...
 
-**建议深挖**
-- ...
+**其他更新 | 动态速览**
+- 一句话事实。链接：https://...
 
-**可以略过**
-- ...
-
-**后续行动**
+**数据源状态**             # 只有失败时输出
 - ...
 ```
 
-证据留在工作笔记里；除非明确要求引用来源，不要展示 `evidence` 或 `依据` 作为可见字段。优先给短而具体的判断，不要泛泛夸奖。
+普通条目严格保持一句话加链接。展开项默认 3–5 条；论文最终最多 2–3 篇。不要输出原始 JSON、分数或流水账。
 
-## 返回状态更新建议
-
-日报之后，返回一段紧凑的状态更新建议，列出应该标记为已调研的 research keys：
+最后追加：
 
 ```text
 调研状态更新建议:
@@ -114,4 +70,4 @@ FEED_STATE_JSON=
 - rss:https://example.com/post - decision=read reason="..."
 ```
 
-这些 key 供 scheduler/agent wrapper 写入当前产品的 state：个人简报使用 `.state/feed-state.json`，行业简报使用 `.state/industry-state.json`。不要包含本地 secret、token、browser storage 或机器专属路径。
+不要包含 secret、token、browser storage、本机路径或运行日志全文。

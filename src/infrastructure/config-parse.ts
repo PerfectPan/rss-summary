@@ -5,7 +5,7 @@ import isNumber from "lodash-es/isNumber.js";
 import isString from "lodash-es/isString.js";
 import trim from "lodash-es/trim.js";
 
-/** Shared JSON config validators (signal-sources, news-topics, …). */
+/** Shared JSON config validators for tracked source and topic policies. */
 
 export function requiredString(value: unknown, label: string): string {
   if (!isString(value) || trim(value) === "")

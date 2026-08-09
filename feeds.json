@@ -213,13 +213,6 @@
     ]
   },
   {
-    "name": "React Blog",
-    "url": "https://react.dev/rss.xml",
-    "tags": [
-      "Articles"
-    ]
-  },
-  {
     "name": "Read the Tea Leaves",
     "url": "https://nolanlawson.com/feed/",
     "tags": [
@@ -297,14 +290,6 @@
     ]
   },
   {
-    "name": "Vercel News",
-    "url": "https://vercel.com/atom",
-    "tags": [
-      "Articles",
-      "News"
-    ]
-  },
-  {
     "name": "WuTianhao",
     "url": "https://rsshub.app/twitter/user/maisui99",
     "tags": [
@@ -314,6 +299,30 @@
   {
     "name": "Zed Industries - Blog",
     "url": "https://zed.dev/blog.rss",
+    "tags": [
+      "Articles",
+      "Blog"
+    ]
+  },
+  {
+    "name": "All Things Distributed",
+    "url": "https://www.allthingsdistributed.com/atom.xml",
+    "tags": [
+      "Articles",
+      "Blog"
+    ]
+  },
+  {
+    "name": "Marc Brooker's Blog",
+    "url": "https://brooker.co.za/blog/rss.xml",
+    "tags": [
+      "Articles",
+      "Blog"
+    ]
+  },
+  {
+    "name": "Aphyr - Posts",
+    "url": "https://aphyr.com/posts.atom",
     "tags": [
       "Articles",
       "Blog"

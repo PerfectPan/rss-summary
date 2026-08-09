@@ -63,12 +63,10 @@ describe("markdown digest renderer", () => {
       ],
     });
 
-    expect(markdown).toContain("# 技术订阅日报 · 2026-06-22");
-    expect(markdown).toContain("**🔥 值得看**");
-    expect(markdown).toContain("**1. BuilderIO/skills**");
-    expect(markdown).toContain("- [查看原文](https://github.com/BuilderIO/skills)");
-    expect(markdown).toContain("**📚 RSS 文章**");
-    expect(markdown).toContain("**1. Deno 2.4**");
+    expect(markdown).toContain("# 我的订阅 · 2026-06-22");
+    expect(markdown).toContain("**重点摘要**");
+    expect(markdown).toContain("**[BuilderIO/skills](https://github.com/BuilderIO/skills)**");
+    expect(markdown).toContain("**[Deno 2.4](https://deno.com/blog/v2.4)**");
     expect(markdown).toContain("fi3ework");
     expect(markdown).toContain("Skills for coding agents");
   });
@@ -120,8 +118,8 @@ describe("markdown digest renderer", () => {
       ],
     });
 
-    expect(markdown).toContain("**📚 RSS 文章**");
-    expect(markdown).toContain("- [查看原文](https://deno.com/blog/v2.4)");
+    expect(markdown).toContain("**其他更新**");
+    expect(markdown).toContain("[查看原文](https://deno.com/blog/v2.4)");
   });
 
   it("does not directly publish papers that still require research", () => {
@@ -144,7 +142,7 @@ describe("markdown digest renderer", () => {
       ],
     });
 
-    expect(markdown).toContain("1 篇论文待深度调研");
+    expect(markdown).toContain("1 篇论文待研究");
     expect(markdown).not.toContain("Unverified agent claim");
   });
 
@@ -195,7 +193,7 @@ describe("markdown digest renderer", () => {
       candidates: [],
     });
 
-    expect(markdown).toContain("0 条高信号 · GitHub + RSS · 2026-06-22 +08:00");
+    expect(markdown).toContain("0 条更新 · GitHub Home + 个人博客 · 2026-06-22 +08:00");
   });
 
   it("labels RSS-only output without showing a GitHub account", () => {
@@ -206,7 +204,7 @@ describe("markdown digest renderer", () => {
       candidates: [],
     });
 
-    expect(markdown).toContain("0 条高信号 · RSS");
+    expect(markdown).toContain("0 条更新 · 个人博客");
     expect(markdown).not.toContain("GitHub 账号：PerfectPan");
   });
 });

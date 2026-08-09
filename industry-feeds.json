@@ -15,6 +15,26 @@
     "tags": ["Articles", "News"]
   },
   {
+    "name": "Google DeepMind",
+    "url": "https://deepmind.google/blog/rss.xml",
+    "tags": ["Articles", "Research", "News"]
+  },
+  {
+    "name": "GitHub Changelog",
+    "url": "https://github.blog/changelog/feed/",
+    "tags": ["Developer Tools", "News"]
+  },
+  {
+    "name": "Vercel Changelog",
+    "url": "https://vercel.com/changelog/rss.xml",
+    "tags": ["Frontend", "Infrastructure", "News"]
+  },
+  {
+    "name": "React Blog",
+    "url": "https://react.dev/rss.xml",
+    "tags": ["Frontend", "Releases"]
+  },
+  {
     "name": "OpenAI Codex CLI Releases",
     "url": "https://github.com/openai/codex/releases.atom",
     "tags": ["Releases"]
@@ -48,31 +68,6 @@
     "name": "Cloudflare Application Security Changelog",
     "url": "https://developers.cloudflare.com/changelog/rss/application-security.xml",
     "tags": ["Security", "News"]
-  },
-  {
-    "name": "AI Daily News",
-    "url": "https://modelwatch.dev/feed",
-    "tags": ["News"]
-  },
-  {
-    "name": "Hacker News 每日摘要",
-    "url": "https://supertechfans.com/cn/index.xml",
-    "tags": ["News"]
-  },
-  {
-    "name": "All Things Distributed",
-    "url": "https://www.allthingsdistributed.com/atom.xml",
-    "tags": ["Articles", "Blog"]
-  },
-  {
-    "name": "Marc Brooker's Blog",
-    "url": "https://brooker.co.za/blog/rss.xml",
-    "tags": ["Articles", "Blog"]
-  },
-  {
-    "name": "Aphyr - Posts",
-    "url": "https://aphyr.com/posts.atom",
-    "tags": ["Articles", "Blog"]
   },
   {
     "name": "arXiv Computer Science - Artificial Intelligence",

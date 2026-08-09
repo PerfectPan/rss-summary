@@ -6,6 +6,7 @@ import { Effect } from "effect";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { loadConfig } from "../../src/infrastructure/config.js";
+import { listRunArtifacts } from "../../src/infrastructure/run-store.js";
 
 const sentOutputs: string[] = [];
 
@@ -56,10 +57,12 @@ describe("digest source isolation", () => {
   });
 
   it("keeps RSS candidates when GitHub Home is unavailable", async () => {
+    const root = await mkdtemp(join(tmpdir(), "rss-summary-run-log-"));
     vi.stubEnv(
       "RSS_FEEDS",
       JSON.stringify([{ name: "Example Feed", url: "https://example.com/feed", tags: ["ai"] }]),
     );
+    vi.stubEnv("FEED_RUN_LOG_DIR", join(root, "runs"));
     process.argv = [
       "node",
       "rss-summary",
@@ -77,17 +80,21 @@ describe("digest source isolation", () => {
     const { renderMarkdownDigest, renderJsonDigest } =
       await import("../../src/presentation/render.js");
 
-    await Effect.runPromise(
-      run((document, format) =>
-        format === "json" ? renderJsonDigest(document) : renderMarkdownDigest(document),
-      ),
-    );
+    try {
+      await Effect.runPromise(
+        run((document, format) =>
+          format === "json" ? renderJsonDigest(document) : renderMarkdownDigest(document),
+        ),
+      );
 
-    expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("GitHub feed unavailable"));
-    expect(sentOutputs).toHaveLength(1);
-    expect(sentOutputs[0]).toContain("RSS survives GitHub outage");
-
-    errorSpy.mockRestore();
+      expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("GitHub feed unavailable"));
+      expect(sentOutputs).toHaveLength(1);
+      expect(sentOutputs[0]).toContain("RSS survives GitHub outage");
+      expect(listRunArtifacts(join(root, "runs"))).toHaveLength(1);
+    } finally {
+      errorSpy.mockRestore();
+      await rm(root, { force: true, recursive: true });
+    }
   });
 
   it("builds a document without delivering or writing seen state", async () => {
@@ -125,7 +132,7 @@ describe("digest source isolation", () => {
     }
   });
 
-  it("skips candidates already marked researched in only-new mode", async () => {
+  it("does not let research cache suppress a new subscription event", async () => {
     const root = await mkdtemp(join(tmpdir(), "rss-summary-researched-"));
     const stateFile = join(root, "feed-state.json");
     await writeFile(
@@ -160,7 +167,7 @@ describe("digest source isolation", () => {
 
       const document = await Effect.runPromise(buildDigestDocument(config));
 
-      expect(document.candidates).toHaveLength(0);
+      expect(document.candidates).toHaveLength(1);
     } finally {
       errorSpy.mockRestore();
       await rm(root, { force: true, recursive: true });

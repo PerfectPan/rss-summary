@@ -25,7 +25,6 @@ try {
   requireFile(join(installed, "docs", "rivus-plugin.md"));
   requireFile(join(installed, "industry-feeds.json"));
   requireFile(join(installed, "news-topics.json"));
-  requireFile(join(installed, "signal-sources.json"));
   run(
     process.execPath,
     [
@@ -42,7 +41,7 @@ const report = await assertRivusPluginConforms({
     pluginId: "rss-summary",
     profileId: "rss-digest",
     skills: { allow: [] },
-    tools: { allow: ["rss-summary/generate-digest", "rss-summary/generate-news-brief", "rss-summary/generate-signal-brief", "rss-summary/generate-industry-brief"] }
+    tools: { allow: ["rss-summary/generate-digest", "rss-summary/generate-news-brief", "rss-summary/generate-industry-brief"] }
   },
   plugin
 });

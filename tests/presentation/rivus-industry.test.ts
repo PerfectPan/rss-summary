@@ -35,8 +35,8 @@ describe("Rivus industry brief adapter", () => {
 
     expect(result.candidateCount).toBe(1);
     expect(result.paperCandidateCount).toBe(0);
-    expect(result.markdown).toContain("# 行业简报 · 2026-08-09");
-    expect(result.markdown).toContain("**1. [Agent release](https://example.com/a)**");
+    expect(result.markdown).toContain("# 行业前沿 · 2026-08-09");
+    expect(result.markdown).toContain("**[Agent release](https://example.com/a)**");
   });
 
   it("reports papers as pending instead of publishing their titles", async () => {

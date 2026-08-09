@@ -30,8 +30,8 @@ describe("industry brief render", () => {
 
     const markdown = renderMarkdownIndustryBrief(document);
 
-    expect(markdown).toContain("# 行业简报 · 2026-08-09");
-    expect(markdown).toContain("**1. [New agent release](https://example.com/a)**");
+    expect(markdown).toContain("# 行业前沿 · 2026-08-09");
+    expect(markdown).toContain("**[New agent release](https://example.com/a)**");
     expect(markdown).toContain("来源：OpenAI");
   });
 
@@ -41,7 +41,7 @@ describe("industry brief render", () => {
       candidates: [],
     });
 
-    expect(markdown).toContain("没有筛出");
+    expect(markdown).toContain("没有新的行业前沿动态");
   });
 
   it("keeps unresearched papers out of Markdown while exposing them as JSON", () => {
@@ -66,7 +66,7 @@ describe("industry brief render", () => {
     const markdown = renderMarkdownIndustryBrief(document);
     const json = JSON.parse(renderJsonIndustryBrief(document));
 
-    expect(markdown).toContain("1 篇论文待深度调研");
+    expect(markdown).toContain("1 篇论文待研究");
     expect(markdown).not.toContain("Unverified agent claim");
     expect(json.candidates).toHaveLength(1);
     expect(json.candidates[0]).toMatchObject({ category: "paper" });

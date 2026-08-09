@@ -1,4 +1,4 @@
 interface:
   display_name: "Feed Research Digest"
-  short_description: "Research GitHub, RSS, and paper candidates"
-  default_prompt: "Use $feed-research-digest to research today’s personal or industry feed candidates before publishing the brief."
+  short_description: "Research subscriptions and official frontier feeds"
+  default_prompt: "Use $feed-research-digest to turn today’s subscription or frontier candidates into a layered Chinese brief."

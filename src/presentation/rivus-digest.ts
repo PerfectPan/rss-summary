@@ -1,6 +1,7 @@
 import { Effect } from "effect";
 
 import type { DigestDocument } from "../domain/digest.js";
+import type { RunAudit } from "../domain/run-audit.js";
 import type { AppConfig } from "../infrastructure/config.js";
 import { loadConfig } from "../infrastructure/config.js";
 import { buildDigestDocument } from "../application/digest.js";
@@ -19,7 +20,9 @@ export type RivusDigestResult = {
   candidateCount: number;
   generatedAt: string;
   markdown: string;
+  paperCandidateCount: number;
   windowLabel?: string;
+  audit?: RunAudit;
 };
 
 type RivusDigestDependencies = {
@@ -64,11 +67,16 @@ export async function generateRivusDigest(
   const document = await Effect.runPromise(
     (dependencies.buildDigestDocument ?? buildDigestDocument)(loadConfig(configEnv, argv)),
   );
+  const paperCandidateCount = document.candidates.filter(
+    (candidate) => candidate.category === "paper",
+  ).length;
   return {
-    candidateCount: document.candidates.length,
+    candidateCount: document.candidates.length - paperCandidateCount,
     generatedAt: document.generatedAt,
     markdown: renderMarkdownDigest(day ? { ...document, displayDate: day } : document),
+    paperCandidateCount,
     ...(document.windowLabel ? { windowLabel: document.windowLabel } : {}),
+    ...(document.audit ? { audit: document.audit } : {}),
   };
 }
 

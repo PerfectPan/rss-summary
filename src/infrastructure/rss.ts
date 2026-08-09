@@ -110,9 +110,13 @@ function normalizeAtomEntry(entry: XmlRecord, feed: FeedSubscription): ActivityC
   };
 }
 
-function publicationType(htmlUrl: string | undefined, feed: FeedSubscription): "article" | "paper" {
+function publicationType(
+  htmlUrl: string | undefined,
+  feed: FeedSubscription,
+): "article" | "paper" | "release" {
   const tags = new Set(feed.tags.map((tag) => tag.toLowerCase()));
   if (tags.has("papers") || tags.has("academic")) return "paper";
+  if (tags.has("releases")) return "release";
 
   const hostnames = [htmlUrl, feed.url]
     .filter((value): value is string => Boolean(value))

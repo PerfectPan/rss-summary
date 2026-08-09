@@ -35,7 +35,6 @@ describe("package CLI metadata", () => {
       "docs/rivus-plugin.md",
       "industry-feeds.json",
       "news-topics.json",
-      "signal-sources.json",
       "README.md",
     ]);
     expect(pkg.scripts?.build).toBe("tsc -p tsconfig.build.json");
