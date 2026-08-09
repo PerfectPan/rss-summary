@@ -97,7 +97,7 @@ async function collectIndustryBrief(
   const selectedSet = new Set(candidates);
   const researchSet = new Set(allCandidates);
   const audit: RunAudit = {
-    version: 1,
+    version: 2,
     runId: randomUUID(),
     product: "frontier",
     generatedAt,

@@ -19,6 +19,7 @@ export type DoubaoSearchResult = {
   rankScore?: number;
   authInfoDescription?: string;
   authInfoLevel?: number;
+  rankPosition: number;
 };
 
 export type DoubaoSearchPage = {
@@ -102,7 +103,7 @@ function parseResponse(value: unknown): DoubaoSearchPage {
 
   const result = asRecord(root.Result);
   const results = Array.isArray(result.WebResults)
-    ? result.WebResults.map(parseResult).filter(
+    ? result.WebResults.map((item, index) => parseResult(item, index + 1)).filter(
         (item): item is DoubaoSearchResult => item !== undefined,
       )
     : [];
@@ -114,12 +115,15 @@ function parseResponse(value: unknown): DoubaoSearchPage {
   };
 }
 
-function parseResult(value: unknown): DoubaoSearchResult | undefined {
+function parseResult(value: unknown, fallbackRankPosition: number): DoubaoSearchResult | undefined {
   const item = asRecord(value);
   const id = text(item.Id);
   const title = text(item.Title);
   const url = text(item.Url);
   if (!id || !title || !url) return undefined;
+  const sortId = number(item.SortId);
+  const rankPosition =
+    sortId !== undefined && Number.isInteger(sortId) && sortId > 0 ? sortId : fallbackRankPosition;
   return {
     id,
     title,
@@ -129,6 +133,7 @@ function parseResult(value: unknown): DoubaoSearchResult | undefined {
     summary: text(item.Summary),
     publishTime: text(item.PublishTime),
     rankScore: number(item.RankScore),
+    rankPosition,
     authInfoDescription: text(item.AuthInfoDes),
     authInfoLevel: number(item.AuthInfoLevel),
   };

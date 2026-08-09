@@ -18,6 +18,7 @@ describe("Rivus industry brief adapter", () => {
           actors: ["OpenAI"],
           eventTypes: ["article"],
           reasons: ["matches interest: agent"],
+          matchedInterests: ["agent"],
           events: [],
           label: "Agent release",
           url: "https://example.com/a",

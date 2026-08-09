@@ -16,6 +16,7 @@ describe("candidate brief", () => {
           actors: ["Official"],
           eventTypes: ["article"],
           reasons: ["matches interest: agent"],
+          matchedInterests: ["agent"],
           events: [],
           label: "Strong update",
           url: "https://example.com/strong",

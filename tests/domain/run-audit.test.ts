@@ -5,13 +5,15 @@ import type { CandidateProject } from "../../src/domain/digest.js";
 
 describe("run audit candidate decisions", () => {
   it("records selected output depth and explicit filter reasons", () => {
-    const selected = candidate("selected", 70, ["matches interest: agent"]);
+    const selected = candidate("selected", 70, ["agent"]);
     const filtered = candidate("filtered", 20);
 
     expect(candidateDecision(selected, [selected], () => "unused")).toMatchObject({
       status: "selected",
       depth: "summary",
-      reason: "selected for expanded summary",
+      presentationReasonCode: "interest-match",
+      presentationEvidence: "agent",
+      reason: "selected for expanded summary: interest-match (agent)",
     });
     expect(candidateDecision(filtered, [selected], () => "already delivered")).toMatchObject({
       status: "filtered",
@@ -21,7 +23,7 @@ describe("run audit candidate decisions", () => {
   });
 });
 
-function candidate(repo: string, score: number, reasons: string[] = []): CandidateProject {
+function candidate(repo: string, score: number, matchedInterests: string[] = []): CandidateProject {
   return {
     repo,
     source: "rss",
@@ -29,7 +31,8 @@ function candidate(repo: string, score: number, reasons: string[] = []): Candida
     score,
     actors: ["Example"],
     eventTypes: ["article"],
-    reasons,
+    reasons: [],
+    matchedInterests,
     events: [],
   };
 }

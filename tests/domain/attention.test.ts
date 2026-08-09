@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { presentationDepthForCandidate } from "../../src/domain/attention.js";
+import {
+  presentationDecisionForCandidate,
+  presentationDepthForCandidate,
+} from "../../src/domain/attention.js";
 import type { CandidateProject } from "../../src/domain/digest.js";
 
 describe("candidate presentation depth", () => {
@@ -10,11 +13,11 @@ describe("candidate presentation depth", () => {
 
   it("expands explainable importance matches and routes papers to research", () => {
     expect(
-      presentationDepthForCandidate(candidate({ score: 50, reasons: ["matches interest: agent"] })),
+      presentationDepthForCandidate(candidate({ score: 50, matchedInterests: ["agent"] })),
     ).toBe("summary");
     expect(
       presentationDepthForCandidate(
-        candidate({ category: "release", score: 20, reasons: ["matches interest: agent"] }),
+        candidate({ category: "release", score: 20, matchedInterests: ["agent"] }),
       ),
     ).toBe("summary");
     expect(presentationDepthForCandidate(candidate({ category: "paper", score: 80 }))).toBe(
@@ -46,21 +49,36 @@ describe("candidate presentation depth", () => {
   });
 
   it("expands explicit high-impact changes even without an interest match", () => {
-    expect(
-      presentationDepthForCandidate(
-        candidate({
-          category: "release",
-          score: 40,
-          label: "Runtime security update",
-          description: "Fixes CVE-2026-12345 and a critical vulnerability.",
-        }),
-      ),
-    ).toBe("summary");
+    const security = presentationDecisionForCandidate(
+      candidate({
+        category: "release",
+        score: 40,
+        label: "Runtime security update",
+        description: "Fixes CVE-2026-12345 and a critical vulnerability.",
+      }),
+    );
+    expect(security).toMatchObject({
+      depth: "summary",
+      reasonCode: "security-event",
+      evidence: "security update",
+    });
     expect(
       presentationDepthForCandidate(
         candidate({ score: 40, label: "API 弃用公告", description: "包含破坏性变更。" }),
       ),
     ).toBe("summary");
+  });
+
+  it("returns typed interest evidence instead of parsing display reasons", () => {
+    expect(
+      presentationDecisionForCandidate(
+        candidate({
+          score: 50,
+          reasons: ["arbitrary display copy"],
+          matchedInterests: ["agent"],
+        }),
+      ),
+    ).toEqual({ depth: "summary", reasonCode: "interest-match", evidence: "agent" });
   });
 });
 

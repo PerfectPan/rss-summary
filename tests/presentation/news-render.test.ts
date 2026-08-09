@@ -17,8 +17,10 @@ describe("presentation/news-render", () => {
         authInfoLevel: 2,
         topicIds: ["technology"],
         topicLabels: ["科技新闻"],
+        queryIds: ["ai-release"],
         queries: ["AI"],
         queryHits: 1,
+        scoreBreakdown: { rank: 16, authority: 8, freshness: 6, crossQuery: 0 },
         score: 100,
         selectedTopicId: "technology",
       },
@@ -33,18 +35,38 @@ describe("presentation/news-render", () => {
         {
           id: "technology",
           label: "科技新闻",
+          icon: "💻",
           enabled: true,
           sourcePolicy: "authoritative",
           maxItems: 3,
-          queries: ["AI"],
+          queries: [
+            {
+              id: "ai-release",
+              text: "AI",
+              intent: "model-release",
+              subjectAny: ["AI"],
+              eventAny: ["发布"],
+              excludedAny: [],
+            },
+          ],
         },
         {
           id: "empty",
           label: "空主题",
+          icon: "📰",
           enabled: true,
           sourcePolicy: "authoritative",
           maxItems: 3,
-          queries: ["x"],
+          queries: [
+            {
+              id: "empty-query",
+              text: "x",
+              intent: "developer-change",
+              subjectAny: ["x"],
+              eventAny: ["发布"],
+              excludedAny: [],
+            },
+          ],
         },
       ],
       warnings: ["某源：1 个查询暂不可用"],
@@ -52,6 +74,8 @@ describe("presentation/news-render", () => {
     });
 
     expect(markdown).toContain("# 午间热点 · 2026-07-29");
+    expect(markdown).toContain("1 条重要动态 · 00:00–12:30");
+    expect(markdown).toContain("**💻 科技 · 1**");
     expect(markdown).toContain("Headline");
     expect(markdown).not.toContain("空主题");
     expect(markdown).toContain("数据源状态：某源：1 个查询暂不可用");

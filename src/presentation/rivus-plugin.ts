@@ -90,7 +90,7 @@ export function createRssSummaryPlugin(
         createExecutor: () => ({ execute: (input) => executeNewsBrief(input) }),
         description:
           "Generate a read-only noon or evening Markdown news brief from bounded Doubao web searches",
-        digest: "sha256:rss-summary-generate-news-brief-v1",
+        digest: "sha256:rss-summary-generate-news-brief-v2",
         id: RSS_SUMMARY_NEWS_TOOL_ID,
         idempotency: "none",
         inputSchema: {
@@ -107,7 +107,7 @@ export function createRssSummaryPlugin(
           type: "object",
         },
         risk: "observe",
-        version: "1.0.0",
+        version: "1.1.0",
       });
       registry.registerTool({
         createExecutor: () => ({ execute: (input) => executeIndustryBrief(input) }),

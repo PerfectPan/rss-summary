@@ -1,9 +1,8 @@
 import { Effect } from "effect";
 
 import {
-  buildNewsStories,
-  countMissingPublishTimeHits,
-  selectNewsStories,
+  buildNewsStoriesWithAudit,
+  selectNewsStoriesWithAudit,
   type NewsBriefEdition,
   type NewsSearchHit,
   type NewsTopic,
@@ -22,6 +21,7 @@ import {
   type DoubaoSearchPage,
 } from "../infrastructure/doubao-search.js";
 import { attempt } from "./effect.js";
+import { buildNewsAudit, type NewsBriefAudit } from "./news-audit.js";
 
 export type { NewsBriefEdition };
 
@@ -32,6 +32,7 @@ export type RivusNewsBriefInput = {
 
 /** Application result: pure document fields. Presentation adds `markdown`. */
 export type RivusNewsBriefResult = {
+  audit: NewsBriefAudit;
   day: string;
   edition: NewsBriefEdition;
   generatedAt: string;
@@ -108,7 +109,12 @@ export function generateRivusNewsBrief(
       topic.queries.map((query) => ({
         query,
         topic,
-        promise: search({ query, count, day: window.day, sourcePolicy: topic.sourcePolicy }),
+        promise: search({
+          query: query.text,
+          count,
+          day: window.day,
+          sourcePolicy: topic.sourcePolicy,
+        }),
       })),
     );
     const settled = yield* attempt(Promise.allSettled(requests.map(({ promise }) => promise)));
@@ -130,11 +136,18 @@ export function generateRivusNewsBrief(
           topicId: request.topic.id,
           topicLabel: request.topic.label,
           sourcePolicy: request.topic.sourcePolicy,
-          query: request.query,
+          queryId: request.query.id,
+          queryText: request.query.text,
+          subjectAny: request.query.subjectAny,
+          eventAny: request.query.eventAny,
+          excludedAny: request.query.excludedAny,
         })),
       );
     });
-    const missingPublishTimeCount = countMissingPublishTimeHits(hits, window);
+    const built = buildNewsStoriesWithAudit(hits, window);
+    const missingPublishTimeCount = built.decisions.filter(
+      ({ reason }) => reason === "invalid-publish-time",
+    ).length;
     const warnings =
       missingPublishTimeCount > 0
         ? [
@@ -142,9 +155,19 @@ export function generateRivusNewsBrief(
             `Doubao 搜索：${missingPublishTimeCount} 条结果缺少有效的发布时间被丢弃`,
           ]
         : topicFailureWarnings;
-    const stories = selectNewsStories(buildNewsStories(hits, window), topics);
+    const selection = selectNewsStoriesWithAudit(built.stories, topics);
+    const stories = selection.stories;
+    const audit = buildNewsAudit(
+      requests,
+      settled,
+      built.decisions,
+      selection.decisions,
+      built.stories.length,
+      stories.length,
+    );
     const generatedAt = (dependencies.now ?? (() => new Date()))().toISOString();
     return {
+      audit,
       day: window.day,
       edition: input.edition,
       generatedAt,
