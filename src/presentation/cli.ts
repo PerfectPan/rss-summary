@@ -4,7 +4,9 @@ import { fileURLToPath } from "node:url";
 import { Effect } from "effect";
 
 import { run as runDigest } from "../application/digest.js";
+import { runIndustry } from "../application/industry-brief.js";
 import { renderJsonDigest, renderMarkdownDigest } from "./render.js";
+import { renderMarkdownIndustryBrief } from "./industry-render.js";
 import { runFeedsCommand } from "./feeds-cli.js";
 import { runGithubHomeCommand } from "./github-home-cli.js";
 import { runResearchCommand } from "./research-cli.js";
@@ -51,6 +53,16 @@ export async function runCliCommand(
     return runResearchCommand(rest, { stdout, stderr });
   }
 
+  if (command === "industry") {
+    try {
+      await Effect.runPromise(runIndustry(renderMarkdownIndustryBrief));
+      return 0;
+    } catch (error) {
+      stderr.write(`${errorMessage(error)}\n`);
+      return 1;
+    }
+  }
+
   if (command === "digest") {
     try {
       await Effect.runPromise(
@@ -84,6 +96,7 @@ function writeHelp(stdout: Writable): void {
   rss-summary feeds list
   rss-summary feeds test
   rss-summary research add [--file <path>] [--state-file .state/feed-state.json]
+  rss-summary industry [--day YYYY-MM-DD] [--only-new] [--dry-run]
   rss-summary signal [--day YYYY-MM-DD] [--occurrence <iso-date-time>] [--dry-run]
 `);
 }
