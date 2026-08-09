@@ -15,6 +15,7 @@ import { createNotifier } from "../infrastructure/notifier.js";
 import { RssClient } from "../infrastructure/rss.js";
 import {
   filterNewCandidates,
+  filterUnresearchedCandidates,
   loadFeedState,
   markCandidatesSeen,
   saveFeedState,
@@ -92,7 +93,9 @@ async function collectDigest(
     repositories,
   });
   const state = loadFeedState(config.stateFile);
-  const candidates = config.onlyNew ? filterNewCandidates(allCandidates, state) : allCandidates;
+  const candidates = config.onlyNew
+    ? filterUnresearchedCandidates(filterNewCandidates(allCandidates, state), state)
+    : allCandidates;
 
   const document: DigestDocument = {
     generatedAt: new Date().toISOString(),

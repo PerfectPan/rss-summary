@@ -73,6 +73,10 @@ export function markCandidateResearched(
   state.researched[researchKeyForCandidate(candidate)] = record;
 }
 
+export function markResearchedByKey(state: FeedState, key: string, record: ResearchRecord): void {
+  state.researched[key] = record;
+}
+
 export function researchKeyForCandidate(candidate: CandidateProject): string {
   if (candidate.source === "rss" || candidate.category === "article") {
     return `rss:${candidate.url ?? candidate.repo}`;

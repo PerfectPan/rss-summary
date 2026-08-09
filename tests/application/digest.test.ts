@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Effect } from "effect";
@@ -119,6 +119,48 @@ describe("digest source isolation", () => {
       expect(document.candidates).toHaveLength(1);
       expect(sentOutputs).toHaveLength(0);
       expect(existsSync(stateFile)).toBe(false);
+    } finally {
+      errorSpy.mockRestore();
+      await rm(root, { force: true, recursive: true });
+    }
+  });
+
+  it("skips candidates already marked researched in only-new mode", async () => {
+    const root = await mkdtemp(join(tmpdir(), "rss-summary-researched-"));
+    const stateFile = join(root, "feed-state.json");
+    await writeFile(
+      stateFile,
+      JSON.stringify({
+        seen: {},
+        researched: {
+          "rss:https://example.com/post": { at: "2026-07-13T00:00:00Z", decision: "read" },
+        },
+      }),
+    );
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    try {
+      const config = loadConfig(
+        {
+          GITHUB_USERNAME: "PerfectPan",
+          RSS_FEEDS: JSON.stringify([
+            { name: "Example Feed", url: "https://example.com/feed", tags: ["ai"] },
+          ]),
+        },
+        [
+          "--only-new",
+          "--since",
+          "2026-07-14T00:00:00+08:00",
+          "--until",
+          "2026-07-15T00:00:00+08:00",
+          "--state-file",
+          stateFile,
+        ],
+      );
+      const { buildDigestDocument } = await import("../../src/application/digest.js");
+
+      const document = await Effect.runPromise(buildDigestDocument(config));
+
+      expect(document.candidates).toHaveLength(0);
     } finally {
       errorSpy.mockRestore();
       await rm(root, { force: true, recursive: true });
