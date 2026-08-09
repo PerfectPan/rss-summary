@@ -93,7 +93,7 @@ Both jobs are intended to be required checks in the branch protection rule for `
 | --- | --- | --- |
 | `feeds.json` | Explicit personal RSS subscriptions | Tracked; changed via `rss-summary feeds`. |
 | `industry-feeds.json` | Curated first-party frontier sources | Tracked; changed intentionally and live-tested. |
-| `news-topics.json` | Noon/evening topic policy | Tracked; validated by `infrastructure/news-topics.ts`. |
+| `news-topics.json` | Noon/evening structured query, relevance, exclusion, source, and quota policy | Tracked; validated by `infrastructure/news-topics.ts`. |
 | `.env` / `.state/` | Local secrets, delivery/research state, and run audit artifacts | Gitignored. |
 
 ## Known Trade-Offs

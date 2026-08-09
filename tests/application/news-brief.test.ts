@@ -6,6 +6,7 @@ import {
   resolveNewsEditionWindow,
   type RivusNewsBriefResult,
 } from "../../src/application/news-brief.js";
+import type { NewsTopicQuery } from "../../src/domain/news.js";
 import { renderNewsBrief } from "../../src/presentation/news-render.js";
 
 function withNewsMarkdown(result: RivusNewsBriefResult) {
@@ -57,6 +58,7 @@ describe("Rivus news brief Tool adapter", () => {
             rankScore: 0.9,
             authInfoLevel: query.includes("政策") ? 1 : 2,
             authInfoDescription: query.includes("政策") ? "非常权威" : "正常权威",
+            rankPosition: 1,
           },
         ],
       };
@@ -73,18 +75,23 @@ describe("Rivus news brief Tool adapter", () => {
               {
                 id: "technology",
                 label: "科技新闻",
+                icon: "💻",
                 enabled: true,
                 sourcePolicy: "authoritative",
                 maxItems: 3,
-                queries: ["AI Agent", "开发工具"],
+                queries: [
+                  newsQuery("ai-agent", "AI Agent"),
+                  newsQuery("developer-tools", "开发工具"),
+                ],
               },
               {
                 id: "politics",
                 label: "政治新闻",
+                icon: "🌍",
                 enabled: true,
                 sourcePolicy: "official",
                 maxItems: 3,
-                queries: ["中国重要政策"],
+                queries: [newsQuery("policy", "中国重要政策")],
               },
             ],
           },
@@ -97,6 +104,14 @@ describe("Rivus news brief Tool adapter", () => {
       expect.objectContaining({ day: "2026-07-29", sourcePolicy: "official" }),
     );
     expect(result).toMatchObject({ edition: "noon", itemCount: 3, day: "2026-07-29" });
+    expect(result.audit).toMatchObject({
+      counts: { fetched: 3, acceptedHits: 3, rejectedHits: 0, selectedStories: 3 },
+      queries: [
+        { queryId: "ai-agent", status: "ok", fetched: 1, accepted: 1 },
+        { queryId: "developer-tools", status: "ok", fetched: 1, accepted: 1 },
+        { queryId: "policy", status: "ok", fetched: 1, accepted: 1 },
+      ],
+    });
     expect(result.markdown).toContain("# 午间热点 · 2026-07-29");
     expect(result.markdown).toContain("**💻 科技 · 2**");
     expect(result.markdown).toContain("**🌍 政治 · 1**");
@@ -118,10 +133,11 @@ describe("Rivus news brief Tool adapter", () => {
       {
         id: "technology",
         label: "科技新闻",
+        icon: "💻",
         enabled: true,
         sourcePolicy: "authoritative" as const,
         maxItems: 3,
-        queries: ["working", "broken"],
+        queries: [newsQuery("working", "working"), newsQuery("broken", "broken")],
       },
     ];
     const partial = await Effect.runPromise(
@@ -138,6 +154,14 @@ describe("Rivus news brief Tool adapter", () => {
       ),
     );
     expect(partial.warnings).toEqual(["科技新闻：1 个查询暂不可用"]);
+    expect(partial.audit.queries).toEqual([
+      expect.objectContaining({ queryId: "working", status: "ok" }),
+      expect.objectContaining({
+        queryId: "broken",
+        status: "failed",
+        error: "temporary search failure",
+      }),
+    ]);
 
     await expect(
       Effect.runPromise(
@@ -176,6 +200,7 @@ describe("Rivus news brief Tool adapter", () => {
                 rankScore: 0.9,
                 authInfoLevel: 2,
                 authInfoDescription: "正常权威",
+                rankPosition: 1,
               },
               {
                 id: "no-time",
@@ -186,6 +211,7 @@ describe("Rivus news brief Tool adapter", () => {
                 rankScore: 0.8,
                 authInfoLevel: 2,
                 authInfoDescription: "正常权威",
+                rankPosition: 2,
               },
             ],
           }),
@@ -193,10 +219,11 @@ describe("Rivus news brief Tool adapter", () => {
             {
               id: "technology",
               label: "科技新闻",
+              icon: "💻",
               enabled: true,
               sourcePolicy: "authoritative",
               maxItems: 3,
-              queries: ["AI Agent"],
+              queries: [newsQuery("ai-agent", "AI Agent", ["summary"], ["fine"])],
             },
           ],
         },
@@ -204,5 +231,30 @@ describe("Rivus news brief Tool adapter", () => {
     );
 
     expect(result.warnings).toContain("Doubao 搜索：1 条结果缺少有效的发布时间被丢弃");
+    expect(result.audit).toMatchObject({
+      counts: { fetched: 2, acceptedHits: 1, rejectedHits: 1 },
+      queries: [
+        {
+          queryId: "ai-agent",
+          rejected: { "invalid-publish-time": 1 },
+        },
+      ],
+    });
   });
 });
+
+function newsQuery(
+  id: string,
+  text: string,
+  eventAny = ["安全更新"],
+  subjectAny = [text],
+): NewsTopicQuery {
+  return {
+    id,
+    text,
+    intent: "developer-change",
+    subjectAny,
+    eventAny,
+    excludedAny: ["评测"],
+  };
+}

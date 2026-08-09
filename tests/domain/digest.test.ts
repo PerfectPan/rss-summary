@@ -167,6 +167,7 @@ describe("github feed domain", () => {
     });
     expect(candidates[0]?.reasons).toContain("rss feed: Deno Blog");
     expect(candidates[0]?.reasons).toContain("matches interest: deno");
+    expect(candidates[0]?.matchedInterests).toContain("deno");
   });
 
   it("preserves title, link, and summary for RSS release candidates", () => {

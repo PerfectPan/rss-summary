@@ -16,6 +16,7 @@ describe("markdown digest renderer", () => {
           actors: ["fi3ework"],
           eventTypes: ["watch"],
           reasons: ["followee starred this repository", "matches interest: skills"],
+          matchedInterests: ["skills"],
           events: [
             {
               id: "star-1",
@@ -44,6 +45,7 @@ describe("markdown digest renderer", () => {
           actors: ["Deno Blog"],
           eventTypes: ["article"],
           reasons: ["rss feed: Deno Blog", "matches interest: deno"],
+          matchedInterests: ["deno"],
           events: [
             {
               id: "rss-1",

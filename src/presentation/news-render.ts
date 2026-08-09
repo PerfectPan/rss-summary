@@ -18,22 +18,19 @@ export function renderNewsBrief(document: NewsBriefDocument): string {
   const lines = [
     `# ${title} · ${document.day}`,
     "",
-    `${document.stories.length} 条高信号 · ${document.windowLabel}`,
+    `${document.stories.length} 条重要动态 · ${document.windowLabel}`,
     "",
   ];
 
   for (const topic of document.topics.filter(({ enabled }) => enabled)) {
     const stories = document.stories.filter(({ selectedTopicId }) => selectedTopicId === topic.id);
     if (stories.length === 0) continue;
-    lines.push(
-      `**${topicIcon(topic.id)} ${shortTopicLabel(topic.label)} · ${stories.length}**`,
-      "",
-    );
+    lines.push(`**${topic.icon} ${shortTopicLabel(topic.label)} · ${stories.length}**`, "");
     stories.forEach((story, index) => appendStory(lines, story, index + 1));
   }
 
   if (document.stories.length === 0) {
-    lines.push("本时段没有筛出经过时间和来源校验的高信号热点。", "");
+    lines.push("本时段没有筛出同时符合时间、来源和事件意图的热点。", "");
   }
   if (document.warnings.length > 0) {
     lines.push(`数据源状态：${document.warnings.join("；")}`, "");
@@ -45,12 +42,6 @@ function appendStory(lines: string[], story: SelectedNewsStory, index: number): 
   lines.push(`**${index}. [${markdownLinkText(story.title)}](${story.canonicalUrl})**`);
   lines.push(story.summary);
   lines.push(`${story.siteName} · ${displayTime(story.publishTime) ?? story.publishTime}`, "");
-}
-
-function topicIcon(topicId: string): string {
-  if (topicId === "technology") return "💻";
-  if (topicId === "politics") return "🌍";
-  return "📰";
 }
 
 function shortTopicLabel(value: string): string {

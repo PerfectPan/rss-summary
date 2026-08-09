@@ -20,6 +20,7 @@ describe("industry brief render", () => {
           actors: ["OpenAI"],
           eventTypes: ["article"],
           reasons: ["matches interest: agent"],
+          matchedInterests: ["agent"],
           events: [],
           label: "New agent release",
           url: "https://example.com/a",

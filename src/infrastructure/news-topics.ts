@@ -1,13 +1,27 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import type { NewsSourcePolicy, NewsTopic } from "../domain/news.js";
+import type {
+  NewsQueryIntent,
+  NewsSourcePolicy,
+  NewsTopic,
+  NewsTopicQuery,
+} from "../domain/news.js";
 import { optionalBoolean, requiredString, requirePositiveInteger } from "./config-parse.js";
 import { requireRecord } from "./parsing.js";
 
 const defaultTopicsFile = fileURLToPath(new URL("../../news-topics.json", import.meta.url));
 const topicIdPattern = /^[a-z][a-z0-9-]*$/u;
+const queryIdPattern = /^[a-z][a-z0-9-]*$/u;
 const maxSearchQueryLength = 100;
+const queryIntents = new Set<NewsQueryIntent>([
+  "model-release",
+  "developer-change",
+  "service-incident",
+  "security-advisory",
+  "policy-action",
+  "capital-event",
+]);
 const newsTopicLimits = {
   maxItemsPerTopic: 10,
   maxQueriesPerTopic: 8,
@@ -29,6 +43,7 @@ export function parseNewsTopics(value: string): NewsTopic[] {
   }
 
   const ids = new Set<string>();
+  const queryIds = new Set<string>();
   const topics = parsed.map((item, index) => {
     const record = requireRecord(item, `news topic ${index + 1}`);
     const id = requiredString(record.id, `news topic ${index + 1} id`);
@@ -37,6 +52,7 @@ export function parseNewsTopics(value: string): NewsTopic[] {
     ids.add(id);
 
     const label = requiredString(record.label, `news topic ${id} label`);
+    const icon = requiredString(record.icon ?? "📰", `news topic ${id} icon`);
     const enabled = optionalBoolean(record.enabled, true, `news topic ${id} enabled`);
     const sourcePolicy = parseSourcePolicy(record.sourcePolicy, id);
     const maxItems = requirePositiveInteger(record.maxItems, 5, `news topic ${id} maxItems`);
@@ -53,17 +69,11 @@ export function parseNewsTopics(value: string): NewsTopic[] {
         `News topic ${id} supports at most ${newsTopicLimits.maxQueriesPerTopic} queries.`,
       );
     }
-    const queries = record.queries.map((query, queryIndex) => {
-      const text = requiredString(query, `news topic ${id} query ${queryIndex + 1}`);
-      if (text.length > maxSearchQueryLength) {
-        throw new Error(
-          `News topic ${id} query ${queryIndex + 1} must not exceed ${maxSearchQueryLength} characters.`,
-        );
-      }
-      return text;
-    });
+    const queries = record.queries.map((query, queryIndex) =>
+      parseQuery(query, id, queryIndex, queryIds),
+    );
 
-    return { id, label, enabled, sourcePolicy, maxItems, queries };
+    return { id, label, icon, enabled, sourcePolicy, maxItems, queries };
   });
   const totalQueries = topics.reduce((total, topic) => total + topic.queries.length, 0);
   if (totalQueries > newsTopicLimits.maxTotalQueries) {
@@ -72,6 +82,48 @@ export function parseNewsTopics(value: string): NewsTopic[] {
     );
   }
   return topics;
+}
+
+function parseQuery(
+  value: unknown,
+  topicId: string,
+  queryIndex: number,
+  queryIds: Set<string>,
+): NewsTopicQuery {
+  const context = `news topic ${topicId} query ${queryIndex + 1}`;
+  const record = requireRecord(value, context);
+  const id = requiredString(record.id, `${context} id`);
+  if (!queryIdPattern.test(id)) throw new Error(`News query id must use kebab-case: ${id}`);
+  if (queryIds.has(id)) throw new Error(`Duplicate news query id: ${id}`);
+  queryIds.add(id);
+  const text = requiredString(record.text, `${context} text`);
+  if (text.length > maxSearchQueryLength) {
+    throw new Error(`${context} text must not exceed ${maxSearchQueryLength} characters.`);
+  }
+  const intent = parseQueryIntent(record.intent, id);
+  return {
+    id,
+    text,
+    intent,
+    subjectAny: parseTerms(record.subjectAny, `${context} subjectAny`, true),
+    eventAny: parseTerms(record.eventAny, `${context} eventAny`, true),
+    excludedAny: parseTerms(record.excludedAny, `${context} excludedAny`, false),
+  };
+}
+
+function parseQueryIntent(value: unknown, id: string): NewsQueryIntent {
+  if (typeof value === "string" && queryIntents.has(value as NewsQueryIntent)) {
+    return value as NewsQueryIntent;
+  }
+  throw new Error(`News query ${id} has an unsupported intent.`);
+}
+
+function parseTerms(value: unknown, context: string, required: boolean): string[] {
+  if (!Array.isArray(value) || (required && value.length === 0)) {
+    throw new Error(`${context} must be ${required ? "a non-empty" : "an"} array.`);
+  }
+  if (value.length > 20) throw new Error(`${context} supports at most 20 terms.`);
+  return value.map((term, index) => requiredString(term, `${context} term ${index + 1}`));
 }
 
 function parseSourcePolicy(value: unknown, id: string): NewsSourcePolicy {

@@ -55,6 +55,7 @@ export type CandidateProject = {
   actors: string[];
   eventTypes: ActivityType[];
   reasons: string[];
+  matchedInterests?: string[];
   events: ActivityCard[];
   repository?: RepositoryMetadata;
   label?: string;
@@ -242,6 +243,7 @@ function scoreRepo(
         : `matches interest: ${interest}`,
     );
   }
+  const allMatchedInterests = uniq([...matchedInterests, ...eventInterests]);
 
   if (repository) {
     score += Math.min(25, Math.log10(Math.max(1, repository.stargazersCount)) * 6);
@@ -259,6 +261,7 @@ function scoreRepo(
     actors,
     eventTypes,
     reasons: [...reasons],
+    matchedInterests: allMatchedInterests,
     events: events.sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     repository,
     label: labelFor(repo, events),

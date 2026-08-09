@@ -100,7 +100,7 @@ The JSON records:
 
 - every source's success/failure, error, and fetched item count;
 - fetched, in-window, ranked, selected, and research-pending counts;
-- every ranked candidate's score, output depth, selected/filtered decision, and reason;
+- every ranked candidate's score, output depth, typed presentation reason/evidence, and selected/filtered decision;
 - delivery status, channel, completion time, and failure message.
 
 Inspect it with:
@@ -119,7 +119,9 @@ rss-summary runs show <run-label-or-json-path>
 
 The news product keeps its own domain because authority validation, topic quotas, time windows, and eight-story cap differ materially from subscription ranking.
 
-Its search configuration contains event intents rather than umbrella topics: named actors or products, a concrete event type, an allowed source class, and explicit noise exclusions. Requests are restricted to the local calendar day, automatic query rewriting is disabled, and the application then applies the exact noon/evening window to each result's publish time. The time filter protects delivery boundaries; it is not used as a substitute for a precise query.
+Its search configuration contains structured event intents rather than umbrella topics: a stable query ID, required subjects, required event terms, an intent code, explicit noise exclusions, and an allowed source class. Requests are restricted to the local calendar day, automatic query rewriting is disabled, and the application then applies the exact noon/evening window and relevance policy to each result. The time filter protects delivery boundaries; it is not used as a substitute for a precise query.
+
+News ranking uses within-query position, source authority, and freshness. A URL returned by multiple queries receives only a bounded tie-break bonus; it is not treated as independent corroboration. The Tool result carries a per-query audit with provider log ID, fetched/accepted counts, rejection reasons, canonical duplicate counts, semantic-title duplicate counts, quota filtering, and the eight-item cap.
 
 ## State semantics
 

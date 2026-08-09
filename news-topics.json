@@ -2,53 +2,107 @@
   {
     "id": "ai-model-releases",
     "label": "AI 模型与 Agent 发布",
+    "icon": "🤖",
     "enabled": true,
     "sourcePolicy": "official",
     "maxItems": 2,
     "queries": [
-      "OpenAI、Anthropic、Google DeepMind、Meta 或 xAI 正式发布新模型、Agent 或 API；只要官方公告，不要教程、评测和传闻",
-      "Codex、Claude Code、Gemini CLI、GitHub Copilot、Cursor 或 Windsurf 进入 GA、发布重大版本或破坏性变更；只要官方公告"
+      {
+        "id": "frontier-model-release",
+        "text": "OpenAI、Anthropic、Google DeepMind、Meta 或 xAI 正式发布新模型、Agent 或 API；只要官方公告",
+        "intent": "model-release",
+        "subjectAny": ["OpenAI", "Anthropic", "Google DeepMind", "Meta", "xAI"],
+        "eventAny": ["正式发布", "正式上线", "开放 API", "进入 GA", "general availability", "launches", "released", "introducing"],
+        "excludedAny": ["教程", "评测", "传闻", "预测", "盘点", "tutorial", "review", "rumor", "prediction", "roundup"]
+      },
+      {
+        "id": "coding-agent-release",
+        "text": "Codex、Claude Code、Gemini CLI、GitHub Copilot、Cursor 或 Windsurf 进入 GA、发布重大版本或破坏性变更；只要官方公告",
+        "intent": "developer-change",
+        "subjectAny": ["Codex", "Claude Code", "Gemini CLI", "GitHub Copilot", "Cursor", "Windsurf"],
+        "eventAny": ["进入 GA", "重大版本", "破坏性变更", "general availability", "major release", "breaking change"],
+        "excludedAny": ["教程", "评测", "传闻", "预测", "盘点", "tutorial", "review", "rumor", "prediction", "roundup"]
+      }
     ]
   },
   {
     "id": "developer-tools",
     "label": "开发工具关键变更",
+    "icon": "💻",
     "enabled": true,
     "sourcePolicy": "official",
     "maxItems": 2,
     "queries": [
-      "TypeScript、Rust、Node.js、Deno、Bun 或主流 IDE 发布重大版本、弃用、破坏性变更或安全更新；只要项目官方公告"
+      {
+        "id": "runtime-toolchain-change",
+        "text": "TypeScript、Rust、Node.js、Deno、Bun 或主流 IDE 发布重大版本、弃用、破坏性变更或安全更新；只要项目官方公告",
+        "intent": "developer-change",
+        "subjectAny": ["TypeScript", "Rust", "Node.js", "Deno", "Bun", "IDE"],
+        "eventAny": ["重大版本", "弃用", "破坏性变更", "安全更新", "major release", "breaking change", "deprecation", "security update"],
+        "excludedAny": ["教程", "评测", "传闻", "预测", "盘点", "tutorial", "review", "rumor", "prediction", "roundup"]
+      }
     ]
   },
   {
     "id": "infrastructure-security",
     "label": "基础设施与安全事件",
+    "icon": "🛡️",
     "enabled": true,
     "sourcePolicy": "authoritative",
     "maxItems": 2,
     "queries": [
-      "AWS、Azure、Google Cloud 或 Cloudflare 发生大规模服务中断、数据泄露或安全事件；只要官方通报或状态页",
-      "开源开发工具发生高危 CVE、供应链攻击或紧急弃用；只要项目维护者或安全机构公告"
+      {
+        "id": "cloud-service-incident",
+        "text": "AWS、Azure、Google Cloud 或 Cloudflare 发生大规模服务中断、数据泄露或安全事件；只要官方通报或状态页",
+        "intent": "service-incident",
+        "subjectAny": ["AWS", "Azure", "Google Cloud", "Cloudflare"],
+        "eventAny": ["服务中断", "大规模中断", "故障", "数据泄露", "安全事件", "outage", "service disruption", "data breach", "security incident"],
+        "excludedAny": ["教程", "评测", "传闻", "预测", "盘点", "tutorial", "review", "rumor", "prediction", "roundup"]
+      },
+      {
+        "id": "open-source-security",
+        "text": "开源开发工具发生高危 CVE、供应链攻击或紧急弃用；只要项目维护者或安全机构公告",
+        "intent": "security-advisory",
+        "subjectAny": ["开源", "GitHub", "npm", "PyPI", "软件包", "dependency", "package"],
+        "eventAny": ["CVE-", "高危漏洞", "供应链攻击", "紧急弃用", "critical vulnerability", "supply-chain attack", "security advisory"],
+        "excludedAny": ["教程", "评测", "传闻", "预测", "盘点", "tutorial", "review", "rumor", "prediction", "roundup"]
+      }
     ]
   },
   {
     "id": "tech-policy",
     "label": "科技政策生效",
+    "icon": "⚖️",
     "enabled": true,
     "sourcePolicy": "official",
     "maxItems": 1,
     "queries": [
-      "AI 模型、芯片或数据相关监管政策正式发布或生效；只要政府、法院或监管机构原文"
+      {
+        "id": "ai-policy-action",
+        "text": "AI 模型、芯片或数据相关监管政策正式发布或生效；只要政府、法院或监管机构原文",
+        "intent": "policy-action",
+        "subjectAny": ["AI", "人工智能", "模型", "芯片", "数据"],
+        "eventAny": ["正式发布", "生效", "通过", "裁定", "takes effect", "effective", "regulation", "ruling"],
+        "excludedAny": ["解读", "观点", "传闻", "预测", "盘点", "opinion", "rumor", "prediction", "roundup"]
+      }
     ]
   },
   {
     "id": "capital-industry",
     "label": "重大资本事件",
+    "icon": "💰",
     "enabled": true,
     "sourcePolicy": "authoritative",
     "maxItems": 1,
     "queries": [
-      "AI 公司完成超过 1 亿美元融资、收购、合并、IPO 或发布关键财报；只要公司公告或权威财经报道"
+      {
+        "id": "major-capital-event",
+        "text": "AI 公司完成超过 1 亿美元融资、收购、合并、IPO 或发布关键财报；只要公司公告或权威财经报道",
+        "intent": "capital-event",
+        "subjectAny": ["AI", "人工智能", "大模型", "模型公司", "OpenAI", "Anthropic", "xAI", "Mistral", "Cohere", "Scale AI", "Hugging Face", "Cursor", "Windsurf", "Perplexity"],
+        "eventAny": ["融资", "收购", "合并", "IPO", "财报", "funding", "acquisition", "merger", "earnings"],
+        "excludedAny": ["传闻", "预测", "盘点", "教程", "opinion", "rumor", "prediction", "roundup"]
+      }
     ]
   }
 ]

@@ -68,6 +68,20 @@ describe("rss-summary Rivus Plugin", () => {
 
   it("delegates news Tool execution to the bounded Doubao search adapter", async () => {
     const generateNewsBrief = vi.fn(async () => ({
+      audit: {
+        queries: [],
+        counts: {
+          fetched: 0,
+          acceptedHits: 0,
+          rejectedHits: 0,
+          canonicalDuplicates: 0,
+          deduplicatedStories: 0,
+          selectedStories: 0,
+          duplicateTitleStories: 0,
+          topicQuotaFilteredStories: 0,
+          briefCapFilteredStories: 0,
+        },
+      },
       day: "2026-07-29",
       edition: "noon" as const,
       generatedAt: "2026-07-29T04:30:00.000Z",
@@ -84,7 +98,7 @@ describe("rss-summary Rivus Plugin", () => {
     const result = await tool
       .createExecutor({
         toolId: RSS_SUMMARY_NEWS_TOOL_ID,
-        toolVersion: "1.0.0",
+        toolVersion: "1.1.0",
       })
       .execute(
         { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
@@ -116,7 +130,7 @@ describe("rss-summary Rivus Plugin", () => {
       const result = await tool
         .createExecutor({
           toolId: RSS_SUMMARY_NEWS_TOOL_ID,
-          toolVersion: "1.0.0",
+          toolVersion: "1.1.0",
         })
         .execute(
           { edition: "evening", occurrence: "2026-07-29T11:00:00.000Z" },

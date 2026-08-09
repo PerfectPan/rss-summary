@@ -1,5 +1,9 @@
 import type { CandidateProject } from "./digest.js";
-import { presentationDepthForCandidate, type PresentationDepth } from "./attention.js";
+import {
+  presentationDecisionForCandidate,
+  type PresentationDepth,
+  type PresentationReasonCode,
+} from "./attention.js";
 
 export type RunProduct = "subscriptions" | "frontier";
 export type RunSourceResult = {
@@ -18,12 +22,14 @@ export type RunCandidateDecision = {
   url?: string;
   score: number;
   depth: PresentationDepth;
+  presentationReasonCode?: PresentationReasonCode;
+  presentationEvidence?: string;
   status: "selected" | "research-pending" | "filtered";
   reason: string;
 };
 
 export type RunAudit = {
-  version: 1;
+  version: 1 | 2;
   runId: string;
   product: RunProduct;
   generatedAt: string;
@@ -55,19 +61,22 @@ export function candidateDecision(
   reasonWhenFiltered: (candidate: CandidateProject) => string,
 ): RunCandidateDecision {
   const selected = selectedCandidates.includes(candidate);
-  const depth = presentationDepthForCandidate(candidate);
+  const presentation = presentationDecisionForCandidate(candidate);
+  const depth = presentation.depth;
   return {
     key: candidate.repo,
     label: candidate.label ?? candidate.repo,
     ...(candidate.url ? { url: candidate.url } : {}),
     score: candidate.score,
     depth,
+    presentationReasonCode: presentation.reasonCode,
+    ...(presentation.evidence ? { presentationEvidence: presentation.evidence } : {}),
     status: selected ? (depth === "research" ? "research-pending" : "selected") : "filtered",
     reason: selected
       ? depth === "research"
         ? "requires source verification before publication"
         : depth === "summary"
-          ? "selected for expanded summary"
+          ? `selected for expanded summary: ${presentation.reasonCode}${presentation.evidence ? ` (${presentation.evidence})` : ""}`
           : "selected for one-line delivery"
       : reasonWhenFiltered(candidate),
   };

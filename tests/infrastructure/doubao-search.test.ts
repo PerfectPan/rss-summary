@@ -55,7 +55,7 @@ describe("Doubao search source", () => {
       ContentFormats: "markdown",
     });
     expect(page).toMatchObject({ logId: "log-1", resultCount: 1, timeCostMs: 42 });
-    expect(page.results[0]).toMatchObject({ id: "result-1", authInfoLevel: 2 });
+    expect(page.results[0]).toMatchObject({ id: "result-1", authInfoLevel: 2, rankPosition: 1 });
   });
 
   it("uses the API's official-only filter for political news", async () => {

@@ -131,7 +131,7 @@ rss-summary runs show <run-label>
 
 ## Rivus Plugin
 
-本仓库导出 `rss-summary/rivus-plugin`：一个 Agent profile（`rss-digest`）+ 三个只读 Tool（`generate-digest` / `generate-news-brief` / `generate-industry-brief`）及对应调度模板。订阅和行业 Tool 的结果都携带 source/candidate audit；Rivus 自己的 trace 与投递 ledger 记录后续卡片投递。行业 Tool 不直接发布未研究论文，只报告待调研数量。安装、manifest 绑定、环境契约见 [docs/rivus-plugin.md](docs/rivus-plugin.md)。
+本仓库导出 `rss-summary/rivus-plugin`：一个 Agent profile（`rss-digest`）+ 三个只读 Tool（`generate-digest` / `generate-news-brief` / `generate-industry-brief`）及对应调度模板。订阅和行业 Tool 携带 source/candidate audit；新闻 Tool 携带逐查询召回、淘汰原因、去重和配额漏斗。Rivus 自己的 trace 与投递 ledger 记录后续卡片投递。行业 Tool 不直接发布未研究论文，只报告待调研数量。安装、manifest 绑定、环境契约见 [docs/rivus-plugin.md](docs/rivus-plugin.md)。
 
 ## Architecture
 

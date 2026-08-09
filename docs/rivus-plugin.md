@@ -15,7 +15,7 @@
 | Automation | `rss-summary/noon-news-brief` | current day 00:00 through noon occurrence |
 | Automation | `rss-summary/evening-news-brief` | current day 12:30 through evening occurrence |
 
-All Tools have `observe` risk. Feed Tools force dry-run mode: they read only-new state but do not send a webhook, write seen state, or write local run artifacts. Their structured result includes the source/candidate audit. Rivus records the subsequent card delivery in its trace and Feishu delivery ledger.
+All Tools have `observe` risk. Feed Tools force dry-run mode: they read only-new state but do not send a webhook, write seen state, or write local run artifacts. Their structured result includes the source/candidate audit. The news Tool includes its query/rejection/selection audit. Rivus records the subsequent card delivery in its trace and Feishu delivery ledger.
 
 Public GitHub Repository Search and Hacker News discovery are intentionally absent. GitHub Home belongs to personal subscriptions; industry discovery comes from curated first-party feeds.
 
@@ -119,7 +119,9 @@ The digest and industry Tool results contain an `audit` object with:
 
 - source successes/failures and item counts;
 - fetched/in-window/ranked/selected counts;
-- per-candidate score, presentation depth, decision, and reason.
+- per-candidate score, presentation depth, typed presentation reason/evidence, and decision.
+
+The news Tool's `audit` records each structured query's provider log ID, result counts, deterministic rejection reasons (`outside-window`, `insufficient-authority`, `intent-mismatch`, and others), canonical/title deduplication, topic quota filtering, and the final brief cap. Selected stories also expose a score breakdown for query rank, authority, freshness, and the bounded cross-query tie-break.
 
 The Tool cannot honestly claim Feishu delivery because delivery happens after Tool execution. Use the Rivus run trace for the exact Tool result and its Feishu delivery ledger for target, attempt, idempotency, and outcome. Direct CLI runs instead write paired `.state/runs/...json` and `.md` artifacts.
 
