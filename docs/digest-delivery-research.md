@@ -46,7 +46,7 @@ Each recommended item should include:
 
 - Link and source.
 - One-sentence gist.
-- Signal: who starred, release, merged PR, RSS source, or repeated trend.
+- Provenance: who starred, release, merged PR, RSS source, or repeated mention. Repetition is corroboration for ranking, not proof of importance.
 - Relevance to the user's interests.
 - Recommended action: `try`, `read`, `track`, `save`, or `skip`.
 - Confidence: `high`, `medium`, or `low` when the evidence is incomplete.
@@ -59,7 +59,7 @@ Star/discovery cards need one compact code-quality judgment, because the useful 
 - Why it matters: relevance to the user's agent/tooling/frontend/Rust/TypeScript interests.
 - Suggested action: try, track, save, or skip.
 
-Merged PR cards need extra interpretation and daily-briefing language. The final digest should not say only "important PR merged" or use implementation-log labels like "this merge"; it should say what happened today, whether it deserves attention, and what the project is. A merged PR entry should answer:
+Merged PR cards that pass the interest/importance gate need extra interpretation and daily-briefing language. The final digest should not say only "pull request merged" or use implementation-log labels like "this merge"; it should say what happened today, whether it deserves attention, and what the project is. A merged PR entry should answer:
 
 - Project: what the repo is for.
 - What happened today: behavior/API/docs/security/tooling change from the PR body and changed-file signal.
@@ -99,7 +99,7 @@ This is mostly the current CLI:
 - Fetch tracked RSS feeds from `feeds.json`.
 - Normalize source events into `ActivityCard`.
 - Filter by calendar day.
-- Score by signal strength, followed actors, interest match, recency, and repeated signals.
+- Score by source strength, followed actors, interest match, recency, and repeated mentions. Keep that score separate from the summary-expansion decision.
 - Emit JSON candidates for the research layer.
 
 This stage should stay deterministic and cheap.

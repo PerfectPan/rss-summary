@@ -42,7 +42,7 @@ Do not commit `.state/`, run artifacts, browser storage, tokens, or generated re
 - Treat GitHub Home and personal blogs as one explicit subscription stream.
 - Do not drop an ordinary item merely because it lacks broad popularity or keyword matches.
 - Reuse `state.researched["github:owner/repo"]` to avoid repeating repository investigation, but do not interpret research cache as permission to suppress a later new event.
-- Render routine updates in one sentence plus a link. Expand only strong releases, repeated social signals, interest matches, or genuinely actionable changes.
+- Render routine updates in one sentence plus a link. Repeated mentions affect ranking only; expand an item only for an interest match or a concrete major/GA/breaking/deprecation/security change.
 
 ### Industry frontier
 
@@ -54,7 +54,7 @@ Do not commit `.state/`, run artifacts, browser storage, tokens, or generated re
 ## Research rules
 
 - GitHub discovery/star: inspect README, top-level tree, package/workspace files, entrypoints, tests/CI, recent activity, and release history. State when the judgment is surface-level.
-- Pull request: explain the project, the exact behavioral/API/tooling change, why it matters, and whether action is needed. Do not stop at "important PR merged".
+- Pull request: explain the project, the exact behavioral/API/tooling change, why it matters, and whether action is needed. Do not stop at "pull request merged".
 - Release: inspect release notes and breaking changes; report impact and upgrade risk.
 - Article: open the original page when accessible. Summarize the claim, evidence, and practical relevance instead of paraphrasing only the feed excerpt.
 - Paper: open canonical `arxiv.org/abs/<id>` and verify authors, institutions, question, method, results, limitations, and code/project links. Use ar5iv HTML only when the abstract is insufficient and the paper is likely to make the final 2–3. Never recommend from title alone.

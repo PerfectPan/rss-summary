@@ -1,63 +1,54 @@
 [
   {
-    "id": "ai-agents",
-    "label": "AI Agent 与模型",
+    "id": "ai-model-releases",
+    "label": "AI 模型与 Agent 发布",
     "enabled": true,
-    "sourcePolicy": "authoritative",
+    "sourcePolicy": "official",
     "maxItems": 2,
     "queries": [
-      "AI Agent 大模型 工具调用 Memory Multi-Agent 重要发布",
-      "Coding Agent 编程智能体 模型能力 重大更新"
+      "OpenAI、Anthropic、Google DeepMind、Meta 或 xAI 正式发布新模型、Agent 或 API；只要官方公告，不要教程、评测和传闻",
+      "Codex、Claude Code、Gemini CLI、GitHub Copilot、Cursor 或 Windsurf 进入 GA、发布重大版本或破坏性变更；只要官方公告"
     ]
   },
   {
     "id": "developer-tools",
-    "label": "开发工具与开源",
+    "label": "开发工具关键变更",
+    "enabled": true,
+    "sourcePolicy": "official",
+    "maxItems": 2,
+    "queries": [
+      "TypeScript、Rust、Node.js、Deno、Bun 或主流 IDE 发布重大版本、弃用、破坏性变更或安全更新；只要项目官方公告"
+    ]
+  },
+  {
+    "id": "infrastructure-security",
+    "label": "基础设施与安全事件",
     "enabled": true,
     "sourcePolicy": "authoritative",
     "maxItems": 2,
     "queries": [
-      "开发工具 开源项目 IDE CLI TypeScript Rust 重大更新"
-    ]
-  },
-  {
-    "id": "product-organization",
-    "label": "产品与组织创新",
-    "enabled": true,
-    "sourcePolicy": "authoritative",
-    "maxItems": 1,
-    "queries": [
-      "AI Native 产品 商业化 研发组织 小团队 重要案例"
-    ]
-  },
-  {
-    "id": "infrastructure-reliability",
-    "label": "基础设施与可靠性",
-    "enabled": true,
-    "sourcePolicy": "authoritative",
-    "maxItems": 1,
-    "queries": [
-      "云服务 基础设施 可观测性 数据库 网络安全 重大故障 复盘"
+      "AWS、Azure、Google Cloud 或 Cloudflare 发生大规模服务中断、数据泄露或安全事件；只要官方通报或状态页",
+      "开源开发工具发生高危 CVE、供应链攻击或紧急弃用；只要项目维护者或安全机构公告"
     ]
   },
   {
     "id": "tech-policy",
-    "label": "科技政策与产业格局",
+    "label": "科技政策生效",
     "enabled": true,
     "sourcePolicy": "official",
     "maxItems": 1,
     "queries": [
-      "人工智能 数据 芯片 开源 科技政策 监管 官方消息"
+      "AI 模型、芯片或数据相关监管政策正式发布或生效；只要政府、法院或监管机构原文"
     ]
   },
   {
     "id": "capital-industry",
-    "label": "资本与商业信号",
+    "label": "重大资本事件",
     "enabled": true,
     "sourcePolicy": "authoritative",
     "maxItems": 1,
     "queries": [
-      "人工智能 科技公司 融资 并购 财报 商业模式 重大变化"
+      "AI 公司完成超过 1 亿美元融资、收购、合并、IPO 或发布关键财报；只要公司公告或权威财经报道"
     ]
   }
 ]

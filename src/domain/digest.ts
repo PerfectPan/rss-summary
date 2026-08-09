@@ -207,7 +207,7 @@ function scoreRepo(
     if (event.type === "follow") reasons.add("follow relationship from GitHub Home");
     if (event.type === "announcement") reasons.add("GitHub Home announcement");
     if (event.type === "pull_request" && event.action === "merged")
-      reasons.add("important PR merged");
+      reasons.add("pull request merged");
     if (context.followees.has(event.actor)) {
       score += 30;
       reasons.add(`followed actor: ${event.actor}`);
@@ -222,7 +222,7 @@ function scoreRepo(
 
   if (actors.length > 1) {
     score += 20 + actors.length * 5;
-    reasons.add("multiple followed signals");
+    reasons.add("multiple followed mentions");
   }
 
   const matchedInterests = matchInterests(repository, context.interests);

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { DoubaoSearchClient } from "../../src/infrastructure/doubao-search.js";
 
 describe("Doubao search source", () => {
-  it("requests an exact day with query rewrite and authoritative URL results", async () => {
+  it("requests an exact day without broad query rewriting and with authoritative URL results", async () => {
     const fetch = vi.fn(
       async (_url: string | URL | Request, _init?: RequestInit) =>
         new Response(
@@ -51,7 +51,7 @@ describe("Doubao search source", () => {
       Count: 10,
       Filter: { NeedUrl: true },
       TimeRange: "2026-07-29..2026-07-29",
-      QueryControl: { QueryRewrite: true },
+      QueryControl: { QueryRewrite: false },
       ContentFormats: "markdown",
     });
     expect(page).toMatchObject({ logId: "log-1", resultCount: 1, timeCostMs: 42 });

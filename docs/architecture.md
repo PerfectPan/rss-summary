@@ -10,7 +10,7 @@ The source type does not decide the product. The user's relationship to the sour
 | --- | --- | --- | --- |
 | My subscriptions | What did sources I deliberately follow publish? | GitHub Home + `feeds.json` personal blogs | `.state/feed-state.json` |
 | Industry frontier | What changed at companies and projects I should know about? | curated official Blog / News / Changelog / Release / research feeds in `industry-feeds.json` | `.state/industry-state.json` |
-| Noon/evening news | What happened in the last hours? | bounded authoritative Doubao queries from `news-topics.json` | none |
+| Noon/evening news | What happened in the last hours? | event-specific Doubao queries from `news-topics.json`, with official/authoritative source policy | none |
 
 GitHub Home belongs to subscriptions because it is already personalized. Public GitHub Repository Search and Hacker News discovery are intentionally not a product: they optimize for popularity and novelty rather than the user's explicit subscriptions or curated official sources.
 
@@ -32,7 +32,7 @@ flowchart LR
 The output depth is separate from ranking:
 
 - `link`: a trusted but ordinary update is one sentence plus its original link.
-- `summary`: an announcement, merged PR, repeated signal, or explicit interest match receives a short excerpt-based summary. A score or release label alone never expands an item.
+- `summary`: an explicit interest match or content-level importance marker (major/GA/breaking/deprecation/security) receives a short excerpt-based summary. Repeated mentions, an announcement label, a merged PR, a score, or a release label alone never expands an item.
 - `research`: papers are withheld from direct Markdown until the research workflow verifies the original source.
 
 `src/domain/attention.ts` owns this decision. Renderers do not reinterpret scores.
@@ -118,6 +118,8 @@ rss-summary runs show <run-label-or-json-path>
 `src/presentation/candidate-brief.ts` owns the shared two-depth layout. Product renderers supply only labels and metadata. Both preserve all selected categories instead of applying one global slice; each expanded section is capped at 8 and each compact section at 20. Papers are counted but hidden from direct Markdown.
 
 The news product keeps its own domain because authority validation, topic quotas, time windows, and eight-story cap differ materially from subscription ranking.
+
+Its search configuration contains event intents rather than umbrella topics: named actors or products, a concrete event type, an allowed source class, and explicit noise exclusions. Requests are restricted to the local calendar day, automatic query rewriting is disabled, and the application then applies the exact noon/evening window to each result's publish time. The time filter protects delivery boundaries; it is not used as a substitute for a precise query.
 
 ## State semantics
 

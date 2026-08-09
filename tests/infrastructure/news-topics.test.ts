@@ -11,19 +11,25 @@ describe("news topics", () => {
     );
 
     expect(topics.map(({ id }) => id)).toEqual([
-      "ai-agents",
+      "ai-model-releases",
       "developer-tools",
-      "product-organization",
-      "infrastructure-reliability",
+      "infrastructure-security",
       "tech-policy",
       "capital-industry",
     ]);
     expect(topics.reduce((total, { maxItems }) => total + maxItems, 0)).toBe(8);
-    expect(topics.flatMap(({ queries }) => queries)).toHaveLength(7);
-    expect(topics.find(({ id }) => id === "tech-policy")?.sourcePolicy).toBe("official");
+    const queries = topics.flatMap(({ queries }) => queries);
+    expect(queries).toHaveLength(7);
+    expect(queries.every((query) => query.includes("只要"))).toBe(true);
+    expect(queries.join(" ")).not.toContain("产品 商业化 研发组织 小团队");
     expect(
       topics
-        .filter(({ id }) => id !== "tech-policy")
+        .filter(({ id }) => ["ai-model-releases", "developer-tools", "tech-policy"].includes(id))
+        .every(({ sourcePolicy }) => sourcePolicy === "official"),
+    ).toBe(true);
+    expect(
+      topics
+        .filter(({ id }) => ["infrastructure-security", "capital-industry"].includes(id))
         .every(({ sourcePolicy }) => sourcePolicy === "authoritative"),
     ).toBe(true);
   });
@@ -99,5 +105,20 @@ describe("news topics", () => {
         ]),
       ),
     ).toThrow(/maxItems.*10/i);
+
+    expect(() =>
+      parseNewsTopics(
+        JSON.stringify([
+          {
+            id: "technology",
+            label: "科技",
+            enabled: true,
+            sourcePolicy: "authoritative",
+            maxItems: 3,
+            queries: ["a".repeat(101)],
+          },
+        ]),
+      ),
+    ).toThrow(/query 1.*100 characters/i);
   });
 });
