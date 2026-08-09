@@ -17,6 +17,7 @@ export type RivusIndustryBriefResult = {
   candidateCount: number;
   generatedAt: string;
   markdown: string;
+  paperCandidateCount: number;
   windowLabel?: string;
 };
 
@@ -52,10 +53,14 @@ export async function generateRivusIndustryBrief(
   const document = await Effect.runPromise(
     (dependencies.buildIndustryDocument ?? buildIndustryDocument)(loadConfig(env, argv)),
   );
+  const paperCandidateCount = document.candidates.filter(
+    (candidate) => candidate.category === "paper",
+  ).length;
   return {
-    candidateCount: document.candidates.length,
+    candidateCount: document.candidates.length - paperCandidateCount,
     generatedAt: document.generatedAt,
     markdown: renderMarkdownIndustryBrief(day ? { ...document, displayDate: day } : document),
+    paperCandidateCount,
     ...(document.windowLabel ? { windowLabel: document.windowLabel } : {}),
   };
 }

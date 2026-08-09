@@ -3,6 +3,7 @@ import { Effect } from "effect";
 import {
   buildCandidateProjects,
   normalizeEvent,
+  selectResearchCandidates,
   type ActivityCard,
   type DigestDocument,
   type RepositoryMetadata,
@@ -41,7 +42,11 @@ export function run(
     yield* attempt(createNotifier({ webhookUrl: config.webhookUrl }).send(output));
 
     if (config.onlyNew && !config.dryRun) {
-      markCandidatesSeen(state, document.candidates, document.generatedAt);
+      const deliveredCandidates =
+        config.outputFormat === "markdown"
+          ? document.candidates.filter((candidate) => candidate.category !== "paper")
+          : document.candidates;
+      markCandidatesSeen(state, deliveredCandidates, document.generatedAt);
       saveFeedState(config.stateFile, state);
     }
   });
@@ -87,11 +92,14 @@ async function collectDigest(
     await enrichPullRequests(client, events);
   }
 
-  const allCandidates = buildCandidateProjects(events, {
-    followees,
-    interests: config.interests,
-    repositories,
-  });
+  const allCandidates = selectResearchCandidates(
+    buildCandidateProjects(events, {
+      followees,
+      interests: config.interests,
+      repositories,
+    }),
+    config.maxPapers,
+  );
   const state = loadFeedState(config.stateFile);
   const candidates = config.onlyNew
     ? filterUnresearchedCandidates(filterNewCandidates(allCandidates, state), state)

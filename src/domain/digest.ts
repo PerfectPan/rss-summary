@@ -15,6 +15,7 @@ export type ActivityType =
   | "follow"
   | "announcement"
   | "article"
+  | "paper"
   | "other";
 
 export type ActivityCard = {
@@ -48,7 +49,7 @@ export type RepositoryMetadata = {
 export type CandidateProject = {
   repo: string;
   source: ActivitySource;
-  category: "discovery" | "release" | "activity" | "article";
+  category: "discovery" | "release" | "activity" | "article" | "paper";
   score: number;
   actors: string[];
   eventTypes: ActivityType[];
@@ -160,6 +161,28 @@ export function buildCandidateProjects(
     .sort((a, b) => b.score - a.score || a.repo.localeCompare(b.repo));
 }
 
+/**
+ * Keep papers as a bounded research queue. A paper must match configured interests in its
+ * abstract; title-only matches are intentionally insufficient for entering the queue.
+ */
+export function selectResearchCandidates(
+  candidates: CandidateProject[],
+  maxPapers: number,
+): CandidateProject[] {
+  const selectedPapers = new Set(
+    candidates
+      .filter((candidate) => candidate.category === "paper")
+      .filter((candidate) =>
+        candidate.reasons.some((reason) => reason.startsWith("matches paper abstract: ")),
+      )
+      .slice(0, maxPapers),
+  );
+
+  return candidates.filter(
+    (candidate) => candidate.category !== "paper" || selectedPapers.has(candidate),
+  );
+}
+
 function scoreRepo(
   repo: string,
   events: ActivityCard[],
@@ -190,6 +213,9 @@ function scoreRepo(
     if (event.type === "article") {
       reasons.add(`rss feed: ${event.sourceName ?? event.actor}`);
     }
+    if (event.type === "paper") {
+      reasons.add(`research paper: ${event.sourceName ?? event.actor}`);
+    }
   }
 
   if (actors.length > 1) {
@@ -203,9 +229,16 @@ function scoreRepo(
     reasons.add(`matches interest: ${interest}`);
   }
 
-  for (const interest of matchEventInterests(events, context.interests)) {
+  const eventInterests = eventTypes.includes("paper")
+    ? matchPaperAbstractInterests(events, context.interests)
+    : matchEventInterests(events, context.interests);
+  for (const interest of eventInterests) {
     score += 20;
-    reasons.add(`matches interest: ${interest}`);
+    reasons.add(
+      eventTypes.includes("paper")
+        ? `matches paper abstract: ${interest}`
+        : `matches interest: ${interest}`,
+    );
   }
 
   if (repository) {
@@ -246,6 +279,7 @@ function baseScore(event: ActivityCard): number {
   if (event.type === "create") return 35;
   if (event.type === "follow") return 25;
   if (event.type === "article") return 30;
+  if (event.type === "paper") return 35;
   if (event.type === "pull_request") {
     if (event.action === "merged") return 55;
     if (event.action === "opened") return 35;
@@ -256,6 +290,7 @@ function baseScore(event: ActivityCard): number {
 }
 
 function categoryFor(types: ActivityType[]): CandidateProject["category"] {
+  if (types.includes("paper")) return "paper";
   if (types.includes("article")) return "article";
   if (
     types.includes("watch") ||
@@ -290,6 +325,20 @@ function matchEventInterests(events: ActivityCard[], interests: string[]): strin
   });
 }
 
+function matchPaperAbstractInterests(events: ActivityCard[], interests: string[]): string[] {
+  const abstractTokens = tokenize(
+    events
+      .filter((event) => event.type === "paper")
+      .map((event) => event.summary ?? "")
+      .join(" "),
+  );
+
+  return interests.filter((interest) => {
+    const interestTokens = [...tokenize(interest)];
+    return interestTokens.length > 0 && interestTokens.every((token) => abstractTokens.has(token));
+  });
+}
+
 function sourceFor(events: ActivityCard[]): ActivitySource {
   return events.some((event) => event.source === "rss" || event.type === "article")
     ? "rss"
@@ -297,8 +346,8 @@ function sourceFor(events: ActivityCard[]): ActivitySource {
 }
 
 function labelFor(repo: string, events: ActivityCard[]): string | undefined {
-  const article = events.find((event) => event.type === "article");
-  return article?.title ?? (article ? repo.replace(/^rss:/u, "") : undefined);
+  const publication = publicationEvent(events);
+  return publication?.title ?? (publication ? repo.replace(/^rss:/u, "") : undefined);
 }
 
 function urlFor(
@@ -306,14 +355,21 @@ function urlFor(
   events: ActivityCard[],
   repository: RepositoryMetadata | undefined,
 ): string | undefined {
-  const article = events.find((event) => event.type === "article");
+  const publication = publicationEvent(events);
   return (
-    article?.htmlUrl ?? article?.sourceUrl ?? repository?.htmlUrl ?? `https://github.com/${repo}`
+    publication?.htmlUrl ??
+    publication?.sourceUrl ??
+    repository?.htmlUrl ??
+    `https://github.com/${repo}`
   );
 }
 
 function descriptionFor(events: ActivityCard[]): string | undefined {
-  return events.find((event) => event.type === "article")?.summary;
+  return publicationEvent(events)?.summary;
+}
+
+function publicationEvent(events: ActivityCard[]): ActivityCard | undefined {
+  return events.find((event) => event.type === "article" || event.type === "paper");
 }
 
 function matchInterests(repository: RepositoryMetadata | undefined, interests: string[]): string[] {

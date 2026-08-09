@@ -10,6 +10,7 @@
   "files": [
     "dist",
     "docs/rivus-plugin.md",
+    "industry-feeds.json",
     "news-topics.json",
     "signal-sources.json",
     "README.md"

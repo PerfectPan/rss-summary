@@ -124,6 +124,30 @@ describe("markdown digest renderer", () => {
     expect(markdown).toContain("- [查看原文](https://deno.com/blog/v2.4)");
   });
 
+  it("does not directly publish papers that still require research", () => {
+    const markdown = renderMarkdownDigest({
+      generatedAt: "2026-08-09T01:00:00.000Z",
+      username: "PerfectPan",
+      candidates: [
+        {
+          repo: "rss:https://arxiv.org/abs/2608.01234",
+          source: "rss",
+          category: "paper",
+          score: 55,
+          actors: ["arXiv cs.AI"],
+          eventTypes: ["paper"],
+          reasons: ["matches paper abstract: agent"],
+          events: [],
+          label: "Unverified agent claim",
+          url: "https://arxiv.org/abs/2608.01234",
+        },
+      ],
+    });
+
+    expect(markdown).toContain("1 篇论文待深度调研");
+    expect(markdown).not.toContain("Unverified agent claim");
+  });
+
   it("renders machine-readable JSON for research skills", () => {
     const json = renderJsonDigest({
       generatedAt: "2026-06-22T10:00:00Z",

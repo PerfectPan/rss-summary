@@ -6,7 +6,7 @@ import { Effect } from "effect";
 import { run as runDigest } from "../application/digest.js";
 import { runIndustry } from "../application/industry-brief.js";
 import { renderJsonDigest, renderMarkdownDigest } from "./render.js";
-import { renderMarkdownIndustryBrief } from "./industry-render.js";
+import { renderJsonIndustryBrief, renderMarkdownIndustryBrief } from "./industry-render.js";
 import { runFeedsCommand } from "./feeds-cli.js";
 import { runGithubHomeCommand } from "./github-home-cli.js";
 import { runResearchCommand } from "./research-cli.js";
@@ -55,7 +55,13 @@ export async function runCliCommand(
 
   if (command === "industry") {
     try {
-      await Effect.runPromise(runIndustry(renderMarkdownIndustryBrief));
+      await Effect.runPromise(
+        runIndustry((document, format) =>
+          format === "json"
+            ? renderJsonIndustryBrief(document)
+            : renderMarkdownIndustryBrief(document),
+        ),
+      );
       return 0;
     } catch (error) {
       stderr.write(`${errorMessage(error)}\n`);
@@ -96,7 +102,7 @@ function writeHelp(stdout: Writable): void {
   rss-summary feeds list
   rss-summary feeds test
   rss-summary research add [--file <path>] [--state-file .state/feed-state.json]
-  rss-summary industry [--day YYYY-MM-DD] [--only-new] [--dry-run]
+  rss-summary industry [--json] [--day YYYY-MM-DD] [--only-new] [--dry-run]
   rss-summary signal [--day YYYY-MM-DD] [--occurrence <iso-date-time>] [--dry-run]
 `);
 }

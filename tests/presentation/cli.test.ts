@@ -59,6 +59,7 @@ describe("top-level CLI", () => {
     expect(output.join("")).toContain("rss-summary feeds remove --url <rss-url>");
     expect(output.join("")).toContain("rss-summary feeds delete --url <rss-url>");
     expect(output.join("")).toContain("rss-summary digest [--rss-only]");
+    expect(output.join("")).toContain("rss-summary industry [--json]");
     expect(output.join("")).toContain("rss-summary signal [--day YYYY-MM-DD]");
   });
 

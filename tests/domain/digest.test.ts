@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { buildCandidateProjects, normalizeEvent } from "../../src/domain/digest.js";
+import {
+  buildCandidateProjects,
+  normalizeEvent,
+  selectResearchCandidates,
+} from "../../src/domain/digest.js";
 
 describe("github feed domain", () => {
   it("normalizes a merged pull request event into an activity card", () => {
@@ -188,6 +192,43 @@ describe("github feed domain", () => {
     );
 
     expect(candidates[0]?.url).toBe("https://example.com/feed.xml");
+  });
+
+  it("admits papers by abstract relevance and enforces the research quota", () => {
+    const paper = (index: number, summary: string) => ({
+      id: `paper-${index}`,
+      type: "paper" as const,
+      source: "rss" as const,
+      actor: "arXiv cs.AI",
+      repo: `rss:https://arxiv.org/abs/2608.${String(index).padStart(5, "0")}`,
+      createdAt: `2026-08-09T0${index}:00:00Z`,
+      htmlUrl: `https://arxiv.org/abs/2608.${String(index).padStart(5, "0")}`,
+      title: `Agent paper ${index}`,
+      summary,
+      sourceName: "arXiv cs.AI",
+      sourceUrl: "https://rss.arxiv.org/rss/cs.AI",
+      tags: ["Papers", "Academic"],
+    });
+    const candidates = buildCandidateProjects(
+      [
+        paper(1, "A coding agent learns to use tools in long-running tasks."),
+        paper(2, "An agent benchmark evaluates reliable tool use."),
+        paper(3, "A chemistry method for molecular simulation."),
+      ],
+      {
+        followees: new Set(),
+        interests: ["agent"],
+        repositories: new Map(),
+      },
+    );
+
+    const selected = selectResearchCandidates(candidates, 1);
+
+    expect(selected).toHaveLength(1);
+    expect(selected[0]).toMatchObject({ category: "paper", eventTypes: ["paper"] });
+    expect(selected[0]?.reasons).toContain("matches paper abstract: agent");
+    expect(selected[0]?.url).toMatch(/^https:\/\/arxiv\.org\/abs\//u);
+    expect(selected.some((candidate) => candidate.repo.endsWith("00003"))).toBe(false);
   });
 
   it("explains GitHub Home trending and recommendation signals", () => {

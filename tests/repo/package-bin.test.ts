@@ -33,6 +33,7 @@ describe("package CLI metadata", () => {
     expect(pkg.files).toEqual([
       "dist",
       "docs/rivus-plugin.md",
+      "industry-feeds.json",
       "news-topics.json",
       "signal-sources.json",
       "README.md",

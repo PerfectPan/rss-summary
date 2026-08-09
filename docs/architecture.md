@@ -2,19 +2,20 @@
 
 `rss-summary` is a local TypeScript CLI, a small set of portable Codex skills, and an external Rivus Plugin. It is not a daemon or hosted service. Scheduling is handled outside the repo by cron, launchd, systemd, Codex automation, or a Rivus deployment daemon.
 
-The runtime goal is simple: produce a previous-day technical subscription digest from GitHub Home and RSS, bounded noon/evening headline briefs from authoritative web search, and a once-per-day high-signal brief (高信号速览) from public GitHub Search, Hacker News, and official-domain search. Collection and ranking stay independent from Rivus scheduling and Feishu delivery.
+The runtime goal is simple: produce a personal technical digest from GitHub Home and RSS, an independent RSS-only industry brief, bounded noon/evening headline briefs from authoritative web search, and a once-per-day high-signal brief (高信号速览) from public GitHub Search, Hacker News, and official-domain search. Collection and ranking stay independent from Rivus scheduling and Feishu delivery.
 
 ## Products
 
-Three independent products share one codebase, one Rivus profile, and one delivery surface:
+Four independent products share one codebase, one Rivus profile, and one delivery surface:
 
 | Product | CLI / Tool | Sources | Config | State |
 | --- | --- | --- | --- | --- |
 | Morning digest (技术订阅日报) | `rss-summary digest` / `rss-summary/generate-digest` | GitHub Home + `feeds.json` | env + `feeds.json` | `.state/feed-state.json` (only-new) |
+| Industry brief (行业简报) | `rss-summary industry` / `rss-summary/generate-industry-brief` | `industry-feeds.json` | env + `industry-feeds.json` | `.state/industry-state.json` (only-new + researched) |
 | Noon/evening news (午间/晚间热点) | `rss-summary/generate-news-brief` | Doubao web search | `news-topics.json` | none |
 | Signal brief (高信号速览) | `rss-summary signal` / `rss-summary/generate-signal-brief` | GitHub Search + HN Algolia + official-domain Doubao | `signal-sources.json` | none (in-run dedupe) |
 
-Personal RSS answers "what did sources I trust publish?"; signal answers "what rose or shipped in public AI×dev?"; news answers "what happened in the last hours?". They do not share a subscription list.
+Personal RSS answers "what did sources I trust publish?"; industry RSS answers "what changed across the tracked AI/dev ecosystem?"; signal answers "what rose or shipped in public AI×dev?"; news answers "what happened in the last hours?". Personal and industry feeds/state remain isolated.
 
 ## High-Level Flow
 
@@ -25,8 +26,10 @@ flowchart TD
   Plugin --> FeedAdapter["src/presentation/rivus-digest.ts feed adapter"]
   Plugin --> NewsBrief["src/application/news-brief.ts news application service"]
   Plugin --> SignalBrief["src/application/signal-brief.ts signal application service"]
+  Plugin --> IndustryAdapter["src/presentation/rivus-industry.ts industry adapter"]
   FeedAdapter --> Digest
   CLI --> Digest["src/application/digest.ts digest workflow"]
+  CLI --> Industry["src/application/industry-brief.ts industry workflow"]
   CLI --> FeedsCommand["src/presentation/feeds-cli.ts feed management"]
 
   Config["src/infrastructure/config.ts env + args + feeds.json"] --> Digest
@@ -37,12 +40,17 @@ flowchart TD
   GitHubHome --> Cards["ActivityCard[]"]
   GitHub --> Cards
   RSS --> Cards
+  IndustryFeeds["industry-feeds.json"] --> Industry
+  Industry --> RSS
   Cards --> Window["src/domain/time.ts time window"]
   Window --> Domain["src/domain/digest.ts score + group"]
 
   State["src/infrastructure/state.ts .state/feed-state.json"] --> Digest
+  IndustryState["src/infrastructure/state.ts .state/industry-state.json"] --> Industry
   Domain --> Render["src/presentation/render.ts Markdown / JSON"]
   Render --> Notify["src/infrastructure/notifier.ts stdout / webhook"]
+  Domain --> IndustryRender["src/presentation/industry-render.ts Markdown / JSON"]
+  IndustryRender --> Notify
 
   Topics["news-topics.json"] --> NewsBrief
   NewsBrief --> Doubao["src/infrastructure/doubao-search.ts Doubao web search"]
@@ -136,7 +144,7 @@ Deepening toward ports-only application + interface implementations is documente
 ```
 src/
   domain/          pure rules and models, zero IO, no Effect, no infra imports
-    digest.ts      ActivityCard normalization + CandidateProject ranking
+    digest.ts      ActivityCard normalization + CandidateProject ranking + paper research quota
     news.ts        NewsTopic policy + story validate/dedupe/rank
     signal.ts      SignalItem contract + filter/score/dedupe/quotas
     time.ts        calendar-day + rolling + explicit windows (shared kernel)
@@ -144,6 +152,7 @@ src/
                    compaction, same-event title collapse (shared kernel)
   application/     use cases; return Effect<Result, Error>
     digest.ts      collection/enrichment/state orchestration (run + buildDigestDocument)
+    industry-brief.ts RSS-only industry collection + independent state orchestration
     news-brief.ts  noon/evening windows + bounded query fan-out
     signal-brief.ts daily window + three-source fan-out
     effect.ts      attempt(): lifts promise ports into the typed Error channel
@@ -153,8 +162,8 @@ src/
     state.ts, feed-store.ts, notifier.ts, parsing.ts (shared helpers)
   presentation/    entrypoints and rendering
     cli.ts, feeds-cli.ts, signal-cli.ts, github-home-cli.ts,
-    rivus-plugin.ts, rivus-digest.ts,
-    render.ts, news-render.ts, signal-render.ts, markdown.ts (shared helpers)
+    rivus-plugin.ts, rivus-digest.ts, rivus-industry.ts,
+    render.ts, industry-render.ts, news-render.ts, signal-render.ts, markdown.ts (shared helpers)
 ```
 
 Layer rules (summary):
@@ -179,16 +188,16 @@ Adoption is deliberately shallow: deps-object injection (not `Context`/`Layer` s
 
 Every product is the same pipeline with different steps: **ingest → filter → rank → select → render → deliver**. The layered structure is a "layered pipeline": domain steps are pure, application wires them with IO, presentation renders.
 
-| Stage | Digest | News brief | Signal brief |
-| --- | --- | --- | --- |
-| Ingest | GitHub Home/events + RSS | Doubao queries per topic | Doubao official intents + HN + GitHub Search |
-| Filter | `domain/time.ts` window | time + authority + window | time window + awesome exclusion + window |
-| Rank | `domain/digest.ts` scores | `domain/news.ts` scores | `domain/signal.ts` scores |
-| Select | state `onlyNew` | per-topic + 8 cap | quotas + soft model/product balance |
-| Render | `presentation/render.ts` | `presentation/news-render.ts` | `presentation/signal-render.ts` |
-| Deliver | notifier / webhook | Rivus card | Rivus card |
+| Stage | Digest | Industry brief | News brief | Signal brief |
+| --- | --- | --- | --- | --- |
+| Ingest | GitHub Home/events + RSS | industry RSS only | Doubao queries per topic | Doubao official intents + HN + GitHub Search |
+| Filter | `domain/time.ts` window | time + abstract interest | time + authority + window | time window + awesome exclusion + window |
+| Rank | `domain/digest.ts` scores | `domain/digest.ts` scores | `domain/news.ts` scores | `domain/signal.ts` scores |
+| Select | state `onlyNew` | independent state + max 8 papers | per-topic + 8 cap | quotas + soft model/product balance |
+| Render | `presentation/render.ts` | `presentation/industry-render.ts` | `presentation/news-render.ts` | `presentation/signal-render.ts` |
+| Deliver | notifier / webhook | notifier / Rivus card | Rivus card | Rivus card |
 
-The three pipelines intentionally do not share an abstraction: digest has state and GitHub-specific enrichment, news has topic quotas and authority checks, signal has multi-source agreement and repo metrics. A unified pipeline framework would buy nothing and cost configurability.
+The four pipelines intentionally do not share one framework: digest and industry reuse the normalized RSS candidate domain but own different sources/state; news has topic quotas and authority checks; signal has multi-source agreement and repo metrics. A unified pipeline framework would buy nothing and cost configurability.
 
 ## Digest Workflow
 
@@ -213,6 +222,19 @@ FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --only-new
 ```
 
 Without `FEED_DAY` or `--day`, the CLI uses the compatibility rolling window from `FEED_WINDOW_HOURS`, defaulting to 36 hours.
+
+## Industry Brief Workflow
+
+`rss-summary industry` reuses RSS normalization, candidate ranking, time windows, and state helpers without touching GitHub Home:
+
+1. `INDUSTRY_FEEDS_FILE` (default `industry-feeds.json`) supplies release, changelog, engineering-blog, and arXiv sources; `INDUSTRY_FEEDS` is an isolated inline override and never reads `RSS_FEEDS`.
+2. `src/infrastructure/rss.ts` classifies arXiv hosts and `Papers`/`Academic` feeds as `paper`.
+3. `src/domain/digest.ts` requires a paper's feed abstract to match configured interests and caps the research queue at `FEED_MAX_PAPERS` (hard maximum 8).
+4. `.state/industry-state.json` filters both seen and researched candidates under `--only-new`.
+5. `industry --json --only-new --dry-run` exposes all candidates to `$feed-research-digest`; direct Markdown and the Rivus Tool omit unresearched paper titles and report only the pending count.
+6. The skill opens the canonical arXiv abstract page, optionally inspects ar5iv HTML, selects at most 2–3 papers, and writes decisions back with `rss-summary research add --state-file .state/industry-state.json`.
+
+This split keeps deterministic ingestion/ranking inside the CLI and evidence-based paper judgment inside the portable research skill. A paper cannot enter direct delivery merely because its title scored well.
 
 ## News Brief Workflow
 
@@ -242,7 +264,7 @@ There is no persistent `.state` for signal briefs; dedupe is in-run only. The CL
 
 ## Feed Management Workflow
 
-RSS/Atom sources are maintained in the tracked `feeds.json` file. `src/presentation/feeds-cli.ts` manages the shared subscription list over `src/infrastructure/feed-store.ts`:
+Personal RSS/Atom sources are maintained in tracked `feeds.json`. `src/presentation/feeds-cli.ts` manages that list over `src/infrastructure/feed-store.ts`; the independent industry product reads tracked `industry-feeds.json`:
 
 ```bash
 rss-summary feeds add --url "https://example.com/feed.xml" --name "Example" --tags "ai,agent"
@@ -251,11 +273,11 @@ rss-summary feeds test
 rss-summary feeds remove --url "https://example.com/feed.xml"
 ```
 
-Commit intentional `feeds.json` changes through the pull request workflow. The digest command always uses the tracked `feeds.json` as its RSS source list.
+Commit intentional `feeds.json` and `industry-feeds.json` changes through the pull request workflow. Inline overrides remain product-specific (`RSS_FEEDS` versus `INDUSTRY_FEEDS`).
 
 ## Domain Model
 
-`ActivityCard` is the normalized input unit for the digest. GitHub events and RSS items both become activity cards with a source, actor, repository-like identifier, timestamp, title, summary, and link fields.
+`ActivityCard` is the normalized input unit for digest and industry products. GitHub events and RSS items both become activity cards with a source, actor, repository-like identifier, timestamp, title, summary, and link fields. Papers use the distinct `paper` activity/category so direct delivery can require research.
 
 `CandidateProject` is the ranked output unit. It groups related cards by repository or article identity, records actors and event types, assigns a category, and explains why the item is worth attention (`reasons`).
 
@@ -267,9 +289,10 @@ Deep research is a Codex skill workflow, not a deterministic CLI subcommand. The
 
 ```bash
 rss-summary digest --json --only-new --dry-run
+rss-summary industry --json --only-new --dry-run
 ```
 
-`skills/feed-research-digest` consumes those candidates and instructs Codex to inspect the relevant repository, PR, release, README, docs, or article page before deciding whether an item is worth attention. The state file has a `researched` field; the CLI writes it via `rss-summary research add` and filters already-researched candidates out of `digest --only-new`, but the skill does not yet call the command, so decisions are not written back automatically.
+`skills/feed-research-digest` consumes those candidates and instructs Codex to inspect the relevant repository, PR, release, README, docs, article, or arXiv abstract page before deciding whether an item is worth attention. The skill closes the cache loop by passing its `调研状态更新建议` to `rss-summary research add`, using `.state/feed-state.json` for personal digests and `.state/industry-state.json` for industry briefs. Both only-new workflows filter already-researched identities.
 
 ## GitHub Identity And Visibility
 
@@ -287,7 +310,6 @@ Keep `GH_FEED_TOKEN`, `.env`, and `.state/` out of git. `feeds.json` is intentio
 - Add a new source: create an adapter that returns `ActivityCard[]`, then wire it into `src/application/digest.ts` before the event-window filter.
 - Add RSS-like source management: extend `src/infrastructure/feed-store.ts` and `src/presentation/feeds-cli.ts` if the source needs local subscriptions.
 - Tune usefulness: adjust interests, base scores, category rules, or reason generation in `src/domain/digest.ts`.
-- Complete deep research caching: have the feed-research skill call `rss-summary research add` so its `调研状态更新建议` decisions are written back to `state.researched` (the CLI command and digest filter already exist).
 - Add delivery channels: extend `src/infrastructure/notifier.ts` or add notifier adapters for Feishu, Slack, Telegram, email, or other targets.
 - Add Rivus capabilities: register narrow Tools in `src/presentation/rivus-plugin.ts` and delegate them to application-level functions instead of copying source or ranking logic into the Plugin.
 - Add content deduplication: cluster RSS/article candidates by canonical URL, title, or content fingerprint before scoring.
@@ -299,7 +321,6 @@ Keep `GH_FEED_TOKEN`, `.env`, and `.state/` out of git. `feeds.json` is intentio
 
 - GitHub Home exact mode depends on GitHub's internal conduit endpoint, rendered DOM, and `data-hydro-view` card metadata, so it may need maintenance if github.com changes the Home page structure.
 - Deep project/article research is skill-driven, not a built-in CLI command.
-- `researched` state is wired through `rss-summary research add` and the digest only-new filter, but the feed-research skill does not yet call it, so decisions are not written back automatically.
 - Webhook delivery is generic only.
 - RSS deduplication is based on generated item IDs, not content similarity.
 - Doubao official-search hits with a missing/unparseable `PublishTime` are dropped by the window filter and surfaced as a warning in the news brief (query is day-scoped, so impact is bounded).

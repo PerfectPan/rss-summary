@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import type { IndustryBriefDocument } from "../../src/application/industry-brief.js";
-import { renderMarkdownIndustryBrief } from "../../src/presentation/industry-render.js";
+import {
+  renderJsonIndustryBrief,
+  renderMarkdownIndustryBrief,
+} from "../../src/presentation/industry-render.js";
 
 describe("industry brief render", () => {
   it("renders the card header and ranked candidates", () => {
@@ -39,5 +42,33 @@ describe("industry brief render", () => {
     });
 
     expect(markdown).toContain("没有筛出");
+  });
+
+  it("keeps unresearched papers out of Markdown while exposing them as JSON", () => {
+    const document: IndustryBriefDocument = {
+      generatedAt: "2026-08-09T01:00:00.000Z",
+      candidates: [
+        {
+          repo: "rss:https://arxiv.org/abs/2608.01234",
+          source: "rss",
+          category: "paper",
+          score: 55,
+          actors: ["arXiv cs.AI"],
+          eventTypes: ["paper"],
+          reasons: ["matches paper abstract: agent"],
+          events: [],
+          label: "Unverified agent claim",
+          url: "https://arxiv.org/abs/2608.01234",
+        },
+      ],
+    };
+
+    const markdown = renderMarkdownIndustryBrief(document);
+    const json = JSON.parse(renderJsonIndustryBrief(document));
+
+    expect(markdown).toContain("1 篇论文待深度调研");
+    expect(markdown).not.toContain("Unverified agent claim");
+    expect(json.candidates).toHaveLength(1);
+    expect(json.candidates[0]).toMatchObject({ category: "paper" });
   });
 });

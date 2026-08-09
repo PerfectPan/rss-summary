@@ -71,7 +71,7 @@ function normalizeRssItem(item: XmlRecord, feed: FeedSubscription): ActivityCard
 
   return {
     id: `rss:${feed.url}:${guid}`,
-    type: "article",
+    type: publicationType(htmlUrl, feed),
     source: "rss",
     actor: feed.name,
     repo: `rss:${htmlUrl ?? guid}`,
@@ -95,7 +95,7 @@ function normalizeAtomEntry(entry: XmlRecord, feed: FeedSubscription): ActivityC
 
   return {
     id: `rss:${feed.url}:${id}`,
-    type: "article",
+    type: publicationType(htmlUrl, feed),
     source: "rss",
     actor: feed.name,
     repo: `rss:${htmlUrl ?? id}`,
@@ -108,6 +108,24 @@ function normalizeAtomEntry(entry: XmlRecord, feed: FeedSubscription): ActivityC
     sourceUrl: feed.url,
     tags: feed.tags,
   };
+}
+
+function publicationType(htmlUrl: string | undefined, feed: FeedSubscription): "article" | "paper" {
+  const tags = new Set(feed.tags.map((tag) => tag.toLowerCase()));
+  if (tags.has("papers") || tags.has("academic")) return "paper";
+
+  const hostnames = [htmlUrl, feed.url]
+    .filter((value): value is string => Boolean(value))
+    .map((value) => {
+      try {
+        return new URL(value).hostname.toLowerCase();
+      } catch {
+        return "";
+      }
+    });
+  return hostnames.some((hostname) => hostname === "arxiv.org" || hostname.endsWith(".arxiv.org"))
+    ? "paper"
+    : "article";
 }
 
 function atomLink(value: unknown): string | undefined {
