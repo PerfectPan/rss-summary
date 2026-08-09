@@ -2,6 +2,7 @@ import { Effect } from "effect";
 
 import {
   buildNewsStories,
+  countMissingPublishTimeHits,
   selectNewsStories,
   type NewsBriefEdition,
   type NewsSearchHit,
@@ -118,7 +119,7 @@ export function generateRivusNewsBrief(
       return yield* Effect.fail(new Error("All Doubao search queries failed."));
     }
 
-    const warnings = topicWarnings(requests, settled);
+    const topicFailureWarnings = topicWarnings(requests, settled);
     const hits: NewsSearchHit[] = [];
     settled.forEach((result, index) => {
       if (result.status !== "fulfilled") return;
@@ -133,6 +134,14 @@ export function generateRivusNewsBrief(
         })),
       );
     });
+    const missingPublishTimeCount = countMissingPublishTimeHits(hits, window);
+    const warnings =
+      missingPublishTimeCount > 0
+        ? [
+            ...topicFailureWarnings,
+            `Doubao 搜索：${missingPublishTimeCount} 条结果缺少有效的发布时间被丢弃`,
+          ]
+        : topicFailureWarnings;
     const stories = selectNewsStories(buildNewsStories(hits, window), topics);
     const generatedAt = (dependencies.now ?? (() => new Date()))().toISOString();
     return {

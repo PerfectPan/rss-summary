@@ -80,6 +80,17 @@ export function buildNewsStories(hits: NewsSearchHit[], window: NewsTimeWindow):
     );
 }
 
+/** Count hits with a title/url but a missing or unparseable publish time. */
+export function countMissingPublishTimeHits(hits: NewsSearchHit[], window: NewsTimeWindow): number {
+  return hits.filter((hit) => {
+    if (!hit.title.trim() || !hit.url.trim()) return false;
+    const publishedAt = hit.publishTime
+      ? parsePublishTime(hit.publishTime, window.timezoneOffset)
+      : Number.NaN;
+    return !Number.isFinite(publishedAt);
+  }).length;
+}
+
 export function selectNewsStories(stories: NewsStory[], topics: NewsTopic[]): SelectedNewsStory[] {
   const selected: SelectedNewsStory[] = [];
   const selectedUrls = new Set<string>();
