@@ -293,4 +293,38 @@ describe("github feed domain", () => {
       "GitHub Home recommendation",
     );
   });
+
+  it("records repeated mentions as corroboration without calling them important", () => {
+    const [candidate] = buildCandidateProjects(
+      [
+        {
+          id: "star-1",
+          type: "watch",
+          actor: "alice",
+          repo: "example/project",
+          createdAt: "2026-08-09T08:00:00Z",
+        },
+        {
+          id: "star-2",
+          type: "watch",
+          actor: "bob",
+          repo: "example/project",
+          createdAt: "2026-08-09T09:00:00Z",
+        },
+        {
+          id: "pr-1",
+          type: "pull_request",
+          actor: "alice",
+          repo: "example/project",
+          createdAt: "2026-08-09T10:00:00Z",
+          action: "merged",
+        },
+      ],
+      { followees: new Set(["alice", "bob"]), interests: [], repositories: new Map() },
+    );
+
+    expect(candidate?.reasons).toContain("multiple followed mentions");
+    expect(candidate?.reasons).toContain("pull request merged");
+    expect(candidate?.reasons.join(" ")).not.toMatch(/important|signal/iu);
+  });
 });

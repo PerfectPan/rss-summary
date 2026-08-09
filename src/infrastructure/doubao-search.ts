@@ -66,7 +66,9 @@ export class DoubaoSearchClient {
         Count: input.count,
         Filter: filter,
         TimeRange: `${input.day}..${input.day}`,
-        QueryControl: { QueryRewrite: true },
+        // Topic queries already encode one bounded event intent. Rewriting broadens them back
+        // into generic discovery queries and lowers precision.
+        QueryControl: { QueryRewrite: false },
         ContentFormats: "markdown",
       }),
       signal: AbortSignal.timeout(this.timeoutMs),

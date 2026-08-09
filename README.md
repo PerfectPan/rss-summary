@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/PerfectPan/rss-summary/actions/workflows/ci.yml/badge.svg)](https://github.com/PerfectPan/rss-summary/actions/workflows/ci.yml)
 
-一个定时信息简报 CLI：把“我明确订阅的内容”和“我应该知道的行业变化”分成两条链路。个人订阅合并 GitHub Home 与 `feeds.json`；行业前沿只跟踪厂商官方 Blog、News、Changelog、Release 和研究源。普通内容用一句话加链接，高质量内容才展开摘要。CLI 可挂 webhook，也可作为 Rivus 插件被调度。
+一个定时信息简报 CLI：把“我明确订阅的内容”和“我应该知道的行业变化”分成两条链路。个人订阅合并 GitHub Home 与 `feeds.json`；行业前沿只跟踪厂商官方 Blog、News、Changelog、Release 和研究源。普通内容用一句话加链接；命中个人兴趣或明确涉及重大版本、GA、破坏性变更、弃用、安全事件的内容才展开摘要。CLI 可挂 webhook，也可作为 Rivus 插件被调度。
 
 ## 示例输出
 

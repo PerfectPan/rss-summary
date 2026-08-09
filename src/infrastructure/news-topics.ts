@@ -7,6 +7,7 @@ import { requireRecord } from "./parsing.js";
 
 const defaultTopicsFile = fileURLToPath(new URL("../../news-topics.json", import.meta.url));
 const topicIdPattern = /^[a-z][a-z0-9-]*$/u;
+const maxSearchQueryLength = 100;
 const newsTopicLimits = {
   maxItemsPerTopic: 10,
   maxQueriesPerTopic: 8,
@@ -52,9 +53,15 @@ export function parseNewsTopics(value: string): NewsTopic[] {
         `News topic ${id} supports at most ${newsTopicLimits.maxQueriesPerTopic} queries.`,
       );
     }
-    const queries = record.queries.map((query, queryIndex) =>
-      requiredString(query, `news topic ${id} query ${queryIndex + 1}`),
-    );
+    const queries = record.queries.map((query, queryIndex) => {
+      const text = requiredString(query, `news topic ${id} query ${queryIndex + 1}`);
+      if (text.length > maxSearchQueryLength) {
+        throw new Error(
+          `News topic ${id} query ${queryIndex + 1} must not exceed ${maxSearchQueryLength} characters.`,
+        );
+      }
+      return text;
+    });
 
     return { id, label, enabled, sourcePolicy, maxItems, queries };
   });
