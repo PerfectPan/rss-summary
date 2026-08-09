@@ -299,7 +299,7 @@ Keep `GH_FEED_TOKEN`, `.env`, and `.state/` out of git. `feeds.json` is intentio
 
 - GitHub Home exact mode depends on GitHub's internal conduit endpoint, rendered DOM, and `data-hydro-view` card metadata, so it may need maintenance if github.com changes the Home page structure.
 - Deep project/article research is skill-driven, not a built-in CLI command.
-- `researched` state exists in the schema but is not yet used by the CLI.
+- `researched` state is wired through `rss-summary research add` and the digest only-new filter, but the feed-research skill does not yet call it, so decisions are not written back automatically.
 - Webhook delivery is generic only.
 - RSS deduplication is based on generated item IDs, not content similarity.
 - Doubao official-search hits with a missing/unparseable `PublishTime` are dropped by the window filter and surfaced as a warning in the news brief (query is day-scoped, so impact is bounded).
