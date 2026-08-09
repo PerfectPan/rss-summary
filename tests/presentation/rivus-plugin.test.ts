@@ -12,6 +12,8 @@ import rssSummaryPlugin, {
   createRssSummaryPlugin,
   RSS_SUMMARY_AUTOMATION_ID,
   RSS_SUMMARY_EVENING_AUTOMATION_ID,
+  RSS_SUMMARY_INDUSTRY_AUTOMATION_ID,
+  RSS_SUMMARY_INDUSTRY_TOOL_ID,
   RSS_SUMMARY_MORNING_AUTOMATION_ID,
   RSS_SUMMARY_NEWS_TOOL_ID,
   RSS_SUMMARY_NOON_AUTOMATION_ID,
@@ -22,7 +24,7 @@ import rssSummaryPlugin, {
 } from "../../src/presentation/rivus-plugin.js";
 
 describe("rss-summary Rivus Plugin", () => {
-  it("conforms as an external Plugin with three narrow read-only Tools", async () => {
+  it("conforms as an external Plugin with four narrow read-only Tools", async () => {
     await expect(
       assertRivusPluginConforms({
         deployment: {
@@ -32,7 +34,12 @@ describe("rss-summary Rivus Plugin", () => {
           profileId: RSS_SUMMARY_PROFILE_ID,
           skills: { allow: [] },
           tools: {
-            allow: [RSS_SUMMARY_TOOL_ID, RSS_SUMMARY_NEWS_TOOL_ID, RSS_SUMMARY_SIGNAL_TOOL_ID],
+            allow: [
+              RSS_SUMMARY_TOOL_ID,
+              RSS_SUMMARY_NEWS_TOOL_ID,
+              RSS_SUMMARY_SIGNAL_TOOL_ID,
+              RSS_SUMMARY_INDUSTRY_TOOL_ID,
+            ],
           },
         },
         plugin: rssSummaryPlugin,
@@ -40,7 +47,12 @@ describe("rss-summary Rivus Plugin", () => {
     ).resolves.toMatchObject({
       pluginId: "rss-summary",
       profileId: RSS_SUMMARY_PROFILE_ID,
-      toolIds: [RSS_SUMMARY_NEWS_TOOL_ID, RSS_SUMMARY_SIGNAL_TOOL_ID, RSS_SUMMARY_TOOL_ID].sort(),
+      toolIds: [
+        RSS_SUMMARY_INDUSTRY_TOOL_ID,
+        RSS_SUMMARY_NEWS_TOOL_ID,
+        RSS_SUMMARY_SIGNAL_TOOL_ID,
+        RSS_SUMMARY_TOOL_ID,
+      ].sort(),
     });
   });
 
@@ -164,7 +176,31 @@ describe("rss-summary Rivus Plugin", () => {
     expect(tool.risk).toBe("observe");
   });
 
-  it("registers morning, noon, evening, and signal Automations with exact Tool grants", () => {
+  it("delegates industry Tool execution to the industry RSS adapter", async () => {
+    const generateIndustryBrief = vi.fn(async () => ({
+      candidateCount: 3,
+      generatedAt: "2026-08-09T01:00:00.000Z",
+      markdown: "# 行业简报 · 2026-08-09\n",
+    }));
+    const registrations = register(createRssSummaryPlugin({ generateIndustryBrief }));
+    const tool = registrations.tools.get(RSS_SUMMARY_INDUSTRY_TOOL_ID)!;
+
+    const result = await tool
+      .createExecutor({
+        toolId: RSS_SUMMARY_INDUSTRY_TOOL_ID,
+        toolVersion: "1.0.0",
+      })
+      .execute(
+        { occurrence: "2026-08-09T01:00:00.000Z" },
+        executionContext(RSS_SUMMARY_INDUSTRY_TOOL_ID),
+      );
+
+    expect(generateIndustryBrief).toHaveBeenCalledWith({ occurrence: "2026-08-09T01:00:00.000Z" });
+    expect(result).toMatchObject({ candidateCount: 3, markdown: "# 行业简报 · 2026-08-09\n" });
+    expect(tool.risk).toBe("observe");
+  });
+
+  it("registers morning, noon, evening, signal, and industry Automations with exact Tool grants", () => {
     const registrations = register(rssSummaryPlugin);
     const occurrence = "2026-07-29T04:30:00.000Z";
     const legacy = registrations.automations.get(RSS_SUMMARY_AUTOMATION_ID)!;
@@ -172,23 +208,27 @@ describe("rss-summary Rivus Plugin", () => {
     const noon = registrations.automations.get(RSS_SUMMARY_NOON_AUTOMATION_ID)!;
     const evening = registrations.automations.get(RSS_SUMMARY_EVENING_AUTOMATION_ID)!;
     const signal = registrations.automations.get(RSS_SUMMARY_SIGNAL_AUTOMATION_ID)!;
+    const industry = registrations.automations.get(RSS_SUMMARY_INDUSTRY_AUTOMATION_ID)!;
 
     expect(registrations.profile.tools.allow).toEqual([
       RSS_SUMMARY_TOOL_ID,
       RSS_SUMMARY_NEWS_TOOL_ID,
       RSS_SUMMARY_SIGNAL_TOOL_ID,
+      RSS_SUMMARY_INDUSTRY_TOOL_ID,
     ]);
     expect(legacy.requestedToolIds).toEqual([RSS_SUMMARY_TOOL_ID]);
     expect(morning.requestedToolIds).toEqual([RSS_SUMMARY_TOOL_ID]);
     expect(noon.requestedToolIds).toEqual([RSS_SUMMARY_NEWS_TOOL_ID]);
     expect(evening.requestedToolIds).toEqual([RSS_SUMMARY_NEWS_TOOL_ID]);
     expect(signal.requestedToolIds).toEqual([RSS_SUMMARY_SIGNAL_TOOL_ID]);
+    expect(industry.requestedToolIds).toEqual([RSS_SUMMARY_INDUSTRY_TOOL_ID]);
     expect(morning.createInput({ occurrence }).text).toContain('"window":"previous-calendar-day"');
     expect(noon.createInput({ occurrence }).text).toContain('"edition":"noon"');
     expect(evening.createInput({ occurrence }).text).toContain('"edition":"evening"');
     expect(signal.createInput({ occurrence }).text).toContain(
       '"occurrence":"2026-07-29T04:30:00.000Z"',
     );
+    expect(industry.createInput({ occurrence }).text).toContain('"onlyNew":true');
     expect(noon.createInput({ occurrence }).text).toContain("原样返回");
   });
 });

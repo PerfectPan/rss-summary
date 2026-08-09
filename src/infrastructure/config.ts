@@ -33,6 +33,8 @@ export type AppConfig = {
   stateFile: string;
   interests: string[];
   rssFeeds: FeedSubscription[];
+  industryFeeds: FeedSubscription[];
+  industryStateFile: string;
 };
 
 export function loadConfig(
@@ -85,6 +87,12 @@ export function loadConfig(
       "skills",
     ],
     rssFeeds: loadFeedSubscriptions(env, args.rssFeedsFile),
+    industryFeeds: loadFeedSubscriptions(
+      env,
+      args.industryFeedsFile ?? env.INDUSTRY_FEEDS_FILE ?? "industry-feeds.json",
+    ),
+    industryStateFile:
+      args.industryStateFile ?? env.INDUSTRY_STATE_FILE ?? ".state/industry-state.json",
   };
 }
 
@@ -130,6 +138,8 @@ function parseArgs(argv: string[]) {
     githubHomeFetch?: string;
     githubHomeStorageState?: string;
     rssFeedsFile?: string;
+    industryFeedsFile?: string;
+    industryStateFile?: string;
     stateFile?: string;
     dryRun?: boolean;
     json?: boolean;
