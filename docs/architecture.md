@@ -269,7 +269,7 @@ Deep research is a Codex skill workflow, not a deterministic CLI subcommand. The
 rss-summary digest --json --only-new --dry-run
 ```
 
-`skills/feed-research-digest` consumes those candidates and instructs Codex to inspect the relevant repository, PR, release, README, docs, or article page before deciding whether an item is worth attention. The state file has a `researched` field the CLI does not yet write or filter by.
+`skills/feed-research-digest` consumes those candidates and instructs Codex to inspect the relevant repository, PR, release, README, docs, or article page before deciding whether an item is worth attention. The state file has a `researched` field; the CLI writes it via `rss-summary research add` and filters already-researched candidates out of `digest --only-new`, but the skill does not yet call the command, so decisions are not written back automatically.
 
 ## GitHub Identity And Visibility
 
@@ -287,7 +287,7 @@ Keep `GH_FEED_TOKEN`, `.env`, and `.state/` out of git. `feeds.json` is intentio
 - Add a new source: create an adapter that returns `ActivityCard[]`, then wire it into `src/application/digest.ts` before the event-window filter.
 - Add RSS-like source management: extend `src/infrastructure/feed-store.ts` and `src/presentation/feeds-cli.ts` if the source needs local subscriptions.
 - Tune usefulness: adjust interests, base scores, category rules, or reason generation in `src/domain/digest.ts`.
-- Add deep research caching: connect `state.researched` to the research skill or add a dedicated CLI command that records research decisions.
+- Complete deep research caching: have the feed-research skill call `rss-summary research add` so its `调研状态更新建议` decisions are written back to `state.researched` (the CLI command and digest filter already exist).
 - Add delivery channels: extend `src/infrastructure/notifier.ts` or add notifier adapters for Feishu, Slack, Telegram, email, or other targets.
 - Add Rivus capabilities: register narrow Tools in `src/presentation/rivus-plugin.ts` and delegate them to application-level functions instead of copying source or ranking logic into the Plugin.
 - Add content deduplication: cluster RSS/article candidates by canonical URL, title, or content fingerprint before scoring.
@@ -299,7 +299,7 @@ Keep `GH_FEED_TOKEN`, `.env`, and `.state/` out of git. `feeds.json` is intentio
 
 - GitHub Home exact mode depends on GitHub's internal conduit endpoint, rendered DOM, and `data-hydro-view` card metadata, so it may need maintenance if github.com changes the Home page structure.
 - Deep project/article research is skill-driven, not a built-in CLI command.
-- `researched` state exists in the schema but is not yet used by the CLI.
+- `researched` state is wired through `rss-summary research add` and the digest only-new filter, but the feed-research skill does not yet call it, so decisions are not written back automatically.
 - Webhook delivery is generic only.
 - RSS deduplication is based on generated item IDs, not content similarity.
 - Doubao official-search hits with a missing/unparseable `PublishTime` are dropped by the window filter and surfaced as a warning in the news brief (query is day-scoped, so impact is bounded).

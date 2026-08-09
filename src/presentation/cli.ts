@@ -7,6 +7,7 @@ import { run as runDigest } from "../application/digest.js";
 import { renderJsonDigest, renderMarkdownDigest } from "./render.js";
 import { runFeedsCommand } from "./feeds-cli.js";
 import { runGithubHomeCommand } from "./github-home-cli.js";
+import { runResearchCommand } from "./research-cli.js";
 import { runSignalCommand } from "./signal-cli.js";
 import { errorMessage } from "../infrastructure/parsing.js";
 
@@ -46,6 +47,10 @@ export async function runCliCommand(
     return runSignalCommand(rest, { stdout, stderr, generate: deps.signal?.generate });
   }
 
+  if (command === "research") {
+    return runResearchCommand(rest, { stdout, stderr });
+  }
+
   if (command === "digest") {
     try {
       await Effect.runPromise(
@@ -78,6 +83,7 @@ function writeHelp(stdout: Writable): void {
   rss-summary feeds delete --url <rss-url>
   rss-summary feeds list
   rss-summary feeds test
+  rss-summary research add [--file <path>] [--state-file .state/feed-state.json]
   rss-summary signal [--day YYYY-MM-DD] [--occurrence <iso-date-time>] [--dry-run]
 `);
 }

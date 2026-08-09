@@ -7,6 +7,7 @@ import {
   filterUnresearchedCandidates,
   markCandidateResearched,
   markCandidatesSeen,
+  markResearchedByKey,
   researchKeyForCandidate,
 } from "../../src/infrastructure/state.js";
 
@@ -75,6 +76,20 @@ describe("feed state", () => {
         url: "https://example.com/post",
       }),
     ).toBe("rss:https://example.com/post");
+  });
+
+  it("marks research decisions by stable key without a candidate", () => {
+    const state = createEmptyFeedState();
+    markResearchedByKey(state, "github:owner/repo", {
+      at: "2026-07-01T00:00:00Z",
+      decision: "track",
+    });
+
+    expect(state.researched["github:owner/repo"]).toEqual({
+      at: "2026-07-01T00:00:00Z",
+      decision: "track",
+    });
+    expect(filterUnresearchedCandidates([candidate("owner/repo", ["e1"])], state)).toEqual([]);
   });
 });
 
