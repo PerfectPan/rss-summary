@@ -20,6 +20,9 @@ describe("research contract documentation", () => {
     expect(skill).toContain("tests/CI");
     expect(skill).toContain("recent commits, PRs, or releases");
     expect(skill).toContain("- 代码质量判断：");
+    expect(skill).toContain("rss-summary industry --json --only-new --dry-run");
+    expect(skill).toContain("arxiv.org/abs/<id>");
+    expect(skill).toContain(".state/industry-state.json");
 
     expect(researchDoc).toContain("lightweight code review");
     expect(researchDoc).toContain("Do not deep-research a starred repo again");
@@ -45,5 +48,8 @@ describe("research contract documentation", () => {
     expect(prompt).toContain("## 输入");
     expect(prompt).toContain("## 调研策略");
     expect(prompt).toContain("不要展示 `evidence` 或 `依据`");
+    expect(prompt).toContain("## 论文调研");
+    expect(prompt).toContain("逐篇核验最多 8 篇，最终只推荐 2 到 3 篇");
+    expect(prompt).toContain("ar5iv.labs.arxiv.org/html/<id>");
   });
 });

@@ -94,6 +94,38 @@ describe("RSS source", () => {
     });
   });
 
+  it("classifies arXiv items and academic-tagged feeds as papers", () => {
+    const arxivEvents = parseFeedXml(
+      `<rss><channel><item>
+        <title>Reliable tool-using agents</title>
+        <link>https://arxiv.org/abs/2608.01234</link>
+        <description>A benchmark for agent tool use.</description>
+      </item></channel></rss>`,
+      {
+        name: "arXiv cs.AI",
+        url: "https://rss.arxiv.org/rss/cs.AI",
+        tags: ["Papers", "Academic"],
+      },
+    );
+    const taggedEvents = parseFeedXml(
+      `<rss><channel><item>
+        <title>Research note</title>
+        <link>https://example.edu/research/note</link>
+      </item></channel></rss>`,
+      {
+        name: "University Research",
+        url: "https://example.edu/feed.xml",
+        tags: ["Academic"],
+      },
+    );
+
+    expect(arxivEvents[0]).toMatchObject({
+      type: "paper",
+      summary: "A benchmark for agent tool use.",
+    });
+    expect(taggedEvents[0]?.type).toBe("paper");
+  });
+
   it("uses Atom published time before updated time", () => {
     const events = parseFeedXml(
       `<?xml version="1.0"?>

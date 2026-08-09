@@ -73,5 +73,15 @@
     "name": "Aphyr - Posts",
     "url": "https://aphyr.com/posts.atom",
     "tags": ["Articles", "Blog"]
+  },
+  {
+    "name": "arXiv Computer Science - Artificial Intelligence",
+    "url": "https://rss.arxiv.org/rss/cs.AI",
+    "tags": ["Papers", "Academic"]
+  },
+  {
+    "name": "arXiv Computer Science - Computation and Language",
+    "url": "https://rss.arxiv.org/rss/cs.CL",
+    "tags": ["Papers", "Academic"]
   }
 ]

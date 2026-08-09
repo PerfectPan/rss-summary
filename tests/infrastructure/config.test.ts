@@ -52,6 +52,20 @@ describe("config", () => {
     ]);
   });
 
+  it("keeps personal and industry feed overrides isolated", () => {
+    const config = loadConfig(
+      {
+        INDUSTRY_FEEDS:
+          '[{"name":"arXiv","url":"https://rss.arxiv.org/rss/cs.AI","tags":["Papers"]}]',
+        RSS_FEEDS: '[{"name":"Personal","url":"https://example.com/personal.xml","tags":["Blog"]}]',
+      },
+      ["--dry-run"],
+    );
+
+    expect(config.rssFeeds.map((feed) => feed.name)).toEqual(["Personal"]);
+    expect(config.industryFeeds.map((feed) => feed.name)).toEqual(["arXiv"]);
+  });
+
   it("loads state and output options from args", () => {
     const config = loadConfig({}, [
       "--json",
@@ -66,6 +80,13 @@ describe("config", () => {
     expect(config.onlyNew).toBe(true);
     expect(config.rssOnly).toBe(true);
     expect(config.stateFile).toBe(".state/test.json");
+  });
+
+  it("loads a bounded paper research queue size", () => {
+    expect(loadConfig({}, ["--dry-run"]).maxPapers).toBe(8);
+    expect(loadConfig({ FEED_MAX_PAPERS: "5" }, ["--dry-run"]).maxPapers).toBe(5);
+    expect(loadConfig({}, ["--max-papers", "3", "--dry-run"]).maxPapers).toBe(3);
+    expect(loadConfig({ FEED_MAX_PAPERS: "50" }, ["--dry-run"]).maxPapers).toBe(8);
   });
 
   it("loads rss-only mode from env", () => {

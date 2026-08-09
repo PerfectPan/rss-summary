@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/PerfectPan/rss-summary/actions/workflows/ci.yml/badge.svg)](https://github.com/PerfectPan/rss-summary/actions/workflows/ci.yml)
 
-一个定时信息简报 CLI：把 GitHub Home、RSS 和权威网络新闻排成每日 Markdown 简报——早报（GitHub + RSS）、午/晚间新闻、21:00 高信号速览。本地只读，可挂 webhook 推送，也可作为 Rivus 插件被调度。
+一个定时信息简报 CLI：把 GitHub Home、RSS 和权威网络新闻排成每日 Markdown 简报——个人早报（GitHub + RSS）、独立行业简报、午/晚间新闻和高信号速览。本地只读，可挂 webhook 推送，也可作为 Rivus 插件被调度。
 
 ## 示例输出
 
@@ -80,6 +80,12 @@ GITHUB_USERNAME=<your-username> FEED_DAY="$(TZ=Asia/Shanghai date +%F)" \
 # 高信号速览（只读，不写状态、不发 webhook）
 rss-summary signal --day "$(TZ=Asia/Shanghai date +%F)" --dry-run
 
+# RSS-only 行业简报；论文只进入研究队列，不直接发布
+rss-summary industry --day "$(TZ=Asia/Shanghai date +%F)" --only-new --dry-run
+
+# 给 feed-research skill 的行业候选 JSON（含最多 8 篇 abstract 匹配论文）
+rss-summary industry --json --day "$(TZ=Asia/Shanghai date +%F)" --only-new --dry-run
+
 # 管理 RSS 源
 rss-summary feeds add --url "https://github.blog/feed" --name "GitHub Blog" --tags "github,ai"
 rss-summary feeds list
@@ -89,18 +95,21 @@ rss-summary feeds list
 
 ## Configuration
 
-| 变量                    | 作用                                           | 默认         |
-| ----------------------- | ---------------------------------------------- | ------------ |
-| `GITHUB_FEED_SOURCE`    | `home`（精确，默认）或 `events`（REST 回退）   | `home`       |
-| `GITHUB_USERNAME`       | 要抓 Home feed 的账号                          | —            |
-| `FEED_DAY`              | 日报日 `YYYY-MM-DD`（本地日历）                | 滚动窗口     |
-| `FEED_TIMEZONE_OFFSET`  | 时区偏移                                       | `+00:00`     |
-| `FEED_WINDOW_HOURS`     | 滚动窗口小时（`FEED_DAY` 未设时）              | `36`         |
-| `GITHUB_HOME_FETCH`     | `conduit`（默认）或 `browser`                  | `conduit`    |
-| `GH_FEED_TOKEN`         | GitHub token（API 补全 PR 详情 / events 回退） | —            |
-| `DOUBAO_SEARCH_API_KEY` | 高信号速览的官方域搜索（可选）                 | —            |
-| `NOTIFY_WEBHOOK_URL`    | 推送 webhook（POST `{ "text": markdown }`）    | —            |
-| `RSS_FEEDS_FILE`        | RSS 订阅文件                                   | `feeds.json` |
+| 变量                    | 作用                                           | 默认                         |
+| ----------------------- | ---------------------------------------------- | ---------------------------- |
+| `GITHUB_FEED_SOURCE`    | `home`（精确，默认）或 `events`（REST 回退）   | `home`                       |
+| `GITHUB_USERNAME`       | 要抓 Home feed 的账号                          | —                            |
+| `FEED_DAY`              | 日报日 `YYYY-MM-DD`（本地日历）                | 滚动窗口                     |
+| `FEED_TIMEZONE_OFFSET`  | 时区偏移                                       | `+00:00`                     |
+| `FEED_WINDOW_HOURS`     | 滚动窗口小时（`FEED_DAY` 未设时）              | `36`                         |
+| `GITHUB_HOME_FETCH`     | `conduit`（默认）或 `browser`                  | `conduit`                    |
+| `GH_FEED_TOKEN`         | GitHub token（API 补全 PR 详情 / events 回退） | —                            |
+| `DOUBAO_SEARCH_API_KEY` | 高信号速览的官方域搜索（可选）                 | —                            |
+| `NOTIFY_WEBHOOK_URL`    | 推送 webhook（POST `{ "text": markdown }`）    | —                            |
+| `RSS_FEEDS_FILE`        | RSS 订阅文件                                   | `feeds.json`                 |
+| `INDUSTRY_FEEDS_FILE`   | 行业 RSS 订阅文件                              | `industry-feeds.json`        |
+| `INDUSTRY_STATE_FILE`   | 行业简报去重/调研状态                          | `.state/industry-state.json` |
+| `FEED_MAX_PAPERS`       | 每次进入深度调研队列的论文硬上限               | `8`                          |
 
 完整列表与默认值见 [.env.example](.env.example)。GitHub Home 的 conduit / 浏览器回退机制见 [docs/architecture.md](docs/architecture.md)。
 
@@ -116,7 +125,7 @@ rss-summary feeds list
 
 ## Rivus Plugin
 
-本仓库导出 `rss-summary/rivus-plugin`：一个 Agent profile（`rss-digest`）+ 三个只读 Tool（`generate-digest` / `generate-news-brief` / `generate-signal-brief`）+ 四个调度模板（早报 09:00、午间 12:30、晚间 19:00、高信号速览 21:00）。调度与飞书推送由 Rivus 侧负责。安装、manifest 绑定、环境契约见 [docs/rivus-plugin.md](docs/rivus-plugin.md)。
+本仓库导出 `rss-summary/rivus-plugin`：一个 Agent profile（`rss-digest`）+ 四个只读 Tool（`generate-digest` / `generate-news-brief` / `generate-signal-brief` / `generate-industry-brief`）及对应调度模板。行业 Tool 不直接发布未研究论文，只报告待调研数量；论文通过 `$feed-research-digest` 核验后进入最终简报。调度与飞书推送由 Rivus 侧负责。安装、manifest 绑定、环境契约见 [docs/rivus-plugin.md](docs/rivus-plugin.md)。
 
 ## Architecture
 

@@ -2,6 +2,7 @@ import { Effect } from "effect";
 
 import {
   buildCandidateProjects,
+  selectResearchCandidates,
   type ActivityCard,
   type CandidateProject,
 } from "../domain/digest.js";
@@ -11,6 +12,7 @@ import { createNotifier } from "../infrastructure/notifier.js";
 import { RssClient } from "../infrastructure/rss.js";
 import {
   filterNewCandidates,
+  filterUnresearchedCandidates,
   loadFeedState,
   markCandidatesSeen,
   saveFeedState,
@@ -40,17 +42,21 @@ export function buildIndustryDocument(
  * it does not cross-contaminate the personal digest's `--only-new`.
  */
 export function runIndustry(
-  render: (document: IndustryBriefDocument) => string,
+  render: (document: IndustryBriefDocument, format: AppConfig["outputFormat"]) => string,
 ): Effect.Effect<void, Error> {
   return Effect.gen(function* () {
     const config = loadConfig();
     const { document, state } = yield* attempt(collectIndustryBrief(config));
-    const output = render(document);
+    const output = render(document, config.outputFormat);
 
     yield* attempt(createNotifier({ webhookUrl: config.webhookUrl }).send(output));
 
     if (config.onlyNew && !config.dryRun) {
-      markCandidatesSeen(state, document.candidates, document.generatedAt);
+      const deliveredCandidates =
+        config.outputFormat === "markdown"
+          ? document.candidates.filter((candidate) => candidate.category !== "paper")
+          : document.candidates;
+      markCandidatesSeen(state, deliveredCandidates, document.generatedAt);
       saveFeedState(config.industryStateFile, state);
     }
   });
@@ -64,14 +70,19 @@ async function collectIndustryBrief(
   const eventWindow = resolveEventWindow(config);
   const events = rssEvents.filter((event) => isWithinEventWindow(event, eventWindow));
 
-  const allCandidates = buildCandidateProjects(events, {
-    followees: new Set<string>(),
-    interests: config.interests,
-    repositories: new Map(),
-  });
+  const allCandidates = selectResearchCandidates(
+    buildCandidateProjects(events, {
+      followees: new Set<string>(),
+      interests: config.interests,
+      repositories: new Map(),
+    }),
+    config.maxPapers,
+  );
 
   const state = loadFeedState(config.industryStateFile);
-  const candidates = config.onlyNew ? filterNewCandidates(allCandidates, state) : allCandidates;
+  const candidates = config.onlyNew
+    ? filterUnresearchedCandidates(filterNewCandidates(allCandidates, state), state)
+    : allCandidates;
 
   return {
     document: {

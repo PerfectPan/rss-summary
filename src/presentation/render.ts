@@ -5,9 +5,18 @@ export type { DigestDocument };
 
 export function renderMarkdownDigest(document: DigestDocument): string {
   const date = document.displayDate ?? document.generatedAt.slice(0, 10);
-  const sections = groupCandidates(document.candidates);
+  const publishableCandidates = document.candidates.filter(
+    (candidate) => candidate.category !== "paper",
+  );
+  const pendingPaperCount = document.candidates.length - publishableCandidates.length;
+  const sections = groupCandidates(publishableCandidates);
   const sourceLabel = document.sourceMode === "rss" ? "RSS" : "GitHub + RSS";
-  const metadata = [`${document.candidates.length} 条高信号`, sourceLabel, document.windowLabel]
+  const metadata = [
+    `${publishableCandidates.length} 条高信号`,
+    pendingPaperCount > 0 ? `${pendingPaperCount} 篇论文待深度调研` : undefined,
+    sourceLabel,
+    document.windowLabel,
+  ]
     .filter(Boolean)
     .join(" · ");
   const lines = [`# 技术订阅日报 · ${date}`, "", metadata, ""];
@@ -17,8 +26,13 @@ export function renderMarkdownDigest(document: DigestDocument): string {
   appendSection(lines, "🛠 项目动态", sections.activity);
   appendSection(lines, "🚀 版本发布", sections.release);
 
-  if (document.candidates.length === 0) {
+  if (publishableCandidates.length === 0 && pendingPaperCount === 0) {
     lines.push("今天没有筛出高价值 GitHub/RSS 条目。");
+  }
+  if (pendingPaperCount > 0) {
+    lines.push(
+      `另有 ${pendingPaperCount} 篇论文进入研究队列；未完成 abstract 与原文核验前不直接发布。`,
+    );
   }
 
   return `${lines.join("\n").trim()}\n`;
@@ -87,6 +101,7 @@ function eventTypeLabel(value: CandidateProject["eventTypes"][number]): string {
     follow: "关注",
     fork: "派生项目",
     other: "动态",
+    paper: "论文",
     pull_request: "Pull Request",
     recommendation: "推荐",
     release: "版本发布",
@@ -115,6 +130,10 @@ function reasonLabel(value: string): string {
     return `关注者：${value.slice("followed actor: ".length)}`;
   if (value.startsWith("matches interest: "))
     return `匹配关注方向：${value.slice("matches interest: ".length)}`;
+  if (value.startsWith("matches paper abstract: "))
+    return `论文摘要匹配关注方向：${value.slice("matches paper abstract: ".length)}`;
   if (value.startsWith("rss feed: ")) return `RSS 来源：${value.slice("rss feed: ".length)}`;
+  if (value.startsWith("research paper: "))
+    return `论文来源：${value.slice("research paper: ".length)}`;
   return value;
 }

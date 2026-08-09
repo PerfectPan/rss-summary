@@ -1,6 +1,6 @@
 # Feed 调研 Prompt
 
-你正在准备 PerfectPan 的每日 GitHub Home 和 RSS 简报。你的任务不是总结每一条动态，而是选出少数真正值得注意的项目、PR、release 或文章，完成必要调研后输出面向决策的中文日报。
+你正在准备 PerfectPan 的每日 GitHub Home 和 RSS 简报。输入也可能来自独立的 RSS 行业简报。你的任务不是总结每一条动态，而是选出少数真正值得注意的项目、PR、release、文章或论文，完成必要调研后输出面向决策的中文日报。
 
 ## 输入
 
@@ -8,17 +8,17 @@
 
 ```text
 CANDIDATES_JSON=
-<粘贴 `rss-summary digest --json --only-new --dry-run` 的输出>
+<粘贴 `rss-summary digest --json --only-new --dry-run` 或 `rss-summary industry --json --only-new --dry-run` 的输出>
 
 FEED_STATE_JSON=
-<如果有 `.state/feed-state.json` 就粘贴其内容；没有就填 `{}`>
+<个人简报使用 `.state/feed-state.json`；行业简报使用 `.state/industry-state.json`；没有就填 `{}`>
 ```
 
 `CANDIDATES_JSON.candidates` 是已经排序的候选动态。`FEED_STATE_JSON.researched` 是项目/文章的调研缓存。GitHub 仓库调研使用 `state.researched["github:owner/repo"]` 作为去重键。
 
 ## 调研策略
 
-只调研最可能有价值的候选项，默认选 5 到 8 条。不要输出原始 candidate JSON，也不要输出平铺时间线。
+只调研最可能有价值的非论文候选项，默认选 5 到 8 条。论文使用独立研究预算：进入输入的论文已经经过 abstract 兴趣匹配和硬配额筛选；逐篇核验最多 8 篇，最终只推荐 2 到 3 篇，不占用前述 5 到 8 条预算。不要输出原始 candidate JSON，也不要输出平铺时间线。
 
 对每个候选项：
 
@@ -55,6 +55,24 @@ FEED_STATE_JSON=
 ## RSS 文章调研
 
 文章页面可访问时必须打开原文。总结核心观点、证据质量和实践相关性。除非原文不可访问，不要只依赖 feed excerpt。
+
+## 论文调研
+
+论文必须经过两段式漏斗，不能只根据标题或 feed excerpt 决定是否推荐：
+
+1. 第一层已经由 CLI 使用 feed abstract 做兴趣匹配并限制候选量；先检查 candidate 的 `summary` 和 `matches paper abstract` 理由是否一致。
+2. 第二层必须打开 `arxiv.org/abs/<id>` abstract HTML，核对作者、机构、研究问题、方法、关键结果、限制和 code/project 链接。
+3. 只有 abstract 不足以判断且论文很可能进入最终 2 到 3 篇时，才进一步读取正文；优先使用 `https://ar5iv.labs.arxiv.org/html/<id>`，不要默认下载和解析 PDF。
+4. 判断它与 agent、LLM、tooling、frontend 或工程实践的真实关系；仅仅出现热门关键词不构成推荐理由。
+5. 明确区分作者声称的结果与论文实际提供的证据。没有对照实验、复现材料或公开代码时要降低可信度，不得补写论文没有给出的结论。
+
+最终推荐的论文使用以下字段：
+
+- 研究问题：
+- 方法与证据：
+- 可信度与限制：
+- 实践相关性：
+- 建议动作：`read`、`track`、`save` 或 `skip`
 
 ## 输出
 
@@ -96,4 +114,4 @@ FEED_STATE_JSON=
 - rss:https://example.com/post - decision=read reason="..."
 ```
 
-这些 key 供 scheduler/agent wrapper 写入 `.state/feed-state.json`。不要包含本地 secret、token、browser storage 或机器专属路径。
+这些 key 供 scheduler/agent wrapper 写入当前产品的 state：个人简报使用 `.state/feed-state.json`，行业简报使用 `.state/industry-state.json`。不要包含本地 secret、token、browser storage 或机器专属路径。

@@ -27,6 +27,7 @@ export type AppConfig = {
   day?: string;
   timezoneOffset: string;
   maxRepos: number;
+  maxPapers: number;
   dryRun: boolean;
   onlyNew: boolean;
   rssOnly: boolean;
@@ -65,6 +66,7 @@ export function loadConfig(
     day: args.day ?? env.FEED_DAY,
     timezoneOffset: args.timezoneOffset ?? env.FEED_TIMEZONE_OFFSET ?? "+08:00",
     maxRepos: numberFrom(args.maxRepos ?? env.FEED_MAX_REPOS, 30),
+    maxPapers: Math.min(numberFrom(args.maxPapers ?? env.FEED_MAX_PAPERS, 8), 8),
     dryRun,
     onlyNew: args.onlyNew || env.FEED_ONLY_NEW === "1" || env.FEED_ONLY_NEW === "true",
     rssOnly: args.rssOnly || env.FEED_RSS_ONLY === "1" || env.FEED_RSS_ONLY === "true",
@@ -86,9 +88,9 @@ export function loadConfig(
       "performance",
       "skills",
     ],
-    rssFeeds: loadFeedSubscriptions(env, args.rssFeedsFile),
+    rssFeeds: loadFeedSubscriptions(env.RSS_FEEDS, args.rssFeedsFile ?? env.RSS_FEEDS_FILE),
     industryFeeds: loadFeedSubscriptions(
-      env,
+      env.INDUSTRY_FEEDS,
       args.industryFeedsFile ?? env.INDUSTRY_FEEDS_FILE ?? "industry-feeds.json",
     ),
     industryStateFile:
@@ -134,6 +136,7 @@ function parseArgs(argv: string[]) {
     day?: string;
     timezoneOffset?: string;
     maxRepos?: string;
+    maxPapers?: string;
     githubFeedSource?: string;
     githubHomeFetch?: string;
     githubHomeStorageState?: string;
@@ -209,12 +212,12 @@ function parseGithubHomeFetch(value: string | undefined): GithubHomeFetch {
 }
 
 function loadFeedSubscriptions(
-  env: NodeJS.ProcessEnv,
+  inlineFeeds: string | undefined,
   configuredFile: string | undefined,
 ): FeedSubscription[] {
-  if (env.RSS_FEEDS) return parseFeedSubscriptions(env.RSS_FEEDS);
+  if (inlineFeeds) return parseFeedSubscriptions(inlineFeeds);
 
-  const feedsFile = configuredFile ?? env.RSS_FEEDS_FILE ?? "feeds.json";
+  const feedsFile = configuredFile ?? "feeds.json";
   if (!existsSync(feedsFile)) return [];
   return parseFeedSubscriptions(readFileSync(feedsFile, "utf8"));
 }

@@ -1,6 +1,6 @@
 ---
 name: feed-research-digest
-description: Research and summarize newly fetched rss-summary candidates after GitHub received_events and RSS/Atom ingestion. Use when the user wants to further inspect daily new feed items, decide what is useful, avoid re-researching already seen items, or turn `rss-summary digest --json --only-new` output into an actionable project/article brief.
+description: Research and summarize newly fetched rss-summary candidates from personal GitHub/RSS digests or RSS-only industry briefs, including deep review of arXiv papers before publication. Use when the user wants to inspect daily feed items, decide what is useful, avoid repeated research, or turn `rss-summary digest --json --only-new` or `rss-summary industry --json --only-new` output into an actionable project, article, and paper brief.
 ---
 
 # Feed Research Digest
@@ -12,30 +12,40 @@ Use `prompts/feed-research.md` as the model prompt. Use `docs/digest-delivery-re
 ## Daily Workflow
 
 1. Locate the `rss-summary` project root containing `package.json`.
-2. Preview new candidates without mutating state:
+2. Choose the product and preview new candidates without mutating state:
 
 ```bash
+# Personal GitHub + RSS digest
 GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --json --only-new --dry-run
+
+# RSS-only industry brief, including the bounded paper research queue
+FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary industry --json --only-new --dry-run
 ```
 
 3. If the JSON `candidates` array is empty, report that there are no new high-signal items.
-4. Read `prompts/feed-research.md` and use it as the prompt body. Fill `CANDIDATES_JSON` with the dry-run JSON output and `FEED_STATE_JSON` with `.state/feed-state.json` when present.
+4. Read `prompts/feed-research.md` and use it as the prompt body. Fill `CANDIDATES_JSON` with the dry-run JSON output. Fill `FEED_STATE_JSON` from `.state/feed-state.json` for `digest` or `.state/industry-state.json` for `industry`.
 5. Follow the prompt's research policy and output format. Do not replace it with an ad hoc summary.
 6. After the user accepts or after a scheduled non-dry run, mark candidates seen with:
 
 ```bash
 GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary digest --only-new
+
+# Or, for the industry product
+FEED_DAY="$(TZ=Asia/Shanghai date +%F)" rss-summary industry --only-new
 ```
 
-The non-dry run writes `.state/feed-state.json`. Do not commit `.state/`.
+The non-dry run writes the matching product state file. Direct Markdown delivery omits unresearched papers and leaves them unseen until research is recorded. Do not commit `.state/`.
 
 7. Write the prompt's `调研状态更新建议:` decisions back to `state.researched` so future runs skip already-researched repos/articles. Save the block to a file (or pipe it on stdin) and run:
 
 ```bash
 rss-summary research add --file research-suggestions.txt
+
+# Use the industry state for an industry run
+rss-summary research add --file research-suggestions.txt --state-file .state/industry-state.json
 ```
 
-Each `github:owner/repo` or `rss:url` line is recorded with its `decision`/`reason`. The next `digest --only-new` then filters those items out. `--state-file` overrides the default `.state/feed-state.json` path. Do not commit `.state/`.
+Each `github:owner/repo` or `rss:url` line is recorded with its `decision`/`reason`. The next matching `digest --only-new` or `industry --only-new` run filters those items out. `--state-file` selects the product state. Do not commit `.state/`.
 
 ## Research Rules
 
@@ -47,6 +57,7 @@ Each `github:owner/repo` or `rss:url` line is recorded with its `decision`/`reas
 - For each merged PR that survives initial filtering, answer three questions before recommending it: what changed, whether the change deserves attention, and what the project is.
 - Do not write `important PR merged` as the final reason. Replace it with a concrete reason such as "router API behavior changed", "agent write path hardened", "parser edge-case fixed", or "docs only; track but no action".
 - RSS `article`: read the article page when available. Summarize the core claim, evidence, and practical relevance. Do not summarize only the feed snippet when the page is accessible.
+- RSS `paper`: treat the CLI result as a bounded research queue, not publishable copy. Open the canonical `arxiv.org/abs/<id>` page for every paper considered; verify authors, institutions, research question, method, results, limitations, and code/project links. Read `ar5iv.labs.arxiv.org/html/<id>` only when the abstract is insufficient and the paper is likely to make the final 2–3. Never recommend a paper from its title alone.
 - If the candidate is not useful after inspection, still record the skip reason so it does not appear as an unexplained omission.
 
 ### Code architecture and quality checks
@@ -98,9 +109,12 @@ Avoid raw timelines. Avoid re-listing every candidate. The value is selection an
 ## State Semantics
 
 - `--only-new --dry-run`: preview new candidates; does not update state.
-- `--only-new`: outputs new candidates and records their event IDs in `.state/feed-state.json`.
+- `--only-new`: outputs new candidates and records delivered event IDs in the matching personal or industry state file.
 - `--json`: emits the digest document as machine-readable JSON for this skill or other model pipelines.
+- `industry --json`: emits the RSS-only industry document, including at most `FEED_MAX_PAPERS` papers whose feed abstracts match configured interests.
+- Direct Markdown renderers do not publish `paper` candidates. They report a pending count until the research workflow records a decision.
 - `FEED_DAY` or `--day`: filters to a calendar day; use this for scheduled daily summaries.
 - `FEED_STATE_FILE`: overrides the default `.state/feed-state.json` path.
+- `INDUSTRY_STATE_FILE`: overrides the default `.state/industry-state.json` path.
 - `state.researched` is keyed by stable research identity. GitHub repo candidates use `github:owner/repo`, so repeated star events for the same repo do not trigger repeated deep research.
-- `rss-summary research add`: appends the prompt's `调研状态更新建议:` decisions to `state.researched` (read from stdin or `--file`); this closes the loop so `digest --only-new` stops re-surfacing researched items.
+- `rss-summary research add`: appends the prompt's `调研状态更新建议:` decisions to `state.researched` (read from stdin or `--file`); pass the industry state path for industry runs so both only-new workflows stop re-surfacing researched items.

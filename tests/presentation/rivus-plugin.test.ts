@@ -181,6 +181,7 @@ describe("rss-summary Rivus Plugin", () => {
       candidateCount: 3,
       generatedAt: "2026-08-09T01:00:00.000Z",
       markdown: "# 行业简报 · 2026-08-09\n",
+      paperCandidateCount: 1,
     }));
     const registrations = register(createRssSummaryPlugin({ generateIndustryBrief }));
     const tool = registrations.tools.get(RSS_SUMMARY_INDUSTRY_TOOL_ID)!;
@@ -196,7 +197,11 @@ describe("rss-summary Rivus Plugin", () => {
       );
 
     expect(generateIndustryBrief).toHaveBeenCalledWith({ occurrence: "2026-08-09T01:00:00.000Z" });
-    expect(result).toMatchObject({ candidateCount: 3, markdown: "# 行业简报 · 2026-08-09\n" });
+    expect(result).toMatchObject({
+      candidateCount: 3,
+      markdown: "# 行业简报 · 2026-08-09\n",
+      paperCandidateCount: 1,
+    });
     expect(tool.risk).toBe("observe");
   });
 

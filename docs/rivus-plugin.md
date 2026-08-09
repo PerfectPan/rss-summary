@@ -6,17 +6,19 @@
 
 | Kind | ID | Purpose |
 | --- | --- | --- |
-| Agent profile | `rss-digest` | Allows only the three rss-summary Tools; no Skills or Memory scopes |
+| Agent profile | `rss-digest` | Allows only the four rss-summary Tools; no Skills or Memory scopes |
 | Tool | `rss-summary/generate-digest` | Builds a read-only GitHub Home + RSS digest |
 | Tool | `rss-summary/generate-news-brief` | Builds a bounded Doubao web-search news brief |
 | Tool | `rss-summary/generate-signal-brief` | Builds the daily 高信号速览 from GitHub Search + Hacker News + official-domain search |
+| Tool | `rss-summary/generate-industry-brief` | Builds an RSS-only industry brief; unresearched papers stay pending |
 | Automation template | `rss-summary/morning-feed-digest` | Previous local calendar day's GitHub Home + RSS |
 | Automation template | `rss-summary/noon-news-brief` | Current day 00:00 through the noon occurrence |
 | Automation template | `rss-summary/evening-news-brief` | Current day 12:30 through the evening occurrence |
 | Automation template | `rss-summary/daily-signal-brief` | Current local calendar day's high-signal brief |
+| Automation template | `rss-summary/daily-industry-brief` | Current local calendar day's RSS-only industry brief |
 | Legacy template | `rss-summary/daily-digest` | Same-day feed digest kept for existing deployments |
 
-All three Tools have `observe` risk. The feed Tool forces `--dry-run`, so it never invokes `NOTIFY_WEBHOOK_URL` and never updates `.state/feed-state.json`. With `onlyNew` enabled, it may read the state file to filter already seen items. The news Tool performs read-only search requests and does not persist delivery state. The signal Tool is read-only across GitHub Search, Hacker News, and Doubao, keeps no `.state`, and never reads `feeds.json`.
+All four Tools have `observe` risk. The feed Tool forces `--dry-run`, so it never invokes `NOTIFY_WEBHOOK_URL` and never updates `.state/feed-state.json`. With `onlyNew` enabled, it may read the state file to filter already seen items. The industry Tool has the same read-only semantics with `.state/industry-state.json`; it omits unresearched paper titles from Markdown and reports only the pending count. The news Tool performs read-only search requests and does not persist delivery state. The signal Tool is read-only across GitHub Search, Hacker News, and Doubao, keeps no `.state`, and never reads `feeds.json`.
 
 ## Install From This Checkout
 
@@ -60,7 +62,8 @@ Replace the starter `rivus.config.json` created by `rivus init` with the complet
         "allow": [
           "rss-summary/generate-digest",
           "rss-summary/generate-news-brief",
-          "rss-summary/generate-signal-brief"
+          "rss-summary/generate-signal-brief",
+          "rss-summary/generate-industry-brief"
         ]
       }
     }
@@ -142,7 +145,7 @@ Replace the starter `rivus.config.json` created by `rivus init` with the complet
 
 Each Automation input contains the exact scheduled ISO occurrence. The morning template resolves the previous local calendar day using `FEED_TIMEZONE_OFFSET`. Noon searches local 00:00–12:30; evening searches from local 12:30 to its occurrence. These non-overlapping windows avoid replaying noon stories in the evening without coupling search to delivery-state persistence. The signal template covers the full local calendar day of its occurrence.
 
-The rendered Markdown starts with `# 技术订阅日报 · YYYY-MM-DD`, `# 午间热点 · YYYY-MM-DD`, `# 晚间热点 · YYYY-MM-DD`, or `# 高信号速览 · YYYY-MM-DD`. Rivus promotes that heading into the interactive-card header and keeps the compact sections and links in the card body. The Plugin does not call Feishu directly; delivery credentials, target identity, idempotency, and retries remain Host responsibilities.
+The rendered Markdown starts with `# 技术订阅日报 · YYYY-MM-DD`, `# 行业简报 · YYYY-MM-DD`, `# 午间热点 · YYYY-MM-DD`, `# 晚间热点 · YYYY-MM-DD`, or `# 高信号速览 · YYYY-MM-DD`. Rivus promotes that heading into the interactive-card header and keeps the compact sections and links in the card body. The Plugin does not call Feishu directly; delivery credentials, target identity, idempotency, and retries remain Host responsibilities.
 
 ## Configure Sources
 
@@ -155,6 +158,9 @@ GITHUB_HOME_FETCH=conduit
 GITHUB_HOME_STORAGE_STATE=/path/to/rss-summary/.state/github-home-storage.json
 GITHUB_USERNAME=PerfectPan
 RSS_FEEDS_FILE=/path/to/rss-summary/feeds.json
+INDUSTRY_FEEDS_FILE=/path/to/rss-summary/industry-feeds.json
+INDUSTRY_STATE_FILE=/path/to/rss-summary/.state/industry-state.json
+FEED_MAX_PAPERS=8
 DOUBAO_SEARCH_API_KEY=replace-with-doubao-search-api-key
 # Optional; the packaged default already contains the six curated brief areas.
 NEWS_TOPICS_FILE=/path/to/rss-summary/news-topics.json

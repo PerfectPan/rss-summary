@@ -34,8 +34,37 @@ describe("Rivus industry brief adapter", () => {
     );
 
     expect(result.candidateCount).toBe(1);
+    expect(result.paperCandidateCount).toBe(0);
     expect(result.markdown).toContain("# 行业简报 · 2026-08-09");
     expect(result.markdown).toContain("**1. [Agent release](https://example.com/a)**");
+  });
+
+  it("reports papers as pending instead of publishing their titles", async () => {
+    const document: IndustryBriefDocument = {
+      generatedAt: "2026-08-09T01:00:00.000Z",
+      candidates: [
+        {
+          repo: "rss:https://arxiv.org/abs/2608.01234",
+          source: "rss",
+          category: "paper",
+          score: 55,
+          actors: ["arXiv cs.AI"],
+          eventTypes: ["paper"],
+          reasons: ["matches paper abstract: agent"],
+          events: [],
+          label: "Unverified agent claim",
+          url: "https://arxiv.org/abs/2608.01234",
+        },
+      ],
+    };
+
+    const result = await generateRivusIndustryBrief(undefined, {
+      env: {},
+      buildIndustryDocument: () => Effect.succeed(document),
+    });
+
+    expect(result).toMatchObject({ candidateCount: 0, paperCandidateCount: 1 });
+    expect(result.markdown).not.toContain("Unverified agent claim");
   });
 
   it("rejects day and occurrence used together", async () => {
