@@ -29,6 +29,14 @@ GH_FEED_TOKEN="..." GITHUB_USERNAME=PerfectPan FEED_DAY="$(TZ=Asia/Shanghai date
 
 The non-dry run writes `.state/feed-state.json`. Do not commit `.state/`.
 
+7. Write the prompt's `调研状态更新建议:` decisions back to `state.researched` so future runs skip already-researched repos/articles. Save the block to a file (or pipe it on stdin) and run:
+
+```bash
+rss-summary research add --file research-suggestions.txt
+```
+
+Each `github:owner/repo` or `rss:url` line is recorded with its `decision`/`reason`. The next `digest --only-new` then filters those items out. `--state-file` overrides the default `.state/feed-state.json` path. Do not commit `.state/`.
+
 ## Research Rules
 
 - GitHub `discovery`: inspect repo README, description, topics, stars, recent activity, releases, and examples. Decide whether it helps the user's agent/tooling/frontend/Rust/TypeScript interests.
@@ -95,3 +103,4 @@ Avoid raw timelines. Avoid re-listing every candidate. The value is selection an
 - `FEED_DAY` or `--day`: filters to a calendar day; use this for scheduled daily summaries.
 - `FEED_STATE_FILE`: overrides the default `.state/feed-state.json` path.
 - `state.researched` is keyed by stable research identity. GitHub repo candidates use `github:owner/repo`, so repeated star events for the same repo do not trigger repeated deep research.
+- `rss-summary research add`: appends the prompt's `调研状态更新建议:` decisions to `state.researched` (read from stdin or `--file`); this closes the loop so `digest --only-new` stops re-surfacing researched items.
