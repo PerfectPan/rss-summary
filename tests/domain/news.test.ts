@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { buildNewsStories, selectNewsStories } from "../../src/domain/news.js";
+import {
+  buildNewsStories,
+  countMissingPublishTimeHits,
+  selectNewsStories,
+} from "../../src/domain/news.js";
 import { parsePublishTime } from "../../src/domain/text.js";
 import type { NewsSearchHit } from "../../src/domain/news.js";
 import type { NewsTopic } from "../../src/domain/news.js";
@@ -153,6 +157,24 @@ describe("news domain", () => {
     const selected = selectNewsStories(stories, [topic({ maxItems: 10 })]);
 
     expect(selected).toHaveLength(8);
+  });
+
+  it("counts hits missing or carrying an unparseable publish time", () => {
+    const count = countMissingPublishTimeHits(
+      [
+        hit({ id: "missing", publishTime: undefined }),
+        hit({ id: "garbage", publishTime: "not-a-date" }),
+        hit({ id: "valid", publishTime: "2026-07-29T09:30:00+08:00" }),
+        hit({ id: "empty-meta", title: "  ", url: "  " }),
+        hit({ id: "stale-but-parseable", publishTime: "2026-07-28T00:00:00+08:00" }),
+      ],
+      {
+        since: Date.parse("2026-07-29T00:00:00+08:00"),
+        until: Date.parse("2026-07-29T12:30:00+08:00"),
+      },
+    );
+
+    expect(count).toBe(2);
   });
 });
 

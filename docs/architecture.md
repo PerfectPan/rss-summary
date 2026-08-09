@@ -302,5 +302,5 @@ Keep `GH_FEED_TOKEN`, `.env`, and `.state/` out of git. `feeds.json` is intentio
 - `researched` state exists in the schema but is not yet used by the CLI.
 - Webhook delivery is generic only.
 - RSS deduplication is based on generated item IDs, not content similarity.
-- Doubao official-search hits with a missing/unparseable `PublishTime` are dropped by the window filter without a warning (query is day-scoped, so impact is bounded).
+- Doubao official-search hits with a missing/unparseable `PublishTime` are dropped by the window filter and surfaced as a warning in the news brief (query is day-scoped, so impact is bounded).
 - This repository has no built-in daemon; a consuming Rivus deployment can host the exported Automation.

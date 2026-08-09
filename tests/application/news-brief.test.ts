@@ -154,4 +154,55 @@ describe("Rivus news brief Tool adapter", () => {
       ),
     ).rejects.toThrow(/all.*search/i);
   });
+
+  it("warns when Doubao hits lack a parseable publish time", async () => {
+    const result = await Effect.runPromise(
+      generateRivusNewsBrief(
+        { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
+        {
+          env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
+          search: async () => ({
+            logId: "ok",
+            resultCount: 2,
+            timeCostMs: 10,
+            results: [
+              {
+                id: "fine",
+                title: "Fine headline",
+                url: "https://example.com/fine",
+                summary: "fine summary",
+                siteName: "Tech",
+                publishTime: "2026-07-29T09:00:00+08:00",
+                rankScore: 0.9,
+                authInfoLevel: 2,
+                authInfoDescription: "正常权威",
+              },
+              {
+                id: "no-time",
+                title: "No publish time",
+                url: "https://example.com/no-time",
+                summary: "no time summary",
+                siteName: "Tech",
+                rankScore: 0.8,
+                authInfoLevel: 2,
+                authInfoDescription: "正常权威",
+              },
+            ],
+          }),
+          topics: [
+            {
+              id: "technology",
+              label: "科技新闻",
+              enabled: true,
+              sourcePolicy: "authoritative",
+              maxItems: 3,
+              queries: ["AI Agent"],
+            },
+          ],
+        },
+      ),
+    );
+
+    expect(result.warnings).toContain("Doubao 搜索：1 条结果缺少有效的发布时间被丢弃");
+  });
 });
