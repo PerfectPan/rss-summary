@@ -16,6 +16,7 @@
 **🔥 值得看**
 
 **1. PerfectPan/signal-catcher**
+
 - 简介：从多源信号里抓取每日值得看的项目。· TypeScript · 1.2k stars
 - 信号：followee-a · 收藏, 趋势项目
 - 为什么看：GitHub Home 趋势项目；关注者收藏了这个项目
@@ -88,18 +89,18 @@ rss-summary feeds list
 
 ## Configuration
 
-| 变量 | 作用 | 默认 |
-| --- | --- | --- |
-| `GITHUB_FEED_SOURCE` | `home`(精确,默认)或 `events`(REST 回退) | `home` |
-| `GITHUB_USERNAME` | 要抓 Home feed 的账号 | — |
-| `FEED_DAY` | 日报日 `YYYY-MM-DD`(本地日历) | 滚动窗口 |
-| `FEED_TIMEZONE_OFFSET` | 时区偏移 | `+00:00` |
-| `FEED_WINDOW_HOURS` | 滚动窗口小时(`FEED_DAY` 未设时) | `36` |
-| `GITHUB_HOME_FETCH` | `conduit`(默认)或 `browser` | `conduit` |
-| `GH_FEED_TOKEN` | GitHub token(API 补全 PR 详情 / events 回退) | — |
-| `DOUBAO_SEARCH_API_KEY` | 高信号速览的官方域搜索(可选) | — |
-| `NOTIFY_WEBHOOK_URL` | 推送 webhook(POST `{ "text": markdown }`) | — |
-| `RSS_FEEDS_FILE` | RSS 订阅文件 | `feeds.json` |
+| 变量                    | 作用                                         | 默认         |
+| ----------------------- | -------------------------------------------- | ------------ |
+| `GITHUB_FEED_SOURCE`    | `home`(精确,默认)或 `events`(REST 回退)      | `home`       |
+| `GITHUB_USERNAME`       | 要抓 Home feed 的账号                        | —            |
+| `FEED_DAY`              | 日报日 `YYYY-MM-DD`(本地日历)                | 滚动窗口     |
+| `FEED_TIMEZONE_OFFSET`  | 时区偏移                                     | `+00:00`     |
+| `FEED_WINDOW_HOURS`     | 滚动窗口小时(`FEED_DAY` 未设时)              | `36`         |
+| `GITHUB_HOME_FETCH`     | `conduit`(默认)或 `browser`                  | `conduit`    |
+| `GH_FEED_TOKEN`         | GitHub token(API 补全 PR 详情 / events 回退) | —            |
+| `DOUBAO_SEARCH_API_KEY` | 高信号速览的官方域搜索(可选)                 | —            |
+| `NOTIFY_WEBHOOK_URL`    | 推送 webhook(POST `{ "text": markdown }`)    | —            |
+| `RSS_FEEDS_FILE`        | RSS 订阅文件                                 | `feeds.json` |
 
 完整列表与默认值见 [.env.example](.env.example)。GitHub Home 的 conduit / 浏览器回退机制见 [docs/architecture.md](docs/architecture.md)。
 
