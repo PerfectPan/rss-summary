@@ -3,6 +3,7 @@ import { Effect } from "effect";
 import type { IndustryBriefDocument } from "../application/industry-brief.js";
 import { buildIndustryDocument } from "../application/industry-brief.js";
 import { calendarDayAtOffset } from "../domain/time.js";
+import type { RunAudit } from "../domain/run-audit.js";
 import type { AppConfig } from "../infrastructure/config.js";
 import { loadConfig } from "../infrastructure/config.js";
 import { renderMarkdownIndustryBrief } from "./industry-render.js";
@@ -19,6 +20,7 @@ export type RivusIndustryBriefResult = {
   markdown: string;
   paperCandidateCount: number;
   windowLabel?: string;
+  audit?: RunAudit;
 };
 
 type RivusIndustryBriefDependencies = {
@@ -62,6 +64,7 @@ export async function generateRivusIndustryBrief(
     markdown: renderMarkdownIndustryBrief(day ? { ...document, displayDate: day } : document),
     paperCandidateCount,
     ...(document.windowLabel ? { windowLabel: document.windowLabel } : {}),
+    ...(document.audit ? { audit: document.audit } : {}),
   };
 }
 

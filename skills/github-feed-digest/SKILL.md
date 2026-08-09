@@ -1,11 +1,11 @@
 ---
 name: github-feed-digest
-description: Run, configure, or migrate the rss-summary GitHub Home Feed and RSS digest automation. Use when the user wants a daily summary of the exact rendered GitHub Home feed, RSS/Atom feeds, GitHub Home login setup, webhook/stdout delivery, or the same digest on another machine.
+description: Run, configure, inspect, or migrate the rss-summary personal subscription automation that combines the user's exact GitHub Home feed with explicitly followed RSS/Atom blogs. Use for GitHub Home login setup, subscription delivery, run audits, troubleshooting, or reproducing the same personal feed on another machine.
 ---
 
 # GitHub Feed Digest
 
-Use the local `rss-summary` project to summarize the exact rendered GitHub Home feed plus optional RSS/Atom feeds.
+Use the local `rss-summary` project to deliver one personal subscription stream: exact GitHub Home plus explicitly followed RSS/Atom sources from `feeds.json`.
 
 ## Core Rule
 
@@ -15,7 +15,7 @@ The GitHub identity comes from the saved GitHub web session in `GITHUB_FEED_SOUR
 
 1. Locate the project root containing `package.json`.
 2. Install dependencies with `pnpm install`.
-3. Build and link the CLI with `pnpm build && pnpm setup && pnpm link --global`.
+3. Build and link the CLI with `pnpm build && pnpm link --global`.
 4. Run `rss-summary github-home login` once to create `.state/github-home-storage.json`.
 5. Set `GITHUB_FEED_SOURCE=home`.
 6. Keep `GITHUB_HOME_FETCH=conduit` for the direct internal Turbo frame fast path with browser fallback, or set `GITHUB_HOME_FETCH=browser` to skip the direct request.
@@ -64,14 +64,12 @@ Cron example:
 
 ## Output Shape
 
-The digest is Markdown with project-focused sections:
+The brief uses attention depth, not source-type sections:
 
-- `值得看`: project discovery signals such as followee stars, forks, and new repositories.
-- `RSS 文章`: matching RSS/Atom articles from configured feeds.
-- `项目动态`: useful PR activity, especially merged PRs and repeated repo activity.
-- `版本发布`: release signals.
+- `重点摘要`: strong releases, repeated GitHub Home signals, interest matches, and actionable changes.
+- `其他更新`: ordinary trusted updates, each kept to one sentence plus the original link.
 
-Do not summarize raw GitHub events as a flat timeline. Explain why each repository may matter.
+Do not drop a new explicitly subscribed item only because it lacks broad popularity. Use `$feed-research-digest` when an item deserves source-based investigation.
 
 ## Daily New State
 
@@ -80,6 +78,8 @@ Do not summarize raw GitHub events as a flat timeline. Explain why each reposito
 - `--json` emits machine-readable candidates for `$feed-research-digest`.
 - `--day YYYY-MM-DD` filters to that calendar day in the configured timezone offset.
 - Do not commit `.state/`. Commit intentional `feeds.json` subscription changes through a pull request.
+- Direct CLI runs write paired audit JSON/Markdown under `.state/runs`; inspect them with `rss-summary runs list`, `runs failures`, or `runs show`.
+- Research cache avoids repeated deep investigation but does not suppress a later new subscription event.
 
 ## Troubleshooting
 

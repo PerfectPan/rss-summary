@@ -36,6 +36,7 @@ export type AppConfig = {
   rssFeeds: FeedSubscription[];
   industryFeeds: FeedSubscription[];
   industryStateFile: string;
+  runLogDir: string;
 };
 
 export function loadConfig(
@@ -95,6 +96,7 @@ export function loadConfig(
     ),
     industryStateFile:
       args.industryStateFile ?? env.INDUSTRY_STATE_FILE ?? ".state/industry-state.json",
+    runLogDir: args.runLogDir ?? env.FEED_RUN_LOG_DIR ?? ".state/runs",
   };
 }
 
@@ -143,6 +145,7 @@ function parseArgs(argv: string[]) {
     rssFeedsFile?: string;
     industryFeedsFile?: string;
     industryStateFile?: string;
+    runLogDir?: string;
     stateFile?: string;
     dryRun?: boolean;
     json?: boolean;

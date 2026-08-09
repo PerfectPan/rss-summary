@@ -1,28 +1,27 @@
 # Rivus Agent Plugin
 
-`rss-summary/rivus-plugin` is an external Plugin for `@rivus/agent`. The host owns scheduling, model execution, delivery, and credentials. This package owns feed/news collection, ranking, filtering, deduplication, and Markdown rendering.
+`rss-summary/rivus-plugin` is an external Plugin for `@rivus/agent`. The Host owns scheduling, model execution, Feishu delivery, credentials, traces, and the delivery ledger. This package owns source collection, filtering, ranking, audit data, and Markdown rendering.
 
-## Registered Surface
+## Registered surface
 
 | Kind | ID | Purpose |
 | --- | --- | --- |
-| Agent profile | `rss-digest` | Allows only the four rss-summary Tools; no Skills or Memory scopes |
-| Tool | `rss-summary/generate-digest` | Builds a read-only GitHub Home + RSS digest |
-| Tool | `rss-summary/generate-news-brief` | Builds a bounded Doubao web-search news brief |
-| Tool | `rss-summary/generate-signal-brief` | Builds the daily 高信号速览 from GitHub Search + Hacker News + official-domain search |
-| Tool | `rss-summary/generate-industry-brief` | Builds an RSS-only industry brief; unresearched papers stay pending |
-| Automation template | `rss-summary/morning-feed-digest` | Previous local calendar day's GitHub Home + RSS |
-| Automation template | `rss-summary/noon-news-brief` | Current day 00:00 through the noon occurrence |
-| Automation template | `rss-summary/evening-news-brief` | Current day 12:30 through the evening occurrence |
-| Automation template | `rss-summary/daily-signal-brief` | Current local calendar day's high-signal brief |
-| Automation template | `rss-summary/daily-industry-brief` | Current local calendar day's RSS-only industry brief |
-| Legacy template | `rss-summary/daily-digest` | Same-day feed digest kept for existing deployments |
+| Agent profile | `rss-digest` | Allows only the three rss-summary Tools |
+| Tool | `rss-summary/generate-digest` | GitHub Home + explicitly subscribed personal RSS |
+| Tool | `rss-summary/generate-industry-brief` | curated official frontier feeds; papers stay pending |
+| Tool | `rss-summary/generate-news-brief` | bounded noon/evening authoritative web news |
+| Automation | `rss-summary/morning-feed-digest` | previous local calendar day's subscriptions |
+| Automation | `rss-summary/daily-industry-brief` | current local calendar day's frontier updates |
+| Automation | `rss-summary/noon-news-brief` | current day 00:00 through noon occurrence |
+| Automation | `rss-summary/evening-news-brief` | current day 12:30 through evening occurrence |
 
-All four Tools have `observe` risk. The feed Tool forces `--dry-run`, so it never invokes `NOTIFY_WEBHOOK_URL` and never updates `.state/feed-state.json`. With `onlyNew` enabled, it may read the state file to filter already seen items. The industry Tool has the same read-only semantics with `.state/industry-state.json`; it omits unresearched paper titles from Markdown and reports only the pending count. The news Tool performs read-only search requests and does not persist delivery state. The signal Tool is read-only across GitHub Search, Hacker News, and Doubao, keeps no `.state`, and never reads `feeds.json`.
+All Tools have `observe` risk. Feed Tools force dry-run mode: they read only-new state but do not send a webhook, write seen state, or write local run artifacts. Their structured result includes the source/candidate audit. Rivus records the subsequent card delivery in its trace and Feishu delivery ledger.
 
-## Install From This Checkout
+Public GitHub Repository Search and Hacker News discovery are intentionally absent. GitHub Home belongs to personal subscriptions; industry discovery comes from curated first-party feeds.
 
-Use Node.js 24.11 or newer within the Node 24 LTS line. Build the package first because the deployment loads its compiled ESM export:
+## Install
+
+Use Node.js 24.11 or newer within Node 24 LTS and build the package before installing it into Rivus:
 
 ```bash
 cd /path/to/rss-summary
@@ -33,20 +32,16 @@ cd /path/to/rivus-project
 npm install /path/to/rss-summary
 ```
 
-The Rivus project supplies the `@rivus/agent` peer. The supported Core range is `>=0.1.1 <0.4.0`; use `0.3.x` for proactive Feishu interactive-card delivery.
+The supported `@rivus/agent` peer range is `>=0.1.1 <0.4.0`.
 
-## Bind The Plugin
+## Bind the Plugin
 
-Replace the starter `rivus.config.json` created by `rivus init` with the complete binding below. An Endpoint belongs to exactly one Agent, so the starter's `feishu-agent-a` Endpoint must not be reused while it is still bound to `agent-a`. This example replaces both starter IDs with the RSS Agent and a dedicated matching Endpoint:
+The important manifest portion is the Plugin, one matching Agent/Endpoint, and the exact Tool allowlist:
 
 ```json
 {
   "plugins": [
-    {
-      "id": "rss-summary",
-      "module": "rss-summary/rivus-plugin",
-      "required": true
-    }
+    { "id": "rss-summary", "module": "rss-summary/rivus-plugin", "required": true }
   ],
   "defaultAgentId": "rss-digest",
   "defaultEndpointId": "feishu-rss-digest",
@@ -61,9 +56,8 @@ Replace the starter `rivus.config.json` created by `rivus init` with the complet
       "tools": {
         "allow": [
           "rss-summary/generate-digest",
-          "rss-summary/generate-news-brief",
-          "rss-summary/generate-signal-brief",
-          "rss-summary/generate-industry-brief"
+          "rss-summary/generate-industry-brief",
+          "rss-summary/generate-news-brief"
         ]
       }
     }
@@ -74,82 +68,21 @@ Replace the starter `rivus.config.json` created by `rivus init` with the complet
       "baseUrl": "https://open.feishu.cn",
       "credentialRef": "env:RIVUS_FEISHU",
       "enabled": true,
-      "experimental": { "cotMessages": false },
       "groupPolicy": "mention-only",
       "id": "feishu-rss-digest",
       "required": true,
       "sessionNamespace": "rss-digest",
       "streamMinIntervalMs": 200
     }
-  ],
-  "automations": [
-    {
-      "agentId": "rss-digest",
-      "delivery": {
-        "endpointId": "feishu-rss-digest",
-        "targetRef": "env:RIVUS_RSS_DIGEST_TARGET",
-        "targetType": "union_id"
-      },
-      "enabled": true,
-      "id": "morning-rss-digest",
-      "required": true,
-      "schedule": "0 9 * * *",
-      "templateId": "rss-summary/morning-feed-digest",
-      "timeZone": "Asia/Shanghai"
-    },
-    {
-      "agentId": "rss-digest",
-      "delivery": {
-        "endpointId": "feishu-rss-digest",
-        "targetRef": "env:RIVUS_RSS_DIGEST_TARGET",
-        "targetType": "union_id"
-      },
-      "enabled": true,
-      "id": "noon-news-brief",
-      "required": true,
-      "schedule": "30 12 * * *",
-      "templateId": "rss-summary/noon-news-brief",
-      "timeZone": "Asia/Shanghai"
-    },
-    {
-      "agentId": "rss-digest",
-      "delivery": {
-        "endpointId": "feishu-rss-digest",
-        "targetRef": "env:RIVUS_RSS_DIGEST_TARGET",
-        "targetType": "union_id"
-      },
-      "enabled": true,
-      "id": "evening-news-brief",
-      "required": true,
-      "schedule": "0 19 * * *",
-      "templateId": "rss-summary/evening-news-brief",
-      "timeZone": "Asia/Shanghai"
-    },
-    {
-      "agentId": "rss-digest",
-      "delivery": {
-        "endpointId": "feishu-rss-digest",
-        "targetRef": "env:RIVUS_RSS_DIGEST_TARGET",
-        "targetType": "union_id"
-      },
-      "enabled": true,
-      "id": "daily-signal-brief",
-      "required": true,
-      "schedule": "0 21 * * *",
-      "templateId": "rss-summary/daily-signal-brief",
-      "timeZone": "Asia/Shanghai"
-    }
   ]
 }
 ```
 
-Each Automation input contains the exact scheduled ISO occurrence. The morning template resolves the previous local calendar day using `FEED_TIMEZONE_OFFSET`. Noon searches local 00:00–12:30; evening searches from local 12:30 to its occurrence. These non-overlapping windows avoid replaying noon stories in the evening without coupling search to delivery-state persistence. The signal template covers the full local calendar day of its occurrence.
+Add Automation instances referencing the templates above. The morning template resolves the previous local day; industry uses the current local day; noon/evening use non-overlapping news windows. Rivus promotes the first Markdown heading into the Feishu card header.
 
-The rendered Markdown starts with `# 技术订阅日报 · YYYY-MM-DD`, `# 行业简报 · YYYY-MM-DD`, `# 午间热点 · YYYY-MM-DD`, `# 晚间热点 · YYYY-MM-DD`, or `# 高信号速览 · YYYY-MM-DD`. Rivus promotes that heading into the interactive-card header and keeps the compact sections and links in the card body. The Plugin does not call Feishu directly; delivery credentials, target identity, idempotency, and retries remain Host responsibilities.
+## Configure sources
 
-## Configure Sources
-
-Set the existing `rss-summary` variables in the Rivus project's private `.env.local`. Use absolute paths because the daemon runs from the Rivus project, not this checkout:
+Use absolute paths in the Rivus project's private environment because the daemon runs from that project:
 
 ```dotenv
 FEED_TIMEZONE_OFFSET=+08:00
@@ -158,27 +91,21 @@ GITHUB_HOME_FETCH=conduit
 GITHUB_HOME_STORAGE_STATE=/path/to/rss-summary/.state/github-home-storage.json
 GITHUB_USERNAME=PerfectPan
 RSS_FEEDS_FILE=/path/to/rss-summary/feeds.json
+FEED_STATE_FILE=/path/to/rss-summary/.state/feed-state.json
 INDUSTRY_FEEDS_FILE=/path/to/rss-summary/industry-feeds.json
 INDUSTRY_STATE_FILE=/path/to/rss-summary/.state/industry-state.json
 FEED_MAX_PAPERS=8
 DOUBAO_SEARCH_API_KEY=replace-with-doubao-search-api-key
-# Optional; the packaged default already contains the six curated brief areas.
 NEWS_TOPICS_FILE=/path/to/rss-summary/news-topics.json
-# Optional; the packaged default already contains the signal brief tuning.
-SIGNAL_SOURCES_FILE=/path/to/rss-summary/signal-sources.json
-# Optional; raised rate limits for the signal brief's GitHub repository Search API.
 GH_FEED_TOKEN=replace-with-github-token
 RIVUS_RSS_DIGEST_TARGET=replace-with-union-id
 ```
 
-`news-topics.json` defines query sets, per-topic quotas, and source policy. The packaged policy covers AI Agents and models, developer tools and open source, product and organization innovation, infrastructure and reliability, technology policy, and capital and industry signals. Their quotas total eight selected stories, while seven queries per run keep two daily briefs within roughly 420 searches in a 30-day month before manual verification. Title-feature containment collapses the same event when publishers use different URLs. Technology policy uses `official`, which requires `AuthInfoLevel=1`; the other areas use `authoritative`, which accepts levels 1–2. Every brief has a hard eight-story output cap. Custom policies are additionally bounded to 8 topics, 8 queries per topic, 32 queries overall, and a per-topic quota of 10 before any paid request starts. The renderer removes duplicated search-result prefixes, limits each story to two sentences and 110 characters, links the headline directly, and keeps source plus time on one metadata line. `NEWS_SEARCH_COUNT_PER_QUERY` defaults to 10 and `NEWS_SEARCH_TIMEOUT_MS` defaults to 15000. If one query fails, the brief includes a source-status warning and continues with successful queries; if all queries fail, the Tool fails so Rivus can apply its normal failure handling.
+Do not set `NOTIFY_WEBHOOK_URL` for the Plugin path; Rivus owns delivery. Browser storage, API keys, and tokens remain local secrets.
 
-Do not set `NOTIFY_WEBHOOK_URL` for the Plugin path; Rivus owns delivery. API keys, GitHub tokens, and browser storage remain local secrets and must not be committed.
-
-The news Tool reads `DOUBAO_SEARCH_API_KEY` from the Node process environment. Rivus' CLI `--env-file` supplies variables to the Host bootstrap but does not add them to `process.env`, so a service must also export the variables before Node starts. One reliable launch form is to let Node load the same private file, while retaining Rivus' flag for Host configuration:
+The news Tool reads `DOUBAO_SEARCH_API_KEY` from the Node process environment. If the Rivus CLI's environment-file option only configures the Host, also load the file into Node:
 
 ```bash
-cd /path/to/rivus-project
 node --env-file=/path/to/rivus-project/.env.local \
   ./node_modules/@rivus/agent/dist/cli.js \
   --env-file /path/to/rivus-project/.env.local \
@@ -186,27 +113,17 @@ node --env-file=/path/to/rivus-project/.env.local \
   --manifest ./rivus.config.json
 ```
 
-### Signal Brief Configuration
+## Audit and delivery evidence
 
-The signal Tool reads `SIGNAL_SOURCES_FILE` (defaults to the packaged `signal-sources.json`), `DOUBAO_SEARCH_API_KEY`, `GH_FEED_TOKEN` (optional; raises the unauthenticated GitHub Search quota from 10 to 30 requests/minute), and `SIGNAL_SEARCH_TIMEOUT_MS` (default 15000). It also reuses `FEED_TIMEZONE_OFFSET` through the config's `timezoneOffsetEnv`.
+The digest and industry Tool results contain an `audit` object with:
 
-`signal-sources.json` is not an RSS subscription list: it holds quotas (`maxTotal` 8, `updates` 5, `opensource` 4), the frontend bias taxonomy (languages, repo topics, update keywords, model-title hints), deterministic scoring weights, Hacker News thresholds (`minPoints`, `includeShowHn`, `maxItems`), GitHub Search tuning, and official-search domains plus one model and one product intent query.
+- source successes/failures and item counts;
+- fetched/in-window/ranked/selected counts;
+- per-candidate score, presentation depth, decision, and reason.
 
-GitHub Search fields have distinct roles:
-
-| Field | Role |
-| --- | --- |
-| `githubSearch.topics` | Free-text OR terms in the Search query (prefer product keywords: `ai`, `llm`, `agent`, `mcp`). |
-| `githubSearch.languages` | **Scoring bias only** in the domain layer (`repoLanguageBoost`). Not sent as free-text OR — a bare `TypeScript` term matches any TS repo and drowns AI×dev signal. Used as query fallback only when `topics` is empty. |
-| `frontendBias.languages` / `repoTopics` / `updateKeywords` | Domain scoring / HN relevance filter (word-boundary match for ASCII tokens). Bare words like `AI` / `model` are omitted from keywords to avoid generic media noise. |
-
-The Tool emits at most two sections — 动态 (`模型`/`产品` labels) and 开源 (`上升` label) — and omits a section entirely when it has no items. Updates are capped at 5 with a soft model/product balance (selection set), then re-sorted by score for display; open source at 4; the brief at 8 items total. If a single source fails, the brief continues with a `数据源状态` warning (missing `DOUBAO_SEARCH_API_KEY` is called out explicitly); if all three fail, the Tool fails so Rivus can apply its normal failure handling.
-
-Use the equivalent process-environment configuration in launchd or systemd. Treat a foreground Tool invocation as the credential acceptance check; `doctor` and `check-config` do not execute the external Tool.
+The Tool cannot honestly claim Feishu delivery because delivery happens after Tool execution. Use the Rivus run trace for the exact Tool result and its Feishu delivery ledger for target, attempt, idempotency, and outcome. Direct CLI runs instead write paired `.state/runs/...json` and `.md` artifacts.
 
 ## Verify
-
-Validate both packages before activating the schedule:
 
 ```bash
 cd /path/to/rss-summary
@@ -215,11 +132,6 @@ pnpm verify
 cd /path/to/rivus-project
 npm run doctor
 npm run check-config
-node --env-file=/path/to/rivus-project/.env.local \
-  ./node_modules/@rivus/agent/dist/cli.js \
-  --env-file /path/to/rivus-project/.env.local \
-  --bootstrap ./src/bootstrap.ts \
-  --manifest ./rivus.config.json
 ```
 
-In the foreground run, invoke each template once and confirm the trace contains exactly its requested Tool call followed by unchanged Markdown. Verify the morning card is for the previous local day, the noon card starts at 00:00, the evening card starts at 12:30, the brief contains at most eight stories, and technology-policy links are level-1 sources. Verify the signal card covers the current local day, contains at most two sections and eight items, and links `feeds.json` never appears in its trace. Only then enable the service manager and all four Automations.
+Invoke each enabled template once in the foreground. Confirm the morning card covers the previous local calendar day, the frontier trace lists only official `industry-feeds.json` sources, noon/evening windows do not overlap, each Tool call returns unchanged Markdown, and the delivery ledger records the card outcome before enabling the service manager.

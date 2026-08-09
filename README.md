@@ -2,43 +2,46 @@
 
 [![CI](https://github.com/PerfectPan/rss-summary/actions/workflows/ci.yml/badge.svg)](https://github.com/PerfectPan/rss-summary/actions/workflows/ci.yml)
 
-一个定时信息简报 CLI：把 GitHub Home、RSS 和权威网络新闻排成每日 Markdown 简报——个人早报（GitHub + RSS）、独立行业简报、午/晚间新闻和高信号速览。本地只读，可挂 webhook 推送，也可作为 Rivus 插件被调度。
+一个定时信息简报 CLI：把“我明确订阅的内容”和“我应该知道的行业变化”分成两条链路。个人订阅合并 GitHub Home 与 `feeds.json`；行业前沿只跟踪厂商官方 Blog、News、Changelog、Release 和研究源。普通内容用一句话加链接，高质量内容才展开摘要。CLI 可挂 webhook，也可作为 Rivus 插件被调度。
 
 ## 示例输出
 
-**早报**（`rss-summary digest`）
+**我的订阅**（`rss-summary digest`）
 
 ```markdown
-# 技术订阅日报 · 2026-08-09
+# 我的订阅 · 2026-08-09
 
-12 条高信号 · GitHub + RSS · 2026-08-08 ~ 2026-08-09
+12 条更新 · GitHub Home + 个人博客 · 2026-08-08 +08:00
 
-**🔥 值得看**
+**重点摘要**
 
-**1. owner/useful-tool**
+**[owner/useful-tool](https://github.com/owner/useful-tool)**
 
-- 简介：从多源信号里抓取每日值得看的项目。· TypeScript · 1.2k stars
-- 信号：followee-a · 收藏，趋势项目
-- 为什么看：GitHub Home 趋势项目；关注者收藏了这个项目
-- [查看原文](https://github.com/owner/useful-tool)
+从订阅动态里发现的高关注项目，解决开发工具链中的具体问题。
+来源：followee-a
+
+**其他更新**
+
+- Example Blog 发布了「A useful post」。[查看原文](https://example.com/post)
 ```
 
-**高信号速览**（`rss-summary signal`）
+**行业前沿**（`rss-summary industry`）
 
 ```markdown
-# 高信号速览 · 2026-08-09
+# 行业前沿 · 2026-08-09
 
-**动态 · 2**
+6 条动态 · 2026-08-09 +08:00
 
-1. **[模型] [glm-5.2 发布](https://example.com/glm-5.2)**
-   支持 1M 上下文，推理与工具调用均有提升。
-   官方博客 · 08:30
+**值得展开**
 
-**开源 · 3**
+**[New agent release](https://example.com/release)**
 
-1. **[上升] [owner/fast-thing](https://github.com/owner/fast-thing)**
-   一个快速做某事的新库。
-   3d · 850★ · Rust
+新增可靠工具调用与可审计执行产物。
+来源：Vendor Changelog
+
+**动态速览**
+
+- Vendor Blog 发布了「API update」。[查看原文](https://example.com/update)
 ```
 
 ## Quick Start
@@ -73,14 +76,11 @@ RSS 源维护在受版本控制的 `feeds.json`，用 `rss-summary feeds ...` �
 ## Commands
 
 ```bash
-# 早报：跑当日 GitHub Home + RSS，标记已读
+# 我的订阅：当日 GitHub Home + 明确订阅的个人 RSS
 GITHUB_USERNAME=<your-username> FEED_DAY="$(TZ=Asia/Shanghai date +%F)" \
   rss-summary digest --only-new
 
-# 高信号速览（只读，不写状态、不发 webhook）
-rss-summary signal --day "$(TZ=Asia/Shanghai date +%F)" --dry-run
-
-# RSS-only 行业简报；论文只进入研究队列，不直接发布
+# 行业前沿：官方 RSS；论文只进入研究队列，不直接发布
 rss-summary industry --day "$(TZ=Asia/Shanghai date +%F)" --only-new --dry-run
 
 # 给 feed-research skill 的行业候选 JSON（含最多 8 篇 abstract 匹配论文）
@@ -89,6 +89,11 @@ rss-summary industry --json --day "$(TZ=Asia/Shanghai date +%F)" --only-new --dr
 # 管理 RSS 源
 rss-summary feeds add --url "https://github.blog/feed" --name "GitHub Blog" --tags "github,ai"
 rss-summary feeds list
+
+# 检查每次 CLI 抓取、筛选和投递产物
+rss-summary runs list
+rss-summary runs failures
+rss-summary runs show <run-label>
 ```
 
 更多选项 `rss-summary <command> --help`。深度研究流水线：加 `--json --only-new --dry-run` 输出候选 JSON，配合 [prompts/feed-research.md](prompts/feed-research.md) 或 [skills/feed-research-digest](skills/feed-research-digest/SKILL.md) 生成最终简报。
@@ -104,12 +109,13 @@ rss-summary feeds list
 | `FEED_WINDOW_HOURS`     | 滚动窗口小时（`FEED_DAY` 未设时）              | `36`                         |
 | `GITHUB_HOME_FETCH`     | `conduit`（默认）或 `browser`                  | `conduit`                    |
 | `GH_FEED_TOKEN`         | GitHub token（API 补全 PR 详情 / events 回退） | —                            |
-| `DOUBAO_SEARCH_API_KEY` | 高信号速览的官方域搜索（可选）                 | —                            |
+| `DOUBAO_SEARCH_API_KEY` | 午/晚间新闻搜索                                | —                            |
 | `NOTIFY_WEBHOOK_URL`    | 推送 webhook（POST `{ "text": markdown }`）    | —                            |
 | `RSS_FEEDS_FILE`        | RSS 订阅文件                                   | `feeds.json`                 |
 | `INDUSTRY_FEEDS_FILE`   | 行业 RSS 订阅文件                              | `industry-feeds.json`        |
 | `INDUSTRY_STATE_FILE`   | 行业简报去重/调研状态                          | `.state/industry-state.json` |
 | `FEED_MAX_PAPERS`       | 每次进入深度调研队列的论文硬上限               | `8`                          |
+| `FEED_RUN_LOG_DIR`      | CLI 运行审计产物目录                           | `.state/runs`                |
 
 完整列表与默认值见 [.env.example](.env.example)。GitHub Home 的 conduit / 浏览器回退机制见 [docs/architecture.md](docs/architecture.md)。
 
@@ -125,11 +131,11 @@ rss-summary feeds list
 
 ## Rivus Plugin
 
-本仓库导出 `rss-summary/rivus-plugin`：一个 Agent profile（`rss-digest`）+ 四个只读 Tool（`generate-digest` / `generate-news-brief` / `generate-signal-brief` / `generate-industry-brief`）及对应调度模板。行业 Tool 不直接发布未研究论文，只报告待调研数量；论文通过 `$feed-research-digest` 核验后进入最终简报。调度与飞书推送由 Rivus 侧负责。安装、manifest 绑定、环境契约见 [docs/rivus-plugin.md](docs/rivus-plugin.md)。
+本仓库导出 `rss-summary/rivus-plugin`：一个 Agent profile（`rss-digest`）+ 三个只读 Tool（`generate-digest` / `generate-news-brief` / `generate-industry-brief`）及对应调度模板。订阅和行业 Tool 的结果都携带 source/candidate audit；Rivus 自己的 trace 与投递 ledger 记录后续卡片投递。行业 Tool 不直接发布未研究论文，只报告待调研数量。安装、manifest 绑定、环境契约见 [docs/rivus-plugin.md](docs/rivus-plugin.md)。
 
 ## Architecture
 
-分层 DDD 结构 `domain → application → infrastructure → presentation`：domain 是纯规则（无 IO、无 Effect）；application 用 [Effect](https://effect.website) 返回 `Effect<Result, Error>` 编排用例；infrastructure 跑适配器；presentation 是入口与渲染。完整数据流、扩展点、文件清单见 [docs/architecture.md](docs/architecture.md)，技术选型与取舍见 [docs/technology-decisions.md](docs/technology-decisions.md)。设计与调研笔记：[signal-brief-design](docs/signal-brief-design.md)、[digest-delivery-research](docs/digest-delivery-research.md)、[competitive-research](docs/competitive-research.md)。
+分层 DDD 结构 `domain → application → infrastructure → presentation`：domain 是纯规则（无 IO、无 Effect）；application 用 [Effect](https://effect.website) 返回 `Effect<Result, Error>` 编排用例；infrastructure 跑适配器；presentation 是入口与渲染。完整数据流、审计产物和扩展点见 [docs/architecture.md](docs/architecture.md)，技术选型与取舍见 [docs/technology-decisions.md](docs/technology-decisions.md)。
 
 ## Development
 

@@ -10,7 +10,6 @@ import { describe, expect, it, vi } from "vite-plus/test";
 
 import rssSummaryPlugin, {
   createRssSummaryPlugin,
-  RSS_SUMMARY_AUTOMATION_ID,
   RSS_SUMMARY_EVENING_AUTOMATION_ID,
   RSS_SUMMARY_INDUSTRY_AUTOMATION_ID,
   RSS_SUMMARY_INDUSTRY_TOOL_ID,
@@ -18,13 +17,11 @@ import rssSummaryPlugin, {
   RSS_SUMMARY_NEWS_TOOL_ID,
   RSS_SUMMARY_NOON_AUTOMATION_ID,
   RSS_SUMMARY_PROFILE_ID,
-  RSS_SUMMARY_SIGNAL_AUTOMATION_ID,
-  RSS_SUMMARY_SIGNAL_TOOL_ID,
   RSS_SUMMARY_TOOL_ID,
 } from "../../src/presentation/rivus-plugin.js";
 
 describe("rss-summary Rivus Plugin", () => {
-  it("conforms as an external Plugin with four narrow read-only Tools", async () => {
+  it("conforms as an external Plugin with three narrow read-only Tools", async () => {
     await expect(
       assertRivusPluginConforms({
         deployment: {
@@ -34,12 +31,7 @@ describe("rss-summary Rivus Plugin", () => {
           profileId: RSS_SUMMARY_PROFILE_ID,
           skills: { allow: [] },
           tools: {
-            allow: [
-              RSS_SUMMARY_TOOL_ID,
-              RSS_SUMMARY_NEWS_TOOL_ID,
-              RSS_SUMMARY_SIGNAL_TOOL_ID,
-              RSS_SUMMARY_INDUSTRY_TOOL_ID,
-            ],
+            allow: [RSS_SUMMARY_TOOL_ID, RSS_SUMMARY_NEWS_TOOL_ID, RSS_SUMMARY_INDUSTRY_TOOL_ID],
           },
         },
         plugin: rssSummaryPlugin,
@@ -47,12 +39,7 @@ describe("rss-summary Rivus Plugin", () => {
     ).resolves.toMatchObject({
       pluginId: "rss-summary",
       profileId: RSS_SUMMARY_PROFILE_ID,
-      toolIds: [
-        RSS_SUMMARY_INDUSTRY_TOOL_ID,
-        RSS_SUMMARY_NEWS_TOOL_ID,
-        RSS_SUMMARY_SIGNAL_TOOL_ID,
-        RSS_SUMMARY_TOOL_ID,
-      ].sort(),
+      toolIds: [RSS_SUMMARY_INDUSTRY_TOOL_ID, RSS_SUMMARY_NEWS_TOOL_ID, RSS_SUMMARY_TOOL_ID].sort(),
     });
   });
 
@@ -61,6 +48,7 @@ describe("rss-summary Rivus Plugin", () => {
       candidateCount: 1,
       generatedAt: "2026-07-17T02:00:00.000Z",
       markdown: "# Feed Digest\n",
+      paperCandidateCount: 0,
       windowLabel: "2026-07-17 +08:00",
     }));
     const registrations = register(createRssSummaryPlugin({ generateDigest }));
@@ -146,36 +134,6 @@ describe("rss-summary Rivus Plugin", () => {
     }
   });
 
-  it("delegates signal Tool execution to the multi-source application adapter", async () => {
-    const generateSignalBrief = vi.fn(async () => ({
-      day: "2026-07-29",
-      generatedAt: "2026-07-29T11:00:00.000Z",
-      itemCount: 2,
-      markdown: "# 高信号速览 · 2026-07-29\n",
-      sections: { updates: 1, opensource: 1 },
-      warnings: [],
-      updates: [],
-      opensource: [],
-      timezoneOffset: "+08:00",
-    }));
-    const registrations = register(createRssSummaryPlugin({ generateSignalBrief }));
-    const tool = registrations.tools.get(RSS_SUMMARY_SIGNAL_TOOL_ID)!;
-
-    const result = await tool
-      .createExecutor({
-        toolId: RSS_SUMMARY_SIGNAL_TOOL_ID,
-        toolVersion: "1.0.0",
-      })
-      .execute(
-        { occurrence: "2026-07-29T11:00:00.000Z" },
-        executionContext(RSS_SUMMARY_SIGNAL_TOOL_ID),
-      );
-
-    expect(generateSignalBrief).toHaveBeenCalledWith({ occurrence: "2026-07-29T11:00:00.000Z" });
-    expect(result).toMatchObject({ itemCount: 2, markdown: "# 高信号速览 · 2026-07-29\n" });
-    expect(tool.risk).toBe("observe");
-  });
-
   it("delegates industry Tool execution to the industry RSS adapter", async () => {
     const generateIndustryBrief = vi.fn(async () => ({
       candidateCount: 3,
@@ -205,34 +163,26 @@ describe("rss-summary Rivus Plugin", () => {
     expect(tool.risk).toBe("observe");
   });
 
-  it("registers morning, noon, evening, signal, and industry Automations with exact Tool grants", () => {
+  it("registers morning, noon, evening, and industry Automations with exact Tool grants", () => {
     const registrations = register(rssSummaryPlugin);
     const occurrence = "2026-07-29T04:30:00.000Z";
-    const legacy = registrations.automations.get(RSS_SUMMARY_AUTOMATION_ID)!;
     const morning = registrations.automations.get(RSS_SUMMARY_MORNING_AUTOMATION_ID)!;
     const noon = registrations.automations.get(RSS_SUMMARY_NOON_AUTOMATION_ID)!;
     const evening = registrations.automations.get(RSS_SUMMARY_EVENING_AUTOMATION_ID)!;
-    const signal = registrations.automations.get(RSS_SUMMARY_SIGNAL_AUTOMATION_ID)!;
     const industry = registrations.automations.get(RSS_SUMMARY_INDUSTRY_AUTOMATION_ID)!;
 
     expect(registrations.profile.tools.allow).toEqual([
       RSS_SUMMARY_TOOL_ID,
       RSS_SUMMARY_NEWS_TOOL_ID,
-      RSS_SUMMARY_SIGNAL_TOOL_ID,
       RSS_SUMMARY_INDUSTRY_TOOL_ID,
     ]);
-    expect(legacy.requestedToolIds).toEqual([RSS_SUMMARY_TOOL_ID]);
     expect(morning.requestedToolIds).toEqual([RSS_SUMMARY_TOOL_ID]);
     expect(noon.requestedToolIds).toEqual([RSS_SUMMARY_NEWS_TOOL_ID]);
     expect(evening.requestedToolIds).toEqual([RSS_SUMMARY_NEWS_TOOL_ID]);
-    expect(signal.requestedToolIds).toEqual([RSS_SUMMARY_SIGNAL_TOOL_ID]);
     expect(industry.requestedToolIds).toEqual([RSS_SUMMARY_INDUSTRY_TOOL_ID]);
     expect(morning.createInput({ occurrence }).text).toContain('"window":"previous-calendar-day"');
     expect(noon.createInput({ occurrence }).text).toContain('"edition":"noon"');
     expect(evening.createInput({ occurrence }).text).toContain('"edition":"evening"');
-    expect(signal.createInput({ occurrence }).text).toContain(
-      '"occurrence":"2026-07-29T04:30:00.000Z"',
-    );
     expect(industry.createInput({ occurrence }).text).toContain('"onlyNew":true');
     expect(noon.createInput({ occurrence }).text).toContain("原样返回");
   });

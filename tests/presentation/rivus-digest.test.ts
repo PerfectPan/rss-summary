@@ -35,7 +35,8 @@ describe("Rivus digest Tool adapter", () => {
     expect(result).toEqual({
       candidateCount: 0,
       generatedAt: "2026-07-16T18:00:00.000Z",
-      markdown: expect.stringMatching(/^# 技术订阅日报 · 2026-07-17\n/u),
+      markdown: expect.stringMatching(/^# 我的订阅 · 2026-07-17\n/u),
+      paperCandidateCount: 0,
       windowLabel: "2026-07-17 +08:00",
     });
   });
@@ -65,7 +66,7 @@ describe("Rivus digest Tool adapter", () => {
     expect(buildDigestDocument).toHaveBeenCalledWith(
       expect.objectContaining({ day: "2026-07-28" }),
     );
-    expect(result.markdown).toMatch(/^# 技术订阅日报 · 2026-07-28\n/u);
+    expect(result.markdown).toMatch(/^# 我的订阅 · 2026-07-28\n/u);
   });
 
   it("rejects ambiguous or malformed date input before running the digest", async () => {

@@ -1,7 +1,7 @@
 # Technology Decisions
 
-Status: current  
-Date: 2026-08-02  
+Status: current
+Date: 2026-08-09
 Scope: what the repository uses, why, and when to revisit.
 
 ## Runtime
@@ -18,7 +18,7 @@ Scope: what the repository uses, why, and when to revisit.
 
 | Library | Where | Why | Revisit when |
 | --- | --- | --- | --- |
-| `effect` 3.x | `application/` use cases + entrypoint boundaries | Typed `Effect<Result, Error>` channels, `Effect.tryPromise` at ports, `Effect.runPromise` at entrypoints. Adoption is deliberately shallow (no `Context`/`Layer`). | A fourth product line appears, or use cases need shared retry/limit/logging services; then move to `Context`/`Layer` (see below). |
+| `effect` 3.x | `application/` use cases + entrypoint boundaries | Typed `Effect<Result, Error>` channels, `Effect.tryPromise` at ports, `Effect.runPromise` at entrypoints. Adoption is deliberately shallow (no `Context`/`Layer`). | Use cases need shared retry/rate-limit services; then move to `Context`/`Layer`. |
 | Vite+ / Vitest 4 | `tests/`, `vite.config.ts` | `vp test` + v8 coverage thresholds; imports use `vite-plus/test`. | — |
 | `fast-xml-parser` | `infrastructure/rss.ts` | RSS 2.0 / Atom parsing; small, dependency-light. | — |
 | `cheerio` | `infrastructure/github-home.ts` | Conduit HTML snapshot extraction on the server side. | — |
@@ -40,7 +40,7 @@ presentation (runPromise) → application (Effect.gen + attempt) → ports (Prom
 
 Deliberately not adopted yet:
 
-- **`Context`/`Layer` services.** Deps-object injection already gives tests a zero-cost seam and the application boundary has only three use cases. Adopt Layers when a service (retry policy, rate limiter, logger) must be shared across use cases.
+- **`Context`/`Layer` services.** Deps-object injection already gives tests a zero-cost seam. Adopt Layers when retry or rate-limit services must be shared across use cases.
 - **Typed error unions.** `Error` is the only error type; products surface warnings as data (`warnings: string[]`), not as error variants. Adopt a union when callers need to branch on failure class.
 
 ## Architecture Organization
@@ -53,10 +53,10 @@ Alternatives considered and rejected:
 
 | Alternative | Why rejected now | Revisit when |
 | --- | --- | --- |
-| Feature-slice / modular monolith (`digest/`, `news/`, `signal/` as self-contained slices) | The three products share a domain kernel (`domain/text.ts`, `domain/time.ts`, `infrastructure/parsing.ts`) and one Rivus profile; slicing would duplicate the kernel or create a shared-package indirection. | A fourth product line with genuinely different config/state/automation lifecycle. |
+| Feature-slice / modular monolith (`subscriptions/`, `frontier/`, `news/`) | The products share a small domain kernel and one Rivus profile; slicing would duplicate the kernel or add package indirection. | A product gains an independent deployment and lifecycle. |
 | Pure pipeline/filter organization (each step its own folder) | Source interchangeability (the pipeline's main win) is not a real requirement today; the sources are fixed. The layered structure already keeps steps pure. | New interchangeable sources beyond the planned HF/PH tier. |
-| Event sourcing / CQRS | No write model, no user input, no audit or cross-request consistency. | Never, absent a fundamental product change. |
-| Aggregates/repositories | Domain objects are immutable data + pure transforms; there is no persistence to encapsulate. | A persistent aggregate (e.g., signal state) becomes non-trivial. |
+| Event sourcing / CQRS | Append-only run audits do not require a separate write/read model or replay semantics. | Never, absent a fundamental product change. |
+| Aggregates/repositories | State and audit artifacts are simple local JSON records around immutable domain data. | Persistence gains lifecycle rules or multiple writers. |
 | Microservices / multi-package | Single deployment unit; the Rivus plugin needs one module export. | Split when an independent deploy unit appears. |
 
 ## Testing Strategy
@@ -91,13 +91,13 @@ Both jobs are intended to be required checks in the branch protection rule for `
 
 | File | Owner | Policy |
 | --- | --- | --- |
-| `feeds.json` | RSS subscriptions (morning digest only) | Tracked; changed via `rss-summary feeds`. |
+| `feeds.json` | Explicit personal RSS subscriptions | Tracked; changed via `rss-summary feeds`. |
+| `industry-feeds.json` | Curated first-party frontier sources | Tracked; changed intentionally and live-tested. |
 | `news-topics.json` | Noon/evening topic policy | Tracked; validated by `infrastructure/news-topics.ts`. |
-| `signal-sources.json` | Signal brief tuning (quotas, bias, scoring, sources) | Tracked; validated by `infrastructure/signal-sources.ts`. Not an RSS list. |
-| `.env` / `.state/` | Local secrets and run state | Gitignored. |
+| `.env` / `.state/` | Local secrets, delivery/research state, and run audit artifacts | Gitignored. |
 
 ## Known Trade-Offs
 
 - Shallow Effect adoption means `Promise.allSettled`-based fan-out rather than Effect structured concurrency; behavior parity was prioritized over idiomatic Effect during the refactor.
 - Browser automation (`github-home.ts`) is the largest uncovered surface; it is isolated behind the client class and v8-ignored with a documented manual test path.
-- `domain/` imports nothing outside itself (verified by convention); contract types like `NewsTopic` and `SignalScoring` are defined in the domain and imported by infrastructure, keeping the dependency direction inward.
+- `domain/` imports nothing outside itself (verified by convention); contract types such as `NewsTopic` and `RunAudit` are defined in the domain and imported by infrastructure, keeping dependencies inward.

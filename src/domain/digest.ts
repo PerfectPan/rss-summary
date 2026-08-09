@@ -1,6 +1,7 @@
 import uniq from "lodash-es/uniq.js";
 
 import { asRecord } from "./record.js";
+import type { RunAudit } from "./run-audit.js";
 
 export type ActivitySource = "github" | "rss";
 
@@ -69,6 +70,7 @@ export type DigestDocument = {
   sourceMode?: "mixed" | "rss";
   windowLabel?: string;
   candidates: CandidateProject[];
+  audit?: RunAudit;
 };
 
 export type BuildCandidatesContext = {
@@ -369,7 +371,9 @@ function descriptionFor(events: ActivityCard[]): string | undefined {
 }
 
 function publicationEvent(events: ActivityCard[]): ActivityCard | undefined {
-  return events.find((event) => event.type === "article" || event.type === "paper");
+  return events.find(
+    (event) => event.source === "rss" || event.type === "article" || event.type === "paper",
+  );
 }
 
 function matchInterests(repository: RepositoryMetadata | undefined, interests: string[]): string[] {

@@ -19,7 +19,7 @@ describe("research contract documentation", () => {
     expect(skill).toContain("dependency/runtime choices");
     expect(skill).toContain("tests/CI");
     expect(skill).toContain("recent commits, PRs, or releases");
-    expect(skill).toContain("- 代码质量判断：");
+    expect(skill).toContain("Do not overclaim beyond the inspected surface");
     expect(skill).toContain("rss-summary industry --json --only-new --dry-run");
     expect(skill).toContain("arxiv.org/abs/<id>");
     expect(skill).toContain(".state/industry-state.json");
@@ -44,12 +44,13 @@ describe("research contract documentation", () => {
     expect(prompt).toContain("state.researched");
     expect(prompt).toContain("代码质量判断");
     expect(prompt).toContain("top-level tree");
-    expect(prompt).toContain("你正在准备 PerfectPan 的每日 GitHub Home 和 RSS 简报");
+    expect(prompt).toContain("`我的订阅`");
+    expect(prompt).toContain("`行业前沿`");
     expect(prompt).toContain("## 输入");
-    expect(prompt).toContain("## 调研策略");
-    expect(prompt).toContain("不要展示 `evidence` 或 `依据`");
-    expect(prompt).toContain("## 论文调研");
-    expect(prompt).toContain("逐篇核验最多 8 篇，最终只推荐 2 到 3 篇");
+    expect(prompt).toContain("## 分层消费");
+    expect(prompt).toContain("audit.sources");
+    expect(prompt).toContain("候选队列最多 8 篇");
+    expect(prompt).toContain("最终 2–3 篇");
     expect(prompt).toContain("ar5iv.labs.arxiv.org/html/<id>");
   });
 });

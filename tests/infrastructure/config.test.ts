@@ -73,6 +73,8 @@ describe("config", () => {
       "--rss-only",
       "--state-file",
       ".state/test.json",
+      "--run-log-dir",
+      ".state/test-runs",
       "--dry-run",
     ]);
 
@@ -80,6 +82,7 @@ describe("config", () => {
     expect(config.onlyNew).toBe(true);
     expect(config.rssOnly).toBe(true);
     expect(config.stateFile).toBe(".state/test.json");
+    expect(config.runLogDir).toBe(".state/test-runs");
   });
 
   it("loads a bounded paper research queue size", () => {
