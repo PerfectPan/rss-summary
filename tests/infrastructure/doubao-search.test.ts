@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { DoubaoSearchClient } from "../../src/infrastructure/doubao-search.js";
+import { DoubaoSearchClient, DoubaoSearchError } from "../../src/infrastructure/doubao-search.js";
 
 describe("Doubao search source", () => {
   it("requests an exact day without broad query rewriting and with authoritative URL results", async () => {
@@ -108,5 +108,32 @@ describe("Doubao search source", () => {
         sourcePolicy: "authoritative",
       }),
     ).rejects.not.toThrow(/secret-key/i);
+  });
+
+  it("preserves transient rate-limit metadata and Retry-After", async () => {
+    const client = new DoubaoSearchClient({
+      apiKey: "test-key",
+      fetch: async () =>
+        new Response(
+          JSON.stringify({
+            ResponseMetadata: {
+              Error: { Code: "rate_limit_exceeded", Message: "rate limit exceeded" },
+            },
+          }),
+          { headers: { "Retry-After": "2" }, status: 200 },
+        ),
+    });
+
+    const error = await client
+      .search({
+        query: "科技新闻",
+        count: 10,
+        day: "2026-07-29",
+        sourcePolicy: "authoritative",
+      })
+      .catch((cause: unknown) => cause);
+
+    expect(error).toBeInstanceOf(DoubaoSearchError);
+    expect(error).toMatchObject({ code: "rate_limit_exceeded", retryAfterMs: 2_000 });
   });
 });
