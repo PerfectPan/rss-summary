@@ -7,6 +7,7 @@ import {
   type RivusNewsBriefResult,
 } from "../../src/application/news-brief.js";
 import type { NewsTopicQuery } from "../../src/domain/news.js";
+import { DoubaoSearchError } from "../../src/infrastructure/doubao-search.js";
 import { renderNewsBrief } from "../../src/presentation/news-render.js";
 
 function withNewsMarkdown(result: RivusNewsBriefResult) {
@@ -179,6 +180,167 @@ describe("Rivus news brief Tool adapter", () => {
     ).rejects.toThrow(/all.*search/i);
   });
 
+  it("limits search concurrency to two while preserving query audit order", async () => {
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const releases: Array<() => void> = [];
+    const search = vi.fn(
+      async () =>
+        new Promise<{ resultCount: number; results: [] }>((resolve) => {
+          inFlight += 1;
+          maxInFlight = Math.max(maxInFlight, inFlight);
+          releases.push(() => {
+            inFlight -= 1;
+            resolve({ resultCount: 0, results: [] });
+          });
+        }),
+    );
+    const resultPromise = Effect.runPromise(
+      generateRivusNewsBrief(
+        { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
+        {
+          env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
+          search,
+          topics: [newsTopic("technology", ["one", "two", "three", "four", "five"])],
+        },
+      ),
+    );
+
+    await vi.waitFor(() => expect(search).toHaveBeenCalledTimes(2));
+    releases.shift()!();
+    await vi.waitFor(() => expect(search).toHaveBeenCalledTimes(3));
+    releases.shift()!();
+    await vi.waitFor(() => expect(search).toHaveBeenCalledTimes(4));
+    releases.splice(0).forEach((release) => release());
+    await vi.waitFor(() => expect(search).toHaveBeenCalledTimes(5));
+    releases.splice(0).forEach((release) => release());
+
+    const result = await resultPromise;
+    expect(maxInFlight).toBe(2);
+    expect(result.audit.queries.map(({ queryId }) => queryId)).toEqual([
+      "one",
+      "two",
+      "three",
+      "four",
+      "five",
+    ]);
+  });
+
+  it("retries a transient Doubao rate limit and succeeds", async () => {
+    const sleep = vi.fn(async () => undefined);
+    const search = vi
+      .fn()
+      .mockRejectedValueOnce(new DoubaoSearchError("rate_limit_exceeded", "rate limit exceeded"))
+      .mockResolvedValueOnce({ logId: "retry-ok", resultCount: 0, results: [] });
+
+    const result = await Effect.runPromise(
+      generateRivusNewsBrief(
+        { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
+        {
+          env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
+          random: () => 0.5,
+          search,
+          sleep,
+          topics: [newsTopic("technology", ["retryable"])],
+        },
+      ),
+    );
+
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(sleep).toHaveBeenCalledTimes(1);
+    expect(result.warnings).toEqual([]);
+    expect(result.audit.queries[0]).toMatchObject({ queryId: "retryable", status: "ok" });
+  });
+
+  it("marks an exhausted rate limit unavailable after three attempts", async () => {
+    const sleepDelays: number[] = [];
+    const sleep = vi.fn(async (milliseconds: number) => {
+      sleepDelays.push(milliseconds);
+    });
+    const search = vi.fn(async ({ query }: { query: string }) => {
+      if (query === "limited") {
+        throw new DoubaoSearchError("rate_limit_exceeded", "rate limit exceeded");
+      }
+      return { resultCount: 0, results: [] };
+    });
+
+    const result = await Effect.runPromise(
+      generateRivusNewsBrief(
+        { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
+        {
+          env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
+          random: () => 0,
+          search,
+          sleep,
+          topics: [newsTopic("technology", ["limited"]), newsTopic("policy", ["working"])],
+        },
+      ),
+    );
+
+    expect(search).toHaveBeenCalledTimes(4);
+    expect(sleep).toHaveBeenCalledTimes(2);
+    expect(sleepDelays).toEqual([125, 250]);
+    expect(result.warnings).toEqual(["technology：1 个查询暂不可用"]);
+    expect(result.audit.queries).toEqual([
+      expect.objectContaining({ queryId: "limited", status: "failed" }),
+      expect.objectContaining({ queryId: "working", status: "ok" }),
+    ]);
+  });
+
+  it("does not retry non-transient search errors", async () => {
+    const sleep = vi.fn(async () => undefined);
+    const search = vi.fn(async ({ query }: { query: string }) => {
+      if (query === "invalid") throw new Error("Doubao search query is invalid");
+      return { resultCount: 0, results: [] };
+    });
+
+    const result = await Effect.runPromise(
+      generateRivusNewsBrief(
+        { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
+        {
+          env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
+          search,
+          sleep,
+          topics: [newsTopic("technology", ["invalid", "working"])],
+        },
+      ),
+    );
+
+    expect(search).toHaveBeenCalledTimes(2);
+    expect(sleep).not.toHaveBeenCalled();
+    expect(result.audit.queries.map(({ queryId, status }) => ({ queryId, status }))).toEqual([
+      { queryId: "invalid", status: "failed" },
+      { queryId: "working", status: "ok" },
+    ]);
+  });
+
+  it("honors Retry-After without jitter", async () => {
+    const sleep = vi.fn(async () => undefined);
+    const search = vi
+      .fn()
+      .mockRejectedValueOnce(
+        new DoubaoSearchError("rate_limit_exceeded", "rate limit exceeded", {
+          retryAfterMs: 1_500,
+        }),
+      )
+      .mockResolvedValueOnce({ resultCount: 0, results: [] });
+
+    await Effect.runPromise(
+      generateRivusNewsBrief(
+        { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
+        {
+          env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
+          random: () => 0,
+          search,
+          sleep,
+          topics: [newsTopic("technology", ["retry-after"])],
+        },
+      ),
+    );
+
+    expect(sleep).toHaveBeenCalledWith(1_500);
+  });
+
   it("warns when Doubao hits lack a parseable publish time", async () => {
     const result = await Effect.runPromise(
       generateRivusNewsBrief(
@@ -256,5 +418,17 @@ function newsQuery(
     subjectAny,
     eventAny,
     excludedAny: ["评测"],
+  };
+}
+
+function newsTopic(id: string, queryIds: string[]) {
+  return {
+    id,
+    label: id,
+    icon: "📰",
+    enabled: true,
+    sourcePolicy: "authoritative" as const,
+    maxItems: 3,
+    queries: queryIds.map((queryId) => newsQuery(queryId, queryId)),
   };
 }

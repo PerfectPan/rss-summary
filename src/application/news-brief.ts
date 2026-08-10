@@ -16,6 +16,7 @@ import {
 import { boundedInteger } from "../infrastructure/parsing.js";
 import { loadNewsTopics } from "../infrastructure/news-topics.js";
 import {
+  DoubaoSearchError,
   DoubaoSearchClient,
   type DoubaoSearchInput,
   type DoubaoSearchPage,
@@ -49,11 +50,16 @@ export type RivusNewsBriefOutput = RivusNewsBriefResult & { markdown: string };
 type NewsBriefDependencies = {
   env?: NodeJS.ProcessEnv;
   now?: () => Date;
+  random?: () => number;
   search?: (input: DoubaoSearchInput) => Promise<DoubaoSearchPage>;
+  sleep?: (milliseconds: number) => Promise<void>;
   topics?: NewsTopic[];
 };
 
 const noonCutoffMinutes = 12 * 60 + 30;
+const newsSearchConcurrency = 2;
+const newsSearchMaxAttempts = 3;
+const newsSearchRetryBaseMs = 250;
 
 export function resolveNewsEditionWindow(
   occurrence: string,
@@ -109,15 +115,22 @@ export function generateRivusNewsBrief(
       topic.queries.map((query) => ({
         query,
         topic,
-        promise: search({
+        input: {
           query: query.text,
           count,
           day: window.day,
           sourcePolicy: topic.sourcePolicy,
-        }),
+        },
       })),
     );
-    const settled = yield* attempt(Promise.allSettled(requests.map(({ promise }) => promise)));
+    const settled = yield* attempt(
+      settleSearchRequests(requests, (input) =>
+        searchWithRetry(input, search, {
+          random: dependencies.random ?? Math.random,
+          sleep: dependencies.sleep ?? sleep,
+        }),
+      ),
+    );
     const successful = settled.filter(
       (result): result is PromiseFulfilledResult<DoubaoSearchPage> => result.status === "fulfilled",
     );
@@ -178,6 +191,67 @@ export function generateRivusNewsBrief(
       topics,
     };
   });
+}
+
+async function settleSearchRequests(
+  requests: Array<{ input: DoubaoSearchInput }>,
+  execute: (input: DoubaoSearchInput) => Promise<DoubaoSearchPage>,
+): Promise<PromiseSettledResult<DoubaoSearchPage>[]> {
+  const settled: PromiseSettledResult<DoubaoSearchPage>[] = [];
+  settled.length = requests.length;
+  let nextIndex = 0;
+  const worker = async () => {
+    while (nextIndex < requests.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      try {
+        settled[index] = { status: "fulfilled", value: await execute(requests[index]!.input) };
+      } catch (reason) {
+        settled[index] = { status: "rejected", reason };
+      }
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(newsSearchConcurrency, requests.length) }, () => worker()),
+  );
+  return settled;
+}
+
+async function searchWithRetry(
+  input: DoubaoSearchInput,
+  search: (input: DoubaoSearchInput) => Promise<DoubaoSearchPage>,
+  dependencies: { random: () => number; sleep: (milliseconds: number) => Promise<void> },
+): Promise<DoubaoSearchPage> {
+  for (let attemptNumber = 1; attemptNumber <= newsSearchMaxAttempts; attemptNumber += 1) {
+    try {
+      return await search(input);
+    } catch (error) {
+      if (attemptNumber === newsSearchMaxAttempts || !isTransientSearchError(error)) throw error;
+      await dependencies.sleep(retryDelayMs(error, attemptNumber, dependencies.random));
+    }
+  }
+  throw new Error("Doubao search retry attempts exhausted.");
+}
+
+function isTransientSearchError(error: unknown): error is DoubaoSearchError {
+  return (
+    error instanceof DoubaoSearchError &&
+    (error.code === "rate_limit_exceeded" || error.code === "http_429")
+  );
+}
+
+function retryDelayMs(
+  error: DoubaoSearchError,
+  attemptNumber: number,
+  random: () => number,
+): number {
+  if (error.retryAfterMs !== undefined) return error.retryAfterMs;
+  const jitter = 0.5 + Math.min(1, Math.max(0, random()));
+  return Math.round(newsSearchRetryBaseMs * 2 ** (attemptNumber - 1) * jitter);
+}
+
+function sleep(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 function parseInput(value: unknown): RivusNewsBriefInput {

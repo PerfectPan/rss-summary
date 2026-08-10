@@ -35,7 +35,7 @@ presentation (runPromise) → application (Effect.gen + attempt) → ports (Prom
 ```
 
 - Application use cases return `Effect<Result, Error>`; `attempt()` in `application/effect.ts` lifts promise-returning ports with `Effect.tryPromise`, mapping any throw to `Error`.
-- Per-source failure isolation keeps `Promise.allSettled` semantics inside `attempt()`; Effect's structured concurrency is not yet used.
+- Per-source failure isolation keeps ordered `Promise.allSettled` semantics inside `attempt()`; news search runs at most two requests concurrently and retries only explicit provider rate limits up to three attempts. Injected sleep/random ports keep backoff tests deterministic. Effect's structured concurrency is not yet used.
 - Domain rules are framework-free: no Effect, no IO, no infra imports.
 
 Deliberately not adopted yet:
@@ -98,6 +98,6 @@ Both jobs are intended to be required checks in the branch protection rule for `
 
 ## Known Trade-Offs
 
-- Shallow Effect adoption means `Promise.allSettled`-based fan-out rather than Effect structured concurrency; behavior parity was prioritized over idiomatic Effect during the refactor.
+- Shallow Effect adoption means an ordered, bounded Promise worker pool rather than Effect structured concurrency; behavior parity and provider-safe concurrency were prioritized over idiomatic Effect during the refactor.
 - Browser automation (`github-home.ts`) is the largest uncovered surface; it is isolated behind the client class and v8-ignored with a documented manual test path.
 - `domain/` imports nothing outside itself (verified by convention); contract types such as `NewsTopic` and `RunAudit` are defined in the domain and imported by infrastructure, keeping dependencies inward.

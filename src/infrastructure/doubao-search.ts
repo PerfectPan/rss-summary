@@ -29,6 +29,18 @@ export type DoubaoSearchPage = {
   results: DoubaoSearchResult[];
 };
 
+export class DoubaoSearchError extends Error {
+  readonly code: string;
+  readonly retryAfterMs?: number;
+
+  constructor(code: string, message: string, options: { retryAfterMs?: number } = {}) {
+    super(`Doubao search API error ${code}: ${message}`);
+    this.name = "DoubaoSearchError";
+    this.code = code;
+    this.retryAfterMs = options.retryAfterMs;
+  }
+}
+
 type DoubaoSearchClientOptions = {
   apiKey: string;
   baseUrl?: string;
@@ -74,9 +86,15 @@ export class DoubaoSearchClient {
       }),
       signal: AbortSignal.timeout(this.timeoutMs),
     });
-    if (!response.ok) throw new Error(`Doubao search HTTP ${response.status}`);
+    const retryAfterMs = parseRetryAfter(response.headers.get("Retry-After"));
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new DoubaoSearchError("http_429", "HTTP 429", { retryAfterMs });
+      }
+      throw new Error(`Doubao search HTTP ${response.status}`);
+    }
 
-    return parseResponse(await response.json());
+    return parseResponse(await response.json(), retryAfterMs);
   }
 }
 
@@ -91,14 +109,14 @@ function validateInput(input: DoubaoSearchInput): void {
     throw new Error("Doubao search day must use YYYY-MM-DD.");
 }
 
-function parseResponse(value: unknown): DoubaoSearchPage {
+function parseResponse(value: unknown, retryAfterMs?: number): DoubaoSearchPage {
   const root = asRecord(value);
   const metadata = asRecord(root.ResponseMetadata);
   const error = asRecord(metadata.Error);
   if (Object.keys(error).length > 0) {
     const code = text(error.Code) ?? text(error.CodeN) ?? "unknown";
     const message = text(error.Message) ?? "unknown error";
-    throw new Error(`Doubao search API error ${code}: ${message}`);
+    throw new DoubaoSearchError(code, message, { retryAfterMs });
   }
 
   const result = asRecord(root.Result);
@@ -113,6 +131,15 @@ function parseResponse(value: unknown): DoubaoSearchPage {
     timeCostMs: number(result.TimeCost),
     results,
   };
+}
+
+function parseRetryAfter(value: string | null): number | undefined {
+  if (!value) return undefined;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) return Math.round(seconds * 1_000);
+  const date = Date.parse(value);
+  if (!Number.isFinite(date)) return undefined;
+  return Math.max(0, date - Date.now());
 }
 
 function parseResult(value: unknown, fallbackRankPosition: number): DoubaoSearchResult | undefined {
