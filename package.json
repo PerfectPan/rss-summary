@@ -39,7 +39,7 @@
     "verify": "pnpm test:layout && pnpm check && pnpm test && pnpm build && pnpm package:check"
   },
   "devDependencies": {
-    "@rivus/agent": "0.1.1",
+    "@rivus/agent": "0.12.7",
     "@types/he": "^1.2.3",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^24.0.0",
@@ -60,6 +60,6 @@
     "playwright": "^1.61.1"
   },
   "peerDependencies": {
-    "@rivus/agent": ">=0.1.1 <0.4.0"
+    "@rivus/agent": "^0.12.7"
   }
 }
