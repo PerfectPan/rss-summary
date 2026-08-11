@@ -6,11 +6,12 @@
 
 | Kind | ID | Purpose |
 | --- | --- | --- |
-| Agent profile | `rss-digest` | Allows only the three rss-summary Tools |
+| Agent profile | `rss-digest` | Allows only the four rss-summary Tools |
 | Tool | `rss-summary/generate-digest` | GitHub Home + explicitly subscribed personal RSS |
 | Tool | `rss-summary/generate-industry-brief` | curated official frontier feeds; papers stay pending |
 | Tool | `rss-summary/generate-news-brief` | bounded noon/evening authoritative web news |
-| Automation | `rss-summary/morning-feed-digest` | previous local calendar day's subscriptions |
+| Tool | `rss-summary/generate-daily-ai-digest` | two-phase grounded Daily AI evidence editing and rendering |
+| Automation | `rss-summary/morning-feed-digest` | previous Asia/Shanghai calendar day's Daily AI Digest |
 | Automation | `rss-summary/daily-industry-brief` | current local calendar day's frontier updates |
 | Automation | `rss-summary/noon-news-brief` | current day 00:00 through noon occurrence |
 | Automation | `rss-summary/evening-news-brief` | current day 12:30 through evening occurrence |

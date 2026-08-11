@@ -12,7 +12,13 @@ The daily product combines the existing seven bounded Doubao queries with curate
 first-party feeds from `industry-feeds.json`. Every publishable item is backed by public
 evidence (`id`, normalized title, canonical URL, published time, cleaned excerpt and
 source tier). Editorial output is accepted only after a deterministic validator checks
-category, Chinese event shape, known references, public URLs, length and duplicates.
+category, Chinese event shape, known references, public URLs, length, duplicates,
+entity overlap and every numeric claim.
+
+The Rivus Tool uses a two-phase contract. `collect` returns normalized evidence but no
+deliverable Markdown. The agent edits only structured `{category, headline, refs}` data
+from that evidence, then calls `render`. The second phase resolves the original cached
+evidence, validates the draft and is the only phase allowed to produce final Markdown.
 
 ## Safety and quality invariants
 
@@ -25,6 +31,8 @@ category, Chinese event shape, known references, public URLs, length and duplica
 - A target of 12–24 is a budget, not a quota; low-quality evidence is omitted.
 - Model/editor output is data, never directly deliverable prose. Invalid output falls back
   only to an event-shaped cleaned source title.
+- A model-created entity or numeric claim must occur in its referenced evidence. Merely
+  attaching a valid reference ID does not make an unrelated claim publishable.
 - Public audit records evidence and decisions but never cookies, tokens or private HTML.
 
 ## Delivery state

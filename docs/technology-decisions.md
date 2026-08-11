@@ -98,7 +98,7 @@ Both jobs are intended to be required checks in the branch protection rule for `
 
 ## Known Trade-Offs
 
-- The Daily AI Digest uses deterministic source-grounded fallback headlines today. A future model editor may propose structured `{category, headline, refs}` records, but its output must pass the same validator and can never be delivered as unchecked free text.
+- The Daily AI Digest uses a two-phase model-editor protocol: `collect` exposes normalized evidence, and `render` accepts structured `{category, headline, refs}` records. The validator rejects unknown references, unrelated entities and unsupported numeric claims before Markdown exists; invalid drafts use deterministic source-grounded fallback headlines.
 
 - Shallow Effect adoption means an ordered, bounded Promise worker pool rather than Effect structured concurrency; behavior parity and provider-safe concurrency were prioritized over idiomatic Effect during the refactor.
 - Browser automation (`github-home.ts`) is the largest uncovered surface; it is isolated behind the client class and v8-ignored with a documented manual test path.
