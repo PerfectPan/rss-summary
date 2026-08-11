@@ -86,8 +86,11 @@ The Daily AI Digest covers the previous Asia/Shanghai calendar day. It reuses bo
 seven-query news search and combines them with the official frontier feeds. Evidence is normalized
 to public IDs, titles, canonical URLs, timestamps, cleaned excerpts and source tiers. Entity/event
 duplicates merge their references. The deterministic validator permits only known references,
-the six declared categories, event-shaped Chinese headlines and public URLs; invalid editorial
-output falls back only to a source-grounded event title. A 12–24 item target is never a fill quota.
+the six declared categories, event-shaped Chinese headlines and public URLs. The production Tool
+first returns evidence in a `collect` phase, then accepts only structured editorial records in a
+`render` phase. It verifies that entities overlap referenced evidence and that every numeric claim
+is present in that evidence; invalid editorial output falls back only to a source-grounded event
+title. A 12–24 item target is never a fill quota, and only `render` returns deliverable Markdown.
 
 ## Research workflow
 

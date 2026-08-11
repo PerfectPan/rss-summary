@@ -41,4 +41,38 @@ describe("Daily AI digest renderer", () => {
       [1] [OpenAI · Codex 2.0](https://openai.com/news/codex-2)"
     `);
   });
+
+  it("keeps a full six-section briefing scannable with global source numbering", () => {
+    const categories = [
+      "概览/要闻",
+      "模型发布",
+      "开发生态",
+      "产品应用",
+      "行业动态",
+      "技术与洞察",
+    ] as const;
+    const items = categories.flatMap((category, categoryIndex) =>
+      [0, 1].map((itemIndex) => ({
+        category,
+        headline: `OpenAI 发布第 ${categoryIndex * 2 + itemIndex + 1} 项可信 AI 更新`,
+        refs: [`s${categoryIndex * 2 + itemIndex + 1}`],
+      })),
+    );
+    const evidence = items.map((item, index) => ({
+      id: item.refs[0]!,
+      title: item.headline,
+      url: `https://openai.com/news/${index + 1}`,
+      publishedAt: "2026-08-10T03:00:00Z",
+      excerpt: item.headline,
+      tier: "official" as const,
+      sourceName: "OpenAI",
+    }));
+
+    const markdown = renderDailyAiDigest({ day: "2026-08-10", items, evidence, warnings: [] });
+
+    expect(markdown).toContain("12 条可信动态");
+    categories.forEach((category) => expect(markdown).toContain(`## ${category}`));
+    expect(markdown.match(/^\d+\. /gmu)).toHaveLength(12);
+    expect(markdown.match(/^\[\d+\] \[/gmu)).toHaveLength(12);
+  });
 });

@@ -6,10 +6,11 @@ import {
   type RivusNewsBriefOutput,
   type RivusNewsBriefResult,
 } from "../application/news-brief.js";
+import { dailyAiCategories } from "../domain/daily-ai.js";
 import { generateRivusIndustryBrief, type RivusIndustryBriefResult } from "./rivus-industry.js";
 import { generateRivusDigest, type RivusDigestResult } from "./rivus-digest.js";
 import { renderNewsBrief } from "./news-render.js";
-import { generateRivusDailyAiDigest, type RivusDailyAiResult } from "./rivus-daily-ai.js";
+import { createRivusDailyAiDigestExecutor, type RivusDailyAiToolResult } from "./daily-ai-tool.js";
 
 export const RSS_SUMMARY_TOOL_ID = "rss-summary/generate-digest";
 export const RSS_SUMMARY_NEWS_TOOL_ID = "rss-summary/generate-news-brief";
@@ -25,7 +26,7 @@ type RssSummaryPluginDependencies = {
   generateDigest?: (input: unknown) => Promise<RivusDigestResult>;
   generateNewsBrief?: (input: unknown) => Promise<RivusNewsBriefOutput>;
   generateIndustryBrief?: (input: unknown) => Promise<RivusIndustryBriefResult>;
-  generateDailyAiDigest?: (input: unknown) => Promise<RivusDailyAiResult>;
+  generateDailyAiDigest?: (input: unknown) => Promise<RivusDailyAiToolResult>;
 };
 
 function withNewsMarkdown(result: RivusNewsBriefResult): RivusNewsBriefOutput {
@@ -52,7 +53,8 @@ export function createRssSummaryPlugin(
     (async (input: unknown) =>
       withNewsMarkdown(await Effect.runPromise(generateRivusNewsBrief(input))));
   const executeIndustryBrief = dependencies.generateIndustryBrief ?? generateRivusIndustryBrief;
-  const executeDailyAiDigest = dependencies.generateDailyAiDigest ?? generateRivusDailyAiDigest;
+  const executeDailyAiDigest =
+    dependencies.generateDailyAiDigest ?? createRivusDailyAiDigestExecutor();
 
   return {
     manifest: {
@@ -65,17 +67,35 @@ export function createRssSummaryPlugin(
         createExecutor: () => ({ execute: (input) => executeDailyAiDigest(input) }),
         description:
           "Generate a source-grounded Daily AI Digest for the previous Asia/Shanghai calendar day",
-        digest: "sha256:rss-summary-generate-daily-ai-digest-v1",
+        digest: "sha256:rss-summary-generate-daily-ai-digest-v2",
         id: RSS_SUMMARY_DAILY_AI_TOOL_ID,
         idempotency: "none",
         inputSchema: {
           additionalProperties: false,
-          properties: { occurrence: { format: "date-time", type: "string" } },
-          required: ["occurrence"],
+          properties: {
+            draft: {
+              description:
+                "Editorial Array<{category, headline, refs}> produced only from collect evidence; required for render",
+              items: {
+                additionalProperties: false,
+                properties: {
+                  category: { enum: [...dailyAiCategories], type: "string" },
+                  headline: { maxLength: 90, type: "string" },
+                  refs: { items: { type: "string" }, minItems: 1, type: "array" },
+                },
+                required: ["category", "headline", "refs"],
+                type: "object",
+              },
+              type: "array",
+            },
+            occurrence: { format: "date-time", type: "string" },
+            phase: { enum: ["collect", "render"], type: "string" },
+          },
+          required: ["occurrence", "phase"],
           type: "object",
         },
         risk: "observe",
-        version: "1.0.0",
+        version: "1.1.0",
       });
       registry.registerTool({
         createExecutor: () => ({ execute: (input) => executeDigest(input) }),
@@ -163,7 +183,7 @@ export function createRssSummaryPlugin(
         model: {},
         skills: { allow: [] },
         systemPrompt:
-          "Generate scheduled briefs only through the rss-summary Tool named in the task. Return its markdown field unchanged and do not add commentary.",
+          "严格遵循任务指定的 rss-summary Tool 协议。编辑阶段只能依据 Tool 返回的 evidence 生成结构化草稿，禁止补写事实；最终只原样返回 render 阶段的 markdown。",
         tools: {
           allow: [
             RSS_SUMMARY_TOOL_ID,
@@ -175,7 +195,7 @@ export function createRssSummaryPlugin(
       });
       registry.registerAutomation({
         createInput: ({ occurrence }) => ({
-          text: `请只调用一次 ${RSS_SUMMARY_DAILY_AI_TOOL_ID}，输入 ${JSON.stringify({ occurrence })}。该工具已完成 source-grounded 编辑和确定性校验；成功后仅将 markdown 字段原样返回，不得自行改写、添加或删除事实。`,
+          text: `请严格按顺序完成 Daily AI Digest：\n1. 调用 ${RSS_SUMMARY_DAILY_AI_TOOL_ID}，输入 ${JSON.stringify({ occurrence, phase: "collect" })}。\n2. 只能引用 collect 返回的 evidence，编辑 12–24 条（质量不足不凑数）中文事件句；每条必须使用允许的 category、90 字以内 headline 和一个或多个真实 evidence id 作为 refs。不得引入 evidence 中不存在的实体、数字、版本、日期或结论。\n3. 再调用同一 Tool，输入 ${JSON.stringify({ occurrence, phase: "render" })} 并增加 draft 字段，值为上一步编辑的 Array<{category, headline, refs}>。\n4. 仅将 render 返回的 markdown 字段原样返回，不得自行改写、添加或删除事实。`,
         }),
         id: RSS_SUMMARY_MORNING_AUTOMATION_ID,
         profileId: RSS_SUMMARY_PROFILE_ID,

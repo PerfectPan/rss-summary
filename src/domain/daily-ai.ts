@@ -110,6 +110,7 @@ export function validateEditorialDraft(
     if (headline.length > 90) throw new Error("headline is too long");
     if (refs.length === 0 || refs.some((ref) => !known.has(ref)))
       throw new Error("unknown reference");
+    assertGroundedHeadline(headline, refs, evidence);
     return { category: category as DailyAiCategory, headline, refs: [...new Set(refs)] };
   });
   const unique: DailyAiEditorialItem[] = [];
@@ -123,6 +124,78 @@ export function validateEditorialDraft(
   }
   return unique;
 }
+
+function assertGroundedHeadline(
+  headline: string,
+  refs: string[],
+  evidence: DailyAiEvidence[],
+): void {
+  const referenced = evidence.filter(({ id }) => refs.includes(id));
+  const sourceText = referenced
+    .flatMap(({ title, excerpt, sourceName }) => [title, excerpt, sourceName])
+    .join(" ");
+  const missingNumber = numericClaims(headline).find(
+    (claim) => !numericClaims(sourceText).includes(claim),
+  );
+  if (missingNumber) throw new Error(`headline 数字 ${missingNumber} 没有来源依据`);
+
+  const actionIndex = headline.search(EVENT_ACTION_PATTERN);
+  const subject = actionIndex > 0 ? headline.slice(0, actionIndex) : headline;
+  const headlineTerms = groundingTerms(subject);
+  const sourceTerms = new Set(groundingTerms(sourceText));
+  if (!headlineTerms.some((term) => sourceTerms.has(term)))
+    throw new Error("headline is not grounded in the referenced entity or event");
+}
+
+function numericClaims(value: string): string[] {
+  return [...value.matchAll(/\d+(?:[.,]\d+)*(?:\s?(?:%|％|B|M|K|亿|万))?/giu)].map(([claim]) =>
+    claim.replace(/[\s,]/gu, "").replace("％", "%").toLowerCase(),
+  );
+}
+
+function groundingTerms(value: string): string[] {
+  const terms = new Set<string>();
+  for (const [term] of value.matchAll(/[A-Za-z][A-Za-z0-9.+-]{1,}/gu)) {
+    const normalized = term.toLowerCase();
+    if (!GROUNDING_STOP_TERMS.has(normalized)) terms.add(normalized);
+  }
+  for (const [segment] of value.matchAll(/[\p{Script=Han}]{2,}/gu)) {
+    for (let index = 0; index < segment.length - 1; index += 1) {
+      const term = segment.slice(index, index + 2);
+      if (!GROUNDING_STOP_TERMS.has(term)) terms.add(term);
+    }
+  }
+  return [...terms];
+}
+
+const GROUNDING_STOP_TERMS = new Set([
+  "ai",
+  "api",
+  "model",
+  "models",
+  "agent",
+  "agents",
+  "发布",
+  "推出",
+  "上线",
+  "开放",
+  "开源",
+  "宣布",
+  "完成",
+  "更新",
+  "新增",
+  "支持",
+  "降低",
+  "提升",
+  "修复",
+  "披露",
+  "生效",
+  "预告",
+  "提供",
+  "报道",
+  "即将",
+  "正式",
+]);
 
 function normalizeEvidence(input: DailyAiEvidence[]): DailyAiEvidence[] {
   const ids = new Set<string>();
@@ -170,10 +243,11 @@ function isEventHeadline(value: string): boolean {
   const headline = cleanText(value);
   if (!/\p{Script=Han}/u.test(headline)) return false;
   if (/GitHub Home 在 GitHub Home 推荐了/u.test(headline)) return false;
-  return /发布|推出|上线|开放|开源|宣布|完成|收购|融资|更新|新增|支持|降低|提升|修复|披露|生效|预告|提供/u.test(
-    headline,
-  );
+  return EVENT_ACTION_PATTERN.test(headline);
 }
+
+const EVENT_ACTION_PATTERN =
+  /发布|推出|上线|开放|开源|宣布|完成|收购|融资|更新|新增|支持|降低|提升|提高|修复|披露|生效|预告|提供|添加|保持|位列|升级|重置|敦促|暂停|合作|计划|扩大|停止|阐述|发文|启用/u;
 
 function cleanText(value: string): string {
   return value.replace(/\s+/gu, " ").trim();

@@ -34,6 +34,54 @@ describe("Daily AI editorial domain", () => {
     ).toThrow(/reference|事件句/u);
   });
 
+  it("rejects editorial claims whose entity or numbers are absent from referenced evidence", () => {
+    expect(() =>
+      validateEditorialDraft(
+        [
+          {
+            category: "模型发布",
+            headline: "Anthropic 发布 Claude 6，推理成本降低 70%",
+            refs: ["source-1"],
+          },
+        ],
+        [evidence()],
+      ),
+    ).toThrow(/grounded|数字/u);
+
+    expect(() =>
+      validateEditorialDraft(
+        [
+          {
+            category: "开发生态",
+            headline: "OpenAI 发布 Codex 2.0，工具调用延迟降低 50%",
+            refs: ["source-1"],
+          },
+        ],
+        [evidence()],
+      ),
+    ).toThrow(/数字/u);
+  });
+
+  it("accepts grounded event verbs used by an editorial news briefing", () => {
+    expect(
+      validateEditorialDraft(
+        [
+          {
+            category: "概览/要闻",
+            headline: "OpenAI 为 Codex 添加机器可读标记",
+            refs: ["source-1"],
+          },
+          {
+            category: "开发生态",
+            headline: "OpenAI 升级 Codex 工具调用链路",
+            refs: ["source-1"],
+          },
+        ],
+        [evidence({ excerpt: "OpenAI 为 Codex 添加机器可读标记，并升级工具调用链路。" })],
+      ),
+    ).toHaveLength(2);
+  });
+
   it("merges the same entity event and keeps stable multi-source refs", () => {
     const result = buildDailyAiDigest([
       evidence(),

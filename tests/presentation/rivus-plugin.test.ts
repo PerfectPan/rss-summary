@@ -207,6 +207,9 @@ describe("rss-summary Rivus Plugin", () => {
     expect(evening.requestedToolIds).toEqual([RSS_SUMMARY_NEWS_TOOL_ID]);
     expect(industry.requestedToolIds).toEqual([RSS_SUMMARY_INDUSTRY_TOOL_ID]);
     expect(morning.createInput({ occurrence }).text).toContain(RSS_SUMMARY_DAILY_AI_TOOL_ID);
+    expect(morning.createInput({ occurrence }).text).toContain('"phase":"collect"');
+    expect(morning.createInput({ occurrence }).text).toContain('"phase":"render"');
+    expect(morning.createInput({ occurrence }).text).toContain("只能引用 collect 返回的 evidence");
     expect(noon.createInput({ occurrence }).text).toContain('"edition":"noon"');
     expect(evening.createInput({ occurrence }).text).toContain('"edition":"evening"');
     expect(industry.createInput({ occurrence }).text).toContain('"onlyNew":true');
