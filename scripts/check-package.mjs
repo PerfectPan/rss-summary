@@ -16,7 +16,15 @@ try {
   await writeFile(join(consumer, "package.json"), '{"private":true,"type":"module"}\n');
   run(
     "npm",
-    ["install", "--ignore-scripts", "--no-audit", "--no-fund", "--package-lock=false", archive, "@rivus/agent@0.1.1"],
+    [
+      "install",
+      "--ignore-scripts",
+      "--no-audit",
+      "--no-fund",
+      "--package-lock=false",
+      archive,
+      "@rivus/agent@0.12.7",
+    ],
     consumer,
   );
 
@@ -41,7 +49,7 @@ const report = await assertRivusPluginConforms({
     pluginId: "rss-summary",
     profileId: "rss-digest",
     skills: { allow: [] },
-    tools: { allow: ["rss-summary/generate-digest", "rss-summary/generate-news-brief", "rss-summary/generate-industry-brief"] }
+    tools: { allow: ["rss-summary/generate-digest", "rss-summary/generate-daily-ai-digest", "rss-summary/generate-news-brief", "rss-summary/generate-industry-brief"] }
   },
   plugin
 });

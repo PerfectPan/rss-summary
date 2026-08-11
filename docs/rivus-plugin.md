@@ -33,7 +33,8 @@ cd /path/to/rivus-project
 npm install /path/to/rss-summary
 ```
 
-The supported `@rivus/agent` peer range is `>=0.1.1 <0.4.0`.
+The supported `@rivus/agent` peer range is `^0.12.7`, matching the runtime version used by
+the production deployment and the version exercised by repository tests.
 
 ## Bind the Plugin
 
