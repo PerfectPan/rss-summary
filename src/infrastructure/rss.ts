@@ -169,5 +169,18 @@ function cleanSummary(value: string | undefined): string | undefined {
     .replace(/<[^>]+>/gu, " ")
     .replace(/\s+/gu, " ")
     .trim();
-  return he.decode(stripped);
+  return cleanBoilerplate(he.decode(stripped));
+}
+
+function cleanBoilerplate(value: string): string | undefined {
+  const promotional =
+    /^(?:AI资讯日报|AI资讯|每日早读|全网数据聚合|前沿科学探索|行业自由发声|开源创新力量|AI与人类未来|访问网页版|进群交流)$/iu;
+  const cleaned = value
+    .split(/\s*[|｜]\s*/u)
+    .filter((part) => !promotional.test(part.trim()))
+    .join(" ")
+    .replace(/(?:订阅我们|关注我们|扫码关注|加入社群|进群交流)[^。！？!?]*[。！？!?]?/giu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
+  return cleaned || undefined;
 }

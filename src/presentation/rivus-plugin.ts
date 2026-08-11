@@ -9,10 +9,12 @@ import {
 import { generateRivusIndustryBrief, type RivusIndustryBriefResult } from "./rivus-industry.js";
 import { generateRivusDigest, type RivusDigestResult } from "./rivus-digest.js";
 import { renderNewsBrief } from "./news-render.js";
+import { generateRivusDailyAiDigest, type RivusDailyAiResult } from "./rivus-daily-ai.js";
 
 export const RSS_SUMMARY_TOOL_ID = "rss-summary/generate-digest";
 export const RSS_SUMMARY_NEWS_TOOL_ID = "rss-summary/generate-news-brief";
 export const RSS_SUMMARY_INDUSTRY_TOOL_ID = "rss-summary/generate-industry-brief";
+export const RSS_SUMMARY_DAILY_AI_TOOL_ID = "rss-summary/generate-daily-ai-digest";
 export const RSS_SUMMARY_PROFILE_ID = "rss-digest";
 export const RSS_SUMMARY_MORNING_AUTOMATION_ID = "rss-summary/morning-feed-digest";
 export const RSS_SUMMARY_NOON_AUTOMATION_ID = "rss-summary/noon-news-brief";
@@ -23,6 +25,7 @@ type RssSummaryPluginDependencies = {
   generateDigest?: (input: unknown) => Promise<RivusDigestResult>;
   generateNewsBrief?: (input: unknown) => Promise<RivusNewsBriefOutput>;
   generateIndustryBrief?: (input: unknown) => Promise<RivusIndustryBriefResult>;
+  generateDailyAiDigest?: (input: unknown) => Promise<RivusDailyAiResult>;
 };
 
 function withNewsMarkdown(result: RivusNewsBriefResult): RivusNewsBriefOutput {
@@ -49,6 +52,7 @@ export function createRssSummaryPlugin(
     (async (input: unknown) =>
       withNewsMarkdown(await Effect.runPromise(generateRivusNewsBrief(input))));
   const executeIndustryBrief = dependencies.generateIndustryBrief ?? generateRivusIndustryBrief;
+  const executeDailyAiDigest = dependencies.generateDailyAiDigest ?? generateRivusDailyAiDigest;
 
   return {
     manifest: {
@@ -57,6 +61,22 @@ export function createRssSummaryPlugin(
       version: "1.0.0",
     },
     register(registry: RivusPluginRegistry): void {
+      registry.registerTool({
+        createExecutor: () => ({ execute: (input) => executeDailyAiDigest(input) }),
+        description:
+          "Generate a source-grounded Daily AI Digest for the previous Asia/Shanghai calendar day",
+        digest: "sha256:rss-summary-generate-daily-ai-digest-v1",
+        id: RSS_SUMMARY_DAILY_AI_TOOL_ID,
+        idempotency: "none",
+        inputSchema: {
+          additionalProperties: false,
+          properties: { occurrence: { format: "date-time", type: "string" } },
+          required: ["occurrence"],
+          type: "object",
+        },
+        risk: "observe",
+        version: "1.0.0",
+      });
       registry.registerTool({
         createExecutor: () => ({ execute: (input) => executeDigest(input) }),
         description:
@@ -145,17 +165,22 @@ export function createRssSummaryPlugin(
         systemPrompt:
           "Generate scheduled briefs only through the rss-summary Tool named in the task. Return its markdown field unchanged and do not add commentary.",
         tools: {
-          allow: [RSS_SUMMARY_TOOL_ID, RSS_SUMMARY_NEWS_TOOL_ID, RSS_SUMMARY_INDUSTRY_TOOL_ID],
+          allow: [
+            RSS_SUMMARY_TOOL_ID,
+            RSS_SUMMARY_DAILY_AI_TOOL_ID,
+            RSS_SUMMARY_NEWS_TOOL_ID,
+            RSS_SUMMARY_INDUSTRY_TOOL_ID,
+          ],
         },
       });
       registry.registerAutomation({
         createInput: ({ occurrence }) => ({
-          text: `请只调用一次 ${RSS_SUMMARY_TOOL_ID}，输入 ${JSON.stringify({ occurrence, onlyNew: true, window: "previous-calendar-day" })}。成功后仅将结果中的 markdown 字段原样返回，不添加任何说明。`,
+          text: `请只调用一次 ${RSS_SUMMARY_DAILY_AI_TOOL_ID}，输入 ${JSON.stringify({ occurrence })}。该工具已完成 source-grounded 编辑和确定性校验；成功后仅将 markdown 字段原样返回，不得自行改写、添加或删除事实。`,
         }),
         id: RSS_SUMMARY_MORNING_AUTOMATION_ID,
         profileId: RSS_SUMMARY_PROFILE_ID,
         requestedSkillIds: [],
-        requestedToolIds: [RSS_SUMMARY_TOOL_ID],
+        requestedToolIds: [RSS_SUMMARY_DAILY_AI_TOOL_ID],
       });
       registry.registerAutomation({
         createInput: ({ occurrence }) => ({
