@@ -11,6 +11,7 @@ The source type does not decide the product. The user's relationship to the sour
 | My subscriptions | What did sources I deliberately follow publish? | GitHub Home + `feeds.json` personal blogs | `.state/feed-state.json` |
 | Industry frontier | What changed at companies and projects I should know about? | curated official Blog / News / Changelog / Release / research feeds in `industry-feeds.json` | `.state/industry-state.json` |
 | Noon/evening news | What happened in the last hours? | event-specific Doubao queries from `news-topics.json`, with official/authoritative source policy | none |
+| Daily AI Digest | What important AI events happened yesterday? | the seven bounded Doubao queries + curated first-party `industry-feeds.json` | delivery receipt + public evidence audit |
 
 GitHub Home belongs to subscriptions because it is already personalized. Public GitHub Repository Search and Hacker News discovery are intentionally not a product: they optimize for popularity and novelty rather than the user's explicit subscriptions or curated official sources.
 
@@ -50,6 +51,9 @@ Dependencies point inward. Domain code must not import application, infrastructu
 
 ## Subscription workflow
 
+The subscription Tool remains on-demand. The 09:00 `morning-feed-digest` automation now invokes
+the Daily AI Digest instead; its ID, schedule and endpoint binding remain stable.
+
 `rss-summary digest` runs this sequence:
 
 1. Load GitHub Home configuration and `feeds.json`.
@@ -75,6 +79,15 @@ GitHub Home uses the saved `.state/github-home-storage.json` session. `GITHUB_HO
 6. Render ordinary updates as one line, expand high-quality updates, and withhold unresearched paper titles from Markdown.
 
 The tracked frontier list deliberately excludes secondary daily aggregators and personal engineering blogs. A personal blog can still be excellent; it belongs in `feeds.json` because the user chose to follow it.
+
+## Daily AI Digest workflow
+
+The Daily AI Digest covers the previous Asia/Shanghai calendar day. It reuses both halves of the
+seven-query news search and combines them with the official frontier feeds. Evidence is normalized
+to public IDs, titles, canonical URLs, timestamps, cleaned excerpts and source tiers. Entity/event
+duplicates merge their references. The deterministic validator permits only known references,
+the six declared categories, event-shaped Chinese headlines and public URLs; invalid editorial
+output falls back only to a source-grounded event title. A 12–24 item target is never a fill quota.
 
 ## Research workflow
 

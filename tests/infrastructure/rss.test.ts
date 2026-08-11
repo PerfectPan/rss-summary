@@ -3,6 +3,13 @@ import { describe, expect, it } from "vite-plus/test";
 import { parseFeedXml, RssClient } from "../../src/infrastructure/rss.js";
 
 describe("RSS source", () => {
+  it("removes navigation and subscription boilerplate from summaries", () => {
+    const [event] = parseFeedXml(
+      `<rss><channel><item><title>2026-08-10日刊</title><link>https://example.com/daily</link><pubDate>Mon, 10 Aug 2026 01:00:00 GMT</pubDate><description><![CDATA[AI资讯日报 | 每日早读 | 访问网页版 | 进群交流 | OpenAI 发布新模型并开放 API。订阅我们获得更多内容。]]></description></item></channel></rss>`,
+      { name: "AI 日报", url: "https://example.com/feed", tags: ["ai"] },
+    );
+    expect(event?.summary).toBe("OpenAI 发布新模型并开放 API。");
+  });
   it("parses RSS 2.0 items into activity cards", () => {
     const events = parseFeedXml(
       `<?xml version="1.0"?>
