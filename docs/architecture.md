@@ -92,6 +92,8 @@ first returns evidence in a `collect` phase, then accepts only structured editor
 `render` phase. It verifies that entities overlap referenced evidence and that every numeric claim
 is present in that evidence; invalid editorial output falls back only to a source-grounded event
 title. A 12–24 item target is never a fill quota, and only `render` returns deliverable Markdown.
+Each source reference is rendered as a clickable inline badge beside its event; the document does
+not repeat the same references in a trailing source section.
 
 ## Research workflow
 

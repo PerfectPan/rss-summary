@@ -3,7 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { renderDailyAiDigest } from "../../src/presentation/daily-ai-render.js";
 
 describe("Daily AI digest renderer", () => {
-  it("renders a readable categorized golden with numbered source links", () => {
+  it("renders source links as inline badges without a repeated source section", () => {
     const markdown = renderDailyAiDigest({
       day: "2026-08-10",
       items: [
@@ -34,11 +34,7 @@ describe("Daily AI digest renderer", () => {
 
       ## 开发生态
 
-      1. OpenAI 发布 Codex 2.0，工具调用延迟降低 30% [1]
-
-      ## 来源
-
-      [1] [OpenAI · Codex 2.0](https://openai.com/news/codex-2)"
+      1. OpenAI 发布 Codex 2.0，工具调用延迟降低 30% [↗ #1](https://openai.com/news/codex-2)"
     `);
   });
 
@@ -73,6 +69,7 @@ describe("Daily AI digest renderer", () => {
     expect(markdown).toContain("12 条可信动态");
     categories.forEach((category) => expect(markdown).toContain(`## ${category}`));
     expect(markdown.match(/^\d+\. /gmu)).toHaveLength(12);
-    expect(markdown.match(/^\[\d+\] \[/gmu)).toHaveLength(12);
+    expect(markdown.match(/\[↗ #\d+\]\(https:\/\/openai\.com\/news\/\d+\)/gu)).toHaveLength(12);
+    expect(markdown).not.toContain("## 来源");
   });
 });

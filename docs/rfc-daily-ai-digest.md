@@ -35,6 +35,8 @@ evidence, validates the draft and is the only phase allowed to produce final Mar
 - A model-created entity or numeric claim must occur in its referenced evidence. Merely
   attaching a valid reference ID does not make an unrelated claim publishable.
 - Public audit records evidence and decisions but never cookies, tokens or private HTML.
+- Each event links its evidence through compact inline source badges; there is no repeated trailing
+  source list.
 
 ## Delivery state
 
