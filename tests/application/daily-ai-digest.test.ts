@@ -37,7 +37,7 @@ describe("Daily AI digest use case", () => {
     ]);
   });
 
-  it("combines authoritative search and official RSS evidence into grounded items", async () => {
+  it("combines authoritative search and official source evidence into grounded items", async () => {
     const result = await generateDailyAiDigest(
       { occurrence: "2026-08-11T01:00:00.000Z" },
       {

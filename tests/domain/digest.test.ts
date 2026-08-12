@@ -170,6 +170,33 @@ describe("github feed domain", () => {
     expect(candidates[0]?.matchedInterests).toContain("deno");
   });
 
+  it("keeps official web page articles distinct from RSS candidates", () => {
+    const candidates = buildCandidateProjects(
+      [
+        {
+          id: "web-1",
+          type: "article",
+          source: "web",
+          actor: "Example News",
+          repo: "web:https://example.com/news/agent-mode",
+          createdAt: "2026-08-12T00:00:00Z",
+          htmlUrl: "https://example.com/news/agent-mode",
+          title: "Agent Mode",
+          sourceName: "Example News",
+          sourceUrl: "https://example.com/news",
+        },
+      ],
+      { followees: new Set(), interests: [], repositories: new Map() },
+    );
+
+    expect(candidates[0]).toMatchObject({
+      source: "web",
+      category: "article",
+      label: "Agent Mode",
+    });
+    expect(candidates[0]?.reasons).toContain("website source: Example News");
+  });
+
   it("preserves title, link, and summary for RSS release candidates", () => {
     const candidates = buildCandidateProjects(
       [

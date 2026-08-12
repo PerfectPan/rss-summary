@@ -160,7 +160,7 @@ describe("rss-summary Rivus Plugin", () => {
     }
   });
 
-  it("delegates industry Tool execution to the industry RSS adapter", async () => {
+  it("delegates industry Tool execution to the first-party source adapter", async () => {
     const generateIndustryBrief = vi.fn(async () => ({
       candidateCount: 3,
       generatedAt: "2026-08-09T01:00:00.000Z",
@@ -173,7 +173,7 @@ describe("rss-summary Rivus Plugin", () => {
     const result = await tool
       .createExecutor({
         toolId: RSS_SUMMARY_INDUSTRY_TOOL_ID,
-        toolVersion: "1.0.0",
+        toolVersion: "1.1.0",
       })
       .execute(
         { occurrence: "2026-08-09T01:00:00.000Z" },

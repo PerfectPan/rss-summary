@@ -78,6 +78,20 @@ describe("feed state", () => {
     ).toBe("rss:https://example.com/post");
   });
 
+  it("keeps web page research identity separate from RSS identity", () => {
+    expect(
+      researchKeyForCandidate({
+        ...candidate("web:item-1", ["web-1"], {
+          source: "web",
+          category: "article",
+          eventTypes: ["article"],
+          eventType: "article",
+        }),
+        url: "https://example.com/news/post",
+      }),
+    ).toBe("web:https://example.com/news/post");
+  });
+
   it("marks research decisions by stable key without a candidate", () => {
     const state = createEmptyFeedState();
     markResearchedByKey(state, "github:owner/repo", {

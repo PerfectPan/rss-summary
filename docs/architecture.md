@@ -9,7 +9,7 @@ The source type does not decide the product. The user's relationship to the sour
 | Product | Question | Sources | State |
 | --- | --- | --- | --- |
 | My subscriptions | What did sources I deliberately follow publish? | GitHub Home + `feeds.json` personal blogs | `.state/feed-state.json` |
-| Industry frontier | What changed at companies and projects I should know about? | curated official Blog / News / Changelog / Release / research feeds in `industry-feeds.json` | `.state/industry-state.json` |
+| Industry frontier | What changed at companies and projects I should know about? | curated official RSS/Atom plus verified News / Changelog pages in `industry-feeds.json` | `.state/industry-state.json` |
 | Noon/evening news | What happened in the last hours? | event-specific Doubao queries from `news-topics.json`, with official/authoritative source policy | none |
 | Daily AI Digest | What important AI events happened yesterday? | the seven bounded Doubao queries + curated first-party `industry-feeds.json` | delivery receipt + public evidence audit |
 
@@ -20,7 +20,7 @@ GitHub Home belongs to subscriptions because it is already personalized. Public 
 ```mermaid
 flowchart LR
   Personal["GitHub Home + personal feeds"] --> Collect["collect with per-source status"]
-  Official["official frontier feeds"] --> Collect
+  Official["official RSS/Atom + verified pages"] --> Collect
   Collect --> Window["calendar window"]
   Window --> Rank["rank + explain"]
   Rank --> State["only-new / research state"]
@@ -72,8 +72,8 @@ GitHub Home uses the saved `.state/github-home-storage.json` session. `GITHUB_HO
 
 `rss-summary industry` never reads GitHub Home or `feeds.json`:
 
-1. Load only `industry-feeds.json` or the isolated `INDUSTRY_FEEDS` override.
-2. Fetch official sources independently and record source health.
+1. Load only `industry-feeds.json` or the isolated `INDUSTRY_SOURCES` override.
+2. Fetch official RSS/Atom and configured listing pages independently and record source health.
 3. Apply the time window and rank updates.
 4. Require paper abstracts to match configured interests and cap the queue at `FEED_MAX_PAPERS` (hard maximum 8).
 5. Under `--only-new`, filter delivered and researched identities with `.state/industry-state.json`.
@@ -84,7 +84,7 @@ The tracked frontier list deliberately excludes secondary daily aggregators and 
 ## Daily AI Digest workflow
 
 The Daily AI Digest covers the previous Asia/Shanghai calendar day. It reuses both halves of the
-seven-query news search and combines them with the official frontier feeds. Evidence is normalized
+seven-query news search and combines them with the official frontier sources. Evidence is normalized
 to public IDs, titles, canonical URLs, timestamps, cleaned excerpts and source tiers. Entity/event
 duplicates merge their references. The deterministic validator permits only known references,
 the six declared categories, event-shaped Chinese headlines and public URLs. The production Tool
@@ -154,7 +154,7 @@ News ranking uses within-query position, source authority, and freshness. A URL 
 ## Extension points
 
 - Add a personal source with `rss-summary feeds add`; this changes `feeds.json`.
-- Add a frontier source only when it is an official first-party feed; edit `industry-feeds.json` and test it.
+- Add a frontier RSS/Atom source when it is first-party. A `page` source additionally requires a same-origin path prefix, explicit dates, policy review, fixture coverage, and a live dry-run; edit `industry-feeds.json` intentionally.
 - Adjust importance in `src/domain/digest.ts`; adjust display depth in `src/domain/attention.ts`.
 - Add a source adapter returning `ActivityCard[]` and source health, then wire it at the application boundary.
 - Add a delivery adapter beside `src/infrastructure/notifier.ts` without moving delivery into domain logic.
@@ -166,5 +166,6 @@ News ranking uses within-query position, source authority, and freshness. A URL 
 - On machines that require `HTTP_PROXY`/`HTTPS_PROXY`, Node 24 must start with `NODE_USE_ENV_PROXY=1` for native fetch to use those variables.
 - Expanded summaries use feed/repository text unless the research skill has inspected the original source.
 - RSS identity dedupe is deterministic, not semantic.
+- Official page ingestion depends on stable same-origin links and explicit date markup. Zero valid dated links is audited as parser failure instead of an empty day.
 - The generic webhook cannot confirm downstream rendering; Rivus provides the stronger delivery ledger.
 - The repository has no built-in daemon.

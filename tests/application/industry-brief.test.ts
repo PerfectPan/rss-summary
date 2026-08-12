@@ -30,8 +30,31 @@ vi.mock("../../src/infrastructure/rss.js", () => ({
   },
 }));
 
+vi.mock("../../src/infrastructure/web-page.js", () => ({
+  WebPageClient: class {
+    getEvents(source: { name: string; url: string; tags: string[] }) {
+      return Promise.resolve([
+        {
+          id: `web:${source.url}:1`,
+          type: "article",
+          source: "web",
+          actor: source.name,
+          repo: `web:${source.url}/post`,
+          createdAt: "2026-08-09T02:00:00.000Z",
+          action: "published",
+          htmlUrl: `${source.url}/post`,
+          title: `${source.name} product update`,
+          sourceName: source.name,
+          sourceUrl: source.url,
+          tags: source.tags,
+        },
+      ]);
+    }
+  },
+}));
+
 describe("industry brief", () => {
-  it("collects RSS-only candidates without touching GitHub", async () => {
+  it("collects first-party RSS and page candidates without touching GitHub", async () => {
     const config = loadConfig({ GITHUB_USERNAME: "PerfectPan", FEED_TIMEZONE_OFFSET: "+08:00" }, [
       "--only-new",
       "--day",
@@ -42,7 +65,9 @@ describe("industry brief", () => {
     const document = await Effect.runPromise(buildIndustryDocument(config));
 
     expect(document.candidates.length).toBeGreaterThan(0);
-    expect(document.candidates.every((candidate) => candidate.source === "rss")).toBe(true);
+    expect(new Set(document.candidates.map((candidate) => candidate.source))).toEqual(
+      new Set(["rss", "web"]),
+    );
   });
 
   it("bounds the abstract-matched paper research queue", async () => {

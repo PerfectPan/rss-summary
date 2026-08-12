@@ -2,7 +2,11 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vite-plus/test";
 
-import { loadConfig, parseFeedSubscriptions } from "../../src/infrastructure/config.js";
+import {
+  loadConfig,
+  parseFeedSubscriptions,
+  parseIndustrySources,
+} from "../../src/infrastructure/config.js";
 
 describe("config", () => {
   it("loads RSS feed subscriptions from JSON", () => {
@@ -55,7 +59,7 @@ describe("config", () => {
   it("keeps personal and industry feed overrides isolated", () => {
     const config = loadConfig(
       {
-        INDUSTRY_FEEDS:
+        INDUSTRY_SOURCES:
           '[{"name":"arXiv","url":"https://rss.arxiv.org/rss/cs.AI","tags":["Papers"]}]',
         RSS_FEEDS: '[{"name":"Personal","url":"https://example.com/personal.xml","tags":["Blog"]}]',
       },
@@ -63,7 +67,56 @@ describe("config", () => {
     );
 
     expect(config.rssFeeds.map((feed) => feed.name)).toEqual(["Personal"]);
-    expect(config.industryFeeds.map((feed) => feed.name)).toEqual(["arXiv"]);
+    expect(config.industrySources.map((feed) => feed.name)).toEqual(["arXiv"]);
+  });
+
+  it("keeps the legacy industry feed override as an alias", () => {
+    const config = loadConfig(
+      { INDUSTRY_FEEDS: '[{"name":"Legacy","url":"https://example.com/feed.xml"}]' },
+      ["--dry-run"],
+    );
+
+    expect(config.industrySources.map((source) => source.name)).toEqual(["Legacy"]);
+  });
+
+  it("loads industry web pages without allowing them in personal feeds", () => {
+    const value = JSON.stringify([
+      {
+        type: "page",
+        name: "Example News",
+        url: "https://example.com/news",
+        pathPrefixes: ["/news/"],
+        tags: ["News"],
+      },
+    ]);
+
+    expect(parseIndustrySources(value)).toEqual([
+      {
+        type: "page",
+        name: "Example News",
+        url: "https://example.com/news",
+        pathPrefixes: ["/news/"],
+        tags: ["News"],
+      },
+    ]);
+    expect(() => parseFeedSubscriptions(value)).toThrow(
+      "Personal feed configuration only supports RSS or Atom sources.",
+    );
+  });
+
+  it("requires absolute path prefixes for web page sources", () => {
+    expect(() =>
+      parseIndustrySources(
+        JSON.stringify([
+          {
+            type: "page",
+            name: "Unsafe",
+            url: "https://example.com/news",
+            pathPrefixes: ["news/"],
+          },
+        ]),
+      ),
+    ).toThrow("Web page source pathPrefixes must contain absolute path prefixes.");
   });
 
   it("loads state and output options from args", () => {

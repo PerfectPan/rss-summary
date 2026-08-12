@@ -9,8 +9,9 @@ import {
 import { isWithinEventWindow, resolveEventWindow } from "../domain/time.js";
 import { candidateDecision, type RunAudit } from "../domain/run-audit.js";
 import { type AppConfig, loadConfig } from "../infrastructure/config.js";
+import { collectIndustrySources } from "../infrastructure/industry-source-batch.js";
 import { RssClient } from "../infrastructure/rss.js";
-import { collectRssFeeds } from "../infrastructure/rss-batch.js";
+import { WebPageClient } from "../infrastructure/web-page.js";
 import {
   filterNewCandidates,
   filterUnresearchedCandidates,
@@ -42,7 +43,7 @@ export function buildIndustryDocument(
 }
 
 /**
- * Full industry workflow for the CLI. RSS-only (no GitHub Home), independent state file so
+ * Full industry workflow for the CLI. First-party sources only (no GitHub Home), independent state file so
  * it does not cross-contaminate the personal digest's `--only-new`.
  */
 export function runIndustry(
@@ -75,11 +76,13 @@ export function runIndustry(
 async function collectIndustryBrief(
   config: AppConfig,
 ): Promise<{ audit: RunAudit; document: IndustryBriefDocument; state: FeedState }> {
-  const rssClient = new RssClient();
-  const rssCollection = await collectRssFeeds(rssClient, config.industryFeeds);
-  const rssEvents = rssCollection.events;
+  const sourceCollection = await collectIndustrySources(
+    { rss: new RssClient(), page: new WebPageClient() },
+    config.industrySources,
+  );
+  const sourceEvents = sourceCollection.events;
   const eventWindow = resolveEventWindow(config);
-  const events = rssEvents.filter((event) => isWithinEventWindow(event, eventWindow));
+  const events = sourceEvents.filter((event) => isWithinEventWindow(event, eventWindow));
 
   const rankedCandidates = buildCandidateProjects(events, {
     followees: new Set<string>(),
@@ -102,9 +105,9 @@ async function collectIndustryBrief(
     product: "frontier",
     generatedAt,
     windowLabel: eventWindow.label,
-    sources: rssCollection.sources,
+    sources: sourceCollection.sources,
     counts: {
-      fetched: rssEvents.length,
+      fetched: sourceEvents.length,
       inWindow: events.length,
       ranked: rankedCandidates.length,
       selected: candidates.filter((candidate) => candidate.category !== "paper").length,

@@ -3,7 +3,7 @@ import uniq from "lodash-es/uniq.js";
 import { asRecord } from "./record.js";
 import type { RunAudit } from "./run-audit.js";
 
-export type ActivitySource = "github" | "rss";
+export type ActivitySource = "github" | "rss" | "web";
 
 export type ActivityType =
   | "watch"
@@ -214,7 +214,9 @@ function scoreRepo(
       reasons.add(`followed actor: ${event.actor}`);
     }
     if (event.type === "article") {
-      reasons.add(`rss feed: ${event.sourceName ?? event.actor}`);
+      reasons.add(
+        `${event.source === "web" ? "website source" : "rss feed"}: ${event.sourceName ?? event.actor}`,
+      );
     }
     if (event.type === "paper") {
       reasons.add(`research paper: ${event.sourceName ?? event.actor}`);
@@ -345,9 +347,9 @@ function matchPaperAbstractInterests(events: ActivityCard[], interests: string[]
 }
 
 function sourceFor(events: ActivityCard[]): ActivitySource {
-  return events.some((event) => event.source === "rss" || event.type === "article")
-    ? "rss"
-    : "github";
+  if (events.some((event) => event.source === "web")) return "web";
+  if (events.some((event) => event.source === "rss" || event.type === "article")) return "rss";
+  return "github";
 }
 
 function labelFor(repo: string, events: ActivityCard[]): string | undefined {
@@ -375,7 +377,11 @@ function descriptionFor(events: ActivityCard[]): string | undefined {
 
 function publicationEvent(events: ActivityCard[]): ActivityCard | undefined {
   return events.find(
-    (event) => event.source === "rss" || event.type === "article" || event.type === "paper",
+    (event) =>
+      event.source === "rss" ||
+      event.source === "web" ||
+      event.type === "article" ||
+      event.type === "paper",
   );
 }
 

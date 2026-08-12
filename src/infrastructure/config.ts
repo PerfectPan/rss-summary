@@ -8,6 +8,16 @@ export type FeedSubscription = {
   tags: string[];
 };
 
+export type WebPageSubscription = {
+  type: "page";
+  name: string;
+  url: string;
+  pathPrefixes: string[];
+  tags: string[];
+};
+
+export type IndustrySource = FeedSubscription | WebPageSubscription;
+
 export type GithubFeedSource = "home" | "events";
 export type GithubHomeFetch = "conduit" | "browser";
 
@@ -34,7 +44,7 @@ export type AppConfig = {
   stateFile: string;
   interests: string[];
   rssFeeds: FeedSubscription[];
-  industryFeeds: FeedSubscription[];
+  industrySources: IndustrySource[];
   industryStateFile: string;
   runLogDir: string;
 };
@@ -90,9 +100,13 @@ export function loadConfig(
       "skills",
     ],
     rssFeeds: loadFeedSubscriptions(env.RSS_FEEDS, args.rssFeedsFile ?? env.RSS_FEEDS_FILE),
-    industryFeeds: loadFeedSubscriptions(
-      env.INDUSTRY_FEEDS,
-      args.industryFeedsFile ?? env.INDUSTRY_FEEDS_FILE ?? "industry-feeds.json",
+    industrySources: loadIndustrySources(
+      env.INDUSTRY_SOURCES ?? env.INDUSTRY_FEEDS,
+      args.industrySourcesFile ??
+        args.industryFeedsFile ??
+        env.INDUSTRY_SOURCES_FILE ??
+        env.INDUSTRY_FEEDS_FILE ??
+        "industry-feeds.json",
     ),
     industryStateFile:
       args.industryStateFile ?? env.INDUSTRY_STATE_FILE ?? ".state/industry-state.json",
@@ -143,6 +157,7 @@ function parseArgs(argv: string[]) {
     githubHomeFetch?: string;
     githubHomeStorageState?: string;
     rssFeedsFile?: string;
+    industrySourcesFile?: string;
     industryFeedsFile?: string;
     industryStateFile?: string;
     runLogDir?: string;
@@ -178,14 +193,53 @@ export function parseFeedSubscriptions(value: string): FeedSubscription[] {
     }
 
     const record = item as Record<string, unknown>;
-    const url = requireString(record.url, "RSS feed url");
-    const name =
-      typeof record.name === "string" && record.name.trim() ? record.name.trim() : hostnameOf(url);
-    const tags = Array.isArray(record.tags)
-      ? record.tags.map((tag) => (typeof tag === "string" ? tag.trim() : "")).filter(Boolean)
-      : [];
+    if (record.type !== undefined && record.type !== "rss") {
+      throw new Error("Personal feed configuration only supports RSS or Atom sources.");
+    }
+    return parseFeedSubscriptionRecord(record);
+  });
+}
 
-    return { name, url, tags };
+export function parseIndustrySources(value: string): IndustrySource[] {
+  const parsed: unknown = JSON.parse(value);
+  if (!Array.isArray(parsed)) {
+    throw new Error("Industry source configuration must be a JSON array.");
+  }
+
+  return parsed.map((item) => {
+    if (typeof item === "string") {
+      return {
+        name: hostnameOf(item),
+        url: item,
+        tags: [],
+      };
+    }
+    if (!item || typeof item !== "object") {
+      throw new Error("Each industry source must be a URL string or an object.");
+    }
+
+    const record = item as Record<string, unknown>;
+    if (record.type === undefined || record.type === "rss") {
+      return parseFeedSubscriptionRecord(record);
+    }
+    if (record.type !== "page") {
+      throw new Error("Industry source type must be either 'rss' or 'page'.");
+    }
+
+    const url = requireString(record.url, "Web page source url");
+    ensureHttpUrl(url, "Web page source url");
+    const pathPrefixes = parseStringArray(record.pathPrefixes, "Web page source pathPrefixes");
+    if (pathPrefixes.length === 0 || pathPrefixes.some((prefix) => !prefix.startsWith("/"))) {
+      throw new Error("Web page source pathPrefixes must contain absolute path prefixes.");
+    }
+
+    return {
+      type: "page",
+      name: optionalName(record.name, url),
+      url,
+      pathPrefixes,
+      tags: parseStringArray(record.tags, "Web page source tags", false),
+    };
   });
 }
 
@@ -223,6 +277,49 @@ function loadFeedSubscriptions(
   const feedsFile = configuredFile ?? "feeds.json";
   if (!existsSync(feedsFile)) return [];
   return parseFeedSubscriptions(readFileSync(feedsFile, "utf8"));
+}
+
+function loadIndustrySources(
+  inlineSources: string | undefined,
+  configuredFile: string,
+): IndustrySource[] {
+  if (inlineSources) return parseIndustrySources(inlineSources);
+  if (!existsSync(configuredFile)) return [];
+  return parseIndustrySources(readFileSync(configuredFile, "utf8"));
+}
+
+function parseFeedSubscriptionRecord(record: Record<string, unknown>): FeedSubscription {
+  const url = requireString(record.url, "RSS feed url");
+  ensureHttpUrl(url, "RSS feed url");
+  return {
+    name: optionalName(record.name, url),
+    url,
+    tags: parseStringArray(record.tags, "RSS feed tags", false),
+  };
+}
+
+function optionalName(value: unknown, url: string): string {
+  return typeof value === "string" && value.trim() ? value.trim() : hostnameOf(url);
+}
+
+function parseStringArray(value: unknown, label: string, required = true): string[] {
+  if (value === undefined && !required) return [];
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+    throw new Error(`${label} must be an array of strings.`);
+  }
+  return value.map((item) => item.trim()).filter(Boolean);
+}
+
+function ensureHttpUrl(value: string, label: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error(`${label} must be a valid URL.`);
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error(`${label} must use http or https.`);
+  }
 }
 
 function requireString(value: unknown, label: string): string {

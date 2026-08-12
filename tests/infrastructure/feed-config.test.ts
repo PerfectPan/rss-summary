@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vite-plus/test";
 
-import { parseFeedSubscriptions } from "../../src/infrastructure/config.js";
+import { parseFeedSubscriptions, parseIndustrySources } from "../../src/infrastructure/config.js";
 
 describe("repository feed configuration", () => {
   it("tracks one shared feeds.json file", () => {
@@ -34,5 +34,16 @@ describe("repository feed configuration", () => {
     );
 
     expect(skill).toContain("Feed additions and removals both go through pull requests.");
+  });
+
+  it("keeps first-party industry sources parseable and deduplicated", () => {
+    const sources = parseIndustrySources(
+      readFileSync(new URL("../../industry-feeds.json", import.meta.url), "utf8"),
+    );
+    const urls = sources.map((source) => source.url);
+
+    expect(sources.length).toBeGreaterThan(0);
+    expect(new Set(urls).size).toBe(urls.length);
+    expect(sources.some((source) => "type" in source && source.type === "page")).toBe(true);
   });
 });

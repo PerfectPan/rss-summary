@@ -80,10 +80,11 @@ export function markResearchedByKey(state: FeedState, key: string, record: Resea
 export function researchKeyForCandidate(candidate: CandidateProject): string {
   if (
     candidate.source === "rss" ||
+    candidate.source === "web" ||
     candidate.category === "article" ||
     candidate.category === "paper"
   ) {
-    return `rss:${candidate.url ?? candidate.repo}`;
+    return `${candidate.source === "web" ? "web" : "rss"}:${candidate.url ?? candidate.repo}`;
   }
   return `github:${candidate.repo}`;
 }
