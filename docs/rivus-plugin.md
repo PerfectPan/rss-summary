@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | Agent profile | `rss-digest` | Allows only the four rss-summary Tools |
 | Tool | `rss-summary/generate-digest` | GitHub Home + explicitly subscribed personal RSS |
-| Tool | `rss-summary/generate-industry-brief` | curated official frontier feeds; papers stay pending |
+| Tool | `rss-summary/generate-industry-brief` | curated official feeds and verified pages; papers stay pending |
 | Tool | `rss-summary/generate-news-brief` | bounded noon/evening authoritative web news |
 | Tool | `rss-summary/generate-daily-ai-digest` | two-phase grounded Daily AI evidence editing and rendering |
 | Automation | `rss-summary/morning-feed-digest` | previous Asia/Shanghai calendar day's personal subscriptions |
@@ -19,7 +19,7 @@
 
 All Tools have `observe` risk. Feed Tools force dry-run mode: they read only-new state but do not send a webhook, write seen state, or write local run artifacts. Their structured result includes the source/candidate audit. The news Tool includes its query/rejection/selection audit. Rivus records the subsequent card delivery in its trace and Feishu delivery ledger.
 
-Public GitHub Repository Search and Hacker News discovery are intentionally absent. GitHub Home belongs to personal subscriptions; industry discovery comes from curated first-party feeds.
+Public GitHub Repository Search and Hacker News discovery are intentionally absent. GitHub Home belongs to personal subscriptions; industry discovery comes from curated first-party RSS/Atom and explicitly configured official pages.
 
 ## Install
 
@@ -96,7 +96,7 @@ GITHUB_HOME_STORAGE_STATE=/path/to/rss-summary/.state/github-home-storage.json
 GITHUB_USERNAME=PerfectPan
 RSS_FEEDS_FILE=/path/to/rss-summary/feeds.json
 FEED_STATE_FILE=/path/to/rss-summary/.state/feed-state.json
-INDUSTRY_FEEDS_FILE=/path/to/rss-summary/industry-feeds.json
+INDUSTRY_SOURCES_FILE=/path/to/rss-summary/industry-feeds.json
 INDUSTRY_STATE_FILE=/path/to/rss-summary/.state/industry-state.json
 FEED_MAX_PAPERS=8
 DOUBAO_SEARCH_API_KEY=replace-with-doubao-search-api-key
@@ -140,4 +140,4 @@ npm run doctor
 npm run check-config
 ```
 
-Invoke each enabled template once in the foreground. Confirm the morning subscriptions card and the separate Daily AI card both cover the previous local calendar day, the frontier trace lists only official `industry-feeds.json` sources, noon/evening windows do not overlap, each Tool call returns unchanged Markdown, and the delivery ledger records the card outcome before enabling the service manager.
+Invoke each enabled template once in the foreground. Confirm the morning subscriptions card and the separate Daily AI card both cover the previous local calendar day, the frontier trace lists only official `industry-feeds.json` sources (including `web-page` source health), noon/evening windows do not overlap, each Tool call returns unchanged Markdown, and the delivery ledger records the card outcome before enabling the service manager.

@@ -28,7 +28,7 @@ type RivusIndustryBriefDependencies = {
   env?: NodeJS.ProcessEnv;
 };
 
-/** Observe-only industry brief Tool: RSS-only, never writes state or sends webhooks. */
+/** Observe-only industry brief Tool: first-party sources only, never writes state or sends webhooks. */
 export async function generateRivusIndustryBrief(
   value: unknown,
   dependencies: RivusIndustryBriefDependencies = {},

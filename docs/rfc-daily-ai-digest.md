@@ -10,7 +10,7 @@ Status: accepted for implementation
 silently remove subscription delivery. Noon and evening news keep their current contracts.
 
 The daily product combines the existing seven bounded Doubao queries with curated
-first-party feeds from `industry-feeds.json`. Every publishable item is backed by public
+first-party sources from `industry-feeds.json`. Every publishable item is backed by public
 evidence (`id`, normalized title, canonical URL, published time, cleaned excerpt and
 source tier). Editorial output is accepted only after a deterministic validator checks
 category, Chinese event shape, known references, public URLs, length, duplicates,

@@ -8,7 +8,7 @@ import {
 export type RunProduct = "subscriptions" | "frontier";
 export type RunSourceResult = {
   id: string;
-  kind: "github-home" | "github-events" | "rss";
+  kind: "github-home" | "github-events" | "rss" | "web-page";
   name: string;
   url?: string;
   status: "ok" | "failed" | "skipped";

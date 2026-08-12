@@ -53,3 +53,5 @@ Use tags as ranking hints, not categories for display. Prefer terms already used
 - RSS 2.0 and Atom are supported.
 - `feeds.json` is tracked as this repository's shared RSS subscription list.
 - The digest command always uses `feeds.json`; do not rely on `RSS_FEEDS` or `RSS_FEEDS_FILE` overrides.
+- Industry sources live in `industry-feeds.json`. Prefer first-party RSS/Atom; a `type: "page"` fallback must use an explicit official URL and child path prefix, expose dated same-origin links, permit automated access, and pass a real `rss-summary industry --dry-run` before review.
+- Never assume every site has `/news`, guess paths at runtime, use Sitemap `lastmod` as publication time, or bypass HTTP 403 / robots restrictions.

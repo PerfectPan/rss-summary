@@ -21,7 +21,7 @@ Scope: what the repository uses, why, and when to revisit.
 | `effect` 3.x | `application/` use cases + entrypoint boundaries | Typed `Effect<Result, Error>` channels, `Effect.tryPromise` at ports, `Effect.runPromise` at entrypoints. Adoption is deliberately shallow (no `Context`/`Layer`). | Use cases need shared retry/rate-limit services; then move to `Context`/`Layer`. |
 | Vite+ / Vitest 4 | `tests/`, `vite.config.ts` | `vp test` + v8 coverage thresholds; imports use `vite-plus/test`. | — |
 | `fast-xml-parser` | `infrastructure/rss.ts` | RSS 2.0 / Atom parsing; small, dependency-light. | — |
-| `cheerio` | `infrastructure/github-home.ts` | Conduit HTML snapshot extraction on the server side. | — |
+| `cheerio` | `infrastructure/github-home.ts`, `infrastructure/web-page.ts` | Server-side extraction for GitHub Home snapshots and explicitly configured official listing pages. | A source requires JavaScript rendering or loses semantic link/time markup. |
 | `playwright` | `infrastructure/github-home.ts` | GitHub Home login flow and rendered-browser fallback. The browser-automation code is explicitly excluded from unit coverage (`/* v8 ignore start */`) and exercised manually. | A different Home source replaces it. |
 | `tsx` | dev only | Runs TS entrypoints directly (`pnpm digest`, `pnpm feeds`). | — |
 | `lodash-es` | `infrastructure/parsing.ts` (and similar helpers) | Named path imports (`lodash-es/isPlainObject.js`) for JSON coercion helpers; tree-shakeable for bundlers, small module graph under Node ESM. Prefer library helpers over one-off reinvention when semantics match. | — |
@@ -35,7 +35,7 @@ presentation (runPromise) → application (Effect.gen + attempt) → ports (Prom
 ```
 
 - Application use cases return `Effect<Result, Error>`; `attempt()` in `application/effect.ts` lifts promise-returning ports with `Effect.tryPromise`, mapping any throw to `Error`.
-- Per-source failure isolation keeps ordered `Promise.allSettled` semantics inside `attempt()`; news search runs at most two requests concurrently and retries only explicit provider rate limits up to three attempts. Injected sleep/random ports keep backoff tests deterministic. Effect's structured concurrency is not yet used.
+- Per-source failure isolation keeps ordered settled-result semantics inside `attempt()`; official page fetches retry only transient network errors, HTTP 429, and HTTP 5xx up to three attempts. News search runs at most two requests concurrently and retries only explicit provider rate limits up to three attempts. Injected sleep/random ports keep backoff tests deterministic. Effect's structured concurrency is not yet used.
 - Domain rules are framework-free: no Effect, no IO, no infra imports.
 
 Deliberately not adopted yet:
@@ -54,7 +54,7 @@ Alternatives considered and rejected:
 | Alternative | Why rejected now | Revisit when |
 | --- | --- | --- |
 | Feature-slice / modular monolith (`subscriptions/`, `frontier/`, `news/`) | The products share a small domain kernel and one Rivus profile; slicing would duplicate the kernel or add package indirection. | A product gains an independent deployment and lifecycle. |
-| Pure pipeline/filter organization (each step its own folder) | Source interchangeability (the pipeline's main win) is not a real requirement today; the sources are fixed. The layered structure already keeps steps pure. | New interchangeable sources beyond the planned HF/PH tier. |
+| Pure pipeline/filter organization (each step its own folder) | RSS and verified page adapters are interchangeable at the infrastructure boundary, but they share one application policy after normalization. A second folder hierarchy would add indirection without separating a lifecycle. | A source type gains distinct ranking, state, or deployment rules. |
 | Event sourcing / CQRS | Append-only run audits do not require a separate write/read model or replay semantics. | Never, absent a fundamental product change. |
 | Aggregates/repositories | State and audit artifacts are simple local JSON records around immutable domain data. | Persistence gains lifecycle rules or multiple writers. |
 | Microservices / multi-package | Single deployment unit; the Rivus plugin needs one module export. | Split when an independent deploy unit appears. |
@@ -92,7 +92,7 @@ Both jobs are intended to be required checks in the branch protection rule for `
 | File | Owner | Policy |
 | --- | --- | --- |
 | `feeds.json` | Explicit personal RSS subscriptions | Tracked; changed via `rss-summary feeds`. |
-| `industry-feeds.json` | Curated first-party frontier sources | Tracked; changed intentionally and live-tested. |
+| `industry-feeds.json` | Curated first-party RSS/Atom and verified listing-page sources | Tracked; changed intentionally and live-tested. |
 | `news-topics.json` | Noon/evening structured query, relevance, exclusion, source, and quota policy | Tracked; validated by `infrastructure/news-topics.ts`. |
 | `.env` / `.state/` | Local secrets, delivery/research state, and run audit artifacts | Gitignored. |
 

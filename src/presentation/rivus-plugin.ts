@@ -153,8 +153,8 @@ export function createRssSummaryPlugin(
       registry.registerTool({
         createExecutor: () => ({ execute: (input) => executeIndustryBrief(input) }),
         description:
-          "Generate a read-only frontier brief from curated official vendor, changelog, release, and research feeds",
-        digest: "sha256:rss-summary-generate-industry-brief-v1",
+          "Generate a read-only frontier brief from curated official feeds, listing pages, releases, and research sources",
+        digest: "sha256:rss-summary-generate-industry-brief-v2",
         id: RSS_SUMMARY_INDUSTRY_TOOL_ID,
         idempotency: "none",
         inputSchema: {
@@ -175,7 +175,7 @@ export function createRssSummaryPlugin(
           type: "object",
         },
         risk: "observe",
-        version: "1.0.0",
+        version: "1.1.0",
       });
       registry.registerAgentProfile({
         displayName: "Subscriptions & Frontier Briefs",

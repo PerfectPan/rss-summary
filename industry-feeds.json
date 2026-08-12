@@ -5,6 +5,20 @@
     "tags": ["Articles", "News"]
   },
   {
+    "type": "page",
+    "name": "Anthropic News",
+    "url": "https://www.anthropic.com/news",
+    "pathPrefixes": ["/news/"],
+    "tags": ["Articles", "News"]
+  },
+  {
+    "type": "page",
+    "name": "Cursor Changelog",
+    "url": "https://cursor.com/changelog",
+    "pathPrefixes": ["/changelog/"],
+    "tags": ["Developer Tools", "News"]
+  },
+  {
     "name": "Hugging Face Blog",
     "url": "https://huggingface.co/blog/feed.xml",
     "tags": ["Articles", "Blog"]
