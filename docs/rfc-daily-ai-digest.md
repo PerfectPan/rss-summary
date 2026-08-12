@@ -4,9 +4,10 @@ Status: accepted for implementation
 
 ## Decision
 
-`generate-digest` remains the on-demand **My subscriptions** product. The existing
-`morning-feed-digest` automation becomes a separate Daily AI Digest for the previous
-Asia/Shanghai calendar day. Noon and evening news keep their current contracts.
+`generate-digest` remains the scheduled and on-demand **My subscriptions** product. The existing
+`morning-feed-digest` ID continues to invoke it. Daily AI Digest uses the independent
+`daily-ai-digest` automation for the previous Asia/Shanghai calendar day, so enabling it cannot
+silently remove subscription delivery. Noon and evening news keep their current contracts.
 
 The daily product combines the existing seven bounded Doubao queries with curated
 first-party feeds from `industry-feeds.json`. Every publishable item is backed by public

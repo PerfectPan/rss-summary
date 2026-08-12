@@ -10,6 +10,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 
 import rssSummaryPlugin, {
   createRssSummaryPlugin,
+  RSS_SUMMARY_DAILY_AI_AUTOMATION_ID,
   RSS_SUMMARY_DAILY_AI_TOOL_ID,
   RSS_SUMMARY_EVENING_AUTOMATION_ID,
   RSS_SUMMARY_INDUSTRY_AUTOMATION_ID,
@@ -188,10 +189,11 @@ describe("rss-summary Rivus Plugin", () => {
     expect(tool.risk).toBe("observe");
   });
 
-  it("registers morning, noon, evening, and industry Automations with exact Tool grants", () => {
+  it("keeps subscriptions and Daily AI as separate Automations with exact Tool grants", () => {
     const registrations = register(rssSummaryPlugin);
     const occurrence = "2026-07-29T04:30:00.000Z";
     const morning = registrations.automations.get(RSS_SUMMARY_MORNING_AUTOMATION_ID)!;
+    const dailyAi = registrations.automations.get(RSS_SUMMARY_DAILY_AI_AUTOMATION_ID)!;
     const noon = registrations.automations.get(RSS_SUMMARY_NOON_AUTOMATION_ID)!;
     const evening = registrations.automations.get(RSS_SUMMARY_EVENING_AUTOMATION_ID)!;
     const industry = registrations.automations.get(RSS_SUMMARY_INDUSTRY_AUTOMATION_ID)!;
@@ -202,14 +204,19 @@ describe("rss-summary Rivus Plugin", () => {
       RSS_SUMMARY_NEWS_TOOL_ID,
       RSS_SUMMARY_INDUSTRY_TOOL_ID,
     ]);
-    expect(morning.requestedToolIds).toEqual([RSS_SUMMARY_DAILY_AI_TOOL_ID]);
+    expect(registrations.automations).toHaveLength(5);
+    expect(morning.requestedToolIds).toEqual([RSS_SUMMARY_TOOL_ID]);
+    expect(dailyAi.requestedToolIds).toEqual([RSS_SUMMARY_DAILY_AI_TOOL_ID]);
     expect(noon.requestedToolIds).toEqual([RSS_SUMMARY_NEWS_TOOL_ID]);
     expect(evening.requestedToolIds).toEqual([RSS_SUMMARY_NEWS_TOOL_ID]);
     expect(industry.requestedToolIds).toEqual([RSS_SUMMARY_INDUSTRY_TOOL_ID]);
-    expect(morning.createInput({ occurrence }).text).toContain(RSS_SUMMARY_DAILY_AI_TOOL_ID);
-    expect(morning.createInput({ occurrence }).text).toContain('"phase":"collect"');
-    expect(morning.createInput({ occurrence }).text).toContain('"phase":"render"');
-    expect(morning.createInput({ occurrence }).text).toContain("只能引用 collect 返回的 evidence");
+    expect(morning.createInput({ occurrence }).text).toContain(RSS_SUMMARY_TOOL_ID);
+    expect(morning.createInput({ occurrence }).text).toContain('"window":"previous-calendar-day"');
+    expect(morning.createInput({ occurrence }).text).toContain('"onlyNew":true');
+    expect(dailyAi.createInput({ occurrence }).text).toContain(RSS_SUMMARY_DAILY_AI_TOOL_ID);
+    expect(dailyAi.createInput({ occurrence }).text).toContain('"phase":"collect"');
+    expect(dailyAi.createInput({ occurrence }).text).toContain('"phase":"render"');
+    expect(dailyAi.createInput({ occurrence }).text).toContain("只能引用 collect 返回的 evidence");
     expect(noon.createInput({ occurrence }).text).toContain('"edition":"noon"');
     expect(evening.createInput({ occurrence }).text).toContain('"edition":"evening"');
     expect(industry.createInput({ occurrence }).text).toContain('"onlyNew":true');
