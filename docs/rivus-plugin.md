@@ -11,7 +11,8 @@
 | Tool | `rss-summary/generate-industry-brief` | curated official frontier feeds; papers stay pending |
 | Tool | `rss-summary/generate-news-brief` | bounded noon/evening authoritative web news |
 | Tool | `rss-summary/generate-daily-ai-digest` | two-phase grounded Daily AI evidence editing and rendering |
-| Automation | `rss-summary/morning-feed-digest` | previous Asia/Shanghai calendar day's Daily AI Digest |
+| Automation | `rss-summary/morning-feed-digest` | previous Asia/Shanghai calendar day's personal subscriptions |
+| Automation | `rss-summary/daily-ai-digest` | previous Asia/Shanghai calendar day's Daily AI Digest |
 | Automation | `rss-summary/daily-industry-brief` | current local calendar day's frontier updates |
 | Automation | `rss-summary/noon-news-brief` | current day 00:00 through noon occurrence |
 | Automation | `rss-summary/evening-news-brief` | current day 12:30 through evening occurrence |
@@ -58,6 +59,7 @@ The important manifest portion is the Plugin, one matching Agent/Endpoint, and t
       "tools": {
         "allow": [
           "rss-summary/generate-digest",
+          "rss-summary/generate-daily-ai-digest",
           "rss-summary/generate-industry-brief",
           "rss-summary/generate-news-brief"
         ]
@@ -80,7 +82,7 @@ The important manifest portion is the Plugin, one matching Agent/Endpoint, and t
 }
 ```
 
-Add Automation instances referencing the templates above. The morning template resolves the previous local day; industry uses the current local day; noon/evening use non-overlapping news windows. Rivus promotes the first Markdown heading into the Feishu card header.
+Add Automation instances referencing the templates above. The morning subscriptions and Daily AI templates both resolve the previous local day but remain independently scheduled and delivered; industry uses the current local day; noon/evening use non-overlapping news windows. Rivus promotes the first Markdown heading into the Feishu card header.
 
 ## Configure sources
 
@@ -138,4 +140,4 @@ npm run doctor
 npm run check-config
 ```
 
-Invoke each enabled template once in the foreground. Confirm the morning card covers the previous local calendar day, the frontier trace lists only official `industry-feeds.json` sources, noon/evening windows do not overlap, each Tool call returns unchanged Markdown, and the delivery ledger records the card outcome before enabling the service manager.
+Invoke each enabled template once in the foreground. Confirm the morning subscriptions card and the separate Daily AI card both cover the previous local calendar day, the frontier trace lists only official `industry-feeds.json` sources, noon/evening windows do not overlap, each Tool call returns unchanged Markdown, and the delivery ledger records the card outcome before enabling the service manager.

@@ -4,7 +4,7 @@
 
 一个定时信息简报 CLI：把“我明确订阅的内容”和“我应该知道的行业变化”分成两条链路。个人订阅合并 GitHub Home 与 `feeds.json`；行业前沿只跟踪厂商官方 Blog、News、Changelog、Release 和研究源。普通内容用一句话加链接；命中个人兴趣或明确涉及重大版本、GA、破坏性变更、弃用、安全事件的内容才展开摘要。CLI 可挂 webhook，也可作为 Rivus 插件被调度。
 
-Rivus 的 09:00 `morning-feed-digest` 保留稳定 automation ID，但主推送是前一北京时间自然日的 source-grounded Daily AI Digest；`generate-digest` 继续作为按需“我的订阅”能力。Daily AI Digest 使用现有七个新闻查询和经过验证的官方 RSS，按六个栏目输出可追溯的中文事件句，质量不足时不凑数。
+Rivus 的 `morning-feed-digest` 保留稳定 automation ID，并继续推送前一北京时间自然日的“我的订阅”；source-grounded Daily AI Digest 使用独立的 `daily-ai-digest` automation。Daily AI Digest 使用现有七个新闻查询和经过验证的官方 RSS，按六个栏目输出可追溯的中文事件句，质量不足时不凑数。具体时间由 Rivus manifest 分别绑定，避免两类产品互相覆盖。
 
 ## 示例输出
 
@@ -133,7 +133,7 @@ rss-summary runs show <run-label>
 
 ## Rivus Plugin
 
-本仓库导出 `rss-summary/rivus-plugin`：一个 Agent profile（`rss-digest`）+ 三个只读 Tool（`generate-digest` / `generate-news-brief` / `generate-industry-brief`）及对应调度模板。订阅和行业 Tool 携带 source/candidate audit；新闻 Tool 携带逐查询召回、淘汰原因、去重和配额漏斗。Rivus 自己的 trace 与投递 ledger 记录后续卡片投递。行业 Tool 不直接发布未研究论文，只报告待调研数量。安装、manifest 绑定、环境契约见 [docs/rivus-plugin.md](docs/rivus-plugin.md)。
+本仓库导出 `rss-summary/rivus-plugin`：一个 Agent profile（`rss-digest`）+ 四个只读 Tool（`generate-digest` / `generate-daily-ai-digest` / `generate-news-brief` / `generate-industry-brief`）及对应调度模板。订阅和行业 Tool 携带 source/candidate audit；新闻 Tool 携带逐查询召回、淘汰原因、去重和配额漏斗。Rivus 自己的 trace 与投递 ledger 记录后续卡片投递。行业 Tool 不直接发布未研究论文，只报告待调研数量。安装、manifest 绑定、环境契约见 [docs/rivus-plugin.md](docs/rivus-plugin.md)。
 
 ## Architecture
 

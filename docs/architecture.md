@@ -51,8 +51,9 @@ Dependencies point inward. Domain code must not import application, infrastructu
 
 ## Subscription workflow
 
-The subscription Tool remains on-demand. The 09:00 `morning-feed-digest` automation now invokes
-the Daily AI Digest instead; its ID, schedule and endpoint binding remain stable.
+The `morning-feed-digest` automation remains the scheduled **My subscriptions** product, preserving
+its stable ID and state history. Daily AI Digest uses the separate `daily-ai-digest` automation so
+deployments can bind both products without one replacing the other.
 
 `rss-summary digest` runs this sequence:
 
