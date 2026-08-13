@@ -1,6 +1,8 @@
 # Rivus Agent Plugin
 
-`rss-summary/rivus-plugin` is an external Plugin for `@rivus/agent`. The Host owns scheduling, model execution, Feishu delivery, credentials, traces, and the delivery ledger. This package owns source collection, filtering, ranking, audit data, and Markdown rendering.
+`rss-summary/rivus-plugin` is an external Plugin for `@rivus/agent`. The Host owns scheduling, model execution, channel rendering, Feishu delivery, credentials, traces, and the delivery ledger. This package owns source collection, filtering, ranking, audit data, and presentation semantics.
+
+Each Automation returns two compatible views of the same result: canonical Markdown remains the durable fallback, while `createPresentation` projects that Markdown into the channel-neutral Automation Presentation IR (`title`, metadata, sections, items, notes, and source links). A modern Rivus Host renders the IR with native channel components; an older Host safely falls back to Markdown. The Plugin never emits CardKit JSON or chooses Feishu colors, spacing, buttons, or containers.
 
 ## Registered surface
 
@@ -82,7 +84,7 @@ The important manifest portion is the Plugin, one matching Agent/Endpoint, and t
 }
 ```
 
-Add Automation instances referencing the templates above. The morning subscriptions and Daily AI templates both resolve the previous local day but remain independently scheduled and delivered; industry uses the current local day; noon/evening use non-overlapping news windows. Rivus promotes the first Markdown heading into the Feishu card header.
+Add Automation instances referencing the templates above. The morning subscriptions and Daily AI templates both resolve the previous local day but remain independently scheduled and delivered; industry uses the current local day; noon/evening use non-overlapping news windows. On modern Hosts, Rivus renders the Plugin-owned Automation Presentation IR; the first Markdown heading remains the legacy card-header fallback.
 
 ## Configure sources
 
@@ -140,4 +142,4 @@ npm run doctor
 npm run check-config
 ```
 
-Invoke each enabled template once in the foreground. Confirm the morning subscriptions card and the separate Daily AI card both cover the previous local calendar day, the frontier trace lists only official `industry-feeds.json` sources (including `web-page` source health), noon/evening windows do not overlap, each Tool call returns unchanged Markdown, and the delivery ledger records the card outcome before enabling the service manager.
+Invoke each enabled template once in the foreground. Confirm the morning subscriptions card and the separate Daily AI card both cover the previous local calendar day, the frontier trace lists only official `industry-feeds.json` sources (including `web-page` source health), noon/evening windows do not overlap, each Tool call returns unchanged Markdown, the structured card keeps source links as inline badges without a duplicate source appendix, and the delivery ledger records the card outcome before enabling the service manager.
