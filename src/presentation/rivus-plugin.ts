@@ -1,4 +1,9 @@
-import { RIVUS_PLUGIN_API_VERSION, type RivusPlugin, type RivusPluginRegistry } from "@rivus/agent";
+import {
+  RIVUS_PLUGIN_API_VERSION,
+  type RivusAutomationTemplate,
+  type RivusPlugin,
+  type RivusPluginRegistry,
+} from "@rivus/agent";
 import { Effect } from "effect";
 
 import {
@@ -11,6 +16,10 @@ import { generateRivusIndustryBrief, type RivusIndustryBriefResult } from "./riv
 import { generateRivusDigest, type RivusDigestResult } from "./rivus-digest.js";
 import { renderNewsBrief } from "./news-render.js";
 import { createRivusDailyAiDigestExecutor, type RivusDailyAiToolResult } from "./daily-ai-tool.js";
+import {
+  createRssAutomationPresentation,
+  type RssAutomationPresentation,
+} from "./automation-presentation.js";
 
 export const RSS_SUMMARY_TOOL_ID = "rss-summary/generate-digest";
 export const RSS_SUMMARY_NEWS_TOOL_ID = "rss-summary/generate-news-brief";
@@ -194,53 +203,78 @@ export function createRssSummaryPlugin(
           ],
         },
       });
-      registry.registerAutomation({
-        createInput: ({ occurrence }) => ({
-          text: `请只调用一次 ${RSS_SUMMARY_TOOL_ID}，输入 ${JSON.stringify({ occurrence, window: "previous-calendar-day", onlyNew: true, rssOnly: false })}。成功后仅将结果中的 markdown 字段原样返回，不添加任何说明。`,
+      registry.registerAutomation(
+        presentationAutomation({
+          createInput: ({ occurrence }) => ({
+            text: `请只调用一次 ${RSS_SUMMARY_TOOL_ID}，输入 ${JSON.stringify({ occurrence, window: "previous-calendar-day", onlyNew: true, rssOnly: false })}。成功后仅将结果中的 markdown 字段原样返回，不添加任何说明。`,
+          }),
+          createPresentation: ({ text }) => createRssAutomationPresentation(text),
+          id: RSS_SUMMARY_MORNING_AUTOMATION_ID,
+          profileId: RSS_SUMMARY_PROFILE_ID,
+          requestedSkillIds: [],
+          requestedToolIds: [RSS_SUMMARY_TOOL_ID],
         }),
-        id: RSS_SUMMARY_MORNING_AUTOMATION_ID,
-        profileId: RSS_SUMMARY_PROFILE_ID,
-        requestedSkillIds: [],
-        requestedToolIds: [RSS_SUMMARY_TOOL_ID],
-      });
-      registry.registerAutomation({
-        createInput: ({ occurrence }) => ({
-          text: `请严格按顺序完成 Daily AI Digest：\n1. 调用 ${RSS_SUMMARY_DAILY_AI_TOOL_ID}，输入 ${JSON.stringify({ occurrence, phase: "collect" })}。\n2. 只能引用 collect 返回的 evidence，编辑 12–24 条（质量不足不凑数）中文事件句；每条必须使用允许的 category、90 字以内 headline 和一个或多个真实 evidence id 作为 refs。不得引入 evidence 中不存在的实体、数字、版本、日期或结论。\n3. 再调用同一 Tool，输入 ${JSON.stringify({ occurrence, phase: "render" })} 并增加 draft 字段，值为上一步编辑的 Array<{category, headline, refs}>。\n4. 仅将 render 返回的 markdown 字段原样返回，不得自行改写、添加或删除事实。`,
+      );
+      registry.registerAutomation(
+        presentationAutomation({
+          createInput: ({ occurrence }) => ({
+            text: `请严格按顺序完成 Daily AI Digest：\n1. 调用 ${RSS_SUMMARY_DAILY_AI_TOOL_ID}，输入 ${JSON.stringify({ occurrence, phase: "collect" })}。\n2. 只能引用 collect 返回的 evidence，编辑 12–24 条（质量不足不凑数）中文事件句；每条必须使用允许的 category、90 字以内 headline 和一个或多个真实 evidence id 作为 refs。不得引入 evidence 中不存在的实体、数字、版本、日期或结论。\n3. 再调用同一 Tool，输入 ${JSON.stringify({ occurrence, phase: "render" })} 并增加 draft 字段，值为上一步编辑的 Array<{category, headline, refs}>。\n4. 仅将 render 返回的 markdown 字段原样返回，不得自行改写、添加或删除事实。`,
+          }),
+          createPresentation: ({ text }) => createRssAutomationPresentation(text),
+          id: RSS_SUMMARY_DAILY_AI_AUTOMATION_ID,
+          profileId: RSS_SUMMARY_PROFILE_ID,
+          requestedSkillIds: [],
+          requestedToolIds: [RSS_SUMMARY_DAILY_AI_TOOL_ID],
         }),
-        id: RSS_SUMMARY_DAILY_AI_AUTOMATION_ID,
-        profileId: RSS_SUMMARY_PROFILE_ID,
-        requestedSkillIds: [],
-        requestedToolIds: [RSS_SUMMARY_DAILY_AI_TOOL_ID],
-      });
-      registry.registerAutomation({
-        createInput: ({ occurrence }) => ({
-          text: `请只调用一次 ${RSS_SUMMARY_NEWS_TOOL_ID}，输入 ${JSON.stringify({ occurrence, edition: "noon" })}。成功后仅将结果中的 markdown 字段原样返回，不添加任何说明。`,
+      );
+      registry.registerAutomation(
+        presentationAutomation({
+          createInput: ({ occurrence }) => ({
+            text: `请只调用一次 ${RSS_SUMMARY_NEWS_TOOL_ID}，输入 ${JSON.stringify({ occurrence, edition: "noon" })}。成功后仅将结果中的 markdown 字段原样返回，不添加任何说明。`,
+          }),
+          createPresentation: ({ text }) => createRssAutomationPresentation(text),
+          id: RSS_SUMMARY_NOON_AUTOMATION_ID,
+          profileId: RSS_SUMMARY_PROFILE_ID,
+          requestedSkillIds: [],
+          requestedToolIds: [RSS_SUMMARY_NEWS_TOOL_ID],
         }),
-        id: RSS_SUMMARY_NOON_AUTOMATION_ID,
-        profileId: RSS_SUMMARY_PROFILE_ID,
-        requestedSkillIds: [],
-        requestedToolIds: [RSS_SUMMARY_NEWS_TOOL_ID],
-      });
-      registry.registerAutomation({
-        createInput: ({ occurrence }) => ({
-          text: `请只调用一次 ${RSS_SUMMARY_NEWS_TOOL_ID}，输入 ${JSON.stringify({ occurrence, edition: "evening" })}。成功后仅将结果中的 markdown 字段原样返回，不添加任何说明。`,
+      );
+      registry.registerAutomation(
+        presentationAutomation({
+          createInput: ({ occurrence }) => ({
+            text: `请只调用一次 ${RSS_SUMMARY_NEWS_TOOL_ID}，输入 ${JSON.stringify({ occurrence, edition: "evening" })}。成功后仅将结果中的 markdown 字段原样返回，不添加任何说明。`,
+          }),
+          createPresentation: ({ text }) => createRssAutomationPresentation(text),
+          id: RSS_SUMMARY_EVENING_AUTOMATION_ID,
+          profileId: RSS_SUMMARY_PROFILE_ID,
+          requestedSkillIds: [],
+          requestedToolIds: [RSS_SUMMARY_NEWS_TOOL_ID],
         }),
-        id: RSS_SUMMARY_EVENING_AUTOMATION_ID,
-        profileId: RSS_SUMMARY_PROFILE_ID,
-        requestedSkillIds: [],
-        requestedToolIds: [RSS_SUMMARY_NEWS_TOOL_ID],
-      });
-      registry.registerAutomation({
-        createInput: ({ occurrence }) => ({
-          text: `请只调用一次 ${RSS_SUMMARY_INDUSTRY_TOOL_ID}，输入 ${JSON.stringify({ occurrence, onlyNew: true })}。成功后仅将结果中的 markdown 字段原样返回，不添加任何说明。`,
+      );
+      registry.registerAutomation(
+        presentationAutomation({
+          createInput: ({ occurrence }) => ({
+            text: `请只调用一次 ${RSS_SUMMARY_INDUSTRY_TOOL_ID}，输入 ${JSON.stringify({ occurrence, onlyNew: true })}。成功后仅将结果中的 markdown 字段原样返回，不添加任何说明。`,
+          }),
+          createPresentation: ({ text }) => createRssAutomationPresentation(text),
+          id: RSS_SUMMARY_INDUSTRY_AUTOMATION_ID,
+          profileId: RSS_SUMMARY_PROFILE_ID,
+          requestedSkillIds: [],
+          requestedToolIds: [RSS_SUMMARY_INDUSTRY_TOOL_ID],
         }),
-        id: RSS_SUMMARY_INDUSTRY_AUTOMATION_ID,
-        profileId: RSS_SUMMARY_PROFILE_ID,
-        requestedSkillIds: [],
-        requestedToolIds: [RSS_SUMMARY_INDUSTRY_TOOL_ID],
-      });
+      );
     },
   };
+}
+
+type PresentationAutomationTemplate = RivusAutomationTemplate & {
+  createPresentation(output: { occurrence: string; text: string }): RssAutomationPresentation;
+};
+
+function presentationAutomation(
+  template: PresentationAutomationTemplate,
+): PresentationAutomationTemplate {
+  return template;
 }
 
 export default createRssSummaryPlugin();

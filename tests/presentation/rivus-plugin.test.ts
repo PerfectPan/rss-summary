@@ -21,6 +21,7 @@ import rssSummaryPlugin, {
   RSS_SUMMARY_PROFILE_ID,
   RSS_SUMMARY_TOOL_ID,
 } from "../../src/presentation/rivus-plugin.js";
+import type { RssAutomationPresentation } from "../../src/presentation/automation-presentation.js";
 
 describe("rss-summary Rivus Plugin", () => {
   it("conforms as an external Plugin with four narrow read-only Tools", async () => {
@@ -221,8 +222,27 @@ describe("rss-summary Rivus Plugin", () => {
     expect(evening.createInput({ occurrence }).text).toContain('"edition":"evening"');
     expect(industry.createInput({ occurrence }).text).toContain('"onlyNew":true');
     expect(noon.createInput({ occurrence }).text).toContain("原样返回");
+    expect(
+      presentationTemplate(dailyAi).createPresentation({
+        occurrence,
+        text: "# Daily AI Digest · 2026-07-29\n\n1 条可信动态\n\n## 模型发布\n\n1. 新模型上线 [↗ #1](https://example.test/model)",
+      }),
+    ).toMatchObject({
+      schemaVersion: 1,
+      sections: [{ items: [{ headline: "新模型上线" }], title: "模型发布" }],
+    });
   });
 });
+
+function presentationTemplate(template: RivusAutomationTemplate): RivusAutomationTemplate & {
+  createPresentation(output: { occurrence: string; text: string }): RssAutomationPresentation;
+} {
+  if (!("createPresentation" in template))
+    throw new Error("Automation presentation adapter is missing");
+  return template as RivusAutomationTemplate & {
+    createPresentation(output: { occurrence: string; text: string }): RssAutomationPresentation;
+  };
+}
 
 function register(plugin: { register(registry: RivusPluginRegistry): void }): {
   automations: Map<string, RivusAutomationTemplate>;
