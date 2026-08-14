@@ -9,8 +9,16 @@ type AutomationPresentationItem = {
   sources: AutomationPresentationSource[];
 };
 
+export type RssAutomationPresentationKind =
+  | "daily-ai"
+  | "generic"
+  | "industry"
+  | "news"
+  | "subscriptions";
+
 export type RssAutomationPresentation = {
   footnote?: string;
+  kind: RssAutomationPresentationKind;
   meta: string[];
   schemaVersion: 1;
   sections: Array<{
@@ -28,7 +36,10 @@ export type RssAutomationPresentation = {
  * adapter in the Plugin preserves ownership of headings, items, notes, and
  * sources; the Host only decides how those semantics look in each channel.
  */
-export function createRssAutomationPresentation(markdown: string): RssAutomationPresentation {
+export function createRssAutomationPresentation(
+  markdown: string,
+  kind: RssAutomationPresentationKind = "generic",
+): RssAutomationPresentation {
   const lines = markdown
     .replace(/\r\n?/gu, "\n")
     .split("\n")
@@ -57,6 +68,12 @@ export function createRssAutomationPresentation(markdown: string): RssAutomation
     if (/^数据源状态[：:]/u.test(line)) {
       footnote = bounded(line, 240);
       activeItem = undefined;
+      continue;
+    }
+    if (/^来源[：:]/u.test(line)) {
+      const sourceName = bounded(line.replace(/^来源[：:]/u, ""), 60);
+      const source = activeItem?.sources.at(-1);
+      if (source) source.label = sourceName;
       continue;
     }
     const sectionTitle = readSectionTitle(line);
@@ -101,6 +118,7 @@ export function createRssAutomationPresentation(markdown: string): RssAutomation
 
   return {
     ...(footnote ? { footnote } : {}),
+    kind,
     meta,
     schemaVersion: 1,
     sections: sections.filter((section) => section.items.length > 0),
@@ -130,8 +148,12 @@ function parseInlineSources(value: string): {
   const sources: AutomationPresentationSource[] = [];
   const headline = value
     .replace(/\[(.+?)\]\((https?:\/\/[^)]+)\)/gu, (_match, label: string, url: string) => {
+      const normalizedLabel = label.replace(/\s*↗(?:\s*#\d+)?$/u, "").trim();
       sources.push({
-        label: /^↗\s*#\d+$/u.test(label) ? sourceLabel(url) : bounded(label, 60),
+        label:
+          !normalizedLabel || /^#\d+$/u.test(normalizedLabel)
+            ? sourceLabel(url)
+            : bounded(normalizedLabel, 60),
         url,
       });
       return "";

@@ -44,6 +44,6 @@ describe("candidate brief", () => {
     expect(markdown).toContain("**Expanded**");
     expect(markdown).toContain("What changed and why it matters.");
     expect(markdown).toContain("**Quick links**");
-    expect(markdown).toContain("Official 发布了「Routine update」。[查看原文]");
+    expect(markdown).toContain("发布了「Routine update」。[Official ↗]");
   });
 });

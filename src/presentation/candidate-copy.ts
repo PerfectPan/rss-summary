@@ -13,7 +13,7 @@ export function candidateCopy(candidate: CandidateProject): CandidateCopy {
   const url =
     candidate.url ?? candidate.repository?.htmlUrl ?? `https://github.com/${candidate.repo}`;
   const source = candidate.actors.join(", ") || candidate.events[0]?.sourceName || "未知来源";
-  const oneLine = oneLineFor(candidate, label, source);
+  const oneLine = oneLineFor(candidate, label);
   const fallback = candidate.repository?.description ?? oneLine;
   return {
     label,
@@ -24,10 +24,10 @@ export function candidateCopy(candidate: CandidateProject): CandidateCopy {
   };
 }
 
-function oneLineFor(candidate: CandidateProject, label: string, source: string): string {
-  if (candidate.category === "article") return `${source} 发布了「${label}」。`;
-  if (candidate.category === "release") return `${source} 发布了「${label}」。`;
-  if (candidate.category === "discovery") return `${source} 在 GitHub Home 推荐了 ${label}。`;
+function oneLineFor(candidate: CandidateProject, label: string): string {
+  if (candidate.category === "article") return `发布了「${label}」。`;
+  if (candidate.category === "release") return `发布了「${label}」。`;
+  if (candidate.category === "discovery") return `${label}`;
   const eventTitle = candidate.events[0]?.title;
   return eventTitle
     ? `${candidate.repo} 更新了「${boundedText(eventTitle, 100)}」。`
