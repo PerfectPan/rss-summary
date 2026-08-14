@@ -79,6 +79,24 @@ Cloudflare · 11:20
     expect(subscriptions.kind).toBe("generic");
   });
 
+  it("keeps a bold linked headline when it appears inside a list item", () => {
+    const presentation = createRssAutomationPresentation(`# 午间热点 · 2026-08-14
+
+1 条重要动态 · 00:00–12:30
+
+## 重大资本事件
+
+- **[Databricks 本想融资 10 亿却获 150 亿认购](https://example.test/databricks)**
+  时间：2026 年 08 月 14 日 04:41 · 来源：示例财经
+`);
+
+    expect(presentation.sections[0]?.items[0]).toMatchObject({
+      headline: "Databricks 本想融资 10 亿却获 150 亿认购",
+      note: "时间：2026 年 08 月 14 日 04:41 · 来源：示例财经",
+      sources: [{ url: "https://example.test/databricks" }],
+    });
+  });
+
   it("keeps the semantic source label out of the item note", () => {
     const presentation = createRssAutomationPresentation(
       `# 我的订阅 · 2026-08-13

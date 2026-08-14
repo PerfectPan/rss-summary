@@ -146,6 +146,13 @@ function parseInlineSources(value: string): {
   sources: AutomationPresentationSource[];
 } {
   const sources: AutomationPresentationSource[] = [];
+  const emphasizedLink = /^\*\*\[(.+?)\]\((https?:\/\/[^)]+)\)\*\*$/u.exec(value.trim());
+  if (emphasizedLink) {
+    return {
+      headline: emphasizedLink[1]!,
+      sources: [{ label: sourceLabel(emphasizedLink[2]!), url: emphasizedLink[2]! }],
+    };
+  }
   const headline = value
     .replace(/\[(.+?)\]\((https?:\/\/[^)]+)\)/gu, (_match, label: string, url: string) => {
       const normalizedLabel = label.replace(/\s*↗(?:\s*#\d+)?$/u, "").trim();
@@ -158,6 +165,7 @@ function parseInlineSources(value: string): {
       });
       return "";
     })
+    .replace(/^\*\*(.+)\*\*$/u, "$1")
     .replace(/\s+/gu, " ")
     .trim();
   return { headline, sources };
