@@ -48,7 +48,7 @@ function appendLinks(lines: string[], title: string, candidates: CandidateProjec
   lines.push(`**${title}**`, "");
   for (const candidate of candidates.slice(0, 20)) {
     const copy = candidateCopy(candidate);
-    lines.push(`- ${copy.oneLine}[查看原文](${copy.url})`);
+    lines.push(`- ${copy.oneLine}[${copy.source} ↗](${copy.url})`);
   }
   lines.push("");
 }

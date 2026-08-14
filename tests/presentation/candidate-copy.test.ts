@@ -18,7 +18,7 @@ describe("candidate copy", () => {
       description: "A concrete explanation.",
     });
 
-    expect(copy.oneLine).toBe("Example Blog 发布了「A useful post」。");
+    expect(copy.oneLine).toBe("发布了「A useful post」。");
     expect(copy.summary).toBe("A concrete explanation.");
   });
 
@@ -36,6 +36,6 @@ describe("candidate copy", () => {
       url: "https://github.com/example/tool/releases/1.0",
     });
 
-    expect(copy.oneLine).toBe("Example Releases 发布了「Version 1.0」。");
+    expect(copy.oneLine).toBe("发布了「Version 1.0」。");
   });
 });
