@@ -15,6 +15,7 @@ describe("rss Automation presentation", () => {
 `);
 
     expect(presentation).toMatchObject({
+      kind: "generic",
       meta: ["23 条可信动态 · 来源可追溯 · 质量不足不凑数"],
       schemaVersion: 1,
       sections: [
@@ -54,6 +55,10 @@ Cloudflare · 11:20
 **[MiniMax-AI/MiniMax-H3](https://github.com/MiniMax-AI/MiniMax-H3)**
 新模型仓库。
 来源：GitHub Home
+
+**其他更新**
+
+- 发布了「Deno 2.4」。[个人博客 ↗](https://deno.example.test/v2.4)
 `);
 
     expect(news.sections[0]?.items[0]).toMatchObject({
@@ -64,7 +69,35 @@ Cloudflare · 11:20
     expect(news.sections[0]?.title).toBe("AI 与 Agent");
     expect(subscriptions.sections[0]?.items[0]).toMatchObject({
       headline: "MiniMax-AI/MiniMax-H3",
-      note: "新模型仓库。 · GitHub Home",
+      note: "新模型仓库。",
+      sources: [{ label: "GitHub Home" }],
+    });
+    expect(subscriptions.sections[1]?.items[0]).toMatchObject({
+      headline: "发布了「Deno 2.4」。",
+      sources: [{ label: "个人博客" }],
+    });
+    expect(subscriptions.kind).toBe("generic");
+  });
+
+  it("keeps the semantic source label out of the item note", () => {
+    const presentation = createRssAutomationPresentation(
+      `# 我的订阅 · 2026-08-13
+
+2 条更新 · GitHub Home
+
+**重点摘要**
+
+**[owner/repo](https://github.com/owner/repo)**
+项目说明。
+来源：GitHub Home
+`,
+      "subscriptions",
+    );
+
+    expect(presentation.kind).toBe("subscriptions");
+    expect(presentation.sections[0]?.items[0]).toMatchObject({
+      note: "项目说明。",
+      sources: [{ label: "GitHub Home", url: "https://github.com/owner/repo" }],
     });
   });
 });
