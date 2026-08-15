@@ -2,7 +2,7 @@
 
 `rss-summary/rivus-plugin` is an external Plugin for `@rivus/agent`. The Host owns scheduling, model execution, channel rendering, Feishu delivery, credentials, traces, and the delivery ledger. This package owns source collection, filtering, ranking, audit data, and presentation semantics.
 
-Each Automation returns two compatible views of the same result: canonical Markdown remains the durable fallback, while `createPresentation` projects that Markdown into the channel-neutral Automation Presentation IR (`kind`, `title`, metadata, sections, items, notes, and source links). The adapter treats an explicit `来源：...` line as the semantic label for the preceding link rather than as a second item note, and keeps provider names out of event headlines. A modern Rivus Host renders the IR with native channel components; an older Host safely falls back to Markdown. The Plugin never emits CardKit JSON or chooses Feishu colors, spacing, buttons, or containers.
+Each Automation returns two compatible views of the same result: canonical Markdown remains the durable fallback, while `createPresentation` projects that Markdown into the channel-neutral Automation Presentation IR (`kind`, `title`, metadata, sections, items, notes, and source links). The adapter treats an explicit `来源：...` line as the semantic label for the preceding link rather than as a second item note, keeps collection labels out of event headlines, gives common providers readable badge labels, and collapses repeated provider badges per item. A modern Rivus Host renders the IR with native channel components; an older Host safely falls back to Markdown. The Plugin never emits CardKit JSON or chooses Feishu colors, spacing, buttons, or containers.
 
 ## Registered surface
 
@@ -36,7 +36,7 @@ cd /path/to/rivus-project
 npm install /path/to/rss-summary
 ```
 
-The supported `@rivus/agent` peer range is `^0.12.7`, matching the runtime version used by
+The supported `@rivus/agent` peer range is `>=0.12.7 <0.14.0`, covering the 0.12 and 0.13 runtime lines used by
 the production deployment and the version exercised by repository tests.
 
 ## Bind the Plugin

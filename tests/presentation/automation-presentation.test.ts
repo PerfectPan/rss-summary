@@ -11,7 +11,7 @@ describe("rss Automation presentation", () => {
 ## 模型发布
 
 1. DeepSeek-V4-Pro 正式版 API 上线 [↗ #1](https://api.example.test/deepseek)
-2. Qwen 发布新权重 [↗ #2](https://qwen.example.test/release) [↗ #3](https://hf.example.test/qwen)
+2. Codex CLI 发布新版本 [↗ #2](https://github.com/openai/codex/releases/tag/v1) [↗ #3](https://github.com/openai/codex/commit/abc) [↗ #4](https://github.com/openai/codex/issues/1)
 `);
 
     expect(presentation).toMatchObject({
@@ -26,13 +26,18 @@ describe("rss Automation presentation", () => {
               headline: "DeepSeek-V4-Pro 正式版 API 上线",
               sources: [{ label: "api.example.test", url: "https://api.example.test/deepseek" }],
             },
-            { headline: "Qwen 发布新权重", sources: expect.any(Array) },
+            {
+              headline: "Codex CLI 发布新版本",
+              sources: [
+                { label: "GitHub", url: "https://github.com/openai/codex/releases/tag/v1" },
+              ],
+            },
           ],
         },
       ],
       title: "Daily AI Digest · 2026-08-13",
     });
-    expect(presentation.sections[0]?.items[1]?.sources).toHaveLength(2);
+    expect(presentation.sections[0]?.items[1]?.sources).toHaveLength(1);
   });
 
   it("normalizes news cards and subscription summaries into the same IR", () => {
