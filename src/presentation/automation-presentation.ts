@@ -160,7 +160,17 @@ function parseInlineSources(value: string): {
     })
     .replace(/\s+/gu, " ")
     .trim();
-  return { headline, sources };
+  return { headline, sources: compactSources(sources) };
+}
+
+function compactSources(sources: AutomationPresentationSource[]): AutomationPresentationSource[] {
+  const labels = new Set<string>();
+  return sources.filter((source) => {
+    const key = source.label.toLocaleLowerCase("en-US");
+    if (labels.has(key)) return false;
+    labels.add(key);
+    return true;
+  });
 }
 
 function sectionId(title: string, index: number): string {
@@ -182,7 +192,10 @@ function sectionId(title: string, index: number): string {
 
 function sourceLabel(url: string): string {
   try {
-    return bounded(new URL(url).hostname.replace(/^www\./u, ""), 60);
+    const hostname = new URL(url).hostname.replace(/^www\./u, "");
+    if (hostname === "github.com") return "GitHub";
+    if (hostname === "github.blog") return "GitHub Blog";
+    return bounded(hostname, 60);
   } catch {
     return "来源";
   }

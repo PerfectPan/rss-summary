@@ -60,6 +60,6 @@
     "playwright": "^1.61.1"
   },
   "peerDependencies": {
-    "@rivus/agent": "^0.12.7"
+    "@rivus/agent": ">=0.12.7 <0.14.0"
   }
 }

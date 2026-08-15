@@ -218,6 +218,7 @@ describe("rss-summary Rivus Plugin", () => {
     expect(dailyAi.createInput({ occurrence }).text).toContain('"phase":"collect"');
     expect(dailyAi.createInput({ occurrence }).text).toContain('"phase":"render"');
     expect(dailyAi.createInput({ occurrence }).text).toContain("只能引用 collect 返回的 evidence");
+    expect(dailyAi.createInput({ occurrence }).text).toContain("Blog/Changelog/Releases");
     expect(noon.createInput({ occurrence }).text).toContain('"edition":"noon"');
     expect(evening.createInput({ occurrence }).text).toContain('"edition":"evening"');
     expect(industry.createInput({ occurrence }).text).toContain('"onlyNew":true');

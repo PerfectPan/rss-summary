@@ -111,9 +111,8 @@ describe("Daily AI digest use case", () => {
     expect(result.evidence).toHaveLength(2);
     expect(result.items.map(({ headline }) => headline)).toEqual([
       "Anthropic 为 Claude 输出新增机器可读标记",
-      "OpenAI 发布「Codex 2.0」",
     ]);
     expect(result.warnings).toEqual(["one source unavailable"]);
-    expect(result.deliveryReceipt.evidenceIds).toHaveLength(2);
+    expect(result.deliveryReceipt.evidenceIds).toHaveLength(1);
   });
 });

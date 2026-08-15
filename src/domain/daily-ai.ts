@@ -107,6 +107,8 @@ export function validateEditorialDraft(
     if (!dailyAiCategories.includes(category as DailyAiCategory))
       throw new Error("invalid category");
     if (!isEventHeadline(headline)) throw new Error("headline 不是合格的中文事件句");
+    if (hasCollectionLabelSubject(headline))
+      throw new Error("headline 不得包含 Blog/Changelog/Releases 等采集源标签");
     if (headline.length > 90) throw new Error("headline is too long");
     if (refs.length === 0 || refs.some((ref) => !known.has(ref)))
       throw new Error("unknown reference");
@@ -248,6 +250,14 @@ function isEventHeadline(value: string): boolean {
 
 const EVENT_ACTION_PATTERN =
   /发布|推出|上线|开放|开源|宣布|完成|收购|融资|更新|新增|支持|降低|提升|提高|修复|披露|生效|预告|提供|添加|保持|位列|升级|重置|敦促|暂停|合作|计划|扩大|停止|阐述|发文|启用/u;
+
+const COLLECTION_LABEL_PATTERN = /\b(?:blog|changelog|releases)\b/iu;
+
+function hasCollectionLabelSubject(headline: string): boolean {
+  const actionIndex = headline.search(EVENT_ACTION_PATTERN);
+  const subject = actionIndex > 0 ? headline.slice(0, actionIndex) : headline;
+  return COLLECTION_LABEL_PATTERN.test(subject);
+}
 
 function cleanText(value: string): string {
   return value.replace(/\s+/gu, " ").trim();

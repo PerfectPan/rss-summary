@@ -76,10 +76,41 @@ describe("Daily AI editorial domain", () => {
             headline: "OpenAI 升级 Codex 工具调用链路",
             refs: ["source-1"],
           },
+          {
+            category: "开发生态",
+            headline: "GitHub 发布 Changelog API 更新",
+            refs: ["source-1"],
+          },
         ],
-        [evidence({ excerpt: "OpenAI 为 Codex 添加机器可读标记，并升级工具调用链路。" })],
+        [
+          evidence({
+            excerpt:
+              "OpenAI 为 Codex 添加机器可读标记，并升级工具调用链路；GitHub 发布 Changelog API 更新。",
+          }),
+        ],
       ),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
+  });
+
+  it("rejects collection labels as headline prefixes", () => {
+    expect(() =>
+      validateEditorialDraft(
+        [
+          {
+            category: "开发生态",
+            headline: "Claude Code Releases 发布「v2.1.232」",
+            refs: ["source-1"],
+          },
+        ],
+        [
+          evidence({
+            excerpt: "Claude Code v2.1.232 release notes",
+            sourceName: "Claude Code Releases",
+            title: "v2.1.232",
+          }),
+        ],
+      ),
+    ).toThrow(/采集源/u);
   });
 
   it("merges the same entity event and keeps stable multi-source refs", () => {
@@ -105,6 +136,24 @@ describe("Daily AI editorial domain", () => {
       draft: [{ category: "unknown", headline: "很重要的 AI 新闻", refs: ["source-1"] }],
     });
     expect(result.items[0]?.headline).toBe("OpenAI 发布 Codex 2.0，工具调用延迟降低 30%");
+    expect(
+      result.audit.decisions.some((decision) => decision.reason === "invalid-editorial-output"),
+    ).toBe(true);
+  });
+
+  it("does not turn an English source title into a synthetic Chinese event", () => {
+    const result = buildDailyAiDigest(
+      [
+        evidence({
+          excerpt: "Claude Code v2.1.232 release notes",
+          sourceName: "Claude Code Releases",
+          title: "v2.1.232",
+        }),
+      ],
+      { draft: [{ category: "unknown", headline: "很重要的 AI 新闻", refs: ["source-1"] }] },
+    );
+
+    expect(result.items).toEqual([]);
     expect(
       result.audit.decisions.some((decision) => decision.reason === "invalid-editorial-output"),
     ).toBe(true);

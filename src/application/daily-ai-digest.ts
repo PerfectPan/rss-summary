@@ -61,7 +61,7 @@ export async function generateDailyAiDigest(
 function newsEvidence(result: RivusNewsBriefResult): DailyAiEvidence[] {
   return result.stories.map((story) => ({
     id: `news:${story.id}`,
-    title: eventHeadline(story.title, story.siteName),
+    title: evidenceTitle(story.title),
     url: story.canonicalUrl,
     publishedAt: story.publishTime,
     excerpt: story.summary,
@@ -82,7 +82,7 @@ function industryEvidence(document: IndustryBriefDocument): DailyAiEvidence[] {
     return [
       {
         id: `official:${event.id}`,
-        title: eventHeadline(title, sourceName),
+        title: evidenceTitle(title),
         url,
         publishedAt: event.createdAt,
         excerpt: candidate.description ?? event.summary ?? title,
@@ -94,18 +94,11 @@ function industryEvidence(document: IndustryBriefDocument): DailyAiEvidence[] {
   });
 }
 
-function eventHeadline(title: string, sourceName: string): string {
-  const clean = title
+function evidenceTitle(title: string): string {
+  return title
     .replace(/\s+/gu, " ")
     .trim()
     .replace(/[。.!！]+$/u, "");
-  if (
-    /发布|推出|上线|开放|开源|宣布|完成|收购|融资|更新|新增|支持|降低|提升|修复|披露|生效|预告|提供/u.test(
-      clean,
-    )
-  )
-    return clean;
-  return `${sourceName} 发布「${clean}」`;
 }
 
 function topicForIndustry(eventTypes: string[], title: string): string {

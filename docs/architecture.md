@@ -90,10 +90,13 @@ duplicates merge their references. The deterministic validator permits only know
 the six declared categories, event-shaped Chinese headlines and public URLs. The production Tool
 first returns evidence in a `collect` phase, then accepts only structured editorial records in a
 `render` phase. It verifies that entities overlap referenced evidence and that every numeric claim
-is present in that evidence; invalid editorial output falls back only to a source-grounded event
-title. A 12–24 item target is never a fill quota, and only `render` returns deliverable Markdown.
-Each source reference is rendered as a clickable inline badge beside its event; the document does
-not repeat the same references in a trailing source section.
+is present in that evidence. Collector labels such as `Blog`, `Changelog`, and `Releases` are not
+valid headline subjects. Invalid editorial output falls back only to source titles that are already
+event-shaped Chinese sentences; raw English titles are omitted instead of being wrapped in a
+synthetic `source published title` sentence. A 12–24 item target is never a fill quota, and only
+`render` returns deliverable Markdown. Source references are rendered as clickable inline badges
+beside each event; repeated labels from the same provider collapse to one badge, and the document
+does not repeat references in a trailing source section.
 
 ## Research workflow
 
