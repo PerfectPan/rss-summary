@@ -1,9 +1,11 @@
 import {
+  applySubscriptionSelection,
   buildSubscriptionEditorial,
   buildSubscriptionEvidence,
+  validateSubscriptionSelectionDraft,
   type SubscriptionEvidence,
 } from "../domain/subscription-editorial.js";
-import type { RunAudit } from "../domain/run-audit.js";
+import type { RunAudit, RunEditorialSelectionDecision } from "../domain/run-audit.js";
 import {
   collectRivusDigest,
   generateRivusDigest,
@@ -24,14 +26,32 @@ export type RivusSubscriptionToolResult =
       generatedAt: string;
       phase: "collect";
     }
-  | (RivusDigestResult & { phase: "render" });
+  | {
+      day?: string;
+      editorialContract: {
+        decisionShape: "Array<{ref, selected, reason}>";
+        selectionPolicy: "select only items worth sending; an empty selection suppresses delivery";
+      };
+      evidence: SubscriptionEvidence[];
+      generatedAt: string;
+      phase: "select";
+      selectedCount: number;
+      selection: ReadonlyArray<{ ref: string; selected: boolean; reason: string }>;
+    }
+  | SubscriptionRenderResult;
+
+type SubscriptionRenderResult = RivusDigestResult & {
+  phase: "render";
+  selectedCount: number;
+  selection: ReadonlyArray<{ ref: string; selected: boolean; reason: string }>;
+};
 
 type SubscriptionToolDependencies = {
   collect?: (value: unknown) => Promise<CollectedRivusDigest>;
   generate?: (value: unknown) => Promise<RivusDigestResult>;
 };
 
-/** Two-phase Tool executor: collect grounded evidence, then validate and render model copy. */
+/** Three-phase Tool executor: collect evidence, select worthwhile items, then render model copy. */
 export function createRivusSubscriptionExecutor(
   dependencies: SubscriptionToolDependencies = {},
 ): (value: unknown) => Promise<RivusSubscriptionToolResult | RivusDigestResult> {
@@ -64,13 +84,43 @@ export function createRivusSubscriptionExecutor(
       };
     }
 
-    const editorial = buildSubscriptionEditorial(collected.document, input.draft);
+    if (input.phase === "select") {
+      const evidence = buildSubscriptionEvidence(collected.document);
+      const selection = validateSubscriptionSelectionDraft(input.selection, evidence);
+      return {
+        ...(collected.day ? { day: collected.day } : {}),
+        editorialContract: {
+          decisionShape: "Array<{ref, selected, reason}>",
+          selectionPolicy:
+            "select only items worth sending; an empty selection suppresses delivery",
+        },
+        evidence: buildSubscriptionEvidence(collected.document),
+        generatedAt: collected.document.generatedAt,
+        phase: "select",
+        selectedCount: selection.decisions.filter((item) => item.selected).length,
+        selection: selection.decisions,
+      };
+    }
+
+    const evidence = buildSubscriptionEvidence(collected.document);
+    const selection = validateSubscriptionSelectionDraft(input.selection, evidence);
+    const selectedDocument = applySubscriptionSelection(collected.document, selection);
+    const editorial = buildSubscriptionEditorial(selectedDocument, input.draft);
     const document = collected.day
-      ? { ...collected.document, displayDate: collected.day }
-      : collected.document;
+      ? { ...selectedDocument, displayDate: collected.day }
+      : selectedDocument;
     const paperCandidateCount = document.candidates.filter(
       (candidate) => candidate.category === "paper",
     ).length;
+    const selectedCount = document.candidates.length - paperCandidateCount;
+    const audit = document.audit
+      ? applyEditorialSelectionToAudit(
+          document.audit as RunAudit,
+          selection.decisions,
+          selectedCount,
+          paperCandidateCount,
+        )
+      : undefined;
     cache.delete(key);
     return {
       candidateCount: document.candidates.length - paperCandidateCount,
@@ -78,33 +128,37 @@ export function createRivusSubscriptionExecutor(
       markdown: renderMarkdownDigest(document, { summaries: editorial.summaries }),
       paperCandidateCount,
       phase: "render",
+      selectedCount,
+      selection: selection.decisions,
       ...(document.windowLabel ? { windowLabel: document.windowLabel } : {}),
-      ...(document.audit ? { audit: document.audit as RunAudit } : {}),
+      ...(audit ? { audit } : {}),
     };
   };
 }
 
 function parseInput(value: unknown): {
   draft?: unknown;
-  phase?: "collect" | "render";
+  phase?: "collect" | "select" | "render";
   request: Record<string, unknown>;
+  selection?: unknown;
 } {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("Subscription Tool input must be an object.");
   }
   const record = value as Record<string, unknown>;
   const phase = record.phase;
-  if (phase !== undefined && phase !== "collect" && phase !== "render") {
-    throw new Error("phase must be collect or render.");
+  if (phase !== undefined && phase !== "collect" && phase !== "select" && phase !== "render") {
+    throw new Error("phase must be collect, select, or render.");
   }
   if (phase && typeof record.occurrence !== "string") {
-    throw new Error("two-phase subscription execution requires occurrence.");
+    throw new Error("multi-phase subscription execution requires occurrence.");
   }
-  const { draft, phase: _phase, ...request } = record;
+  const { draft, phase: _phase, selection, ...request } = record;
   return {
     draft,
     ...(phase ? { phase } : {}),
     request,
+    ...(selection === undefined ? {} : { selection }),
   };
 }
 
@@ -118,4 +172,31 @@ function cacheKey(request: Record<string, unknown>): string {
 
 function trimCache(cache: Map<string, CollectedRivusDigest>): void {
   while (cache.size > 8) cache.delete(cache.keys().next().value!);
+}
+
+function applyEditorialSelectionToAudit(
+  audit: RunAudit,
+  decisions: ReadonlyArray<RunEditorialSelectionDecision>,
+  selectedCount: number,
+  researchPending: number,
+): RunAudit {
+  const decisionByRef = new Map(decisions.map((decision) => [decision.ref, decision]));
+  return {
+    ...audit,
+    counts: { ...audit.counts, researchPending, selected: selectedCount },
+    candidates: audit.candidates.map((candidate) => {
+      const decision = decisionByRef.get(candidate.key);
+      return decision?.selected
+        ? candidate
+        : {
+            ...candidate,
+            reason: decision?.reason ?? "AI selection omitted this item",
+            status: "filtered" as const,
+          };
+    }),
+    editorialSelection: {
+      decisions: [...decisions],
+      selectedCount,
+    },
+  };
 }

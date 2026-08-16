@@ -30,6 +30,17 @@ export type SubscriptionEditorial = {
   summaries: ReadonlyMap<string, string>;
 };
 
+export type SubscriptionSelectionDecision = {
+  ref: string;
+  selected: boolean;
+  reason: string;
+};
+
+export type SubscriptionSelection = {
+  decisions: ReadonlyArray<SubscriptionSelectionDecision>;
+  selectedRefs: ReadonlySet<string>;
+};
+
 /** Build the bounded, source-grounded contract exposed to the automation model. */
 export function buildSubscriptionEvidence(document: DigestDocument): SubscriptionEvidence[] {
   const sections = selectCandidatePresentationSections(document.candidates, {
@@ -120,6 +131,58 @@ export function buildSubscriptionEditorial(
   return { evidence, summaries };
 }
 
+/**
+ * Validate the model's second-pass selection against the collected evidence.
+ * Omitted evidence is treated as rejected, never as implicitly selected.
+ */
+export function validateSubscriptionSelectionDraft(
+  value: unknown,
+  evidence: SubscriptionEvidence[],
+): SubscriptionSelection {
+  if (!Array.isArray(value)) throw new Error("selection output must be an array");
+  const byId = new Map(evidence.map((item) => [item.id, item]));
+  const seen = new Set<string>();
+  const decisions: SubscriptionSelectionDecision[] = [];
+
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object") throw new Error("selection item must be an object");
+    const record = entry as Record<string, unknown>;
+    const ref = typeof record.ref === "string" ? record.ref : "";
+    if (!byId.has(ref)) throw new Error(`unknown selection reference: ${ref}`);
+    if (seen.has(ref)) throw new Error(`duplicate selection reference: ${ref}`);
+    if (typeof record.selected !== "boolean")
+      throw new Error(`selection must specify selected: ${ref}`);
+    const reason = boundedSelectionReason(record.reason);
+    seen.add(ref);
+    decisions.push({ ref, selected: record.selected, reason });
+  }
+
+  for (const item of evidence) {
+    if (seen.has(item.id)) continue;
+    decisions.push({
+      ref: item.id,
+      selected: false,
+      reason: "AI selection omitted this item",
+    });
+  }
+
+  return {
+    decisions,
+    selectedRefs: new Set(decisions.filter((item) => item.selected).map((item) => item.ref)),
+  };
+}
+
+/** Apply the AI selection before editorial summaries and presentation rendering. */
+export function applySubscriptionSelection(
+  document: DigestDocument,
+  selection: SubscriptionSelection,
+): DigestDocument {
+  const candidates = document.candidates.filter((candidate) =>
+    selection.selectedRefs.has(candidateIdentity(candidate)),
+  );
+  return { ...document, candidates };
+}
+
 export function subscriptionEvidenceId(candidate: CandidateProject): string {
   return candidateIdentity(candidate);
 }
@@ -157,6 +220,13 @@ function cleanSummary(value: unknown): string {
   const sentences = normalizedSentenceStops.match(/[^。！？!?；;]+[。！？!?；;]?/gu) ?? [];
   if (sentences.length > 2) throw new Error("summary must contain at most two sentences");
   return summary;
+}
+
+function boundedSelectionReason(value: unknown): string {
+  if (typeof value !== "string") throw new Error("selection reason must be a string");
+  const reason = bounded(value, 240);
+  if (reason.length < 4) throw new Error("selection reason is too short");
+  return reason;
 }
 
 function acceptValidSubscriptionEditorialItems(

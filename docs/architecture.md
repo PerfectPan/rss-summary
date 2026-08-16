@@ -65,7 +65,7 @@ deployments can bind both products without one replacing the other.
 5. Rank candidates and bound the paper queue.
 6. Under `--only-new`, filter only previously delivered event IDs. Research cache entries do not suppress new subscription events.
 7. Assign `link`, `summary`, or `research` presentation depth.
-8. In Rivus, run the subscription Tool in two phases. `collect` returns typed evidence: repository facts are deterministic, while PR/RSS evidence marks whether a short editorial summary is required. The model writes only `Array<{ref, summary}>`; `render` rejects unknown references and ungrounded numeric claims, then falls back to a compact source excerpt when editorial output is invalid.
+8. In Rivus, run the subscription Tool in three phases. `collect` returns typed evidence, `select` requires the model to decide whether every RSS/GitHub item is worth pushing with a reason, and `render` filters to `selected=true` before validating `Array<{ref, summary}>` and ungrounded numeric claims. An empty selection is an auditable suppressed run rather than an empty card.
 9. Render, deliver, record an audit artifact, then update seen state after successful non-dry delivery.
 
 The CLI remains deterministic and renders source excerpts directly. The scheduled Rivus path adds the model editorial pass. This keeps ingestion/ranking/facts inside `rss-summary`, uses the Host model only for bounded copy editing, and leaves channel layout to Rivus Renderer. The industry frontier, noon/evening news, and Daily AI products retain their existing workflows; an already edited frontier headline is not summarized again by the subscription pass.
