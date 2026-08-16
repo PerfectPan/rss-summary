@@ -29,6 +29,8 @@ export function renderMarkdownDigest(
     compactTitle: "其他更新",
     emptyMessage: "今天没有新的订阅内容。",
     pendingMessage: (count) => `另有 ${count} 篇论文等待原文核验，暂不直接推送。`,
+    semanticSummaries: true,
+    summaryLimit: 20,
     summaries: options.summaries,
   });
 }

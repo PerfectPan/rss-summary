@@ -1,4 +1,5 @@
-import type { CandidateProject, DigestDocument } from "./digest.js";
+import { selectCandidatePresentationSections } from "./attention.js";
+import { candidateIdentity, type CandidateProject, type DigestDocument } from "./digest.js";
 import { compactSummary, formatCompactCount } from "./text.js";
 
 export type SubscriptionEvidenceKind =
@@ -31,7 +32,13 @@ export type SubscriptionEditorial = {
 
 /** Build the bounded, source-grounded contract exposed to the automation model. */
 export function buildSubscriptionEvidence(document: DigestDocument): SubscriptionEvidence[] {
+  const sections = selectCandidatePresentationSections(document.candidates, {
+    semanticSummaries: true,
+    summaryLimit: 20,
+  });
+  const visible = new Set([...sections.summaries, ...sections.links]);
   return document.candidates.flatMap((candidate) => {
+    if (!visible.has(candidate)) return [];
     if (candidate.category === "paper") return [];
     const event = candidate.events[0];
     const kind = evidenceKind(candidate);
@@ -97,14 +104,7 @@ export function buildSubscriptionEditorial(
   draft?: unknown,
 ): SubscriptionEditorial {
   const evidence = buildSubscriptionEvidence(document);
-  let items: SubscriptionEditorialItem[] = [];
-  if (draft !== undefined) {
-    try {
-      items = validateSubscriptionEditorialDraft(draft, evidence);
-    } catch {
-      items = [];
-    }
-  }
+  const items = acceptValidSubscriptionEditorialItems(draft, evidence);
   const supplied = new Map(items.map(({ ref, summary }) => [ref, summary]));
   const summaries = new Map<string, string>();
   for (const item of evidence) {
@@ -121,19 +121,7 @@ export function buildSubscriptionEditorial(
 }
 
 export function subscriptionEvidenceId(candidate: CandidateProject): string {
-  const event = candidate.events[0];
-  if (candidate.eventTypes.includes("pull_request")) {
-    return `github-pull-request:${candidate.repo}:${event?.prNumber ?? event?.id ?? "unknown"}`;
-  }
-  if (candidate.source === "rss") {
-    return `rss-${candidate.category}:${event?.id ?? candidate.repo}`;
-  }
-  if (candidate.source === "web") {
-    return `web-${candidate.category}:${event?.id ?? candidate.repo}`;
-  }
-  if (candidate.category === "discovery") return `github-repository:${candidate.repo}`;
-  if (candidate.category === "release") return `github-release:${event?.id ?? candidate.repo}`;
-  return `github-activity:${event?.id ?? candidate.repo}`;
+  return candidateIdentity(candidate);
 }
 
 function evidenceKind(candidate: CandidateProject): SubscriptionEvidenceKind {
@@ -165,9 +153,30 @@ function cleanSummary(value: unknown): string {
   if (typeof value !== "string") throw new Error("summary must be a string");
   const summary = bounded(value, 180);
   if (summary.length < 8) throw new Error("summary is too short");
-  const sentences = summary.match(/[^。！？!?]+[。！？!?]?/gu) ?? [];
+  const normalizedSentenceStops = summary.replace(/\.(?=\s|$)/gu, "。");
+  const sentences = normalizedSentenceStops.match(/[^。！？!?；;]+[。！？!?；;]?/gu) ?? [];
   if (sentences.length > 2) throw new Error("summary must contain at most two sentences");
   return summary;
+}
+
+function acceptValidSubscriptionEditorialItems(
+  value: unknown,
+  evidence: SubscriptionEvidence[],
+): SubscriptionEditorialItem[] {
+  if (!Array.isArray(value)) return [];
+  const accepted: SubscriptionEditorialItem[] = [];
+  const seen = new Set<string>();
+  for (const entry of value) {
+    try {
+      const item = validateSubscriptionEditorialDraft([entry], evidence)[0];
+      if (!item || seen.has(item.ref)) continue;
+      seen.add(item.ref);
+      accepted.push(item);
+    } catch {
+      // A malformed model item must not discard other grounded summaries.
+    }
+  }
+  return accepted;
 }
 
 function numericClaims(value: string): string[] {

@@ -15,8 +15,11 @@ describe("candidate presentation depth", () => {
     ).toBe("link");
   });
 
-  it("always expands RSS publications and pull requests that need semantic summaries", () => {
-    expect(presentationDepthForCandidate(candidate({ score: 30 }))).toBe("summary");
+  it("expands RSS publications and pull requests only for the subscription policy", () => {
+    expect(presentationDepthForCandidate(candidate({ score: 30 }))).toBe("link");
+    expect(
+      presentationDepthForCandidate(candidate({ score: 30 }), { semanticSummaries: true }),
+    ).toBe("summary");
     expect(
       presentationDepthForCandidate(
         candidate({
@@ -26,6 +29,7 @@ describe("candidate presentation depth", () => {
           eventTypes: ["pull_request"],
           score: 20,
         }),
+        { semanticSummaries: true },
       ),
     ).toBe("summary");
   });

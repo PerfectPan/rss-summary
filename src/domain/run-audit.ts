@@ -1,6 +1,7 @@
 import { candidateIdentity, type CandidateProject } from "./digest.js";
 import {
   presentationDecisionForCandidate,
+  type PresentationPolicy,
   type PresentationDepth,
   type PresentationReasonCode,
 } from "./attention.js";
@@ -59,9 +60,10 @@ export function candidateDecision(
   candidate: CandidateProject,
   selectedCandidates: CandidateProject[],
   reasonWhenFiltered: (candidate: CandidateProject) => string,
+  presentationPolicy: PresentationPolicy = {},
 ): RunCandidateDecision {
   const selected = selectedCandidates.includes(candidate);
-  const presentation = presentationDecisionForCandidate(candidate);
+  const presentation = presentationDecisionForCandidate(candidate, presentationPolicy);
   const depth = presentation.depth;
   return {
     key: candidateIdentity(candidate),
