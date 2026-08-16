@@ -8,7 +8,26 @@ import type { CandidateProject } from "../../src/domain/digest.js";
 
 describe("candidate presentation depth", () => {
   it("keeps ordinary trusted-source updates compact", () => {
-    expect(presentationDepthForCandidate(candidate({ score: 30 }))).toBe("link");
+    expect(
+      presentationDepthForCandidate(
+        candidate({ category: "release", eventTypes: ["release"], score: 30 }),
+      ),
+    ).toBe("link");
+  });
+
+  it("always expands RSS publications and pull requests that need semantic summaries", () => {
+    expect(presentationDepthForCandidate(candidate({ score: 30 }))).toBe("summary");
+    expect(
+      presentationDepthForCandidate(
+        candidate({
+          repo: "example/project",
+          source: "github",
+          category: "activity",
+          eventTypes: ["pull_request"],
+          score: 20,
+        }),
+      ),
+    ).toBe("summary");
   });
 
   it("expands explainable importance matches and routes papers to research", () => {
@@ -26,7 +45,11 @@ describe("candidate presentation depth", () => {
   });
 
   it("does not expand an item from score alone", () => {
-    expect(presentationDepthForCandidate(candidate({ score: 100 }))).toBe("link");
+    expect(
+      presentationDepthForCandidate(
+        candidate({ category: "release", eventTypes: ["release"], score: 100 }),
+      ),
+    ).toBe("link");
     expect(presentationDepthForCandidate(candidate({ category: "release", score: 85 }))).toBe(
       "link",
     );
@@ -35,16 +58,33 @@ describe("candidate presentation depth", () => {
   it("uses repeated mentions only for ranking, not for summary expansion", () => {
     expect(
       presentationDepthForCandidate(
-        candidate({ score: 120, reasons: ["multiple followed mentions"] }),
+        candidate({
+          category: "release",
+          eventTypes: ["release"],
+          score: 120,
+          reasons: ["multiple followed mentions"],
+        }),
       ),
     ).toBe("link");
     expect(
       presentationDepthForCandidate(
-        candidate({ score: 65, reasons: ["GitHub Home announcement"] }),
+        candidate({
+          category: "release",
+          eventTypes: ["release"],
+          score: 65,
+          reasons: ["GitHub Home announcement"],
+        }),
       ),
     ).toBe("link");
     expect(
-      presentationDepthForCandidate(candidate({ score: 55, reasons: ["pull request merged"] })),
+      presentationDepthForCandidate(
+        candidate({
+          category: "release",
+          eventTypes: ["release"],
+          score: 55,
+          reasons: ["pull request merged"],
+        }),
+      ),
     ).toBe("link");
   });
 

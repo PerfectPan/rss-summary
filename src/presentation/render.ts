@@ -3,7 +3,10 @@ import { renderCandidateBrief } from "./candidate-brief.js";
 
 export type { DigestDocument };
 
-export function renderMarkdownDigest(document: DigestDocument): string {
+export function renderMarkdownDigest(
+  document: DigestDocument,
+  options: { summaries?: ReadonlyMap<string, string> } = {},
+): string {
   const date = document.displayDate ?? document.generatedAt.slice(0, 10);
   const publishableCount = document.candidates.filter(
     (candidate) => candidate.category !== "paper",
@@ -26,6 +29,7 @@ export function renderMarkdownDigest(document: DigestDocument): string {
     compactTitle: "其他更新",
     emptyMessage: "今天没有新的订阅内容。",
     pendingMessage: (count) => `另有 ${count} 篇论文等待原文核验，暂不直接推送。`,
+    summaries: options.summaries,
   });
 }
 

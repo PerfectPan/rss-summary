@@ -214,6 +214,9 @@ describe("rss-summary Rivus Plugin", () => {
     expect(morning.createInput({ occurrence }).text).toContain(RSS_SUMMARY_TOOL_ID);
     expect(morning.createInput({ occurrence }).text).toContain('"window":"previous-calendar-day"');
     expect(morning.createInput({ occurrence }).text).toContain('"onlyNew":true');
+    expect(morning.createInput({ occurrence }).text).toContain('"phase":"collect"');
+    expect(morning.createInput({ occurrence }).text).toContain('"phase":"render"');
+    expect(morning.createInput({ occurrence }).text).toContain("summaryPolicy=required");
     expect(dailyAi.createInput({ occurrence }).text).toContain(RSS_SUMMARY_DAILY_AI_TOOL_ID);
     expect(dailyAi.createInput({ occurrence }).text).toContain('"phase":"collect"');
     expect(dailyAi.createInput({ occurrence }).text).toContain('"phase":"render"');

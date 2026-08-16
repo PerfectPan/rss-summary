@@ -17,7 +17,8 @@ describe("run audit candidate decisions", () => {
     });
     expect(candidateDecision(filtered, [selected], () => "already delivered")).toMatchObject({
       status: "filtered",
-      depth: "link",
+      depth: "summary",
+      presentationReasonCode: "semantic-summary",
       reason: "already delivered",
     });
   });

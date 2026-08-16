@@ -150,18 +150,40 @@ export function buildCandidateProjects(
   events: ActivityCard[],
   context: BuildCandidatesContext,
 ): CandidateProject[] {
-  const byRepo = new Map<string, ActivityCard[]>();
+  const groups = new Map<string, { repo: string; events: ActivityCard[] }>();
 
   for (const event of events) {
     if (!isHighSignal(event)) continue;
-    const existing = byRepo.get(event.repo) ?? [];
-    existing.push(event);
-    byRepo.set(event.repo, existing);
+    const key = candidateGroupKey(event);
+    const group = groups.get(key) ?? { repo: event.repo, events: [] };
+    group.events.push(event);
+    groups.set(key, group);
   }
 
-  return [...byRepo.entries()]
-    .map(([repo, repoEvents]) => scoreRepo(repo, repoEvents, context))
+  return [...groups.values()]
+    .map(({ repo, events: groupedEvents }) => scoreRepo(repo, groupedEvents, context))
     .sort((a, b) => b.score - a.score || a.repo.localeCompare(b.repo));
+}
+
+/**
+ * A repository is the identity for discovery signals, while content-bearing
+ * events keep their own identity. Otherwise a star and multiple pull requests
+ * from the same repository collapse into one semantically ambiguous card.
+ */
+function candidateGroupKey(event: ActivityCard): string {
+  if (event.type === "pull_request") {
+    return `github-pull-request:${event.repo}:${event.prNumber ?? event.id}`;
+  }
+  if (
+    event.source === "rss" ||
+    event.source === "web" ||
+    event.type === "article" ||
+    event.type === "paper"
+  ) {
+    return `publication:${event.htmlUrl ?? event.id}`;
+  }
+  if (event.type === "release" && event.htmlUrl) return `github-release:${event.htmlUrl}`;
+  return `github-repository:${event.repo}`;
 }
 
 /**
@@ -184,6 +206,21 @@ export function selectResearchCandidates(
   return candidates.filter(
     (candidate) => candidate.category !== "paper" || selectedPapers.has(candidate),
   );
+}
+
+/** Stable semantic identity used by audits and research state. */
+export function candidateIdentity(candidate: CandidateProject): string {
+  const event = candidate.events[0];
+  if (candidate.eventTypes.includes("pull_request")) {
+    return `github-pull-request:${candidate.repo}:${event?.prNumber ?? event?.id ?? "unknown"}`;
+  }
+  if (candidate.source === "rss" || candidate.source === "web") {
+    return `publication:${candidate.url ?? event?.htmlUrl ?? event?.id ?? candidate.repo}`;
+  }
+  if (candidate.category === "release") {
+    return `github-release:${candidate.url ?? event?.id ?? candidate.repo}`;
+  }
+  return `github-repository:${candidate.repo}`;
 }
 
 function scoreRepo(
@@ -354,7 +391,12 @@ function sourceFor(events: ActivityCard[]): ActivitySource {
 
 function labelFor(repo: string, events: ActivityCard[]): string | undefined {
   const publication = publicationEvent(events);
-  return publication?.title ?? (publication ? repo.replace(/^rss:/u, "") : undefined);
+  if (publication) return publication.title ?? repo.replace(/^(?:rss|web):/u, "");
+  const pullRequest = pullRequestEvent(events);
+  if (!pullRequest) return undefined;
+  const number = pullRequest.prNumber ? ` #${pullRequest.prNumber}` : "";
+  const title = pullRequest.title ? ` · ${pullRequest.title}` : "";
+  return `${repo}${number}${title}`;
 }
 
 function urlFor(
@@ -363,16 +405,18 @@ function urlFor(
   repository: RepositoryMetadata | undefined,
 ): string | undefined {
   const publication = publicationEvent(events);
+  const pullRequest = pullRequestEvent(events);
   return (
     publication?.htmlUrl ??
     publication?.sourceUrl ??
+    pullRequest?.htmlUrl ??
     repository?.htmlUrl ??
     `https://github.com/${repo}`
   );
 }
 
 function descriptionFor(events: ActivityCard[]): string | undefined {
-  return publicationEvent(events)?.summary;
+  return publicationEvent(events)?.summary ?? pullRequestEvent(events)?.summary;
 }
 
 function publicationEvent(events: ActivityCard[]): ActivityCard | undefined {
@@ -383,6 +427,10 @@ function publicationEvent(events: ActivityCard[]): ActivityCard | undefined {
       event.type === "article" ||
       event.type === "paper",
   );
+}
+
+function pullRequestEvent(events: ActivityCard[]): ActivityCard | undefined {
+  return events.find((event) => event.type === "pull_request");
 }
 
 function matchInterests(repository: RepositoryMetadata | undefined, interests: string[]): string[] {

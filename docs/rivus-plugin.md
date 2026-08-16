@@ -129,6 +129,8 @@ The digest and industry Tool results contain an `audit` object with:
 
 The news Tool's `audit` records each structured query's provider log ID, result counts, deterministic rejection reasons (`outside-window`, `insufficient-authority`, `intent-mismatch`, and others), canonical/title deduplication, topic quota filtering, and the final brief cap. Selected stories also expose a score breakdown for query rank, authority, freshness, and the bounded cross-query tie-break.
 
+The subscriptions Tool uses a bounded two-phase contract in scheduled runs. `collect` returns typed evidence and deterministic repository facts; only PR/RSS evidence with `summaryPolicy=required` is sent through the profile model for a 1–2 sentence Chinese summary. `render` accepts `Array<{ref, summary}>`, validates references and numeric claims, then returns Markdown. The frontier/news products do not pass through this subscription editor.
+
 The Tool cannot honestly claim Feishu delivery because delivery happens after Tool execution. Use the Rivus run trace for the exact Tool result and its Feishu delivery ledger for target, attempt, idempotency, and outcome. Direct CLI runs instead write paired `.state/runs/...json` and `.md` artifacts.
 
 ## Verify
@@ -142,4 +144,4 @@ npm run doctor
 npm run check-config
 ```
 
-Invoke each enabled template once in the foreground. Confirm the morning subscriptions card and the separate Daily AI card both cover the previous local calendar day, the frontier trace lists only official `industry-feeds.json` sources (including `web-page` source health), noon/evening windows do not overlap, each Tool call returns unchanged Markdown, the structured card keeps semantic source links inline with each item without right-side button columns or a duplicate source appendix, and the delivery ledger records the card outcome before enabling the service manager.
+Invoke each enabled template once in the foreground. Confirm the morning subscriptions trace contains exactly one `collect` and one `render` call, repository rows retain deterministic stars/language facts, PR/RSS rows contain grounded summaries, and only the final render Markdown is returned. Confirm the separate Daily AI card covers the previous local calendar day, the frontier trace lists only official `industry-feeds.json` sources (including `web-page` source health), noon/evening windows do not overlap, the structured card keeps semantic source links inline with each item without right-side button columns or a duplicate source appendix, and the delivery ledger records the card outcome before enabling the service manager.
