@@ -27,6 +27,8 @@ export const RSS_SUMMARY_NEWS_TOOL_ID = "rss-summary/generate-news-brief";
 export const RSS_SUMMARY_INDUSTRY_TOOL_ID = "rss-summary/generate-industry-brief";
 export const RSS_SUMMARY_DAILY_AI_TOOL_ID = "rss-summary/generate-daily-ai-digest";
 export const RSS_SUMMARY_PROFILE_ID = "rss-digest";
+export const RSS_SUMMARY_AUTOMATION_SUPPRESSED =
+  "RIVUS_AUTOMATION_SUPPRESSED: no high-value subscription updates";
 export const RSS_SUMMARY_MORNING_AUTOMATION_ID = "rss-summary/morning-feed-digest";
 export const RSS_SUMMARY_DAILY_AI_AUTOMATION_ID = "rss-summary/daily-ai-digest";
 export const RSS_SUMMARY_NOON_AUTOMATION_ID = "rss-summary/noon-news-brief";
@@ -122,7 +124,7 @@ export function createRssSummaryPlugin(
           properties: {
             draft: {
               description:
-                "Grounded Array<{ref, summary}> produced only from collect evidence; required for render",
+                "Grounded Array<{ref, summary}> produced only from selected evidence; required for render",
               items: {
                 additionalProperties: false,
                 properties: {
@@ -145,8 +147,23 @@ export function createRssSummaryPlugin(
               type: "string",
             },
             onlyNew: { default: true, type: "boolean" },
-            phase: { enum: ["collect", "render"], type: "string" },
+            phase: { enum: ["collect", "select", "render"], type: "string" },
             rssOnly: { default: false, type: "boolean" },
+            selection: {
+              description:
+                "AI second-pass Array<{ref, selected, reason}> produced only from collect evidence; required for render",
+              items: {
+                additionalProperties: false,
+                properties: {
+                  reason: { maxLength: 240, minLength: 4, type: "string" },
+                  ref: { minLength: 1, type: "string" },
+                  selected: { type: "boolean" },
+                },
+                required: ["ref", "selected", "reason"],
+                type: "object",
+              },
+              type: "array",
+            },
             window: { enum: ["previous-calendar-day"], type: "string" },
           },
           type: "object",
@@ -224,7 +241,7 @@ export function createRssSummaryPlugin(
       registry.registerAutomation(
         presentationAutomation({
           createInput: ({ occurrence }) => ({
-            text: `请严格按顺序完成“我的订阅”：\n1. 调用 ${RSS_SUMMARY_TOOL_ID}，输入 ${JSON.stringify({ occurrence, window: "previous-calendar-day", onlyNew: true, rssOnly: false, phase: "collect" })}。\n2. 只处理 collect 返回且 summaryPolicy=required 的 evidence：为每条写 1–2 句、180 字以内的中文摘要，说明“这是什么/解决什么或文章讲了什么”；只能依据 title、rawText、facts，不得补写来源中没有的数字或事实。repository 的 stars、语言等 facts 是确定性信息，不要改写，也不要为 summaryPolicy=none 的条目生成摘要。\n3. 再调用同一 Tool，输入 ${JSON.stringify({ occurrence, window: "previous-calendar-day", onlyNew: true, rssOnly: false, phase: "render" })} 并增加 draft 字段，值为上一步的 Array<{ref, summary}>。\n4. 仅将 render 返回的 markdown 字段原样返回，不得自行改写、添加或删除事实。`,
+            text: `请严格按顺序完成“我的订阅”：\n1. 调用 ${RSS_SUMMARY_TOOL_ID}，输入 ${JSON.stringify({ occurrence, window: "previous-calendar-day", onlyNew: true, rssOnly: false, phase: "collect" })}。\n2. 基于 collect 返回的全部 evidence 做第二轮 AI 精选：逐条判断是否值得推送给用户，重点考虑实际影响、与用户订阅兴趣的相关性、信息新颖性和证据充分性；普通 star/watch、重复公告、低信息量改动、仅标题变化和无法说明价值的条目应 selected=false。必须为每条 evidence 输出一项 Array<{ref, selected, reason}>，reason 用简短中文说明取舍，不得补写事实。若没有任何值得推送的条目，全部 selected=false。\n3. 再调用同一 Tool，输入 ${JSON.stringify({ occurrence, window: "previous-calendar-day", onlyNew: true, rssOnly: false, phase: "select" })} 并增加 selection 字段，值为上一步的完整精选结果。\n4. 只对 selection 中 selected=true 的 evidence 生成摘要：每条 1–2 句、180 字以内中文，说明“这是什么/解决什么或文章讲了什么”；只能依据 title、rawText、facts，不得补写来源中没有的数字或事实，也不要为 summaryPolicy=none 的条目生成摘要。\n5. 再调用同一 Tool，输入 ${JSON.stringify({ occurrence, window: "previous-calendar-day", onlyNew: true, rssOnly: false, phase: "render" })} 并增加 selection 与 draft 字段。若 selected=true 的条目为 0，render 仍返回空结果，最终只返回精确标记 \\"${RSS_SUMMARY_AUTOMATION_SUPPRESSED}\\"；否则仅将 render 返回的 markdown 字段原样返回，不得自行改写、添加或删除事实。`,
           }),
           createPresentation: ({ text }) => createRssAutomationPresentation(text, "subscriptions"),
           id: RSS_SUMMARY_MORNING_AUTOMATION_ID,

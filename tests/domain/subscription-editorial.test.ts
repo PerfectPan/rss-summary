@@ -4,6 +4,7 @@ import {
   buildSubscriptionEditorial,
   buildSubscriptionEvidence,
   validateSubscriptionEditorialDraft,
+  validateSubscriptionSelectionDraft,
 } from "../../src/domain/subscription-editorial.js";
 import type { DigestDocument } from "../../src/domain/digest.js";
 
@@ -51,6 +52,42 @@ describe("subscription editorial contract", () => {
     expect(() =>
       validateSubscriptionEditorialDraft([{ ref: "missing", summary: "不存在的证据。" }], evidence),
     ).toThrow(/unknown reference/u);
+  });
+
+  it("treats AI selection as an explicit second pass and rejects omitted evidence", () => {
+    const evidence = buildSubscriptionEvidence(document());
+    const selection = validateSubscriptionSelectionDraft(
+      [
+        {
+          ref: "github-repository:example/project",
+          selected: false,
+          reason: "普通 star 活动，没有足够的新信息。",
+        },
+        {
+          ref: "github-pull-request:example/project:41",
+          selected: true,
+          reason: "包含明确的上传恢复能力变化，值得关注。",
+        },
+      ],
+      evidence,
+    );
+
+    expect([...selection.selectedRefs]).toEqual(["github-pull-request:example/project:41"]);
+    expect(selection.decisions).toEqual([
+      expect.objectContaining({
+        ref: "github-repository:example/project",
+        selected: false,
+      }),
+      expect.objectContaining({
+        ref: "github-pull-request:example/project:41",
+        selected: true,
+      }),
+      expect.objectContaining({
+        ref: "publication:https://deno.com/blog/v2.4",
+        reason: "AI selection omitted this item",
+        selected: false,
+      }),
+    ]);
   });
 
   it("keeps valid summaries when another draft item is invalid", () => {

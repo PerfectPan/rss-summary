@@ -29,6 +29,12 @@ export type RunCandidateDecision = {
   reason: string;
 };
 
+export type RunEditorialSelectionDecision = {
+  ref: string;
+  selected: boolean;
+  reason: string;
+};
+
 export type RunAudit = {
   version: 1 | 2;
   runId: string;
@@ -44,6 +50,10 @@ export type RunAudit = {
     researchPending: number;
   };
   candidates: RunCandidateDecision[];
+  editorialSelection?: {
+    selectedCount: number;
+    decisions: RunEditorialSelectionDecision[];
+  };
 };
 
 export type RunDelivery = {

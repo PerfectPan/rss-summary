@@ -4,7 +4,7 @@ import type { DigestDocument } from "../../src/domain/digest.js";
 import { createRivusSubscriptionExecutor } from "../../src/presentation/subscription-tool.js";
 
 describe("subscription Tool editorial workflow", () => {
-  it("reuses collected evidence and renders grounded AI summaries with repository facts", async () => {
+  it("reuses collected evidence, applies AI selection, and renders grounded summaries", async () => {
     const collect = vi.fn(async () => ({ day: "2026-08-15", document: fixture() }));
     const execute = createRivusSubscriptionExecutor({ collect });
     const request = {
@@ -21,9 +21,19 @@ describe("subscription Tool editorial workflow", () => {
       ],
     });
 
+    if (!("evidence" in collected)) throw new Error("collect phase did not return evidence");
+    const selection = collected.evidence.map((item) => ({
+      reason: item.kind === "article" ? "新版本文章有明确技术变化" : "普通活动不值得推送",
+      ref: item.id,
+      selected: item.kind === "article",
+    }));
+    const selected = await execute({ ...request, phase: "select", selection });
+    expect(selected).toMatchObject({ phase: "select", selectedCount: 1 });
+
     const rendered = await execute({
       ...request,
       phase: "render",
+      selection,
       draft: [
         {
           ref: "publication:https://deno.com/blog/v2.4",
@@ -33,8 +43,11 @@ describe("subscription Tool editorial workflow", () => {
     });
 
     expect(collect).toHaveBeenCalledTimes(1);
-    expect(rendered).toMatchObject({ phase: "render", candidateCount: 2 });
-    expect("markdown" in rendered ? rendered.markdown : "").toContain("⭐ 12.3k · TypeScript");
+    expect(rendered).toMatchObject({ phase: "render", candidateCount: 1, selectedCount: 1 });
+    expect(rendered).toMatchObject({
+      audit: { counts: { selected: 1 }, editorialSelection: { selectedCount: 1 } },
+    });
+    expect("markdown" in rendered ? rendered.markdown : "").not.toContain("⭐ 12.3k · TypeScript");
     expect("markdown" in rendered ? rendered.markdown : "").toContain(
       "文章介绍 Deno 2.4 的运行时更新",
     );
@@ -43,6 +56,16 @@ describe("subscription Tool editorial workflow", () => {
 
 function fixture(): DigestDocument {
   return {
+    audit: {
+      candidates: [],
+      counts: { fetched: 2, inWindow: 2, ranked: 2, researchPending: 0, selected: 2 },
+      generatedAt: "2026-08-15T12:00:00Z",
+      product: "subscriptions",
+      runId: "run-fixture",
+      sources: [],
+      version: 2,
+      windowLabel: "2026-08-15",
+    },
     generatedAt: "2026-08-15T12:00:00Z",
     username: "PerfectPan",
     candidates: [
