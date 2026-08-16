@@ -13,8 +13,9 @@ import {
 } from "../application/news-brief.js";
 import { dailyAiCategories } from "../domain/daily-ai.js";
 import { generateRivusIndustryBrief, type RivusIndustryBriefResult } from "./rivus-industry.js";
-import { generateRivusDigest, type RivusDigestResult } from "./rivus-digest.js";
+import type { RivusDigestResult } from "./rivus-digest.js";
 import { renderNewsBrief } from "./news-render.js";
+import { createRivusSubscriptionExecutor } from "./subscription-tool.js";
 import { createRivusDailyAiDigestExecutor, type RivusDailyAiToolResult } from "./daily-ai-tool.js";
 import {
   createRssAutomationPresentation,
@@ -57,7 +58,9 @@ function withNewsMarkdown(result: RivusNewsBriefResult): RivusNewsBriefOutput {
 export function createRssSummaryPlugin(
   dependencies: RssSummaryPluginDependencies = {},
 ): RivusPlugin {
-  const executeDigest = dependencies.generateDigest ?? generateRivusDigest;
+  const executeDigest = createRivusSubscriptionExecutor({
+    ...(dependencies.generateDigest ? { generate: dependencies.generateDigest } : {}),
+  });
   const executeNewsBrief =
     dependencies.generateNewsBrief ??
     (async (input: unknown) =>
@@ -111,12 +114,26 @@ export function createRssSummaryPlugin(
         createExecutor: () => ({ execute: (input) => executeDigest(input) }),
         description:
           "Generate a read-only subscription brief from the user's GitHub Home and personal RSS sources",
-        digest: "sha256:rss-summary-generate-digest-v1",
+        digest: "sha256:rss-summary-generate-digest-v2",
         id: RSS_SUMMARY_TOOL_ID,
         idempotency: "none",
         inputSchema: {
           additionalProperties: false,
           properties: {
+            draft: {
+              description:
+                "Grounded Array<{ref, summary}> produced only from collect evidence; required for render",
+              items: {
+                additionalProperties: false,
+                properties: {
+                  ref: { minLength: 1, type: "string" },
+                  summary: { maxLength: 180, minLength: 8, type: "string" },
+                },
+                required: ["ref", "summary"],
+                type: "object",
+              },
+              type: "array",
+            },
             day: {
               description: "Local calendar day in YYYY-MM-DD format",
               pattern: "^\\d{4}-\\d{2}-\\d{2}$",
@@ -128,13 +145,14 @@ export function createRssSummaryPlugin(
               type: "string",
             },
             onlyNew: { default: true, type: "boolean" },
+            phase: { enum: ["collect", "render"], type: "string" },
             rssOnly: { default: false, type: "boolean" },
             window: { enum: ["previous-calendar-day"], type: "string" },
           },
           type: "object",
         },
         risk: "observe",
-        version: "1.0.0",
+        version: "1.1.0",
       });
       registry.registerTool({
         createExecutor: () => ({ execute: (input) => executeNewsBrief(input) }),
@@ -206,7 +224,7 @@ export function createRssSummaryPlugin(
       registry.registerAutomation(
         presentationAutomation({
           createInput: ({ occurrence }) => ({
-            text: `请只调用一次 ${RSS_SUMMARY_TOOL_ID}，输入 ${JSON.stringify({ occurrence, window: "previous-calendar-day", onlyNew: true, rssOnly: false })}。成功后仅将结果中的 markdown 字段原样返回，不添加任何说明。`,
+            text: `请严格按顺序完成“我的订阅”：\n1. 调用 ${RSS_SUMMARY_TOOL_ID}，输入 ${JSON.stringify({ occurrence, window: "previous-calendar-day", onlyNew: true, rssOnly: false, phase: "collect" })}。\n2. 只处理 collect 返回且 summaryPolicy=required 的 evidence：为每条写 1–2 句、180 字以内的中文摘要，说明“这是什么/解决什么或文章讲了什么”；只能依据 title、rawText、facts，不得补写来源中没有的数字或事实。repository 的 stars、语言等 facts 是确定性信息，不要改写，也不要为 summaryPolicy=none 的条目生成摘要。\n3. 再调用同一 Tool，输入 ${JSON.stringify({ occurrence, window: "previous-calendar-day", onlyNew: true, rssOnly: false, phase: "render" })} 并增加 draft 字段，值为上一步的 Array<{ref, summary}>。\n4. 仅将 render 返回的 markdown 字段原样返回，不得自行改写、添加或删除事实。`,
           }),
           createPresentation: ({ text }) => createRssAutomationPresentation(text, "subscriptions"),
           id: RSS_SUMMARY_MORNING_AUTOMATION_ID,

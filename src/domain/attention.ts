@@ -4,6 +4,7 @@ export type PresentationDepth = "link" | "summary" | "research";
 
 export type PresentationReasonCode =
   | "ordinary-update"
+  | "semantic-summary"
   | "interest-match"
   | "major-release"
   | "breaking-change"
@@ -72,6 +73,9 @@ export function presentationDecisionForCandidate(
   for (const rule of importantContentRules) {
     const match = rule.pattern.exec(content);
     if (match) return { depth: "summary", reasonCode: rule.reasonCode, evidence: match[0] };
+  }
+  if (candidate.category === "article" || candidate.eventTypes.includes("pull_request")) {
+    return { depth: "summary", reasonCode: "semantic-summary" };
   }
   return { depth: "link", reasonCode: "ordinary-update" };
 }

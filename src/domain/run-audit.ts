@@ -1,4 +1,4 @@
-import type { CandidateProject } from "./digest.js";
+import { candidateIdentity, type CandidateProject } from "./digest.js";
 import {
   presentationDecisionForCandidate,
   type PresentationDepth,
@@ -64,7 +64,7 @@ export function candidateDecision(
   const presentation = presentationDecisionForCandidate(candidate);
   const depth = presentation.depth;
   return {
-    key: candidate.repo,
+    key: candidateIdentity(candidate),
     label: candidate.label ?? candidate.repo,
     ...(candidate.url ? { url: candidate.url } : {}),
     score: candidate.score,

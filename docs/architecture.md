@@ -24,8 +24,9 @@ flowchart LR
   Collect --> Window["calendar window"]
   Window --> Rank["rank + explain"]
   Rank --> State["only-new / research state"]
-  State --> Depth["link / summary / research"]
-  Depth --> Render["Markdown or JSON"]
+  State --> Depth["link / semantic summary / research"]
+  Depth --> Edit["grounded subscription editorial pass"]
+  Edit --> Render["Markdown or JSON"]
   Render --> Delivery["stdout / webhook / Rivus"]
   Delivery --> Audit["run artifact / Rivus trace + ledger"]
 ```
@@ -33,7 +34,7 @@ flowchart LR
 The output depth is separate from ranking:
 
 - `link`: a trusted but ordinary update is one sentence plus its original link.
-- `summary`: an explicit interest match or content-level importance marker (major/GA/breaking/deprecation/security) receives a short excerpt-based summary. Repeated mentions, an announcement label, a merged PR, a score, or a release label alone never expands an item.
+- `summary`: RSS articles and pull requests always receive semantic space; other candidates expand for an explicit interest match or content-level importance marker (major/GA/breaking/deprecation/security). Repeated mentions, an announcement label, a score, or a release label alone never expands an item.
 - `research`: papers are withheld from direct Markdown until the research workflow verifies the original source.
 
 `src/domain/attention.ts` owns this decision. Renderers do not reinterpret scores.
@@ -60,11 +61,14 @@ deployments can bind both products without one replacing the other.
 1. Load GitHub Home configuration and `feeds.json`.
 2. Fetch GitHub Home and every RSS feed independently. A failed source is recorded and does not erase successful sources.
 3. Filter the explicit calendar day or rolling window.
-4. Enrich GitHub candidates with followed users, repository metadata, and bounded PR details when credentials permit.
+4. Enrich GitHub candidates with followed users, repository metadata, and bounded PR details when credentials permit. Repository discovery remains grouped by repository; each PR and publication keeps a separate content identity.
 5. Rank candidates and bound the paper queue.
 6. Under `--only-new`, filter only previously delivered event IDs. Research cache entries do not suppress new subscription events.
 7. Assign `link`, `summary`, or `research` presentation depth.
-8. Render, deliver, record an audit artifact, then update seen state after successful non-dry delivery.
+8. In Rivus, run the subscription Tool in two phases. `collect` returns typed evidence: repository facts are deterministic, while PR/RSS evidence marks whether a short editorial summary is required. The model writes only `Array<{ref, summary}>`; `render` rejects unknown references and ungrounded numeric claims, then falls back to a compact source excerpt when editorial output is invalid.
+9. Render, deliver, record an audit artifact, then update seen state after successful non-dry delivery.
+
+The CLI remains deterministic and renders source excerpts directly. The scheduled Rivus path adds the model editorial pass. This keeps ingestion/ranking/facts inside `rss-summary`, uses the Host model only for bounded copy editing, and leaves channel layout to Rivus Renderer. The industry frontier, noon/evening news, and Daily AI products retain their existing workflows; an already edited frontier headline is not summarized again by the subscription pass.
 
 GitHub Home uses the saved `.state/github-home-storage.json` session. `GITHUB_HOME_FETCH=conduit` first reads GitHub's conduit response and falls back to a rendered browser page. `GITHUB_FEED_SOURCE=events` is the REST fallback.
 
@@ -137,7 +141,7 @@ rss-summary runs show <run-label-or-json-path>
 
 ## Rendering and limits
 
-`src/presentation/candidate-brief.ts` owns the shared two-depth layout. Product renderers supply only labels and metadata. Both preserve all selected categories instead of applying one global slice; each expanded section is capped at 8 and each compact section at 20. Papers are counted but hidden from direct Markdown.
+`src/presentation/candidate-brief.ts` owns the shared two-depth layout. Product renderers supply only labels and metadata. Both preserve all selected categories instead of applying one global slice; each expanded and compact section is capped at 20. Papers are counted but hidden from direct Markdown.
 
 The news product keeps its own domain because authority validation, topic quotas, time windows, and eight-story cap differ materially from subscription ranking.
 
@@ -167,7 +171,7 @@ News ranking uses within-query position, source authority, and freshness. A URL 
 
 - GitHub Home parsing depends on GitHub's internal conduit/DOM shape.
 - On machines that require `HTTP_PROXY`/`HTTPS_PROXY`, Node 24 must start with `NODE_USE_ENV_PROXY=1` for native fetch to use those variables.
-- Expanded summaries use feed/repository text unless the research skill has inspected the original source.
+- CLI summaries use feed/repository text unless the research skill has inspected the original source. Scheduled Rivus subscription summaries are model-edited from bounded PR/RSS evidence and fall back to that source text when validation fails.
 - RSS identity dedupe is deterministic, not semantic.
 - Official page ingestion depends on stable same-origin links and explicit date markup. Zero valid dated links is audited as parser failure instead of an empty day.
 - The generic webhook cannot confirm downstream rendering; Rivus provides the stronger delivery ledger.

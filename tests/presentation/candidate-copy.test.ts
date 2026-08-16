@@ -38,4 +38,56 @@ describe("candidate copy", () => {
 
     expect(copy.oneLine).toBe("发布了「Version 1.0」。");
   });
+
+  it("preserves repository facts and pull-request semantics", () => {
+    const repository = candidateCopy({
+      repo: "example/project",
+      source: "github",
+      category: "discovery",
+      score: 90,
+      actors: ["alice"],
+      eventTypes: ["watch"],
+      reasons: [],
+      events: [],
+      repository: {
+        fullName: "example/project",
+        htmlUrl: "https://github.com/example/project",
+        description: "A useful project.",
+        language: "TypeScript",
+        stargazersCount: 12_345,
+        topics: [],
+        pushedAt: "2026-08-15T00:00:00Z",
+      },
+    });
+    const pullRequest = candidateCopy(
+      {
+        repo: "example/project",
+        source: "github",
+        category: "activity",
+        score: 35,
+        actors: ["bob"],
+        eventTypes: ["pull_request"],
+        reasons: [],
+        events: [
+          {
+            id: "pr-41",
+            type: "pull_request",
+            actor: "bob",
+            repo: "example/project",
+            createdAt: "2026-08-15T00:00:00Z",
+            prNumber: 41,
+            title: "Add resumable uploads",
+          },
+        ],
+        label: "example/project #41 · Add resumable uploads",
+        url: "https://github.com/example/project/pull/41",
+      },
+      { editorialSummary: "为上传流程增加断点续传，避免网络中断后从头开始。" },
+    );
+
+    expect(repository.facts).toEqual(["⭐ 12.3k", "TypeScript"]);
+    expect(repository.oneLine).toContain("⭐ 12.3k");
+    expect(pullRequest.oneLine).toBe("PR #41 · Add resumable uploads");
+    expect(pullRequest.summary).toBe("为上传流程增加断点续传，避免网络中断后从头开始。");
+  });
 });

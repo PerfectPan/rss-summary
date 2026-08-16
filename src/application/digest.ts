@@ -210,7 +210,7 @@ async function fetchFollowees(client: GitHubClient): Promise<Set<string>> {
 
 async function enrichPullRequests(client: GitHubClient, events: ActivityCard[]): Promise<void> {
   const pullRequests = events
-    .filter((event) => event.type === "pull_request" && event.prNumber && !event.title)
+    .filter((event) => event.type === "pull_request" && event.prNumber)
     .slice(0, 20);
 
   await Promise.all(
@@ -219,7 +219,7 @@ async function enrichPullRequests(client: GitHubClient, events: ActivityCard[]):
         const pr = await client.getPullRequest(event.repo, event.prNumber ?? 0);
         event.title = pr.title;
         event.htmlUrl = pr.htmlUrl;
-        event.summary = pr.body ?? undefined;
+        if (pr.body) event.summary = pr.body;
       } catch {
         // Missing PR details should not block the whole daily digest.
       }

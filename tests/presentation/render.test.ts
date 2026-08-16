@@ -120,8 +120,8 @@ describe("markdown digest renderer", () => {
       ],
     });
 
-    expect(markdown).toContain("**其他更新**");
-    expect(markdown).toContain("[Deno Blog ↗](https://deno.com/blog/v2.4)");
+    expect(markdown).toContain("**重点摘要**");
+    expect(markdown).toContain("**[Deno 2.4](https://deno.com/blog/v2.4)**");
   });
 
   it("does not directly publish papers that still require research", () => {
