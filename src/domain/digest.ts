@@ -171,6 +171,10 @@ export function buildCandidateProjects(
  * from the same repository collapse into one semantically ambiguous card.
  */
 function candidateGroupKey(event: ActivityCard): string {
+  return activityIdentity(event);
+}
+
+function activityIdentity(event: ActivityCard): string {
   if (event.type === "pull_request") {
     return `github-pull-request:${event.repo}:${event.prNumber ?? event.id}`;
   }
@@ -182,7 +186,7 @@ function candidateGroupKey(event: ActivityCard): string {
   ) {
     return `publication:${event.htmlUrl ?? event.id}`;
   }
-  if (event.type === "release" && event.htmlUrl) return `github-release:${event.htmlUrl}`;
+  if (event.type === "release") return `github-release:${event.htmlUrl ?? event.id}`;
   return `github-repository:${event.repo}`;
 }
 
@@ -211,15 +215,10 @@ export function selectResearchCandidates(
 /** Stable semantic identity used by audits and research state. */
 export function candidateIdentity(candidate: CandidateProject): string {
   const event = candidate.events[0];
-  if (candidate.eventTypes.includes("pull_request")) {
-    return `github-pull-request:${candidate.repo}:${event?.prNumber ?? event?.id ?? "unknown"}`;
-  }
-  if (candidate.source === "rss" || candidate.source === "web") {
-    return `publication:${candidate.url ?? event?.htmlUrl ?? event?.id ?? candidate.repo}`;
-  }
-  if (candidate.category === "release") {
-    return `github-release:${candidate.url ?? event?.id ?? candidate.repo}`;
-  }
+  if (event) return activityIdentity(event);
+  if (candidate.source === "rss" || candidate.source === "web")
+    return `publication:${candidate.url ?? candidate.repo}`;
+  if (candidate.category === "release") return `github-release:${candidate.url ?? candidate.repo}`;
   return `github-repository:${candidate.repo}`;
 }
 

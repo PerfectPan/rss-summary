@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import {
+  buildSubscriptionEditorial,
   buildSubscriptionEvidence,
   validateSubscriptionEditorialDraft,
 } from "../../src/domain/subscription-editorial.js";
@@ -23,7 +24,7 @@ describe("subscription editorial contract", () => {
         summaryPolicy: "required",
       }),
       expect.objectContaining({
-        id: "rss-article:rss-1",
+        id: "publication:https://deno.com/blog/v2.4",
         kind: "article",
         summaryPolicy: "required",
       }),
@@ -40,7 +41,7 @@ describe("subscription editorial contract", () => {
             summary: "为上传流程增加断点续传。网络中断后可从检查点继续。",
           },
           {
-            ref: "rss-article:rss-1",
+            ref: "publication:https://deno.com/blog/v2.4",
             summary: "文章介绍 Deno 2.4 的运行时更新，并说明 TypeScript 工作流的变化。",
           },
         ],
@@ -50,6 +51,63 @@ describe("subscription editorial contract", () => {
     expect(() =>
       validateSubscriptionEditorialDraft([{ ref: "missing", summary: "不存在的证据。" }], evidence),
     ).toThrow(/unknown reference/u);
+  });
+
+  it("keeps valid summaries when another draft item is invalid", () => {
+    const editorial = buildSubscriptionEditorial(document(), [
+      {
+        ref: "github-pull-request:example/project:41",
+        summary: "为上传流程增加断点续传。网络中断后可从检查点继续。",
+      },
+      {
+        ref: "publication:https://deno.com/blog/v2.4",
+        summary: "文章声称包含 99 项来源中不存在的变化。",
+      },
+    ]);
+
+    expect(editorial.summaries.get("github-pull-request:example/project:41")).toBe(
+      "为上传流程增加断点续传。网络中断后可从检查点继续。",
+    );
+    expect(editorial.summaries.get("publication:https://deno.com/blog/v2.4")).toBe(
+      "Runtime updates for TypeScript and JavaScript.",
+    );
+  });
+
+  it("rejects more than two sentences across Chinese and ASCII punctuation", () => {
+    const evidence = buildSubscriptionEvidence(document());
+    expect(() =>
+      validateSubscriptionEditorialDraft(
+        [
+          {
+            ref: "github-pull-request:example/project:41",
+            summary: "先保存检查点; 再恢复上传. 最后报告结果。",
+          },
+        ],
+        evidence,
+      ),
+    ).toThrow(/at most two sentences/u);
+  });
+
+  it("exposes only candidates that fit the rendered subscription sections", () => {
+    const base = document();
+    const articles = Array.from({ length: 25 }, (_, index) => ({
+      ...base.candidates[2]!,
+      repo: `rss:https://example.com/${index}`,
+      events: [
+        {
+          ...base.candidates[2]!.events[0]!,
+          id: `rss-${index}`,
+          repo: `rss:https://example.com/${index}`,
+          htmlUrl: `https://example.com/${index}`,
+        },
+      ],
+      url: `https://example.com/${index}`,
+    }));
+
+    const evidence = buildSubscriptionEvidence({ ...base, candidates: articles });
+
+    expect(evidence).toHaveLength(20);
+    expect(evidence.every(({ summaryPolicy }) => summaryPolicy === "required")).toBe(true);
   });
 });
 

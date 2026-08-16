@@ -26,7 +26,7 @@ describe("subscription Tool editorial workflow", () => {
       phase: "render",
       draft: [
         {
-          ref: "rss-article:rss-1",
+          ref: "publication:https://deno.com/blog/v2.4",
           summary: "文章介绍 Deno 2.4 的运行时更新，并解释 TypeScript 工作流的变化。",
         },
       ],

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   buildCandidateProjects,
+  candidateIdentity,
   normalizeEvent,
   selectResearchCandidates,
 } from "../../src/domain/digest.js";
@@ -131,6 +132,37 @@ describe("github feed domain", () => {
       url: "https://github.com/example/project/pull/41",
       description: "Adds checkpointed upload state so interrupted transfers can resume.",
     });
+  });
+
+  it("uses the event identity for publications without an item URL", () => {
+    const candidates = buildCandidateProjects(
+      [
+        {
+          id: "feed-item-1",
+          type: "article",
+          source: "rss",
+          actor: "Example Feed",
+          repo: "rss:https://example.com/feed.xml",
+          createdAt: "2026-08-15T10:00:00Z",
+          title: "First",
+        },
+        {
+          id: "feed-item-2",
+          type: "article",
+          source: "rss",
+          actor: "Example Feed",
+          repo: "rss:https://example.com/feed.xml",
+          createdAt: "2026-08-15T11:00:00Z",
+          title: "Second",
+        },
+      ],
+      { followees: new Set(), interests: [], repositories: new Map() },
+    );
+
+    expect(candidates.map(candidateIdentity)).toEqual([
+      "publication:feed-item-1",
+      "publication:feed-item-2",
+    ]);
   });
 
   it("does not treat branch creation as project discovery", () => {

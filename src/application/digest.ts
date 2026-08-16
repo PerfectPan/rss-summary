@@ -144,11 +144,16 @@ async function collectDigest(
       researchPending: candidates.filter((candidate) => candidate.category === "paper").length,
     },
     candidates: rankedCandidates.map((candidate) =>
-      candidateDecision(candidate, candidates, (value) => {
-        if (!researchSet.has(value)) return "paper abstract did not pass interest or quota";
-        if (config.onlyNew && !selectedSet.has(value)) return "all events were already delivered";
-        return "not selected";
-      }),
+      candidateDecision(
+        candidate,
+        candidates,
+        (value) => {
+          if (!researchSet.has(value)) return "paper abstract did not pass interest or quota";
+          if (config.onlyNew && !selectedSet.has(value)) return "all events were already delivered";
+          return "not selected";
+        },
+        { semanticSummaries: true },
+      ),
     ),
   };
   document.audit = audit;
