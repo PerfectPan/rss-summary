@@ -148,6 +148,7 @@ export function createRssSummaryPlugin(
                   content: { maxLength: 16_000, type: "string" },
                   error: { type: "string" },
                   fetchedUrl: { format: "uri", type: "string" },
+                  method: { enum: ["browser", "http"], type: "string" },
                   ref: { minLength: 1, type: "string" },
                   status: { enum: ["failed", "ok"], type: "string" },
                   title: { type: "string" },
@@ -196,13 +197,14 @@ export function createRssSummaryPlugin(
       registry.registerTool({
         createExecutor: () => ({ execute: (input) => executeArticleResearch(input) }),
         description:
-          "Fetch and extract the readable body of one Agent-selected public article URL for grounded summarization",
+          "Render or fetch one Agent-selected public article URL and extract its readable body for grounded summarization",
         digest: "sha256:rss-summary-research-article-v1",
         id: RSS_SUMMARY_RESEARCH_TOOL_ID,
         idempotency: "none",
         inputSchema: {
           additionalProperties: false,
           properties: {
+            mode: { default: "auto", enum: ["auto", "browser", "http"], type: "string" },
             ref: { minLength: 1, type: "string" },
             url: { format: "uri", type: "string" },
           },
@@ -283,7 +285,7 @@ export function createRssSummaryPlugin(
       registry.registerAutomation(
         presentationAutomation({
           createInput: ({ occurrence }) => ({
-            text: `请严格按顺序完成“我的订阅”：\n1. 调用 ${RSS_SUMMARY_TOOL_ID}，输入 ${JSON.stringify({ occurrence, window: "previous-calendar-day", onlyNew: true, rssOnly: false, phase: "collect" })}。\n2. 基于 collect 返回的全部 evidence 做第二轮 AI 精选：逐条判断是否值得推送给用户，重点考虑实际影响、与用户订阅兴趣的相关性、信息新颖性和证据充分性；普通 star/watch、重复公告、低信息量改动、仅标题变化和无法说明价值的条目应 selected=false。必须为每条 evidence 输出一项 Array<{ref, selected, reason}>，reason 用简短中文说明取舍，不得补写事实。若没有任何值得推送的条目，全部 selected=false。\n3. 再调用同一 Tool，输入 ${JSON.stringify({ occurrence, window: "previous-calendar-day", onlyNew: true, rssOnly: false, phase: "select" })} 并增加 selection 字段，值为上一步的完整精选结果。\n4. 对每个 selected=true 且有 URL 的 evidence 调用 ${RSS_SUMMARY_RESEARCH_TOOL_ID}，输入 {ref, url}，抓取对应网页正文；不要抓取未选中的条目。若研究失败，该条目改为 selected=false，不要用猜测补写。\n5. 只对研究成功的 selected=true evidence 生成摘要：摘要风格对齐 Daily AI Digest 的单条事件句，直接写主体、动作、具体变化或结果与影响；每条 1–2 句、180 字以内中文。必须优先依据研究 Tool 返回的正文，只能依据证据，不得补写来源中没有的数字或事实，也不要为 summaryPolicy=none 的条目生成摘要。若 URL 指向一篇日报，只概括其中高价值主题，不把整篇拆成多条，也不要写“来源名发布原始标题”或宣传语。\n6. 再调用同一 Tool，输入 ${JSON.stringify({ occurrence, window: "previous-calendar-day", onlyNew: true, rssOnly: false, phase: "render" })} 并增加 selection、research 与 draft 字段。若 selected=true 的条目为 0，render 仍返回空结果，最终只返回精确标记 \\"${RSS_SUMMARY_AUTOMATION_SUPPRESSED}\\"；否则仅将 render 返回的 markdown 字段原样返回，不得自行改写、添加或删除事实。`,
+            text: `请严格按顺序完成“我的订阅”：\n1. 调用 ${RSS_SUMMARY_TOOL_ID}，输入 ${JSON.stringify({ occurrence, window: "previous-calendar-day", onlyNew: true, rssOnly: false, phase: "collect" })}。\n2. 基于 collect 返回的全部 evidence 做第二轮 AI 精选：逐条判断是否值得推送给用户，重点考虑实际影响、与用户订阅兴趣的相关性、信息新颖性和证据充分性；普通 star/watch、重复公告、低信息量改动、仅标题变化和无法说明价值的条目应 selected=false。必须为每条 evidence 输出一项 Array<{ref, selected, reason}>，reason 用简短中文说明取舍，不得补写事实。若没有任何值得推送的条目，全部 selected=false。\n3. 再调用同一 Tool，输入 ${JSON.stringify({ occurrence, window: "previous-calendar-day", onlyNew: true, rssOnly: false, phase: "select" })} 并增加 selection 字段，值为上一步的完整精选结果。\n4. 对每个 selected=true 且有 URL 的 evidence 调用 ${RSS_SUMMARY_RESEARCH_TOOL_ID}，输入 {ref, url, mode:"auto"}；该 Tool 会优先打开浏览器读取渲染后的正文，失败再回退 HTTP。不要抓取未选中的条目。若两种方式都失败，该条目改为 selected=false，不要用猜测补写。\n5. 只对研究成功的 selected=true evidence 生成摘要：摘要风格对齐 Daily AI Digest 的单条事件句，直接写主体、动作、具体变化或结果与影响；每条 1–2 句、180 字以内中文。必须优先依据研究 Tool 返回的正文，只能依据证据，不得补写来源中没有的数字或事实，也不要为 summaryPolicy=none 的条目生成摘要。若 URL 指向一篇日报，只概括其中高价值主题，不把整篇拆成多条，也不要写“来源名发布原始标题”或宣传语。\n6. 再调用同一 Tool，输入 ${JSON.stringify({ occurrence, window: "previous-calendar-day", onlyNew: true, rssOnly: false, phase: "render" })} 并增加 selection、research 与 draft 字段。若 selected=true 的条目为 0，render 仍返回空结果，最终只返回精确标记 \\"${RSS_SUMMARY_AUTOMATION_SUPPRESSED}\\"；否则仅将 render 返回的 markdown 字段原样返回，不得自行改写、添加或删除事实。`,
           }),
           createPresentation: ({ text }) => createRssAutomationPresentation(text, "subscriptions"),
           id: RSS_SUMMARY_MORNING_AUTOMATION_ID,

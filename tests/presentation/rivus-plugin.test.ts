@@ -257,6 +257,7 @@ describe("rss-summary Rivus Plugin", () => {
     expect(morning.createInput({ occurrence }).text).toContain("RIVUS_AUTOMATION_SUPPRESSED");
     expect(morning.createInput({ occurrence }).text).toContain("summaryPolicy=none");
     expect(morning.createInput({ occurrence }).text).toContain(RSS_SUMMARY_RESEARCH_TOOL_ID);
+    expect(morning.createInput({ occurrence }).text).toContain('mode:"auto"');
     expect(dailyAi.createInput({ occurrence }).text).toContain(RSS_SUMMARY_DAILY_AI_TOOL_ID);
     expect(dailyAi.createInput({ occurrence }).text).toContain('"phase":"collect"');
     expect(dailyAi.createInput({ occurrence }).text).toContain('"phase":"render"');

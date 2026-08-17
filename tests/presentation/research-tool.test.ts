@@ -35,4 +35,55 @@ describe("article research Tool", () => {
     );
     expect(research).not.toHaveBeenCalled();
   });
+
+  it("uses browser research first in auto mode and skips HTTP on success", async () => {
+    const browser = vi.fn(async ({ ref, url }: { ref: string; url: string }) => ({
+      content: "Rendered browser content with enough detail for a grounded single-item summary.",
+      fetchedUrl: url,
+      ref,
+      retrievedAt: "2026-08-17T01:00:00.000Z",
+      status: "ok" as const,
+      title: "Rendered title",
+      url,
+    }));
+    const http = vi.fn();
+    const execute = createArticleResearchExecutor({
+      browserClient: { research: browser },
+      client: { research: http },
+    });
+
+    await expect(
+      execute({ mode: "auto", ref: "article:1", url: "https://example.com/article" }),
+    ).resolves.toMatchObject({ status: "ok", title: "Rendered title" });
+    expect(browser).toHaveBeenCalledWith({ ref: "article:1", url: "https://example.com/article" });
+    expect(http).not.toHaveBeenCalled();
+  });
+
+  it("falls back to HTTP when browser research fails in auto mode", async () => {
+    const browser = vi.fn(async () => ({
+      error: "browser timeout",
+      ref: "article:1",
+      retrievedAt: "2026-08-17T01:00:00.000Z",
+      status: "failed" as const,
+      url: "https://example.com/article",
+    }));
+    const http = vi.fn(async ({ ref, url }: { ref: string; url: string }) => ({
+      content: "HTTP fallback content with enough detail for a grounded single-item summary.",
+      fetchedUrl: url,
+      ref,
+      retrievedAt: "2026-08-17T01:00:00.000Z",
+      status: "ok" as const,
+      title: "HTTP title",
+      url,
+    }));
+    const execute = createArticleResearchExecutor({
+      browserClient: { research: browser },
+      client: { research: http },
+    });
+
+    await expect(
+      execute({ mode: "auto", ref: "article:1", url: "https://example.com/article" }),
+    ).resolves.toMatchObject({ status: "ok", title: "HTTP title" });
+    expect(http).toHaveBeenCalledWith({ ref: "article:1", url: "https://example.com/article" });
+  });
 });

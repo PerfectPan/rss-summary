@@ -9,6 +9,7 @@ export type ArticleResearchResult =
   | {
       content: string;
       fetchedUrl: string;
+      method?: "browser" | "http";
       ref: string;
       retrievedAt: string;
       status: "ok";
@@ -17,6 +18,7 @@ export type ArticleResearchResult =
     }
   | {
       error: string;
+      method?: "browser" | "http";
       ref: string;
       retrievedAt: string;
       status: "failed";
@@ -54,7 +56,7 @@ export class ArticleResearchClient {
   async research(request: ArticleResearchRequest): Promise<ArticleResearchResult> {
     const retrievedAt = this.now().toISOString();
     try {
-      const url = validateResearchUrl(request.url);
+      const url = validateArticleResearchUrl(request.url);
       const response = await this.fetchImpl(url, {
         headers: {
           accept: "text/html, application/xhtml+xml, text/plain;q=0.8, */*;q=0.5",
@@ -75,6 +77,7 @@ export class ArticleResearchClient {
       return {
         content: extracted.content,
         fetchedUrl: response.url || url,
+        method: "http",
         ref: request.ref,
         retrievedAt,
         status: "ok",
@@ -84,6 +87,7 @@ export class ArticleResearchClient {
     } catch (error) {
       return {
         error: error instanceof Error ? error.message : String(error),
+        method: "http",
         ref: request.ref,
         retrievedAt,
         status: "failed",
@@ -153,7 +157,7 @@ async function readResponseBody(response: Response, maxBytes: number): Promise<s
   return new TextDecoder().decode(bytes);
 }
 
-function validateResearchUrl(value: string): string {
+export function validateArticleResearchUrl(value: string): string {
   const url = new URL(value);
   if (url.protocol !== "https:" && url.protocol !== "http:") {
     throw new Error("article URL must use http or https");

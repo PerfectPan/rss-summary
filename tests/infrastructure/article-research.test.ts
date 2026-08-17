@@ -48,6 +48,7 @@ describe("article research", () => {
       client.research({ ref: "article:1", url: "http://127.0.0.1/admin" }),
     ).resolves.toEqual({
       error: "article URL points to a private or local host",
+      method: "http",
       ref: "article:1",
       retrievedAt: "2026-08-17T01:00:00.000Z",
       status: "failed",
