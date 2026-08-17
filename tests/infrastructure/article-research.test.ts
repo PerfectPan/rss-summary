@@ -23,6 +23,17 @@ describe("article research", () => {
     expect(result.content).not.toContain("Privacy Terms");
   });
 
+  it("removes page-level promotion from a readable article body", () => {
+    const result = extractArticle(
+      `<article><h1>AI 日报</h1><p>AI资讯 | 每日早读 | 全网数据聚合 | 访问网页版↗️</p><p>机器人仿真引擎支持一小时无人干预运行。</p><p>AI资讯日报多渠道</p><p>💬 微信公众号</p><p>公众号：何夕2077</p></article>`,
+      "https://example.com/daily",
+    );
+
+    expect(result.content).toContain("机器人仿真引擎支持一小时无人干预运行");
+    expect(result.content).not.toContain("每日早读");
+    expect(result.content).not.toContain("何夕2077");
+  });
+
   it("returns structured failure for a private URL without making a request", async () => {
     let calls = 0;
     const client = new ArticleResearchClient({

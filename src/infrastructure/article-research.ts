@@ -115,7 +115,8 @@ export function extractArticle(
     .find("h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,td,th")
     .map((_index, element) => cleanText($(element).text()))
     .get()
-    .filter((line): line is string => Boolean(line));
+    .filter((line): line is string => Boolean(line))
+    .filter((line) => !isResearchBoilerplate(line));
   const structured = compactLines(lines).slice(0, maxChars).trim();
   const content = (structured || cleanText($.root().text())).slice(0, maxChars).trim();
   return { content, title };
@@ -193,6 +194,15 @@ function isPrivateIpv4(hostname: string): boolean {
 
 function cleanText(value: string | undefined): string {
   return (value ?? "").replace(/\s+/gu, " ").trim();
+}
+
+function isResearchBoilerplate(line: string): boolean {
+  return (
+    /^"?\s*AI资讯\s*\|\s*每日早读/u.test(line) ||
+    line === "AI资讯日报多渠道" ||
+    /^(?:💬\s*|📹\s*)?(?:微信公众号|抖音)$/u.test(line) ||
+    /^(?:公众号|自媒体账号)[:：]?/u.test(line)
+  );
 }
 
 function compactLines(lines: string[]): string {
