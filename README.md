@@ -141,7 +141,7 @@ rss-summary runs show <run-label>
 
 ## Rivus Plugin
 
-本仓库导出 `rss-summary/rivus-plugin`：一个 Agent profile（`rss-digest`）+ 四个只读 Tool（`generate-digest` / `generate-daily-ai-digest` / `generate-news-brief` / `generate-industry-brief`）及对应调度模板。订阅和行业 Tool 携带 source/candidate audit；新闻 Tool 携带逐查询召回、淘汰原因、去重和配额漏斗。Automation 的 `createPresentation` 把最终 Markdown 投影为标题、元信息、栏目、条目、说明和来源链接；它不直接构造飞书 CardKit JSON。Rivus 自己的 Renderer、trace 与投递 ledger 分别负责渠道展示和后续卡片投递证据。行业 Tool 不直接发布未研究论文，只报告待调研数量。安装、manifest 绑定、环境契约见 [docs/rivus-plugin.md](docs/rivus-plugin.md)。
+本仓库导出 `rss-summary/rivus-plugin`：一个 Agent profile（`rss-digest`）+ 五个只读 Tool（`generate-digest` / `research-article` / `generate-daily-ai-digest` / `generate-news-brief` / `generate-industry-brief`）及对应调度模板。订阅和行业 Tool 携带 source/candidate audit；`research-article` 只对 Agent 选中的公开 URL 抓取并提取正文，返回受限、可追溯的研究证据；新闻 Tool 携带逐查询召回、淘汰原因、去重和配额漏斗。Automation 的 `createPresentation` 把最终 Markdown 投影为标题、元信息、栏目、条目、说明和来源链接；它不直接构造飞书 CardKit JSON。Rivus 自己的 Renderer、trace 与投递 ledger 分别负责渠道展示和后续卡片投递证据。行业 Tool 不直接发布未研究论文，只报告待调研数量。安装、manifest 绑定、环境契约见 [docs/rivus-plugin.md](docs/rivus-plugin.md)。
 
 `industry-feeds.json` 中缺省类型仍是 RSS/Atom；`type: "page"` 只用于已验证的官方列表页，并要求同源文章路径与显式日期。不是每个网站都有 `/news`，也不会自动猜路径或绕过站点抓取政策。设计与准入条件见 [Official Web Page Sources RFC](docs/rfc-official-web-page-sources.md)。旧的 `INDUSTRY_FEEDS` / `INDUSTRY_FEEDS_FILE` 环境变量继续作为兼容别名。
 

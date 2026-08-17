@@ -66,7 +66,10 @@ function normalizeRssItem(item: XmlRecord, feed: FeedSubscription): ActivityCard
   const title = text(item.title);
   const htmlUrl = text(item.link);
   const guid = text(item.guid) ?? htmlUrl ?? title ?? "untitled";
-  const summary = cleanSummary(text(item.description) ?? text(item.encoded));
+  const summary = chooseRicherSummary(
+    cleanSummary(text(item.description)),
+    cleanSummary(text(item.encoded)),
+  );
   const createdAt = normalizeDate(text(item.pubDate) ?? text(item.date));
 
   return {
@@ -84,6 +87,15 @@ function normalizeRssItem(item: XmlRecord, feed: FeedSubscription): ActivityCard
     sourceUrl: feed.url,
     tags: feed.tags,
   };
+}
+
+function chooseRicherSummary(
+  description: string | undefined,
+  encoded: string | undefined,
+): string | undefined {
+  if (!description) return encoded;
+  if (!encoded) return description;
+  return encoded.length > description.length ? encoded : description;
 }
 
 function normalizeAtomEntry(entry: XmlRecord, feed: FeedSubscription): ActivityCard {
@@ -167,6 +179,10 @@ function cleanSummary(value: string | undefined): string | undefined {
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/giu, " ")
     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/giu, " ")
     .replace(/<[^>]+>/gu, " ")
+    .replace(/!\[[^\]]*\]\([^)]*\)/gu, " ")
+    .replace(/\[([^\]]+)\]\([^)]*\)/gu, "$1")
+    .replace(/(^|\n)\s*#{1,6}\s*/gu, "$1")
+    .replace(/[\\*_`]/gu, "")
     .replace(/\s+/gu, " ")
     .trim();
   return cleanBoilerplate(he.decode(stripped));
@@ -179,8 +195,14 @@ function cleanBoilerplate(value: string): string | undefined {
     .split(/\s*[|｜]\s*/u)
     .filter((part) => !promotional.test(part.trim()))
     .join(" ")
+    .replace(/^(?:AI资讯日报\s*\d{4}[/.年-]\d{1,2}[/.月-]\d{1,2}日?\s*)?/iu, "")
     .replace(/(?:订阅我们|关注我们|扫码关注|加入社群|进群交流)[^。！？!?]*[。！？!?]?/giu, " ")
     .replace(/\s+/gu, " ")
     .trim();
-  return cleaned || undefined;
+  const summaryMarker = /(?:^|\s)(?:今日摘要|今日要闻)\s*[:：]?\s*/u.exec(cleaned);
+  const withoutHeader = summaryMarker
+    ? cleaned.slice(summaryMarker.index + summaryMarker[0].length)
+    : cleaned;
+  const withoutFooter = withoutHeader.split(/\s*AI资讯日报多渠道\s*/u, 1)[0]?.trim() ?? "";
+  return withoutFooter || undefined;
 }

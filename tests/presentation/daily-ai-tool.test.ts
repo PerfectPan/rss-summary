@@ -41,6 +41,18 @@ describe("Rivus Daily AI Tool", () => {
     const rendered = await execute({
       occurrence: "2026-08-11T01:00:00Z",
       phase: "render",
+      research: [
+        {
+          content:
+            "正文确认 OpenAI 发布 Codex 2.0，工具调用延迟降低 30%，并说明这项变化对开发者工作流、工具调用稳定性和实际使用成本的具体影响。".repeat(
+              2,
+            ),
+          ref: "official:openai-codex-2",
+          status: "ok",
+          title: "Codex 2.0 正文",
+          url: "https://openai.com/news/codex-2",
+        },
+      ],
       draft: [
         {
           category: "开发生态",

@@ -1,6 +1,6 @@
 import { selectCandidatePresentationSections } from "./attention.js";
 import { candidateIdentity, type CandidateProject, type DigestDocument } from "./digest.js";
-import { compactSummary, formatCompactCount } from "./text.js";
+import { canonicalizeUrl, compactSummary, formatCompactCount } from "./text.js";
 
 export type SubscriptionEvidenceKind =
   | "activity"
@@ -39,6 +39,15 @@ export type SubscriptionSelectionDecision = {
 export type SubscriptionSelection = {
   decisions: ReadonlyArray<SubscriptionSelectionDecision>;
   selectedRefs: ReadonlySet<string>;
+};
+
+export type SubscriptionResearch = {
+  content?: string;
+  fetchedUrl?: string;
+  ref: string;
+  status: "failed" | "ok";
+  title?: string;
+  url: string;
 };
 
 /** Build the bounded, source-grounded contract exposed to the automation model. */
@@ -113,8 +122,9 @@ export function validateSubscriptionEditorialDraft(
 export function buildSubscriptionEditorial(
   document: DigestDocument,
   draft?: unknown,
+  research?: unknown,
 ): SubscriptionEditorial {
-  const evidence = buildSubscriptionEvidence(document);
+  const evidence = mergeSubscriptionResearch(buildSubscriptionEvidence(document), research);
   const items = acceptValidSubscriptionEditorialItems(draft, evidence);
   const supplied = new Map(items.map(({ ref, summary }) => [ref, summary]));
   const summaries = new Map<string, string>();
@@ -129,6 +139,50 @@ export function buildSubscriptionEditorial(
     }
   }
   return { evidence, summaries };
+}
+
+/** Replace shallow feed excerpts with the Agent's fetched article evidence. */
+export function mergeSubscriptionResearch(
+  evidence: SubscriptionEvidence[],
+  value: unknown,
+): SubscriptionEvidence[] {
+  if (value === undefined) return evidence;
+  if (!Array.isArray(value)) throw new Error("research output must be an array");
+  const byRef = new Map(evidence.map((item) => [item.id, item]));
+  const researched = new Map<string, SubscriptionResearch>();
+  for (const entry of value) {
+    if (!entry || typeof entry !== "object") throw new Error("research item must be an object");
+    const record = entry as Record<string, unknown>;
+    const ref = typeof record.ref === "string" ? record.ref : "";
+    const source = byRef.get(ref);
+    if (!source) throw new Error(`unknown research reference: ${ref}`);
+    const url = typeof record.url === "string" ? record.url : "";
+    if (canonicalizeUrl(url) !== canonicalizeUrl(source.url))
+      throw new Error(`research URL does not match evidence: ${ref}`);
+    const status = record.status;
+    if (status !== "ok" && status !== "failed") throw new Error(`invalid research status: ${ref}`);
+    const content = record.content;
+    if (status === "ok" && (typeof content !== "string" || content.trim().length < 80)) {
+      throw new Error(`research content is too short: ${ref}`);
+    }
+    researched.set(ref, {
+      ...(typeof content === "string" ? { content } : {}),
+      ...(typeof record.fetchedUrl === "string" ? { fetchedUrl: record.fetchedUrl } : {}),
+      ref,
+      status,
+      ...(typeof record.title === "string" ? { title: record.title } : {}),
+      url,
+    });
+  }
+  return evidence.map((item) => {
+    const research = researched.get(item.id);
+    if (!research || research.status !== "ok" || !research.content) return item;
+    return {
+      ...item,
+      rawText: bounded(`${item.rawText}\n${research.content}`, 7_000),
+      title: research.title?.trim() || item.title,
+    };
+  });
 }
 
 /**

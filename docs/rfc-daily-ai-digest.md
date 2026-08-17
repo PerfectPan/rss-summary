@@ -16,10 +16,13 @@ source tier). Editorial output is accepted only after a deterministic validator 
 category, Chinese event shape, known references, public URLs, length, duplicates,
 entity overlap and every numeric claim.
 
-The Rivus Tool uses a two-phase contract. `collect` returns normalized evidence but no
-deliverable Markdown. The agent edits only structured `{category, headline, refs}` data
-from that evidence, then calls `render`. The second phase resolves the original cached
-evidence, validates the draft and is the only phase allowed to produce final Markdown.
+The Rivus Tool keeps a two-phase digest contract while the Agent adds a bounded research
+step between them. `collect` returns normalized evidence but no deliverable Markdown. The
+Agent edits only structured `{category, headline, refs}` data, calls the read-only
+`rss-summary/research-article` Tool for selected public URLs, then calls `render` with the
+draft and research results. The render phase resolves the original cached evidence, merges
+only URL-matched research bodies, validates the draft and is the only phase allowed to
+produce final Markdown.
 
 ## Safety and quality invariants
 
@@ -30,6 +33,8 @@ evidence, validates the draft and is the only phase allowed to produce final Mar
 - Aggregators cannot be the sole evidence for a major story.
 - Duplicate entity/event evidence is merged and cites every supporting source.
 - RSS boilerplate, navigation and subscription promotion are removed before editorial use.
+- Selected article URLs may be researched through a bounded HTTP Tool; private/local hosts,
+  credentials, oversized responses and unreadable bodies are rejected.
 - A target of 12–24 is a budget, not a quota; low-quality evidence is omitted.
 - Model/editor output is data, never directly deliverable prose. Invalid output falls back only to
   a cleaned source title that is already an event-shaped Chinese sentence; raw English titles are

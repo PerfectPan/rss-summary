@@ -105,7 +105,7 @@ export function createRivusSubscriptionExecutor(
     const evidence = buildSubscriptionEvidence(collected.document);
     const selection = validateSubscriptionSelectionDraft(input.selection, evidence);
     const selectedDocument = applySubscriptionSelection(collected.document, selection);
-    const editorial = buildSubscriptionEditorial(selectedDocument, input.draft);
+    const editorial = buildSubscriptionEditorial(selectedDocument, input.draft, input.research);
     const document = collected.day
       ? { ...selectedDocument, displayDate: collected.day }
       : selectedDocument;
@@ -139,6 +139,7 @@ export function createRivusSubscriptionExecutor(
 function parseInput(value: unknown): {
   draft?: unknown;
   phase?: "collect" | "select" | "render";
+  research?: unknown;
   request: Record<string, unknown>;
   selection?: unknown;
 } {
@@ -153,10 +154,11 @@ function parseInput(value: unknown): {
   if (phase && typeof record.occurrence !== "string") {
     throw new Error("multi-phase subscription execution requires occurrence.");
   }
-  const { draft, phase: _phase, selection, ...request } = record;
+  const { draft, phase: _phase, research, selection, ...request } = record;
   return {
     draft,
     ...(phase ? { phase } : {}),
+    ...(research === undefined ? {} : { research }),
     request,
     ...(selection === undefined ? {} : { selection }),
   };
