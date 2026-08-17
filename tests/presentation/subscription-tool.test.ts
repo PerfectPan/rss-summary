@@ -34,10 +34,22 @@ describe("subscription Tool editorial workflow", () => {
       ...request,
       phase: "render",
       selection,
+      research: [
+        {
+          content:
+            "正文解释 Deno 2.4 的运行时更新，并说明 TypeScript 工作流的变化；同时列出运行时、工具链和兼容性方面的具体变化，方便读者判断升级影响。".repeat(
+              2,
+            ),
+          ref: "publication:https://deno.com/blog/v2.4",
+          status: "ok",
+          title: "Deno 2.4 正文",
+          url: "https://deno.com/blog/v2.4",
+        },
+      ],
       draft: [
         {
           ref: "publication:https://deno.com/blog/v2.4",
-          summary: "文章介绍 Deno 2.4 的运行时更新，并解释 TypeScript 工作流的变化。",
+          summary: "正文解释 Deno 2.4 的运行时更新，并说明 TypeScript 工作流的变化。",
         },
       ],
     });
@@ -49,7 +61,46 @@ describe("subscription Tool editorial workflow", () => {
     });
     expect("markdown" in rendered ? rendered.markdown : "").not.toContain("⭐ 12.3k · TypeScript");
     expect("markdown" in rendered ? rendered.markdown : "").toContain(
-      "文章介绍 Deno 2.4 的运行时更新",
+      "正文解释 Deno 2.4 的运行时更新",
+    );
+  });
+
+  it("suppresses a selected item when both research paths fail", async () => {
+    const collect = vi.fn(async () => ({ day: "2026-08-15", document: fixture() }));
+    const execute = createRivusSubscriptionExecutor({ collect });
+    const request = {
+      occurrence: "2026-08-16T01:00:00.000Z",
+      window: "previous-calendar-day",
+    };
+    const collected = await execute({ ...request, phase: "collect" });
+    if (!("evidence" in collected)) throw new Error("collect phase did not return evidence");
+    const selection = collected.evidence.map((item) => ({
+      reason: "文章有明确技术变化",
+      ref: item.id,
+      selected: item.kind === "article",
+    }));
+
+    const rendered = await execute({
+      ...request,
+      phase: "render",
+      selection,
+      research: [
+        {
+          error: "browser: timeout; http: 403",
+          ref: "publication:https://deno.com/blog/v2.4",
+          status: "failed",
+          url: "https://deno.com/blog/v2.4",
+        },
+      ],
+    });
+
+    expect(rendered).toMatchObject({ candidateCount: 0, phase: "render", selectedCount: 0 });
+    expect("selection" in rendered ? rendered.selection : []).toContainEqual(
+      expect.objectContaining({
+        reason: "研究正文缺失或抓取失败，已取消推送",
+        ref: "publication:https://deno.com/blog/v2.4",
+        selected: false,
+      }),
     );
   });
 });

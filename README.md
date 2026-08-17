@@ -110,22 +110,25 @@ rss-summary runs show <run-label>
 
 ## Configuration
 
-| 变量                    | 作用                                           | 默认                         |
-| ----------------------- | ---------------------------------------------- | ---------------------------- |
-| `GITHUB_FEED_SOURCE`    | `home`（精确，默认）或 `events`（REST 回退）   | `home`                       |
-| `GITHUB_USERNAME`       | 要抓 Home feed 的账号                          | —                            |
-| `FEED_DAY`              | 日报日 `YYYY-MM-DD`（本地日历）                | 滚动窗口                     |
-| `FEED_TIMEZONE_OFFSET`  | 时区偏移                                       | `+00:00`                     |
-| `FEED_WINDOW_HOURS`     | 滚动窗口小时（`FEED_DAY` 未设时）              | `36`                         |
-| `GITHUB_HOME_FETCH`     | `conduit`（默认）或 `browser`                  | `conduit`                    |
-| `GH_FEED_TOKEN`         | GitHub token（API 补全 PR 详情 / events 回退） | —                            |
-| `DOUBAO_SEARCH_API_KEY` | 午/晚间新闻搜索                                | —                            |
-| `NOTIFY_WEBHOOK_URL`    | 推送 webhook（POST `{ "text": markdown }`）    | —                            |
-| `RSS_FEEDS_FILE`        | RSS 订阅文件                                   | `feeds.json`                 |
-| `INDUSTRY_SOURCES_FILE` | 行业官方 RSS/Atom 与页面来源文件               | `industry-feeds.json`        |
-| `INDUSTRY_STATE_FILE`   | 行业简报去重/调研状态                          | `.state/industry-state.json` |
-| `FEED_MAX_PAPERS`       | 每次进入深度调研队列的论文硬上限               | `8`                          |
-| `FEED_RUN_LOG_DIR`      | CLI 运行审计产物目录                           | `.state/runs`                |
+| 变量                             | 作用                                                              | 默认                         |
+| -------------------------------- | ----------------------------------------------------------------- | ---------------------------- |
+| `GITHUB_FEED_SOURCE`             | `home`（精确，默认）或 `events`（REST 回退）                      | `home`                       |
+| `GITHUB_USERNAME`                | 要抓 Home feed 的账号                                             | —                            |
+| `FEED_DAY`                       | 日报日 `YYYY-MM-DD`（本地日历）                                   | 滚动窗口                     |
+| `FEED_TIMEZONE_OFFSET`           | 时区偏移                                                          | `+00:00`                     |
+| `FEED_WINDOW_HOURS`              | 滚动窗口小时（`FEED_DAY` 未设时）                                 | `36`                         |
+| `GITHUB_HOME_FETCH`              | `conduit`（默认）或 `browser`                                     | `conduit`                    |
+| `RSS_ARTICLE_BROWSER_CHANNEL`    | 浏览器研究使用的 Chrome channel；不可用时回退 Playwright Chromium | `chrome`                     |
+| `RSS_ARTICLE_BROWSER_HEADLESS`   | 浏览器研究是否无头运行                                            | `true`                       |
+| `RSS_ARTICLE_BROWSER_TIMEOUT_MS` | 单条浏览器研究超时（毫秒）                                        | `30000`                      |
+| `GH_FEED_TOKEN`                  | GitHub token（API 补全 PR 详情 / events 回退）                    | —                            |
+| `DOUBAO_SEARCH_API_KEY`          | 午/晚间新闻搜索                                                   | —                            |
+| `NOTIFY_WEBHOOK_URL`             | 推送 webhook（POST `{ "text": markdown }`）                       | —                            |
+| `RSS_FEEDS_FILE`                 | RSS 订阅文件                                                      | `feeds.json`                 |
+| `INDUSTRY_SOURCES_FILE`          | 行业官方 RSS/Atom 与页面来源文件                                  | `industry-feeds.json`        |
+| `INDUSTRY_STATE_FILE`            | 行业简报去重/调研状态                                             | `.state/industry-state.json` |
+| `FEED_MAX_PAPERS`                | 每次进入深度调研队列的论文硬上限                                  | `8`                          |
+| `FEED_RUN_LOG_DIR`               | CLI 运行审计产物目录                                              | `.state/runs`                |
 
 完整列表与默认值见 [.env.example](.env.example)。GitHub Home 的 conduit / 浏览器回退机制见 [docs/architecture.md](docs/architecture.md)。
 
@@ -141,7 +144,7 @@ rss-summary runs show <run-label>
 
 ## Rivus Plugin
 
-本仓库导出 `rss-summary/rivus-plugin`：一个 Agent profile（`rss-digest`）+ 四个只读 Tool（`generate-digest` / `generate-daily-ai-digest` / `generate-news-brief` / `generate-industry-brief`）及对应调度模板。订阅和行业 Tool 携带 source/candidate audit；新闻 Tool 携带逐查询召回、淘汰原因、去重和配额漏斗。Automation 的 `createPresentation` 把最终 Markdown 投影为标题、元信息、栏目、条目、说明和来源链接；它不直接构造飞书 CardKit JSON。Rivus 自己的 Renderer、trace 与投递 ledger 分别负责渠道展示和后续卡片投递证据。行业 Tool 不直接发布未研究论文，只报告待调研数量。安装、manifest 绑定、环境契约见 [docs/rivus-plugin.md](docs/rivus-plugin.md)。
+本仓库导出 `rss-summary/rivus-plugin`：一个 Agent profile（`rss-digest`）+ 五个只读 Tool（`generate-digest` / `research-article` / `generate-daily-ai-digest` / `generate-news-brief` / `generate-industry-brief`）及对应调度模板。订阅和行业 Tool 携带 source/candidate audit；`research-article` 只对 Agent 选中的公开 URL 做浏览器优先、HTTP 回退的正文抓取，返回受限、可追溯的研究证据；新闻 Tool 携带逐查询召回、淘汰原因、去重和配额漏斗。Automation 的 `createPresentation` 把最终 Markdown 投影为标题、元信息、栏目、条目、说明和来源链接；它不直接构造飞书 CardKit JSON。Rivus 自己的 Renderer、trace 与投递 ledger 分别负责渠道展示和后续卡片投递证据。行业 Tool 不直接发布未研究论文，只报告待调研数量。安装、manifest 绑定、环境契约见 [docs/rivus-plugin.md](docs/rivus-plugin.md)。
 
 `industry-feeds.json` 中缺省类型仍是 RSS/Atom；`type: "page"` 只用于已验证的官方列表页，并要求同源文章路径与显式日期。不是每个网站都有 `/news`，也不会自动猜路径或绕过站点抓取政策。设计与准入条件见 [Official Web Page Sources RFC](docs/rfc-official-web-page-sources.md)。旧的 `INDUSTRY_FEEDS` / `INDUSTRY_FEEDS_FILE` 环境变量继续作为兼容别名。
 

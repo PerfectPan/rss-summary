@@ -65,10 +65,10 @@ deployments can bind both products without one replacing the other.
 5. Rank candidates and bound the paper queue.
 6. Under `--only-new`, filter only previously delivered event IDs. Research cache entries do not suppress new subscription events.
 7. Assign `link`, `summary`, or `research` presentation depth.
-8. In Rivus, run the subscription Tool in three phases. `collect` returns typed evidence, `select` requires the model to decide whether every RSS/GitHub item is worth pushing with a reason, and `render` filters to `selected=true` before validating `Array<{ref, summary}>` and ungrounded numeric claims. An empty selection is an auditable suppressed run rather than an empty card.
+8. In Rivus, run the subscription Tool in three phases. `collect` returns typed evidence, `select` requires the model to decide whether every RSS/GitHub item is worth pushing with a reason, and the Agent uses the read-only `research-article` Tool for selected public URLs before writing per-item summaries. The RSS/GitHub collection, selection, deduplication and delivery path remains unchanged. `render` accepts those research results, filters to `selected=true`, and validates `Array<{ref, summary}>` plus grounded numeric claims. An empty selection is an auditable suppressed run rather than an empty card.
 9. Render, deliver, record an audit artifact, then update seen state after successful non-dry delivery.
 
-The CLI remains deterministic and renders source excerpts directly. The scheduled Rivus path adds the model editorial pass. This keeps ingestion/ranking/facts inside `rss-summary`, uses the Host model only for bounded copy editing, and leaves channel layout to Rivus Renderer. The industry frontier, noon/evening news, and Daily AI products retain their existing workflows; an already edited frontier headline is not summarized again by the subscription pass.
+The CLI remains deterministic and renders source excerpts directly. The scheduled Rivus path adds the model editorial and bounded source-research pass only for selected subscription items. This keeps candidate ingestion/ranking, RSS/GitHub selection, deduplication and delivery inside the existing path, lets the Agent fetch only selected public article bodies through a constrained Tool, and leaves channel layout to Rivus Renderer. The industry frontier, noon/evening news, and Daily AI products retain their existing workflows; an already edited frontier headline is not summarized again by the subscription pass.
 
 GitHub Home uses the saved `.state/github-home-storage.json` session. `GITHUB_HOME_FETCH=conduit` first reads GitHub's conduit response and falls back to a rendered browser page. `GITHUB_FEED_SOURCE=events` is the REST fallback.
 
@@ -94,24 +94,24 @@ duplicates merge their references. The deterministic validator permits only know
 the six declared categories, event-shaped Chinese headlines and public URLs. The production Tool
 first returns evidence in a `collect` phase, then accepts only structured editorial records in a
 `render` phase. It verifies that entities overlap referenced evidence and that every numeric claim
-is present in that evidence. Collector labels such as `Blog`, `Changelog`, and `Releases` are not
-valid headline subjects. Invalid editorial output falls back only to source titles that are already
-event-shaped Chinese sentences; raw English titles are omitted instead of being wrapped in a
-synthetic `source published title` sentence. A 12–24 item target is never a fill quota, and only
-`render` returns deliverable Markdown. Source references are rendered as clickable inline badges
-beside each event; repeated labels from the same provider collapse to one badge, and the document
-does not repeat references in a trailing source section.
+is present in that evidence. Collector labels such as `Blog`,
+`Changelog`, and `Releases` are not valid headline subjects. Invalid editorial output falls back
+only to source titles that are already event-shaped Chinese sentences; raw English titles are
+omitted instead of being wrapped in a synthetic `source published title` sentence. A 12–24 item
+target is never a fill quota, and only `render` returns deliverable Markdown. Source references are
+rendered as clickable inline badges beside each event; repeated labels from the same provider
+collapse to one badge, and the document does not repeat references in a trailing source section.
 
 ## Research workflow
 
-The deterministic CLI emits candidates; the portable `$feed-research-digest` skill performs source-based judgment:
+The deterministic CLI emits candidates; the portable `$feed-research-digest` skill and the scheduled Rivus `research-article` Tool perform source-based judgment:
 
 ```bash
 rss-summary digest --json --only-new --dry-run
 rss-summary industry --json --only-new --dry-run
 ```
 
-Normal subscription/frontier entries need no deep research. The skill spends attention on `summary` candidates and papers, opens the original article/repository/release/arXiv page, and writes research decisions with `rss-summary research add`. Personal research cache avoids repeated investigation but does not hide later subscription events; frontier research state also participates in only-new filtering.
+Normal subscription/frontier entries need no deep research. The skill or Agent Tool spends attention on selected `summary` candidates and papers, opens the original article/repository/release/arXiv page, and keeps the extracted body bounded before editorial validation. Personal research cache avoids repeated investigation but does not hide later subscription events; frontier research state also participates in only-new filtering.
 
 ## Audit artifacts
 
@@ -171,7 +171,7 @@ News ranking uses within-query position, source authority, and freshness. A URL 
 
 - GitHub Home parsing depends on GitHub's internal conduit/DOM shape.
 - On machines that require `HTTP_PROXY`/`HTTPS_PROXY`, Node 24 must start with `NODE_USE_ENV_PROXY=1` for native fetch to use those variables.
-- CLI summaries use feed/repository text unless the research skill has inspected the original source. Scheduled Rivus subscription summaries are model-edited from bounded PR/RSS evidence and fall back to that source text when validation fails.
+- CLI summaries use feed/repository text unless the research skill has inspected the original source. Scheduled Rivus subscription summaries are model-edited from bounded PR/RSS evidence, and selected URLs can be upgraded with the Agent's bounded research result before validation; failed research falls back to source text only when the item remains explicitly selected.
 - RSS identity dedupe is deterministic, not semantic.
 - Official page ingestion depends on stable same-origin links and explicit date markup. Zero valid dated links is audited as parser failure instead of an empty day.
 - The generic webhook cannot confirm downstream rendering; Rivus provides the stronger delivery ledger.

@@ -1,6 +1,6 @@
 import { selectCandidatePresentationSections } from "./attention.js";
 import { candidateIdentity, type CandidateProject, type DigestDocument } from "./digest.js";
-import { compactSummary, formatCompactCount } from "./text.js";
+import { canonicalizeUrl, compactSummary, formatCompactCount } from "./text.js";
 
 export type SubscriptionEvidenceKind =
   | "activity"
@@ -39,6 +39,15 @@ export type SubscriptionSelectionDecision = {
 export type SubscriptionSelection = {
   decisions: ReadonlyArray<SubscriptionSelectionDecision>;
   selectedRefs: ReadonlySet<string>;
+};
+
+export type SubscriptionResearch = {
+  content?: string;
+  fetchedUrl?: string;
+  ref: string;
+  status: "failed" | "ok";
+  title?: string;
+  url: string;
 };
 
 /** Build the bounded, source-grounded contract exposed to the automation model. */
@@ -113,8 +122,9 @@ export function validateSubscriptionEditorialDraft(
 export function buildSubscriptionEditorial(
   document: DigestDocument,
   draft?: unknown,
+  research?: unknown,
 ): SubscriptionEditorial {
-  const evidence = buildSubscriptionEvidence(document);
+  const evidence = mergeSubscriptionResearch(buildSubscriptionEvidence(document), research);
   const items = acceptValidSubscriptionEditorialItems(draft, evidence);
   const supplied = new Map(items.map(({ ref, summary }) => [ref, summary]));
   const summaries = new Map<string, string>();
@@ -129,6 +139,76 @@ export function buildSubscriptionEditorial(
     }
   }
   return { evidence, summaries };
+}
+
+/** Replace shallow feed excerpts with the Agent's fetched article evidence. */
+export function mergeSubscriptionResearch(
+  evidence: SubscriptionEvidence[],
+  value: unknown,
+): SubscriptionEvidence[] {
+  const entries = validateSubscriptionResearch(value, evidence);
+  if (entries.length === 0) return evidence;
+  const researched = new Map(entries.map((entry) => [entry.ref, entry]));
+  return evidence.map((item) => {
+    const research = researched.get(item.id);
+    if (!research || research.status !== "ok" || !research.content) return item;
+    return {
+      ...item,
+      rawText: bounded(`${item.rawText}\n${research.content}`, 7_000),
+      title: research.title?.trim() || item.title,
+    };
+  });
+}
+
+export function validateSubscriptionResearch(
+  value: unknown,
+  evidence: SubscriptionEvidence[],
+): SubscriptionResearch[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) throw new Error("research output must be an array");
+  const byRef = new Map(evidence.map((item) => [item.id, item]));
+  const seen = new Set<string>();
+  return value.map((entry) => {
+    if (!entry || typeof entry !== "object") throw new Error("research item must be an object");
+    const record = entry as Record<string, unknown>;
+    const ref = typeof record.ref === "string" ? record.ref : "";
+    const source = byRef.get(ref);
+    if (!source) throw new Error(`unknown research reference: ${ref}`);
+    if (seen.has(ref)) throw new Error(`duplicate research reference: ${ref}`);
+    seen.add(ref);
+    const url = typeof record.url === "string" ? record.url : "";
+    if (canonicalizeUrl(url) !== canonicalizeUrl(source.url))
+      throw new Error(`research URL does not match evidence: ${ref}`);
+    const status = record.status;
+    if (status !== "ok" && status !== "failed") throw new Error(`invalid research status: ${ref}`);
+    const content = record.content;
+    if (status === "ok" && (typeof content !== "string" || content.trim().length < 80)) {
+      throw new Error(`research content is too short: ${ref}`);
+    }
+    return {
+      ...(typeof content === "string" ? { content } : {}),
+      ...(typeof record.fetchedUrl === "string" ? { fetchedUrl: record.fetchedUrl } : {}),
+      ref,
+      status,
+      ...(typeof record.title === "string" ? { title: record.title } : {}),
+      url,
+    };
+  });
+}
+
+export function excludeSubscriptionResearchFailures(
+  selection: SubscriptionSelection,
+  failedRefs: ReadonlySet<string>,
+): SubscriptionSelection {
+  const decisions = selection.decisions.map((decision) =>
+    failedRefs.has(decision.ref) && decision.selected
+      ? { ...decision, reason: "研究正文缺失或抓取失败，已取消推送", selected: false }
+      : decision,
+  );
+  return {
+    decisions,
+    selectedRefs: new Set(decisions.filter((item) => item.selected).map((item) => item.ref)),
+  };
 }
 
 /**

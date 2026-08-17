@@ -49,7 +49,7 @@ const report = await assertRivusPluginConforms({
     pluginId: "rss-summary",
     profileId: "rss-digest",
     skills: { allow: [] },
-    tools: { allow: ["rss-summary/generate-digest", "rss-summary/generate-daily-ai-digest", "rss-summary/generate-news-brief", "rss-summary/generate-industry-brief"] }
+    tools: { allow: ["rss-summary/generate-digest", "rss-summary/research-article", "rss-summary/generate-daily-ai-digest", "rss-summary/generate-news-brief", "rss-summary/generate-industry-brief"] }
   },
   plugin
 });
