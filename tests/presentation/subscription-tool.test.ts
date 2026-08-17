@@ -64,6 +64,45 @@ describe("subscription Tool editorial workflow", () => {
       "正文解释 Deno 2.4 的运行时更新",
     );
   });
+
+  it("suppresses a selected item when both research paths fail", async () => {
+    const collect = vi.fn(async () => ({ day: "2026-08-15", document: fixture() }));
+    const execute = createRivusSubscriptionExecutor({ collect });
+    const request = {
+      occurrence: "2026-08-16T01:00:00.000Z",
+      window: "previous-calendar-day",
+    };
+    const collected = await execute({ ...request, phase: "collect" });
+    if (!("evidence" in collected)) throw new Error("collect phase did not return evidence");
+    const selection = collected.evidence.map((item) => ({
+      reason: "文章有明确技术变化",
+      ref: item.id,
+      selected: item.kind === "article",
+    }));
+
+    const rendered = await execute({
+      ...request,
+      phase: "render",
+      selection,
+      research: [
+        {
+          error: "browser: timeout; http: 403",
+          ref: "publication:https://deno.com/blog/v2.4",
+          status: "failed",
+          url: "https://deno.com/blog/v2.4",
+        },
+      ],
+    });
+
+    expect(rendered).toMatchObject({ candidateCount: 0, phase: "render", selectedCount: 0 });
+    expect("selection" in rendered ? rendered.selection : []).toContainEqual(
+      expect.objectContaining({
+        reason: "研究正文缺失或抓取失败，已取消推送",
+        ref: "publication:https://deno.com/blog/v2.4",
+        selected: false,
+      }),
+    );
+  });
 });
 
 function fixture(): DigestDocument {

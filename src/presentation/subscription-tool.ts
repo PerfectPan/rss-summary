@@ -2,7 +2,9 @@ import {
   applySubscriptionSelection,
   buildSubscriptionEditorial,
   buildSubscriptionEvidence,
+  excludeSubscriptionResearchFailures,
   validateSubscriptionSelectionDraft,
+  validateSubscriptionResearch,
   type SubscriptionEvidence,
 } from "../domain/subscription-editorial.js";
 import type { RunAudit, RunEditorialSelectionDecision } from "../domain/run-audit.js";
@@ -104,8 +106,30 @@ export function createRivusSubscriptionExecutor(
 
     const evidence = buildSubscriptionEvidence(collected.document);
     const selection = validateSubscriptionSelectionDraft(input.selection, evidence);
-    const selectedDocument = applySubscriptionSelection(collected.document, selection);
-    const editorial = buildSubscriptionEditorial(selectedDocument, input.draft, input.research);
+    const research = validateSubscriptionResearch(input.research, evidence);
+    const researchedRefs = new Set(research.map((item) => item.ref));
+    const missingResearchRefs = new Set(
+      evidence
+        .filter(
+          (item) =>
+            item.summaryPolicy === "required" &&
+            selection.selectedRefs.has(item.id) &&
+            !researchedRefs.has(item.id),
+        )
+        .map((item) => item.id),
+    );
+    const effectiveSelection = excludeSubscriptionResearchFailures(
+      selection,
+      new Set([
+        ...research.filter((item) => item.status === "failed").map((item) => item.ref),
+        ...missingResearchRefs,
+      ]),
+    );
+    const selectedDocument = applySubscriptionSelection(collected.document, effectiveSelection);
+    const effectiveResearch = research.filter(
+      (item) => item.status === "ok" && effectiveSelection.selectedRefs.has(item.ref),
+    );
+    const editorial = buildSubscriptionEditorial(selectedDocument, input.draft, effectiveResearch);
     const document = collected.day
       ? { ...selectedDocument, displayDate: collected.day }
       : selectedDocument;
@@ -116,9 +140,8 @@ export function createRivusSubscriptionExecutor(
     const audit = document.audit
       ? applyEditorialSelectionToAudit(
           document.audit as RunAudit,
-          selection.decisions,
+          effectiveSelection.decisions,
           selectedCount,
-          paperCandidateCount,
         )
       : undefined;
     cache.delete(key);
@@ -129,7 +152,7 @@ export function createRivusSubscriptionExecutor(
       paperCandidateCount,
       phase: "render",
       selectedCount,
-      selection: selection.decisions,
+      selection: effectiveSelection.decisions,
       ...(document.windowLabel ? { windowLabel: document.windowLabel } : {}),
       ...(audit ? { audit } : {}),
     };
@@ -180,12 +203,11 @@ function applyEditorialSelectionToAudit(
   audit: RunAudit,
   decisions: ReadonlyArray<RunEditorialSelectionDecision>,
   selectedCount: number,
-  researchPending: number,
 ): RunAudit {
   const decisionByRef = new Map(decisions.map((decision) => [decision.ref, decision]));
   return {
     ...audit,
-    counts: { ...audit.counts, researchPending, selected: selectedCount },
+    counts: { ...audit.counts, selected: selectedCount },
     candidates: audit.candidates.map((candidate) => {
       const decision = decisionByRef.get(candidate.key);
       return decision?.selected
