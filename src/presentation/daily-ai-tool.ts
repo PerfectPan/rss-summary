@@ -53,10 +53,7 @@ export function createRivusDailyAiDigestExecutor(
       };
     }
 
-    const digest = buildDailyAiDigest(collected.evidence, {
-      draft: input.draft,
-      research: input.research,
-    });
+    const digest = buildDailyAiDigest(collected.evidence, { draft: input.draft });
     const result = {
       ...collected,
       ...digest,
@@ -84,7 +81,6 @@ function parseToolInput(value: unknown): {
   occurrence: string;
   phase: "collect" | "render";
   draft?: unknown;
-  research?: unknown;
 } {
   if (!value || typeof value !== "object" || Array.isArray(value))
     throw new Error("Daily AI Tool input must be an object.");
@@ -94,12 +90,7 @@ function parseToolInput(value: unknown): {
     throw new Error("occurrence must be a valid date-time.");
   if (record.phase !== "collect" && record.phase !== "render")
     throw new Error("phase must be collect or render.");
-  return {
-    occurrence,
-    phase: record.phase,
-    draft: record.draft,
-    research: record.research,
-  };
+  return { occurrence, phase: record.phase, draft: record.draft };
 }
 
 function trimCache(cache: Map<string, DailyAiDigestResult>): void {

@@ -65,10 +65,10 @@ deployments can bind both products without one replacing the other.
 5. Rank candidates and bound the paper queue.
 6. Under `--only-new`, filter only previously delivered event IDs. Research cache entries do not suppress new subscription events.
 7. Assign `link`, `summary`, or `research` presentation depth.
-8. In Rivus, run the subscription Tool in three phases. `collect` returns typed evidence, `select` requires the model to decide whether every RSS/GitHub item is worth pushing with a reason, and the Agent uses the read-only `research-article` Tool for selected public URLs before writing summaries. `render` accepts those research results, filters to `selected=true`, and validates `Array<{ref, summary}>` plus grounded numeric claims. An empty selection is an auditable suppressed run rather than an empty card.
+8. In Rivus, run the subscription Tool in three phases. `collect` returns typed evidence, `select` requires the model to decide whether every RSS/GitHub item is worth pushing with a reason, and the Agent uses the read-only `research-article` Tool for selected public URLs before writing per-item summaries. The RSS/GitHub collection, selection, deduplication and delivery path remains unchanged. `render` accepts those research results, filters to `selected=true`, and validates `Array<{ref, summary}>` plus grounded numeric claims. An empty selection is an auditable suppressed run rather than an empty card.
 9. Render, deliver, record an audit artifact, then update seen state after successful non-dry delivery.
 
-The CLI remains deterministic and renders source excerpts directly. The scheduled Rivus path adds the model editorial and bounded source-research pass. This keeps candidate ingestion/ranking inside `rss-summary`, lets the Agent fetch only selected public article bodies through a constrained Tool, and leaves channel layout to Rivus Renderer. The industry frontier, noon/evening news, and Daily AI products retain their existing workflows; an already edited frontier headline is not summarized again by the subscription pass.
+The CLI remains deterministic and renders source excerpts directly. The scheduled Rivus path adds the model editorial and bounded source-research pass only for selected subscription items. This keeps candidate ingestion/ranking, RSS/GitHub selection, deduplication and delivery inside the existing path, lets the Agent fetch only selected public article bodies through a constrained Tool, and leaves channel layout to Rivus Renderer. The industry frontier, noon/evening news, and Daily AI products retain their existing workflows; an already edited frontier headline is not summarized again by the subscription pass.
 
 GitHub Home uses the saved `.state/github-home-storage.json` session. `GITHUB_HOME_FETCH=conduit` first reads GitHub's conduit response and falls back to a rendered browser page. `GITHUB_FEED_SOURCE=events` is the REST fallback.
 
@@ -92,10 +92,9 @@ seven-query news search and combines them with the official frontier sources. Ev
 to public IDs, titles, canonical URLs, timestamps, cleaned excerpts and source tiers. Entity/event
 duplicates merge their references. The deterministic validator permits only known references,
 the six declared categories, event-shaped Chinese headlines and public URLs. The production Tool
-first returns evidence in a `collect` phase; the Agent drafts only worthwhile events, researches
-their selected public URLs with the bounded `research-article` Tool, then calls `render` with the
-draft and URL-matched research bodies. Render verifies that entities overlap referenced evidence
-and that every numeric claim is present in that evidence. Collector labels such as `Blog`,
+first returns evidence in a `collect` phase, then accepts only structured editorial records in a
+`render` phase. It verifies that entities overlap referenced evidence and that every numeric claim
+is present in that evidence. Collector labels such as `Blog`,
 `Changelog`, and `Releases` are not valid headline subjects. Invalid editorial output falls back
 only to source titles that are already event-shaped Chinese sentences; raw English titles are
 omitted instead of being wrapped in a synthetic `source published title` sentence. A 12–24 item

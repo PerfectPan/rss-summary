@@ -35,14 +35,6 @@ export type DailyAiDecision = {
   reason: string;
 };
 
-export type DailyAiResearch = {
-  content?: string;
-  ref: string;
-  status: "failed" | "ok";
-  title?: string;
-  url: string;
-};
-
 export type DailyAiDigest = {
   evidence: DailyAiEvidence[];
   items: DailyAiEditorialItem[];
@@ -51,9 +43,9 @@ export type DailyAiDigest = {
 
 export function buildDailyAiDigest(
   inputEvidence: DailyAiEvidence[],
-  options: { draft?: unknown; research?: unknown } = {},
+  options: { draft?: unknown } = {},
 ): DailyAiDigest {
-  const evidence = mergeDailyAiResearch(normalizeEvidence(inputEvidence), options.research);
+  const evidence = normalizeEvidence(inputEvidence);
   const groups: DailyAiEvidence[][] = [];
   const decisions: DailyAiDecision[] = [];
   for (const item of evidence) {
@@ -96,48 +88,6 @@ export function buildDailyAiDigest(
     }
   }
   return { evidence, items, audit: { decisions } };
-}
-
-/** Enrich candidate excerpts with content fetched by the Agent's research Tool. */
-export function mergeDailyAiResearch(
-  evidence: DailyAiEvidence[],
-  value: unknown,
-): DailyAiEvidence[] {
-  if (value === undefined) return evidence;
-  if (!Array.isArray(value)) throw new Error("research output must be an array");
-  const byRef = new Map(evidence.map((item) => [item.id, item]));
-  const researched = new Map<string, DailyAiResearch>();
-  for (const entry of value) {
-    if (!entry || typeof entry !== "object") throw new Error("research item must be an object");
-    const record = entry as Record<string, unknown>;
-    const ref = typeof record.ref === "string" ? record.ref : "";
-    const source = byRef.get(ref);
-    if (!source) throw new Error(`unknown research reference: ${ref}`);
-    const url = typeof record.url === "string" ? record.url : "";
-    if (url !== source.url) throw new Error(`research URL does not match evidence: ${ref}`);
-    const status = record.status;
-    if (status !== "ok" && status !== "failed") throw new Error(`invalid research status: ${ref}`);
-    const content = record.content;
-    if (status === "ok" && (typeof content !== "string" || content.trim().length < 80)) {
-      throw new Error(`research content is too short: ${ref}`);
-    }
-    researched.set(ref, {
-      ...(typeof content === "string" ? { content } : {}),
-      ref,
-      status,
-      ...(typeof record.title === "string" ? { title: record.title } : {}),
-      url,
-    });
-  }
-  return evidence.map((item) => {
-    const research = researched.get(item.id);
-    if (!research || research.status !== "ok" || !research.content) return item;
-    return {
-      ...item,
-      excerpt: `${item.excerpt}\n${research.content}`.slice(0, 8_000),
-      title: research.title?.trim() || item.title,
-    };
-  });
 }
 
 export function validateEditorialDraft(

@@ -243,10 +243,7 @@ describe("rss-summary Rivus Plugin", () => {
     ]);
     expect(registrations.automations).toHaveLength(5);
     expect(morning.requestedToolIds).toEqual([RSS_SUMMARY_TOOL_ID, RSS_SUMMARY_RESEARCH_TOOL_ID]);
-    expect(dailyAi.requestedToolIds).toEqual([
-      RSS_SUMMARY_DAILY_AI_TOOL_ID,
-      RSS_SUMMARY_RESEARCH_TOOL_ID,
-    ]);
+    expect(dailyAi.requestedToolIds).toEqual([RSS_SUMMARY_DAILY_AI_TOOL_ID]);
     expect(noon.requestedToolIds).toEqual([RSS_SUMMARY_NEWS_TOOL_ID]);
     expect(evening.requestedToolIds).toEqual([RSS_SUMMARY_NEWS_TOOL_ID]);
     expect(industry.requestedToolIds).toEqual([RSS_SUMMARY_INDUSTRY_TOOL_ID]);
@@ -264,8 +261,9 @@ describe("rss-summary Rivus Plugin", () => {
     expect(dailyAi.createInput({ occurrence }).text).toContain('"phase":"collect"');
     expect(dailyAi.createInput({ occurrence }).text).toContain('"phase":"render"');
     expect(dailyAi.createInput({ occurrence }).text).toContain("只能引用 collect 返回的 evidence");
-    expect(dailyAi.createInput({ occurrence }).text).toContain(RSS_SUMMARY_RESEARCH_TOOL_ID);
+    expect(dailyAi.createInput({ occurrence }).text).toContain("主体、动作、具体变化或结果与影响");
     expect(dailyAi.createInput({ occurrence }).text).toContain("Blog/Changelog/Releases");
+    expect(morning.createInput({ occurrence }).text).toContain("对齐 Daily AI Digest");
     expect(noon.createInput({ occurrence }).text).toContain('"edition":"noon"');
     expect(evening.createInput({ occurrence }).text).toContain('"edition":"evening"');
     expect(industry.createInput({ occurrence }).text).toContain('"onlyNew":true');
