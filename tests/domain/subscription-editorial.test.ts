@@ -3,6 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   buildSubscriptionEditorial,
   buildSubscriptionEvidence,
+  SubscriptionDraftValidationError,
   validateSubscriptionEditorialDraft,
   validateSubscriptionSelectionDraft,
 } from "../../src/domain/subscription-editorial.js";
@@ -90,24 +91,39 @@ describe("subscription editorial contract", () => {
     ]);
   });
 
-  it("keeps valid summaries when another draft item is invalid", () => {
-    const editorial = buildSubscriptionEditorial(document(), [
-      {
-        ref: "github-pull-request:example/project:41",
-        summary: "为上传流程增加断点续传。网络中断后可从检查点继续。",
-      },
-      {
-        ref: "publication:https://deno.com/blog/v2.4",
-        summary: "文章声称包含 99 项来源中不存在的变化。",
-      },
-    ]);
+  it("returns a retryable error when a draft item is invalid", () => {
+    expect(() =>
+      buildSubscriptionEditorial(document(), [
+        {
+          ref: "github-pull-request:example/project:41",
+          summary: "为上传流程增加断点续传。网络中断后可从检查点继续。",
+        },
+        {
+          ref: "publication:https://deno.com/blog/v2.4",
+          summary: "文章声称包含 99 项来源中不存在的变化。",
+        },
+      ]),
+    ).toThrow(SubscriptionDraftValidationError);
 
-    expect(editorial.summaries.get("github-pull-request:example/project:41")).toBe(
-      "为上传流程增加断点续传。网络中断后可从检查点继续。",
-    );
-    expect(editorial.summaries.get("publication:https://deno.com/blog/v2.4")).toBe(
-      "Runtime updates for TypeScript and JavaScript.",
-    );
+    try {
+      buildSubscriptionEditorial(document(), [
+        {
+          ref: "publication:https://deno.com/blog/v2.4",
+          summary: "文章声称包含 99 项来源中不存在的变化。",
+        },
+      ]);
+      throw new Error("expected validation error");
+    } catch (error) {
+      expect(error).toMatchObject({ code: "SUBSCRIPTION_SUMMARY_VALIDATION_FAILED" });
+      expect((error as SubscriptionDraftValidationError).issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            message: expect.stringContaining("numeric claim 99"),
+            ref: "publication:https://deno.com/blog/v2.4",
+          }),
+        ]),
+      );
+    }
   });
 
   it("accepts model summaries with semicolon-separated clauses", () => {

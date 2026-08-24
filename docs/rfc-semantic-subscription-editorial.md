@@ -14,7 +14,7 @@ The subscriptions pipeline grouped every GitHub event by repository and rendered
 2. Preserve repository facts deterministically from GitHub metadata. The model cannot rewrite stars, language, links, or source identity.
 3. Run the scheduled subscriptions Tool in `collect` and `render` phases, following the existing Daily AI orchestration pattern.
 4. `collect` exposes bounded typed evidence. Only pull requests and RSS articles with usable source text have `summaryPolicy=required`.
-5. The model returns only `Array<{ref, summary}>`, with a concise Chinese summary of at most 180 characters per required reference. Sentence and clause punctuation is model-owned and is not rejected by the validator.
+5. The model returns only `Array<{ref, summary}>`, with a concise Chinese summary of at most 180 characters per required reference. Sentence and clause punctuation is model-owned and is not rejected by the validator. If a summary fails validation, render returns `SUBSCRIPTION_SUMMARY_VALIDATION_FAILED` so the Agent can regenerate it; the Tool never silently falls back to RSS text.
 6. `render` rejects unknown/duplicate references and numeric claims absent from evidence. One invalid item falls back independently, without discarding other grounded summaries.
 7. The Plugin owns content semantics and the channel-neutral presentation. Rivus owns model execution, scheduling, delivery, and channel rendering.
 8. Semantic summary expansion is a subscription presentation policy. Industry frontier keeps its existing compact/expanded policy and eight-item expanded cap; subscriptions may expose up to 20 summaries. Collect exposes only the candidates that can fit the rendered sections.
