@@ -327,5 +327,13 @@
       "Articles",
       "Blog"
     ]
+  },
+  {
+    "name": "Earendil Posts",
+    "url": "https://earendil.com/posts/feed.atom",
+    "tags": [
+      "Articles",
+      "Blog"
+    ]
   }
 ]
