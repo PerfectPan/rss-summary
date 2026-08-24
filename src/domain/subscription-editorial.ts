@@ -294,11 +294,9 @@ export function repositoryFactsForCandidate(candidate: CandidateProject): string
 
 function cleanSummary(value: unknown): string {
   if (typeof value !== "string") throw new Error("summary must be a string");
-  const summary = bounded(value, 180);
+  const summary = value.replace(/\s+/gu, " ").trim();
   if (summary.length < 8) throw new Error("summary is too short");
-  const normalizedSentenceStops = summary.replace(/\.(?=\s|$)/gu, "。");
-  const sentences = normalizedSentenceStops.match(/[^。！？!?；;]+[。！？!?；;]?/gu) ?? [];
-  if (sentences.length > 2) throw new Error("summary must contain at most two sentences");
+  if (summary.length > 180) throw new Error("summary is too long");
   return summary;
 }
 
