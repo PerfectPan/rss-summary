@@ -110,19 +110,39 @@ describe("subscription editorial contract", () => {
     );
   });
 
-  it("rejects more than two sentences across Chinese and ASCII punctuation", () => {
+  it("accepts model summaries with semicolon-separated clauses", () => {
+    const evidence = buildSubscriptionEvidence(document());
+    expect(
+      validateSubscriptionEditorialDraft(
+        [
+          {
+            ref: "github-pull-request:example/project:41",
+            summary: "先保存检查点；再恢复上传；最后报告结果。",
+          },
+        ],
+        evidence,
+      ),
+    ).toEqual([
+      {
+        ref: "github-pull-request:example/project:41",
+        summary: "先保存检查点；再恢复上传；最后报告结果。",
+      },
+    ]);
+  });
+
+  it("rejects summaries longer than 180 characters", () => {
     const evidence = buildSubscriptionEvidence(document());
     expect(() =>
       validateSubscriptionEditorialDraft(
         [
           {
             ref: "github-pull-request:example/project:41",
-            summary: "先保存检查点; 再恢复上传. 最后报告结果。",
+            summary: "a".repeat(181),
           },
         ],
         evidence,
       ),
-    ).toThrow(/at most two sentences/u);
+    ).toThrow(/too long/u);
   });
 
   it("exposes only candidates that fit the rendered subscription sections", () => {
