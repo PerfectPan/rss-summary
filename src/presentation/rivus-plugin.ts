@@ -271,7 +271,7 @@ export function createRssSummaryPlugin(
         model: {},
         skills: { allow: [] },
         systemPrompt:
-          "严格遵循任务指定的 rss-summary Tool 协议。编辑阶段只能依据 Tool 返回的 evidence 生成结构化草稿，禁止补写事实；最终只原样返回 render 阶段的 markdown。",
+          "严格遵循任务指定的 rss-summary Tool 协议。编辑阶段只能依据 Tool 返回的 evidence 生成结构化草稿，禁止补写事实；如果 render 返回 SUBSCRIPTION_SUMMARY_VALIDATION_FAILED，依据错误原因重写对应 summary 并重新调用 render，最多重试两次；仍失败则取消对应条目的选择，禁止回退到 RSS 原文；最终只原样返回 render 阶段的 markdown。",
         tools: {
           allow: [
             RSS_SUMMARY_TOOL_ID,

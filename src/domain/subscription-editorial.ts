@@ -30,6 +30,24 @@ export type SubscriptionEditorial = {
   summaries: ReadonlyMap<string, string>;
 };
 
+export type SubscriptionDraftValidationIssue = {
+  message: string;
+  ref: string;
+};
+
+export class SubscriptionDraftValidationError extends Error {
+  readonly code = "SUBSCRIPTION_SUMMARY_VALIDATION_FAILED";
+
+  constructor(readonly issues: ReadonlyArray<SubscriptionDraftValidationIssue>) {
+    super(
+      `SUBSCRIPTION_SUMMARY_VALIDATION_FAILED: ${issues
+        .map(({ message, ref }) => `${ref}: ${message}`)
+        .join("; ")}. Regenerate the invalid summaries and call render again.`,
+    );
+    this.name = "SubscriptionDraftValidationError";
+  }
+}
+
 export type SubscriptionSelectionDecision = {
   ref: string;
   selected: boolean;
@@ -125,7 +143,7 @@ export function buildSubscriptionEditorial(
   research?: unknown,
 ): SubscriptionEditorial {
   const evidence = mergeSubscriptionResearch(buildSubscriptionEvidence(document), research);
-  const items = acceptValidSubscriptionEditorialItems(draft, evidence);
+  const items = validateSubscriptionEditorialItemsForRender(draft, evidence);
   const supplied = new Map(items.map(({ ref, summary }) => [ref, summary]));
   const summaries = new Map<string, string>();
   for (const item of evidence) {
@@ -307,23 +325,51 @@ function boundedSelectionReason(value: unknown): string {
   return reason;
 }
 
-function acceptValidSubscriptionEditorialItems(
+function validateSubscriptionEditorialItemsForRender(
   value: unknown,
   evidence: SubscriptionEvidence[],
 ): SubscriptionEditorialItem[] {
-  if (!Array.isArray(value)) return [];
+  const requiredRefs = new Set(
+    evidence.filter((item) => item.summaryPolicy === "required").map((item) => item.id),
+  );
+  if (requiredRefs.size === 0 && value === undefined) return [];
+  if (!Array.isArray(value)) {
+    throw new SubscriptionDraftValidationError(
+      [...requiredRefs].map((ref) => ({ ref, message: "summary is missing" })),
+    );
+  }
   const accepted: SubscriptionEditorialItem[] = [];
+  const issues: SubscriptionDraftValidationIssue[] = [];
   const seen = new Set<string>();
+  const providedRefs = new Set<string>();
   for (const entry of value) {
+    const ref =
+      entry &&
+      typeof entry === "object" &&
+      typeof (entry as Record<string, unknown>).ref === "string"
+        ? ((entry as Record<string, unknown>).ref as string)
+        : "<missing-ref>";
+    if (providedRefs.has(ref)) {
+      issues.push({ message: "duplicate reference", ref });
+      continue;
+    }
+    providedRefs.add(ref);
     try {
       const item = validateSubscriptionEditorialDraft([entry], evidence)[0];
       if (!item || seen.has(item.ref)) continue;
       seen.add(item.ref);
       accepted.push(item);
-    } catch {
-      // A malformed model item must not discard other grounded summaries.
+    } catch (error) {
+      issues.push({
+        message: error instanceof Error ? error.message : String(error),
+        ref,
+      });
     }
   }
+  for (const ref of requiredRefs) {
+    if (!providedRefs.has(ref)) issues.push({ message: "summary is missing", ref });
+  }
+  if (issues.length > 0) throw new SubscriptionDraftValidationError(issues);
   return accepted;
 }
 

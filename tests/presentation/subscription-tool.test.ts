@@ -103,6 +103,52 @@ describe("subscription Tool editorial workflow", () => {
       }),
     );
   });
+
+  it("surfaces invalid summaries so the Agent can retry render", async () => {
+    const collect = vi.fn(async () => ({ day: "2026-08-15", document: fixture() }));
+    const execute = createRivusSubscriptionExecutor({ collect });
+    const request = {
+      occurrence: "2026-08-16T02:00:00.000Z",
+      window: "previous-calendar-day",
+    };
+    const collected = await execute({ ...request, phase: "collect" });
+    if (!("evidence" in collected)) throw new Error("collect phase did not return evidence");
+    const selection = collected.evidence.map((item) => ({
+      reason: item.kind === "article" ? "有明确技术变化" : "普通活动",
+      ref: item.id,
+      selected: item.kind === "article",
+    }));
+
+    try {
+      await execute({
+        ...request,
+        phase: "render",
+        selection,
+        research: [
+          {
+            content: "正文说明 Deno 2.4 的运行时更新，并解释 TypeScript 工作流的变化。".repeat(20),
+            ref: "publication:https://deno.com/blog/v2.4",
+            status: "ok",
+            url: "https://deno.com/blog/v2.4",
+          },
+        ],
+        draft: [
+          {
+            ref: "publication:https://deno.com/blog/v2.4",
+            summary: "a".repeat(181),
+          },
+        ],
+      });
+      throw new Error("expected validation error");
+    } catch (error) {
+      expect(error).toMatchObject({ code: "SUBSCRIPTION_SUMMARY_VALIDATION_FAILED" });
+      expect((error as { issues: Array<{ message: string }> }).issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ message: expect.stringContaining("too long") }),
+        ]),
+      );
+    }
+  });
 });
 
 function fixture(): DigestDocument {
