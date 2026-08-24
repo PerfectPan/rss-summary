@@ -10,6 +10,22 @@ describe("RSS source", () => {
     );
     expect(event?.summary).toBe("OpenAI 发布新模型并开放 API。");
   });
+
+  it("prefers the richer encoded article body over a promotional description", () => {
+    const [event] = parseFeedXml(
+      `<rss><channel><item>
+        <title>2026-08-16日刊</title>
+        <link>https://hex2077.dev/docs/2026-08/2026-08-16/</link>
+        <description><![CDATA[## AI资讯日报 2026/8/16 | 每日早读 | 全网数据聚合 | ## 今日摘要]]></description>
+        <content:encoded><![CDATA[<h2>AI资讯日报 2026/8/16</h2><blockquote>每日早读 | 全网数据聚合</blockquote><h2>今日摘要</h2><pre><code>李飞飞团队发布机器人仿真引擎，皮卡推出四款全新音频生成模型</code></pre><h3>产品与功能更新</h3><p><strong>机器人仿真引擎首发。</strong>系统支持一小时无人干预运行。</p><hr/><h2>AI资讯日报多渠道</h2>]]></content:encoded>
+      </item></channel></rss>`,
+      { name: "AI 日报", url: "https://example.com/feed", tags: ["ai"] },
+    );
+
+    expect(event?.summary).toContain("李飞飞团队发布机器人仿真引擎");
+    expect(event?.summary).toContain("机器人仿真引擎首发");
+    expect(event?.summary).not.toContain("AI资讯日报多渠道");
+  });
   it("parses RSS 2.0 items into activity cards", () => {
     const events = parseFeedXml(
       `<?xml version="1.0"?>

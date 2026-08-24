@@ -8,8 +8,9 @@ Each Automation returns two compatible views of the same result: canonical Markd
 
 | Kind | ID | Purpose |
 | --- | --- | --- |
-| Agent profile | `rss-digest` | Allows only the four rss-summary Tools |
+| Agent profile | `rss-digest` | Allows only the five rss-summary Tools |
 | Tool | `rss-summary/generate-digest` | GitHub Home + explicitly subscribed personal RSS |
+| Tool | `rss-summary/research-article` | render or fetch one Agent-selected public article URL |
 | Tool | `rss-summary/generate-industry-brief` | curated official feeds and verified pages; papers stay pending |
 | Tool | `rss-summary/generate-news-brief` | bounded noon/evening authoritative web news |
 | Tool | `rss-summary/generate-daily-ai-digest` | two-phase grounded Daily AI evidence editing and rendering |
@@ -61,6 +62,7 @@ The important manifest portion is the Plugin, one matching Agent/Endpoint, and t
       "tools": {
         "allow": [
           "rss-summary/generate-digest",
+          "rss-summary/research-article",
           "rss-summary/generate-daily-ai-digest",
           "rss-summary/generate-industry-brief",
           "rss-summary/generate-news-brief"
@@ -109,6 +111,11 @@ RIVUS_RSS_DIGEST_TARGET=replace-with-union-id
 
 Do not set `NOTIFY_WEBHOOK_URL` for the Plugin path; Rivus owns delivery. Browser storage, API keys, and tokens remain local secrets.
 
+The subscription research Tool uses browser-first mode by default. On a Mac mini with Chrome installed, set
+`RSS_ARTICLE_BROWSER_CHANNEL=chrome` (the default), keep `RSS_ARTICLE_BROWSER_HEADLESS=true` for daemon runs,
+and optionally tune `RSS_ARTICLE_BROWSER_TIMEOUT_MS`. If the browser cannot render a page, the Tool falls back
+to its bounded HTTP extractor; pass `mode:"browser"` to require browser research or `mode:"http"` to skip it.
+
 The news Tool reads `DOUBAO_SEARCH_API_KEY` from the Node process environment. If the Rivus CLI's environment-file option only configures the Host, also load the file into Node:
 
 ```bash
@@ -129,7 +136,7 @@ The digest and industry Tool results contain an `audit` object with:
 
 The news Tool's `audit` records each structured query's provider log ID, result counts, deterministic rejection reasons (`outside-window`, `insufficient-authority`, `intent-mismatch`, and others), canonical/title deduplication, topic quota filtering, and the final brief cap. Selected stories also expose a score breakdown for query rank, authority, freshness, and the bounded cross-query tie-break.
 
-The subscriptions Tool uses a bounded three-phase contract in scheduled runs. `collect` returns typed evidence and deterministic repository facts. The profile model must then make a second-pass decision for every evidence item through `select`, with a short reason; ordinary star/watch activity, duplicates, low-information changes, title-only changes, and items without a user-relevant value should be rejected. `render` accepts the complete selection plus `Array<{ref, summary}>`, filters the document to `selected=true`, validates references and numeric claims, and returns Markdown. If the selection is empty, the profile returns `RIVUS_AUTOMATION_SUPPRESSED:` with a reason so Rivus records the run without creating a delivery. The frontier/news products do not pass through this subscription editor.
+The subscriptions Tool uses a bounded three-phase contract in scheduled runs. `collect` returns typed evidence and deterministic repository facts. The profile model must then make a second-pass decision for every evidence item through `select`, with a short reason; ordinary star/watch activity, duplicates, low-information changes, title-only changes, and items without a user-relevant value should be rejected. For selected public URLs, the Agent calls `rss-summary/research-article` with `mode:"auto"`; the Tool opens an isolated Chrome/Chromium page first, waits for rendered content, and falls back to HTTP if browser research fails. The Agent passes the bounded body into `render` as research evidence. This research step improves only the selected item's grounded summary; the RSS/GitHub collection, selection, deduplication and delivery path stays the same. Summary wording follows the Daily AI Digest single-event style: subject, action, concrete change/result and impact, in one or two sentences. `render` accepts the complete selection plus research and `Array<{ref, summary}>`, filters the document to `selected=true`, validates references and numeric claims, and returns Markdown. If the selection is empty, the profile returns `RIVUS_AUTOMATION_SUPPRESSED:` with a reason so Rivus records the run without creating a delivery. The frontier/news products do not pass through this subscription editor.
 
 The Tool cannot honestly claim Feishu delivery because delivery happens after Tool execution. Use the Rivus run trace for the exact Tool result and its Feishu delivery ledger for target, attempt, idempotency, and outcome. Direct CLI runs instead write paired `.state/runs/...json` and `.md` artifacts.
 
@@ -144,4 +151,4 @@ npm run doctor
 npm run check-config
 ```
 
-Invoke each enabled template once in the foreground. Confirm the morning subscriptions trace contains `collect`, `select`, and `render` calls, every evidence item has an AI decision and reason, repository rows retain deterministic stars/language facts, PR/RSS rows contain grounded summaries only when selected, and an empty selection is recorded as suppressed without a delivery. Confirm the separate Daily AI card covers the previous local calendar day, the frontier trace lists only official `industry-feeds.json` sources (including `web-page` source health), noon/evening windows do not overlap, the structured card keeps semantic source links inline with each item without right-side button columns or a duplicate source appendix, and the delivery ledger records the card outcome before enabling the service manager.
+Invoke each enabled template once in the foreground. Confirm the morning subscriptions trace contains `collect`, `select`, `research-article`, and `render` calls, every evidence item has an AI decision and reason, research results are URL-matched and bounded, repository rows retain deterministic stars/language facts, PR/RSS rows contain grounded summaries only when selected, and an empty selection is recorded as suppressed without a delivery. Confirm the separate Daily AI card covers the previous local calendar day, the frontier trace lists only official `industry-feeds.json` sources (including `web-page` source health), noon/evening windows do not overlap, the structured card keeps semantic source links inline with each item without right-side button columns or a duplicate source appendix, and the delivery ledger records the card outcome before enabling the service manager.

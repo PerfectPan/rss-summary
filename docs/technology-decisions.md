@@ -22,7 +22,7 @@ Scope: what the repository uses, why, and when to revisit.
 | Vite+ / Vitest 4 | `tests/`, `vite.config.ts` | `vp test` + v8 coverage thresholds; imports use `vite-plus/test`. | — |
 | `fast-xml-parser` | `infrastructure/rss.ts` | RSS 2.0 / Atom parsing; small, dependency-light. | — |
 | `cheerio` | `infrastructure/github-home.ts`, `infrastructure/web-page.ts` | Server-side extraction for GitHub Home snapshots and explicitly configured official listing pages. | A source requires JavaScript rendering or loses semantic link/time markup. |
-| `playwright` | `infrastructure/github-home.ts` | GitHub Home login flow and rendered-browser fallback. The browser-automation code is explicitly excluded from unit coverage (`/* v8 ignore start */`) and exercised manually. | A different Home source replaces it. |
+| `playwright` | `infrastructure/github-home.ts`, `infrastructure/browser-article-research.ts` | GitHub Home login/rendered fallback and isolated browser-first article research. Browser automation is explicitly excluded from unit coverage (`/* v8 ignore start */`) and exercised manually or through the Mac mini smoke path. | A different browser/runtime replaces it. |
 | `tsx` | dev only | Runs TS entrypoints directly (`pnpm digest`, `pnpm feeds`). | — |
 | `lodash-es` | `infrastructure/parsing.ts` (and similar helpers) | Named path imports (`lodash-es/isPlainObject.js`) for JSON coercion helpers; tree-shakeable for bundlers, small module graph under Node ESM. Prefer library helpers over one-off reinvention when semantics match. | — |
 
@@ -101,5 +101,5 @@ Both jobs are intended to be required checks in the branch protection rule for `
 - The Daily AI Digest uses a two-phase model-editor protocol: `collect` exposes normalized evidence, and `render` accepts structured `{category, headline, refs}` records. The validator rejects unknown references, unrelated entities and unsupported numeric claims before Markdown exists; invalid drafts use deterministic source-grounded fallback headlines.
 
 - Shallow Effect adoption means an ordered, bounded Promise worker pool rather than Effect structured concurrency; behavior parity and provider-safe concurrency were prioritized over idiomatic Effect during the refactor.
-- Browser automation (`github-home.ts`) is the largest uncovered surface; it is isolated behind the client class and v8-ignored with a documented manual test path.
+- Browser automation (`github-home.ts` and `browser-article-research.ts`) is isolated behind client classes and v8-ignored with documented manual/smoke test paths. Article research uses an isolated context with no storage state, only navigates the selected public URL, and falls back to bounded HTTP extraction when browser rendering fails.
 - `domain/` imports nothing outside itself (verified by convention); contract types such as `NewsTopic` and `RunAudit` are defined in the domain and imported by infrastructure, keeping dependencies inward.
