@@ -39,9 +39,26 @@ try {
       "--input-type=module",
       "--eval",
       `import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import plugin from "rss-summary/rivus-plugin";
 import { assertRivusPluginConforms } from "@rivus/agent/testing";
 createRequire(import.meta.url).resolve("rss-summary/rivus-plugin");
+const installed = ${JSON.stringify(installed)};
+const { loadConfig } = await import(
+  pathToFileURL(join(installed, "dist", "infrastructure", "config.js")).href
+);
+const config = loadConfig({}, ["--dry-run"]);
+const expectedIndustrySourceCount = JSON.parse(
+  readFileSync(join(installed, "industry-feeds.json"), "utf8")
+).length;
+if (config.industrySources.length !== expectedIndustrySourceCount) {
+  throw new Error(
+    "Packaged industry sources: expected " + expectedIndustrySourceCount +
+      ", received " + config.industrySources.length
+  );
+}
 const report = await assertRivusPluginConforms({
   deployment: {
     agentId: "rss-digest",
