@@ -7,6 +7,7 @@ import type {
   NewsStory,
   NewsStoryDecision,
 } from "../../src/domain/news.js";
+import { DoubaoSearchError } from "../../src/infrastructure/doubao-search.js";
 
 describe("news audit", () => {
   it("explains query failures and every stage of the selection funnel", () => {
@@ -40,7 +41,7 @@ describe("news audit", () => {
           rankPosition: value.rankPosition,
         })),
       }),
-      Promise.reject(new Error("search unavailable")),
+      Promise.reject(new DoubaoSearchError("10406", "search unavailable")),
     ];
 
     return Promise.allSettled(settled).then((results) => {
@@ -59,7 +60,8 @@ describe("news audit", () => {
         expect.objectContaining({
           queryId: "failed",
           status: "failed",
-          error: "search unavailable",
+          errorCode: "10406",
+          error: "Doubao search API error 10406: search unavailable",
         }),
       ]);
       expect(audit.counts).toEqual({

@@ -72,4 +72,15 @@ describe("Daily AI digest renderer", () => {
     expect(markdown.match(/\[↗ #\d+\]\(https:\/\/openai\.com\/news\/\d+\)/gu)).toHaveLength(12);
     expect(markdown).not.toContain("## 来源");
   });
+
+  it("renders source degradation warnings in the deliverable Markdown", () => {
+    const markdown = renderDailyAiDigest({
+      day: "2026-08-10",
+      items: [],
+      evidence: [],
+      warnings: ["Doubao 搜索暂不可用：本期仅使用官方来源"],
+    });
+
+    expect(markdown).toContain("数据源状态：Doubao 搜索暂不可用：本期仅使用官方来源");
+  });
 });

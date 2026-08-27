@@ -37,6 +37,9 @@ evidence, validates the draft and is the only phase allowed to produce final Mar
 - A model-created entity or numeric claim must occur in its referenced evidence. Merely
   attaching a valid reference ID does not make an unrelated claim publishable.
 - Public audit records evidence and decisions but never cookies, tokens or private HTML.
+- Noon search, evening search and official-source collection are independent failure domains. An
+  all-query Doubao failure is retained as a per-query audit and visible source-status warning while
+  remaining collectors continue; the aggregate fails only when no collector yields usable evidence.
 - Each event links its evidence through compact inline source badges. Repeated labels from the same
   provider collapse to one visible badge, and there is no repeated trailing source list.
 
