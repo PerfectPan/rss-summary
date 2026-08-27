@@ -86,7 +86,7 @@ export function createRssSummaryPlugin(
         createExecutor: () => ({ execute: (input) => executeDailyAiDigest(input) }),
         description:
           "Generate a source-grounded Daily AI Digest for the previous Asia/Shanghai calendar day",
-        digest: "sha256:rss-summary-generate-daily-ai-digest-v2",
+        digest: "sha256:rss-summary-generate-daily-ai-digest-v3",
         id: RSS_SUMMARY_DAILY_AI_TOOL_ID,
         idempotency: "none",
         inputSchema: {
@@ -114,7 +114,7 @@ export function createRssSummaryPlugin(
           type: "object",
         },
         risk: "observe",
-        version: "1.1.0",
+        version: "1.2.0",
       });
       registry.registerTool({
         createExecutor: () => ({ execute: (input) => executeDigest(input) }),

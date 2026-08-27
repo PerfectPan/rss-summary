@@ -6,7 +6,7 @@ import type {
   NewsTopic,
   NewsTopicQuery,
 } from "../domain/news.js";
-import type { DoubaoSearchPage } from "../infrastructure/doubao-search.js";
+import { DoubaoSearchError, type DoubaoSearchPage } from "../infrastructure/doubao-search.js";
 
 export type NewsQueryAudit = {
   queryId: string;
@@ -20,6 +20,7 @@ export type NewsQueryAudit = {
   fetched: number;
   accepted: number;
   rejected: Partial<Record<NewsHitRejectionReason, number>>;
+  errorCode?: string;
   error?: string;
 };
 
@@ -62,6 +63,7 @@ export function buildNewsAudit(
         fetched: 0,
         accepted: 0,
         rejected: {},
+        ...(result.reason instanceof DoubaoSearchError ? { errorCode: result.reason.code } : {}),
         error: errorText(result.reason),
       };
     }

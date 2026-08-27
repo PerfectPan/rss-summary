@@ -2,6 +2,7 @@ import { Effect } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
 
 import {
+  AllDoubaoQueriesFailedError,
   generateRivusNewsBrief,
   resolveNewsEditionWindow,
   type RivusNewsBriefResult,
@@ -164,20 +165,40 @@ describe("Rivus news brief Tool adapter", () => {
       }),
     ]);
 
-    await expect(
-      Effect.runPromise(
+    const failure = await Effect.runPromise(
+      Effect.flip(
         generateRivusNewsBrief(
           { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
           {
             env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
             topics,
             search: async () => {
-              throw new Error("down");
+              throw new DoubaoSearchError("10406", "free quota exhausted");
             },
           },
         ),
       ),
-    ).rejects.toThrow(/all.*search/i);
+    );
+    expect(failure).toMatchObject({
+      name: AllDoubaoQueriesFailedError.name,
+      result: {
+        audit: {
+          queries: [
+            expect.objectContaining({
+              queryId: "working",
+              status: "failed",
+              errorCode: "10406",
+            }),
+            expect.objectContaining({
+              queryId: "broken",
+              status: "failed",
+              errorCode: "10406",
+            }),
+          ],
+        },
+        stories: [],
+      },
+    });
   });
 
   it("limits search concurrency to two while preserving query audit order", async () => {
@@ -224,6 +245,26 @@ describe("Rivus news brief Tool adapter", () => {
       "four",
       "five",
     ]);
+  });
+
+  it("does not classify query configuration failures as provider unavailability", async () => {
+    const failure = await Effect.runPromise(
+      Effect.flip(
+        generateRivusNewsBrief(
+          { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
+          {
+            env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
+            search: async () => {
+              throw new Error("invalid query configuration");
+            },
+            topics: [newsTopic("technology", ["invalid"])],
+          },
+        ),
+      ),
+    );
+
+    expect(failure).toBeInstanceOf(AggregateError);
+    expect(failure).not.toBeInstanceOf(AllDoubaoQueriesFailedError);
   });
 
   it("retries a transient Doubao rate limit and succeeds", async () => {

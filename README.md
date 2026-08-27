@@ -4,7 +4,7 @@
 
 一个定时信息简报 CLI：把“我明确订阅的内容”和“我应该知道的行业变化”分成两条链路。个人订阅合并 GitHub Home 与 `feeds.json`；行业前沿只跟踪厂商官方 RSS/Atom，以及经过验证的 News、Changelog、Release 和研究页面。个人订阅按语义区分仓库、PR 与文章：仓库保留 stars/语言等确定性事实，Rivus 先让 AI 二次精选是否值得推送，再只为入选的 PR 与 RSS 文章生成最长 180 字、来源约束的中文摘要。CLI 可挂 webhook，也可作为 Rivus 插件被调度。
 
-Rivus 的 `morning-feed-digest` 保留稳定 automation ID，并继续推送前一北京时间自然日的“我的订阅”；source-grounded Daily AI Digest 使用独立的 `daily-ai-digest` automation。Daily AI Digest 使用现有七个新闻查询和经过验证的官方 RSS，按六个栏目输出可追溯的中文事件句；采集源标签不进入标题，原始英文标题不会被机械包装成中文事件，质量不足时不凑数。每个 Automation 同时产出 Markdown 兼容视图与渠道无关的展示 IR：插件决定栏目、条目和来源，Rivus Renderer 决定飞书卡片组件与视觉样式。具体时间由 Rivus manifest 分别绑定，避免两类产品互相覆盖。
+Rivus 的 `morning-feed-digest` 保留稳定 automation ID，并继续推送前一北京时间自然日的“我的订阅”；source-grounded Daily AI Digest 使用独立的 `daily-ai-digest` automation。Daily AI Digest 使用现有七个新闻查询和经过验证的官方 RSS，按六个栏目输出可追溯的中文事件句；午间、晚间 Doubao 搜索与官方源彼此隔离，单个搜索时段全挂时会保留逐查询审计、显示降级告警并继续使用其他来源，只有所有来源都没有可用证据时才整体失败。采集源标签不进入标题，原始英文标题不会被机械包装成中文事件，质量不足时不凑数。每个 Automation 同时产出 Markdown 兼容视图与渠道无关的展示 IR：插件决定栏目、条目和来源，Rivus Renderer 决定飞书卡片组件与视觉样式。具体时间由 Rivus manifest 分别绑定，避免两类产品互相覆盖。
 
 ## 示例输出
 

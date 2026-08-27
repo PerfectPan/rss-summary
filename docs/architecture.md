@@ -101,6 +101,11 @@ omitted instead of being wrapped in a synthetic `source published title` sentenc
 target is never a fill quota, and only `render` returns deliverable Markdown. Source references are
 rendered as clickable inline badges beside each event; repeated labels from the same provider
 collapse to one badge, and the document does not repeat references in a trailing source section.
+Noon search, evening search, and official-source collection are separate failure domains. If every
+query in one Doubao edition fails, Daily AI records that edition's full per-query audit, renders a
+visible source-status warning, and continues with the other edition and official sources. If both
+Doubao editions fail, official evidence can still produce the digest. Generation fails only when
+all collectors yield no usable evidence; configuration and programming errors are never degraded.
 
 ## Research workflow
 

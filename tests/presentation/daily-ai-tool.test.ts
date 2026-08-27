@@ -21,6 +21,12 @@ describe("Rivus Daily AI Tool", () => {
       ],
       items: [],
       warnings: [],
+      sourceAudit: {
+        news: {
+          noon: { queries: [], counts: {} as never },
+          evening: { queries: [], counts: {} as never },
+        },
+      },
       audit: { decisions: [] },
       deliveryReceipt: {
         id: "daily-ai:2026-08-11",

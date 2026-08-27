@@ -47,6 +47,21 @@ export type RivusNewsBriefResult = {
 /** Tool shape after presentation renders Markdown. */
 export type RivusNewsBriefOutput = RivusNewsBriefResult & { markdown: string };
 
+/**
+ * Every configured query failed because of provider or network availability.
+ * Standalone news briefs still fail; aggregate products may safely degrade by
+ * consuming the attached empty result and its complete per-query audit.
+ */
+export class AllDoubaoQueriesFailedError extends Error {
+  readonly result: RivusNewsBriefResult;
+
+  constructor(result: RivusNewsBriefResult) {
+    super("All Doubao search queries failed.");
+    this.name = "AllDoubaoQueriesFailedError";
+    this.result = result;
+  }
+}
+
 type NewsBriefDependencies = {
   env?: NodeJS.ProcessEnv;
   now?: () => Date;
@@ -134,11 +149,32 @@ export function generateRivusNewsBrief(
     const successful = settled.filter(
       (result): result is PromiseFulfilledResult<DoubaoSearchPage> => result.status === "fulfilled",
     );
+    const topicFailureWarnings = topicWarnings(requests, settled);
+    const generatedAt = (dependencies.now ?? (() => new Date()))().toISOString();
     if (successful.length === 0) {
-      return yield* Effect.fail(new Error("All Doubao search queries failed."));
+      const failures = settled.flatMap((result) =>
+        result.status === "rejected" ? [result.reason] : [],
+      );
+      if (!failures.every((error) => error instanceof DoubaoSearchError)) {
+        return yield* Effect.fail(
+          new AggregateError(failures, "All Doubao search queries failed."),
+        );
+      }
+      return yield* Effect.fail(
+        new AllDoubaoQueriesFailedError({
+          audit: buildNewsAudit(requests, settled, [], [], 0, 0),
+          day: window.day,
+          edition: input.edition,
+          generatedAt,
+          itemCount: 0,
+          warnings: topicFailureWarnings,
+          windowLabel: window.label,
+          stories: [],
+          topics,
+        }),
+      );
     }
 
-    const topicFailureWarnings = topicWarnings(requests, settled);
     const hits: NewsSearchHit[] = [];
     settled.forEach((result, index) => {
       if (result.status !== "fulfilled") return;
@@ -178,7 +214,6 @@ export function generateRivusNewsBrief(
       built.stories.length,
       stories.length,
     );
-    const generatedAt = (dependencies.now ?? (() => new Date()))().toISOString();
     return {
       audit,
       day: window.day,

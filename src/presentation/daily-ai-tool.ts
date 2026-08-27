@@ -12,6 +12,7 @@ export type RivusDailyAiToolResult =
       generatedAt: string;
       evidence: DailyAiDigestResult["evidence"];
       warnings: string[];
+      sourceAudit: DailyAiDigestResult["sourceAudit"];
       editorialContract: {
         categories: readonly string[];
         itemTarget: string;
@@ -45,6 +46,7 @@ export function createRivusDailyAiDigestExecutor(
         generatedAt: collected.generatedAt,
         evidence: collected.evidence,
         warnings: collected.warnings,
+        sourceAudit: collected.sourceAudit,
         editorialContract: {
           categories: dailyAiCategories,
           itemTarget: "12–24; quality is a ceiling, never a fill quota",
