@@ -1,6 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 import { hostnameOf } from "./parsing.js";
+
+const defaultIndustrySourcesFile = fileURLToPath(
+  new URL("../../industry-feeds.json", import.meta.url),
+);
 
 export type FeedSubscription = {
   name: string;
@@ -106,7 +111,7 @@ export function loadConfig(
         args.industryFeedsFile ??
         env.INDUSTRY_SOURCES_FILE ??
         env.INDUSTRY_FEEDS_FILE ??
-        "industry-feeds.json",
+        defaultIndustrySourcesFile,
     ),
     industryStateFile:
       args.industryStateFile ?? env.INDUSTRY_STATE_FILE ?? ".state/industry-state.json",
@@ -284,7 +289,9 @@ function loadIndustrySources(
   configuredFile: string,
 ): IndustrySource[] {
   if (inlineSources) return parseIndustrySources(inlineSources);
-  if (!existsSync(configuredFile)) return [];
+  if (!existsSync(configuredFile)) {
+    throw new Error(`Industry source configuration file does not exist: ${configuredFile}`);
+  }
   return parseIndustrySources(readFileSync(configuredFile, "utf8"));
 }
 

@@ -90,7 +90,9 @@ Add Automation instances referencing the templates above. The morning subscripti
 
 ## Configure sources
 
-Use absolute paths in the Rivus project's private environment because the daemon runs from that project:
+Use absolute paths for project-owned mutable state and source overrides in the Rivus project's private
+environment. `INDUSTRY_SOURCES_FILE` is optional: when omitted, the Plugin loads its packaged
+`industry-feeds.json` independently of the daemon working directory. When set, the file must exist.
 
 ```dotenv
 FEED_TIMEZONE_OFFSET=+08:00
@@ -100,7 +102,8 @@ GITHUB_HOME_STORAGE_STATE=/path/to/rss-summary/.state/github-home-storage.json
 GITHUB_USERNAME=PerfectPan
 RSS_FEEDS_FILE=/path/to/rss-summary/feeds.json
 FEED_STATE_FILE=/path/to/rss-summary/.state/feed-state.json
-INDUSTRY_SOURCES_FILE=/path/to/rss-summary/industry-feeds.json
+# Optional override; omit to use the registry packaged with rss-summary.
+# INDUSTRY_SOURCES_FILE=/path/to/rss-summary/industry-feeds.json
 INDUSTRY_STATE_FILE=/path/to/rss-summary/.state/industry-state.json
 FEED_MAX_PAPERS=8
 DOUBAO_SEARCH_API_KEY=replace-with-doubao-search-api-key

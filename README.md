@@ -125,7 +125,7 @@ rss-summary runs show <run-label>
 | `DOUBAO_SEARCH_API_KEY`          | 午/晚间新闻搜索                                                   | —                            |
 | `NOTIFY_WEBHOOK_URL`             | 推送 webhook（POST `{ "text": markdown }`）                       | —                            |
 | `RSS_FEEDS_FILE`                 | RSS 订阅文件                                                      | `feeds.json`                 |
-| `INDUSTRY_SOURCES_FILE`          | 行业官方 RSS/Atom 与页面来源文件                                  | `industry-feeds.json`        |
+| `INDUSTRY_SOURCES_FILE`          | 行业官方 RSS/Atom 与页面来源文件；覆盖路径必须存在                | 包内 `industry-feeds.json`   |
 | `INDUSTRY_STATE_FILE`            | 行业简报去重/调研状态                                             | `.state/industry-state.json` |
 | `FEED_MAX_PAPERS`                | 每次进入深度调研队列的论文硬上限                                  | `8`                          |
 | `FEED_RUN_LOG_DIR`               | CLI 运行审计产物目录                                              | `.state/runs`                |
@@ -147,6 +147,7 @@ rss-summary runs show <run-label>
 本仓库导出 `rss-summary/rivus-plugin`：一个 Agent profile（`rss-digest`）+ 五个只读 Tool（`generate-digest` / `research-article` / `generate-daily-ai-digest` / `generate-news-brief` / `generate-industry-brief`）及对应调度模板。订阅和行业 Tool 携带 source/candidate audit；`research-article` 只对 Agent 选中的公开 URL 做浏览器优先、HTTP 回退的正文抓取，返回受限、可追溯的研究证据；新闻 Tool 携带逐查询召回、淘汰原因、去重和配额漏斗。Automation 的 `createPresentation` 把最终 Markdown 投影为标题、元信息、栏目、条目、说明和来源链接；它不直接构造飞书 CardKit JSON。Rivus 自己的 Renderer、trace 与投递 ledger 分别负责渠道展示和后续卡片投递证据。行业 Tool 不直接发布未研究论文，只报告待调研数量。安装、manifest 绑定、环境契约见 [docs/rivus-plugin.md](docs/rivus-plugin.md)。
 
 `industry-feeds.json` 中缺省类型仍是 RSS/Atom；`type: "page"` 只用于已验证的官方列表页，并要求同源文章路径与显式日期。不是每个网站都有 `/news`，也不会自动猜路径或绕过站点抓取政策。设计与准入条件见 [Official Web Page Sources RFC](docs/rfc-official-web-page-sources.md)。旧的 `INDUSTRY_FEEDS` / `INDUSTRY_FEEDS_FILE` 环境变量继续作为兼容别名。
+未设置来源文件变量时始终读取 npm 包内的注册表，不依赖进程工作目录；显式配置的文件不存在时会直接报错，避免静默生成缺少官方来源的简报。
 
 ## Architecture
 
