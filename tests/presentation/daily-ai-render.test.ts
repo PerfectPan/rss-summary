@@ -6,6 +6,7 @@ describe("Daily AI digest renderer", () => {
   it("renders source links as inline badges without a repeated source section", () => {
     const markdown = renderDailyAiDigest({
       day: "2026-08-10",
+      windowLabel: "2026-08-09 09:00–2026-08-10 09:00 +08:00",
       items: [
         {
           category: "开发生态",
@@ -30,7 +31,7 @@ describe("Daily AI digest renderer", () => {
     expect(markdown).toMatchInlineSnapshot(`
       "# Daily AI Digest · 2026-08-10
 
-      1 条可信动态 · 来源可追溯 · 质量不足不凑数
+      1 条可信动态 · 2026-08-09 09:00–2026-08-10 09:00 +08:00 · 来源可追溯 · 质量不足不凑数
 
       ## 开发生态
 
@@ -64,7 +65,13 @@ describe("Daily AI digest renderer", () => {
       sourceName: "OpenAI",
     }));
 
-    const markdown = renderDailyAiDigest({ day: "2026-08-10", items, evidence, warnings: [] });
+    const markdown = renderDailyAiDigest({
+      day: "2026-08-10",
+      windowLabel: "2026-08-09 09:00–2026-08-10 09:00 +08:00",
+      items,
+      evidence,
+      warnings: [],
+    });
 
     expect(markdown).toContain("12 条可信动态");
     categories.forEach((category) => expect(markdown).toContain(`## ${category}`));
@@ -76,6 +83,7 @@ describe("Daily AI digest renderer", () => {
   it("renders source degradation warnings in the deliverable Markdown", () => {
     const markdown = renderDailyAiDigest({
       day: "2026-08-10",
+      windowLabel: "2026-08-09 09:00–2026-08-10 09:00 +08:00",
       items: [],
       evidence: [],
       warnings: ["Doubao 搜索暂不可用：本期仅使用官方来源"],

@@ -8,14 +8,14 @@ import {
 import type { IndustryBriefDocument } from "../../src/application/industry-brief.js";
 
 describe("Daily AI digest use case", () => {
-  it("uses the previous Asia/Shanghai calendar day", async () => {
+  it("uses the rolling 24 hours before the occurrence across news editions", async () => {
     const calls: string[] = [];
     const result = await generateDailyAiDigest(
       { occurrence: "2026-08-11T01:00:00.000Z" },
       {
         env: { FEED_TIMEZONE_OFFSET: "+08:00" },
-        industry: async (day) => {
-          calls.push(day);
+        industry: async (window) => {
+          calls.push(`official:${window.since}:${window.until}`);
           return officialDocument();
         },
         news: async (occurrence, edition) => {
@@ -34,12 +34,32 @@ describe("Daily AI digest use case", () => {
         },
       },
     );
-    expect(result.day).toBe("2026-08-10");
+    expect(result.day).toBe("2026-08-11");
+    expect(result.windowLabel).toBe("2026-08-10 09:00–2026-08-11 09:00 +08:00");
     expect(calls).toEqual([
-      "noon:2026-08-10T12:30:00+08:00",
-      "evening:2026-08-10T23:59:59+08:00",
-      "2026-08-10",
+      "noon:2026-08-10T04:30:00.000Z",
+      "evening:2026-08-10T15:59:59.999Z",
+      "noon:2026-08-11T01:00:00.000Z",
+      "official:2026-08-10T01:00:00.000Z:2026-08-11T01:00:00.000Z",
     ]);
+  });
+
+  it("filters every collector result to the exact half-open rolling window", async () => {
+    const result = await generateDailyAiDigest(
+      { occurrence: "2026-08-11T01:00:00.000Z" },
+      {
+        env: { FEED_TIMEZONE_OFFSET: "+08:00" },
+        industry: async () => officialDocument(),
+        news: async (_occurrence, edition) =>
+          newsResult(edition, [
+            story("before", "2026-08-10T00:59:59.999Z"),
+            story("start", "2026-08-10T01:00:00.000Z"),
+            story("end", "2026-08-11T01:00:00.000Z"),
+          ]),
+      },
+    );
+
+    expect(result.evidence.map(({ id }) => id)).toEqual(["news:start", "official:rss-1"]);
   });
 
   it("continues the evening and official collectors when the noon Doubao edition fails", async () => {
@@ -79,10 +99,12 @@ describe("Daily AI digest use case", () => {
       },
     );
 
-    expect(calls).toEqual(["noon", "evening", "official"]);
-    expect(result.items).toHaveLength(1);
-    expect(result.warnings).toEqual(["午间 Doubao 搜索全部不可用，已继续使用晚间和官方来源"]);
-    expect(result.sourceAudit.news.noon.queries[0]).toMatchObject({
+    expect(calls).toEqual(["noon", "evening", "noon", "official"]);
+    expect(result.items).toEqual([]);
+    expect(result.warnings).toEqual([
+      "Doubao 搜索部分不可用：2026-08-10 noon、2026-08-11 noon，已继续使用其余新闻和官方来源",
+    ]);
+    expect(result.sourceAudit.news[0]?.audit.queries[0]).toMatchObject({
       status: "failed",
       errorCode: "10406",
     });
@@ -101,10 +123,8 @@ describe("Daily AI digest use case", () => {
     );
 
     expect(result.evidence.map(({ id }) => id)).toEqual(["official:rss-1"]);
-    expect(result.warnings).toEqual([
-      "Doubao 搜索暂不可用：午间、晚间查询全部失败，本期仅使用官方来源",
-    ]);
-    expect(result.sourceAudit.news.evening.queries[0]).toMatchObject({ errorCode: "10406" });
+    expect(result.warnings).toEqual(["Doubao 搜索暂不可用：所有查询均失败，本期仅使用官方来源"]);
+    expect(result.sourceAudit.news[1]?.audit.queries[0]).toMatchObject({ errorCode: "10406" });
   });
 
   it("fails only when every collector yields no usable evidence", async () => {
@@ -214,11 +234,9 @@ describe("Daily AI digest use case", () => {
       },
     );
     expect(result.evidence).toHaveLength(2);
-    expect(result.items.map(({ headline }) => headline)).toEqual([
-      "Anthropic 为 Claude 输出新增机器可读标记",
-    ]);
+    expect(result.items).toEqual([]);
     expect(result.warnings).toEqual(["one source unavailable"]);
-    expect(result.deliveryReceipt.evidenceIds).toHaveLength(1);
+    expect(result.deliveryReceipt.evidenceIds).toHaveLength(0);
   });
 });
 
@@ -236,6 +254,27 @@ function newsResult(
     windowLabel: "",
     stories,
     topics: [],
+  };
+}
+
+function story(id: string, publishTime: string): RivusNewsBriefResult["stories"][number] {
+  return {
+    id,
+    title: `Story ${id}`,
+    canonicalUrl: `https://example.com/${id}`,
+    summary: id,
+    siteName: "Example",
+    publishTime,
+    rankScore: 1,
+    authInfoLevel: 1,
+    topicIds: ["developer-tools"],
+    topicLabels: ["开发"],
+    queryIds: ["q1"],
+    queries: ["q"],
+    queryHits: 1,
+    scoreBreakdown: { rank: 1, authority: 1, freshness: 1, crossQuery: 0 },
+    score: 3,
+    selectedTopicId: "developer-tools",
   };
 }
 
