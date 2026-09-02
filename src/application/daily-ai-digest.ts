@@ -13,23 +13,32 @@ import {
   type DailyAiDigest,
   type DailyAiEvidence,
 } from "../domain/daily-ai.js";
-import { calendarDayAtOffset, shiftCalendarDay } from "../domain/time.js";
+import {
+  calendarDayAtOffset,
+  endOfCalendarDay,
+  parseOffsetMilliseconds,
+  shiftCalendarDay,
+  startOfCalendarDay,
+} from "../domain/time.js";
 import { loadConfig } from "../infrastructure/config.js";
 
 export type DailyAiDigestResult = DailyAiDigest & {
   day: string;
+  windowLabel: string;
   generatedAt: string;
   warnings: string[];
   sourceAudit: {
-    news: { noon: NewsBriefAudit; evening: NewsBriefAudit };
+    news: Array<{ day: string; edition: "noon" | "evening"; audit: NewsBriefAudit }>;
     industry?: NonNullable<IndustryBriefDocument["audit"]>;
   };
   deliveryReceipt: DailyAiDeliveryReceipt;
 };
 
+export type DailyAiWindow = { since: string; until: string };
+
 type DailyAiDigestDependencies = {
   env?: NodeJS.ProcessEnv;
-  industry?: (day: string, env: NodeJS.ProcessEnv) => Promise<IndustryBriefDocument>;
+  industry?: (window: DailyAiWindow, env: NodeJS.ProcessEnv) => Promise<IndustryBriefDocument>;
   news?: (occurrence: string, edition: "noon" | "evening") => Promise<RivusNewsBriefResult>;
   now?: () => Date;
   draft?: unknown;
@@ -42,20 +51,29 @@ export async function generateDailyAiDigest(
   const input = parseInput(value);
   const env = dependencies.env ?? process.env;
   const timezoneOffset = env.FEED_TIMEZONE_OFFSET ?? "+08:00";
-  const day = shiftCalendarDay(calendarDayAtOffset(input.occurrence, timezoneOffset), -1);
+  const until = Date.parse(input.occurrence);
+  const since = until - 24 * 60 * 60 * 1000;
+  const window = {
+    since: new Date(since).toISOString(),
+    until: new Date(until).toISOString(),
+  };
+  const day = calendarDayAtOffset(input.occurrence, timezoneOffset);
+  const windowLabel = formatWindowLabel(since, until, timezoneOffset);
   const news =
     dependencies.news ?? ((occurrence, edition) => runNewsBrief({ occurrence, edition }, env));
   const industry = dependencies.industry ?? defaultIndustry;
   // Keep the shared Doubao search budget at two in-flight requests. Each news
   // edition owns a concurrency-two pool, so editions must not overlap.
-  const noon = await collectNewsEdition(news, `${day}T12:30:00${timezoneOffset}`, "noon");
-  const evening = await collectNewsEdition(news, `${day}T23:59:59${timezoneOffset}`, "evening");
-  const official = await industry(day, env);
-  const evidence = [
-    ...newsEvidence(noon.result),
-    ...newsEvidence(evening.result),
-    ...industryEvidence(official),
-  ];
+  const newsCollections: Array<NewsEditionCollection & NewsSegment> = [];
+  for (const segment of newsSegments(since, until, timezoneOffset)) {
+    const collected = await collectNewsEdition(news, segment.occurrence, segment.edition);
+    newsCollections.push({ ...segment, ...collected });
+  }
+  const official = await industry(window, env);
+  const evidence = newsCollections
+    .flatMap(({ result }) => newsEvidence(result))
+    .concat(industryEvidence(official))
+    .filter(({ publishedAt }) => isWithinWindow(publishedAt, since, until));
   const digest = buildDailyAiDigest(evidence, { draft: dependencies.draft });
   if (digest.evidence.length === 0) {
     throw new Error("Daily AI digest has no usable evidence from Doubao or official sources.");
@@ -63,14 +81,18 @@ export async function generateDailyAiDigest(
   return {
     ...digest,
     day,
+    windowLabel,
     generatedAt: (dependencies.now ?? (() => new Date()))().toISOString(),
     warnings: [
-      ...(noon.unavailable ? [] : noon.result.warnings),
-      ...(evening.unavailable ? [] : evening.result.warnings),
-      ...doubaoAvailabilityWarnings(noon.unavailable, evening.unavailable),
+      ...newsCollections.flatMap(({ result, unavailable }) => (unavailable ? [] : result.warnings)),
+      ...doubaoAvailabilityWarnings(newsCollections),
     ],
     sourceAudit: {
-      news: { noon: noon.result.audit, evening: evening.result.audit },
+      news: newsCollections.map(({ day: segmentDay, edition, result }) => ({
+        day: segmentDay,
+        edition,
+        audit: result.audit,
+      })),
       ...(official.audit ? { industry: official.audit } : {}),
     },
     deliveryReceipt: createDailyAiDeliveryReceipt(
@@ -81,6 +103,11 @@ export async function generateDailyAiDigest(
 }
 
 type NewsEditionCollection = { result: RivusNewsBriefResult; unavailable: boolean };
+type NewsSegment = {
+  day: string;
+  edition: "noon" | "evening";
+  occurrence: string;
+};
 
 async function collectNewsEdition(
   news: NonNullable<DailyAiDigestDependencies["news"]>,
@@ -104,13 +131,64 @@ async function runNewsBrief(
   throw Cause.squash(exit.cause);
 }
 
-function doubaoAvailabilityWarnings(noonFailed: boolean, eveningFailed: boolean): string[] {
-  if (noonFailed && eveningFailed) {
-    return ["Doubao 搜索暂不可用：午间、晚间查询全部失败，本期仅使用官方来源"];
+function doubaoAvailabilityWarnings(
+  collections: Array<NewsEditionCollection & NewsSegment>,
+): string[] {
+  const failed = collections.filter(({ unavailable }) => unavailable);
+  if (failed.length === collections.length) {
+    return ["Doubao 搜索暂不可用：所有查询均失败，本期仅使用官方来源"];
   }
-  if (noonFailed) return ["午间 Doubao 搜索全部不可用，已继续使用晚间和官方来源"];
-  if (eveningFailed) return ["晚间 Doubao 搜索全部不可用，已继续使用午间和官方来源"];
+  if (failed.length > 0) {
+    const labels = failed.map(({ day, edition }) => `${day} ${edition}`).join("、");
+    return [`Doubao 搜索部分不可用：${labels}，已继续使用其余新闻和官方来源`];
+  }
   return [];
+}
+
+function newsSegments(since: number, until: number, timezoneOffset: string): NewsSegment[] {
+  const firstDay = calendarDayAtOffset(new Date(since).toISOString(), timezoneOffset);
+  const lastDay = calendarDayAtOffset(new Date(until).toISOString(), timezoneOffset);
+  const segments: NewsSegment[] = [];
+  for (let day = firstDay; ; day = shiftCalendarDay(day, 1)) {
+    const dayStart = startOfCalendarDay(day, timezoneOffset);
+    const dayEnd = endOfCalendarDay(day, timezoneOffset);
+    const noon = dayStart + (12 * 60 + 30) * 60_000;
+    appendNewsSegment(segments, { since, until }, day, "noon", dayStart, noon);
+    appendNewsSegment(segments, { since, until }, day, "evening", noon, dayEnd);
+    if (day === lastDay) break;
+  }
+  return segments;
+}
+
+function appendNewsSegment(
+  segments: NewsSegment[],
+  window: { since: number; until: number },
+  day: string,
+  edition: "noon" | "evening",
+  segmentStart: number,
+  segmentEnd: number,
+): void {
+  const overlapEnd = Math.min(window.until, segmentEnd);
+  if (Math.max(window.since, segmentStart) >= overlapEnd) return;
+  const occurrence =
+    overlapEnd === segmentEnd && edition === "evening" ? overlapEnd - 1 : overlapEnd;
+  segments.push({ day, edition, occurrence: new Date(occurrence).toISOString() });
+}
+
+function isWithinWindow(publishedAt: string, since: number, until: number): boolean {
+  const instant = Date.parse(publishedAt);
+  return Number.isFinite(instant) && instant >= since && instant < until;
+}
+
+function formatWindowLabel(since: number, until: number, timezoneOffset: string): string {
+  return `${formatInstant(since, timezoneOffset)}–${formatInstant(until, timezoneOffset)} ${timezoneOffset}`;
+}
+
+function formatInstant(instant: number, timezoneOffset: string): string {
+  return new Date(instant + parseOffsetMilliseconds(timezoneOffset))
+    .toISOString()
+    .slice(0, 16)
+    .replace("T", " ");
 }
 
 function newsEvidence(result: RivusNewsBriefResult): DailyAiEvidence[] {
@@ -143,7 +221,6 @@ function industryEvidence(document: IndustryBriefDocument): DailyAiEvidence[] {
         excerpt: candidate.description ?? event.summary ?? title,
         tier: "official" as const,
         sourceName,
-        topicId: topicForIndustry(candidate.eventTypes, title),
       },
     ];
   });
@@ -156,21 +233,16 @@ function evidenceTitle(title: string): string {
     .replace(/[。.!！]+$/u, "");
 }
 
-function topicForIndustry(eventTypes: string[], title: string): string {
-  if (eventTypes.includes("release") || /模型|model|weights/iu.test(title))
-    return "ai-model-releases";
-  if (/API|SDK|CLI|开发|GitHub|MCP/iu.test(title)) return "developer-tools";
-  return "industry-official";
-}
-
 async function defaultIndustry(
-  day: string,
+  window: DailyAiWindow,
   env: NodeJS.ProcessEnv,
 ): Promise<IndustryBriefDocument> {
   const config = loadConfig(env, [
     "--dry-run",
-    "--day",
-    day,
+    "--since",
+    window.since,
+    "--until",
+    window.until,
     "--timezone-offset",
     env.FEED_TIMEZONE_OFFSET ?? "+08:00",
   ]);

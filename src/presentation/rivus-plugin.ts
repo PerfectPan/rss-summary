@@ -85,8 +85,8 @@ export function createRssSummaryPlugin(
       registry.registerTool({
         createExecutor: () => ({ execute: (input) => executeDailyAiDigest(input) }),
         description:
-          "Generate a source-grounded Daily AI Digest for the previous Asia/Shanghai calendar day",
-        digest: "sha256:rss-summary-generate-daily-ai-digest-v3",
+          "Generate a source-grounded Daily AI Digest for the rolling 24 hours before the occurrence",
+        digest: "sha256:rss-summary-generate-daily-ai-digest-v4",
         id: RSS_SUMMARY_DAILY_AI_TOOL_ID,
         idempotency: "none",
         inputSchema: {
@@ -114,7 +114,7 @@ export function createRssSummaryPlugin(
           type: "object",
         },
         risk: "observe",
-        version: "1.2.0",
+        version: "1.3.0",
       });
       registry.registerTool({
         createExecutor: () => ({ execute: (input) => executeDigest(input) }),
@@ -271,7 +271,7 @@ export function createRssSummaryPlugin(
         model: {},
         skills: { allow: [] },
         systemPrompt:
-          "严格遵循任务指定的 rss-summary Tool 协议。编辑阶段只能依据 Tool 返回的 evidence 生成结构化草稿，禁止补写事实；如果 render 返回 SUBSCRIPTION_SUMMARY_VALIDATION_FAILED，依据错误原因重写对应 summary 并重新调用 render，最多重试两次；仍失败则取消对应条目的选择，禁止回退到 RSS 原文；最终只原样返回 render 阶段的 markdown。",
+          "严格遵循任务指定的 rss-summary Tool 协议。编辑阶段只能依据 Tool 返回的 evidence 生成结构化草稿，禁止补写事实；如果 render 返回 SUBSCRIPTION_SUMMARY_VALIDATION_FAILED 或 DAILY_AI_DRAFT_VALIDATION_FAILED，依据错误原因修正无效条目并重新调用 render，最多重试两次；禁止回退到来源标题；最终只原样返回 render 阶段的 markdown。",
         tools: {
           allow: [
             RSS_SUMMARY_TOOL_ID,
@@ -297,7 +297,7 @@ export function createRssSummaryPlugin(
       registry.registerAutomation(
         presentationAutomation({
           createInput: ({ occurrence }) => ({
-            text: `请严格按顺序完成 Daily AI Digest：\n1. 调用 ${RSS_SUMMARY_DAILY_AI_TOOL_ID}，输入 ${JSON.stringify({ occurrence, phase: "collect" })}。\n2. 只能引用 collect 返回的 evidence，编辑 12–24 条（质量不足不凑数）中文事件句；每条必须使用允许的 category、90 字以内 headline 和一个或多个真实 evidence id 作为 refs。单条写法直接交代主体、动作、具体变化或结果与影响；不得把 Blog/Changelog/Releases 等采集源名称作为主语，也不得套用“来源名 发布「原始标题」”模板。不得引入 evidence 中不存在的实体、数字、版本、日期或结论。\n3. 再调用同一 Tool，输入 ${JSON.stringify({ occurrence, phase: "render" })} 并增加 draft 字段，值为上一步编辑的 Array<{category, headline, refs}>。\n4. 仅将 render 返回的 markdown 字段原样返回，不得自行改写、添加或删除事实。`,
+            text: `请严格按顺序完成 Daily AI Digest：\n1. 调用 ${RSS_SUMMARY_DAILY_AI_TOOL_ID}，输入 ${JSON.stringify({ occurrence, phase: "collect" })}。\n2. 基于 collect 返回的滚动 24 小时 evidence，自主判断值得纳入的事件，翻译或归纳为简洁中文 headline，并选择最合适的 category。目标 12–24 条，但质量优先、不凑数。每条使用一个或多个真实 evidence id 作为 refs，headline 不超过 90 字；只能陈述 evidence 支持的信息，不得补写事实。输出 Array<{category, headline, refs}>。\n3. 再调用同一 Tool，输入 ${JSON.stringify({ occurrence, phase: "render" })} 并增加 draft 字段。若返回 DAILY_AI_DRAFT_VALIDATION_FAILED，只修正结构或引用有误的条目后重试。\n4. 仅将 render 返回的 markdown 字段原样返回，不得自行改写、添加或删除事实。`,
           }),
           createPresentation: ({ text }) => createRssAutomationPresentation(text, "daily-ai"),
           id: RSS_SUMMARY_DAILY_AI_AUTOMATION_ID,

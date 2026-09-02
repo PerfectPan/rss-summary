@@ -11,7 +11,7 @@ The source type does not decide the product. The user's relationship to the sour
 | My subscriptions | What did sources I deliberately follow publish? | GitHub Home + `feeds.json` personal blogs | `.state/feed-state.json` |
 | Industry frontier | What changed at companies and projects I should know about? | curated official RSS/Atom plus verified News / Changelog pages in `industry-feeds.json` | `.state/industry-state.json` |
 | Noon/evening news | What happened in the last hours? | event-specific Doubao queries from `news-topics.json`, with official/authoritative source policy | none |
-| Daily AI Digest | What important AI events happened yesterday? | the seven bounded Doubao queries + curated first-party `industry-feeds.json` | delivery receipt + public evidence audit |
+| Daily AI Digest | What important AI events happened in the last 24 hours? | the seven bounded Doubao queries + curated first-party `industry-feeds.json` | delivery receipt + public evidence audit |
 
 GitHub Home belongs to subscriptions because it is already personalized. Public GitHub Repository Search and Hacker News discovery are intentionally not a product: they optimize for popularity and novelty rather than the user's explicit subscriptions or curated official sources.
 
@@ -87,25 +87,25 @@ The tracked frontier list deliberately excludes secondary daily aggregators and 
 
 ## Daily AI Digest workflow
 
-The Daily AI Digest covers the previous Asia/Shanghai calendar day. It reuses both halves of the
-seven-query news search and combines them with the official frontier sources. Evidence is normalized
-to public IDs, titles, canonical URLs, timestamps, cleaned excerpts and source tiers. Entity/event
-duplicates merge their references. The deterministic validator permits only known references,
-the six declared categories, event-shaped Chinese headlines and public URLs. The production Tool
-first returns evidence in a `collect` phase, then accepts only structured editorial records in a
-`render` phase. It verifies that entities overlap referenced evidence and that every numeric claim
-is present in that evidence. Collector labels such as `Blog`,
-`Changelog`, and `Releases` are not valid headline subjects. Invalid editorial output falls back
-only to source titles that are already event-shaped Chinese sentences; raw English titles are
-omitted instead of being wrapped in a synthetic `source published title` sentence. A 12–24 item
-target is never a fill quota, and only `render` returns deliverable Markdown. Source references are
+The Daily AI Digest covers the rolling 24 hours before its scheduled occurrence. It collects every
+noon/evening news segment that overlaps that window and combines them with official frontier sources
+queried with the same exact `since`/`until` bounds. Evidence is normalized to public IDs, titles,
+canonical URLs, timestamps, cleaned excerpts and source tiers; the final evidence set is filtered to
+the half-open interval `[occurrence - 24h, occurrence)`. Exact URL/title duplicates merge their
+references; semantic deduplication remains Agent-owned. The production Tool first returns evidence in a `collect` phase. The Agent decides what
+is newsworthy, translates or summarizes it, and chooses one of the six categories. `render` accepts
+structured `{category, headline, refs}` records and validates only their schema, category, length and
+known evidence references. Each record is validated independently, so a bad record cannot discard
+valid siblings. If all records are invalid while evidence exists, a typed validation error triggers a
+bounded retry against the cached snapshot; there is no title fallback or code-side keyword inference.
+A 12–24 item target is never a fill quota, and only `render` returns deliverable Markdown. Source references are
 rendered as clickable inline badges beside each event; repeated labels from the same provider
 collapse to one badge, and the document does not repeat references in a trailing source section.
-Noon search, evening search, and official-source collection are separate failure domains. If every
-query in one Doubao edition fails, Daily AI records that edition's full per-query audit, renders a
-visible source-status warning, and continues with the other edition and official sources. If both
-Doubao editions fail, official evidence can still produce the digest. Generation fails only when
-all collectors yield no usable evidence; configuration and programming errors are never degraded.
+Each overlapping news segment and official-source collection are separate failure domains. If every
+query in one segment fails, Daily AI records that segment's full per-query audit, renders a visible
+source-status warning, and continues with the remaining segments and official sources. Official
+evidence can still produce the digest when all Doubao segments fail. Generation fails only when all
+collectors yield no usable evidence; configuration and programming errors are never degraded.
 
 ## Research workflow
 

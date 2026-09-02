@@ -15,12 +15,12 @@ Each Automation returns two compatible views of the same result: canonical Markd
 | Tool | `rss-summary/generate-news-brief` | bounded noon/evening authoritative web news |
 | Tool | `rss-summary/generate-daily-ai-digest` | two-phase grounded Daily AI evidence editing and rendering |
 | Automation | `rss-summary/morning-feed-digest` | previous Asia/Shanghai calendar day's personal subscriptions |
-| Automation | `rss-summary/daily-ai-digest` | previous Asia/Shanghai calendar day's Daily AI Digest |
+| Automation | `rss-summary/daily-ai-digest` | rolling 24-hour Daily AI Digest ending at the occurrence |
 | Automation | `rss-summary/daily-industry-brief` | current local calendar day's frontier updates |
 | Automation | `rss-summary/noon-news-brief` | current day 00:00 through noon occurrence |
 | Automation | `rss-summary/evening-news-brief` | current day 12:30 through evening occurrence |
 
-All Tools have `observe` risk. Feed Tools force dry-run mode: they read only-new state but do not send a webhook, write seen state, or write local run artifacts. Their structured result includes the source/candidate audit. The news Tool includes its query/rejection/selection audit. Daily AI's `collect` result exposes both editions' query audits plus the official-source audit; a provider-wide Doubao failure retains each normalized error code while successful remaining collectors continue. Rivus records the subsequent card delivery in its trace and Feishu delivery ledger.
+All Tools have `observe` risk. Feed Tools force dry-run mode: they read only-new state but do not send a webhook, write seen state, or write local run artifacts. Their structured result includes the source/candidate audit. The news Tool includes its query/rejection/selection audit. Daily AI's `collect` result exposes every news segment overlapping its rolling window plus the official-source audit; a provider-wide Doubao failure retains each normalized error code while successful remaining collectors continue. Rivus records the subsequent card delivery in its trace and Feishu delivery ledger.
 
 Public GitHub Repository Search and Hacker News discovery are intentionally absent. GitHub Home belongs to personal subscriptions; industry discovery comes from curated first-party RSS/Atom and explicitly configured official pages.
 
@@ -86,7 +86,7 @@ The important manifest portion is the Plugin, one matching Agent/Endpoint, and t
 }
 ```
 
-Add Automation instances referencing the templates above. The morning subscriptions and Daily AI templates both resolve the previous local day but remain independently scheduled and delivered; industry uses the current local day; noon/evening use non-overlapping news windows. On modern Hosts, Rivus renders the Plugin-owned Automation Presentation IR; the first Markdown heading remains the legacy card-header fallback.
+Add Automation instances referencing the templates above. Morning subscriptions resolves the previous local day, while Daily AI resolves the exact rolling 24 hours before its occurrence; they remain independently scheduled and delivered. Industry uses the current local day; standalone noon/evening news uses non-overlapping windows. On modern Hosts, Rivus renders the Plugin-owned Automation Presentation IR; the first Markdown heading remains the legacy card-header fallback.
 
 ## Configure sources
 
@@ -154,4 +154,4 @@ npm run doctor
 npm run check-config
 ```
 
-Invoke each enabled template once in the foreground. Confirm the morning subscriptions trace contains `collect`, `select`, `research-article`, and `render` calls, every evidence item has an AI decision and reason, research results are URL-matched and bounded, repository rows retain deterministic stars/language facts, PR/RSS rows contain grounded summaries only when selected, and an empty selection is recorded as suppressed without a delivery. Confirm the separate Daily AI card covers the previous local calendar day, the frontier trace lists only official `industry-feeds.json` sources (including `web-page` source health), noon/evening windows do not overlap, the structured card keeps semantic source links inline with each item without right-side button columns or a duplicate source appendix, and the delivery ledger records the card outcome before enabling the service manager.
+Invoke each enabled template once in the foreground. Confirm the morning subscriptions trace contains `collect`, `select`, `research-article`, and `render` calls, every evidence item has an AI decision and reason, research results are URL-matched and bounded, repository rows retain deterministic stars/language facts, PR/RSS rows contain grounded summaries only when selected, and an empty selection is recorded as suppressed without a delivery. Confirm the separate Daily AI card covers `[occurrence - 24h, occurrence)`, invalid draft items do not remove valid siblings, the frontier trace lists only official `industry-feeds.json` sources (including `web-page` source health), standalone noon/evening windows do not overlap, the structured card keeps semantic source links inline with each item without right-side button columns or a duplicate source appendix, and the delivery ledger records the card outcome before enabling the service manager.

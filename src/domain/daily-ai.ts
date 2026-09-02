@@ -1,4 +1,4 @@
-import { canonicalizeUrl, isSameTitleEvent } from "./text.js";
+import { canonicalizeUrl } from "./text.js";
 
 export const dailyAiCategories = [
   "概览/要闻",
@@ -35,10 +35,39 @@ export type DailyAiDecision = {
   reason: string;
 };
 
+export type DailyAiEditorialIssueReason =
+  | "invalid-draft"
+  | "invalid-item"
+  | "invalid-category"
+  | "invalid-headline"
+  | "empty-draft"
+  | "unknown-reference";
+
+export type DailyAiEditorialIssue = {
+  index: number;
+  refs: string[];
+  reason: DailyAiEditorialIssueReason;
+  message: string;
+};
+
+export type DailyAiEditorialValidation = {
+  items: DailyAiEditorialItem[];
+  issues: DailyAiEditorialIssue[];
+};
+
+export class DailyAiDraftValidationError extends Error {
+  readonly code = "DAILY_AI_DRAFT_VALIDATION_FAILED";
+
+  constructor(readonly issues: readonly DailyAiEditorialIssue[]) {
+    super("Daily AI editorial draft must contain at least one valid item");
+    this.name = "DailyAiDraftValidationError";
+  }
+}
+
 export type DailyAiDigest = {
   evidence: DailyAiEvidence[];
   items: DailyAiEditorialItem[];
-  audit: { decisions: DailyAiDecision[] };
+  audit: { decisions: DailyAiDecision[]; editorialIssues: DailyAiEditorialIssue[] };
 };
 
 export function buildDailyAiDigest(
@@ -62,13 +91,24 @@ export function buildDailyAiDigest(
     }
   }
 
-  const fallback = groups.filter(isPublishableGroup).map(toFallbackItem).slice(0, 24);
-  let items = fallback;
+  let items: DailyAiEditorialItem[] = [];
+  let editorialIssues: DailyAiEditorialIssue[] = [];
   if (options.draft !== undefined) {
-    try {
-      items = validateEditorialDraft(options.draft, evidence).slice(0, 24);
-    } catch {
-      decisions.push({ evidenceIds: [], status: "filtered", reason: "invalid-editorial-output" });
+    const validation = validateEditorialDraft(options.draft, evidence);
+    items = validation.items.slice(0, 24);
+    editorialIssues = validation.issues;
+    if (evidence.length > 0 && items.length === 0) {
+      if (editorialIssues.length === 0) {
+        editorialIssues = [
+          {
+            index: -1,
+            refs: [],
+            reason: "empty-draft",
+            message: "editorial draft is empty",
+          },
+        ];
+      }
+      throw new DailyAiDraftValidationError(editorialIssues);
     }
   }
   const selected = new Set(items.flatMap(({ refs }) => refs));
@@ -77,127 +117,80 @@ export function buildDailyAiDigest(
       decisions.push({
         evidenceIds: group.map(({ id }) => id),
         status: "selected",
-        reason: "event-shaped-grounded-evidence",
+        reason: "selected-by-editorial-draft",
       });
-    } else {
+    } else if (options.draft !== undefined) {
       decisions.push({
         evidenceIds: group.map(({ id }) => id),
         status: "filtered",
-        reason: "not-an-event-or-insufficient-authority",
+        reason: "not-selected-by-editorial-draft",
       });
     }
   }
-  return { evidence, items, audit: { decisions } };
+  return { evidence, items, audit: { decisions, editorialIssues } };
 }
 
 export function validateEditorialDraft(
   value: unknown,
   evidence: DailyAiEvidence[],
-): DailyAiEditorialItem[] {
-  if (!Array.isArray(value)) throw new Error("editorial output must be an array");
+): DailyAiEditorialValidation {
+  if (!Array.isArray(value))
+    return {
+      items: [],
+      issues: [
+        {
+          index: -1,
+          refs: [],
+          reason: "invalid-draft",
+          message: "editorial output must be an array",
+        },
+      ],
+    };
   const known = new Set(evidence.map(({ id }) => id));
-  const items = value.map((entry) => {
-    if (!entry || typeof entry !== "object") throw new Error("editorial item must be an object");
+  const items: DailyAiEditorialItem[] = [];
+  const issues: DailyAiEditorialIssue[] = [];
+  for (const [index, entry] of value.entries()) {
+    if (!entry || typeof entry !== "object") {
+      issues.push({
+        index,
+        refs: [],
+        reason: "invalid-item",
+        message: "editorial item must be an object",
+      });
+      continue;
+    }
     const record = entry as Record<string, unknown>;
     const category = record.category;
     const headline = typeof record.headline === "string" ? record.headline.trim() : "";
     const refs = Array.isArray(record.refs)
       ? record.refs.filter((ref): ref is string => typeof ref === "string")
       : [];
-    if (!dailyAiCategories.includes(category as DailyAiCategory))
-      throw new Error("invalid category");
-    if (!isEventHeadline(headline)) throw new Error("headline 不是合格的中文事件句");
-    if (hasCollectionLabelSubject(headline))
-      throw new Error("headline 不得包含 Blog/Changelog/Releases 等采集源标签");
-    if (headline.length > 90) throw new Error("headline is too long");
-    if (refs.length === 0 || refs.some((ref) => !known.has(ref)))
-      throw new Error("unknown reference");
-    assertGroundedHeadline(headline, refs, evidence);
-    return { category: category as DailyAiCategory, headline, refs: [...new Set(refs)] };
-  });
+    if (!dailyAiCategories.includes(category as DailyAiCategory)) {
+      issues.push({ index, refs, reason: "invalid-category", message: "invalid category" });
+      continue;
+    }
+    if (!headline || headline.length > 90) {
+      issues.push({
+        index,
+        refs,
+        reason: "invalid-headline",
+        message: !headline ? "headline is required" : "headline is too long",
+      });
+      continue;
+    }
+    if (refs.length === 0 || refs.some((ref) => !known.has(ref))) {
+      issues.push({ index, refs, reason: "unknown-reference", message: "unknown reference" });
+      continue;
+    }
+    items.push({ category: category as DailyAiCategory, headline, refs: [...new Set(refs)] });
+  }
   const unique: DailyAiEditorialItem[] = [];
   for (const item of items) {
-    if (
-      !unique.some((existing) =>
-        isSameTitleEvent({ title: existing.headline }, { title: item.headline }),
-      )
-    )
+    if (!unique.some((existing) => isSameHeadline(existing.headline, item.headline)))
       unique.push(item);
   }
-  return unique;
+  return { items: unique, issues };
 }
-
-function assertGroundedHeadline(
-  headline: string,
-  refs: string[],
-  evidence: DailyAiEvidence[],
-): void {
-  const referenced = evidence.filter(({ id }) => refs.includes(id));
-  const sourceText = referenced
-    .flatMap(({ title, excerpt, sourceName }) => [title, excerpt, sourceName])
-    .join(" ");
-  const missingNumber = numericClaims(headline).find(
-    (claim) => !numericClaims(sourceText).includes(claim),
-  );
-  if (missingNumber) throw new Error(`headline 数字 ${missingNumber} 没有来源依据`);
-
-  const actionIndex = headline.search(EVENT_ACTION_PATTERN);
-  const subject = actionIndex > 0 ? headline.slice(0, actionIndex) : headline;
-  const headlineTerms = groundingTerms(subject);
-  const sourceTerms = new Set(groundingTerms(sourceText));
-  if (!headlineTerms.some((term) => sourceTerms.has(term)))
-    throw new Error("headline is not grounded in the referenced entity or event");
-}
-
-function numericClaims(value: string): string[] {
-  return [...value.matchAll(/\d+(?:[.,]\d+)*(?:\s?(?:%|％|B|M|K|亿|万))?/giu)].map(([claim]) =>
-    claim.replace(/[\s,]/gu, "").replace("％", "%").toLowerCase(),
-  );
-}
-
-function groundingTerms(value: string): string[] {
-  const terms = new Set<string>();
-  for (const [term] of value.matchAll(/[A-Za-z][A-Za-z0-9.+-]{1,}/gu)) {
-    const normalized = term.toLowerCase();
-    if (!GROUNDING_STOP_TERMS.has(normalized)) terms.add(normalized);
-  }
-  for (const [segment] of value.matchAll(/[\p{Script=Han}]{2,}/gu)) {
-    for (let index = 0; index < segment.length - 1; index += 1) {
-      const term = segment.slice(index, index + 2);
-      if (!GROUNDING_STOP_TERMS.has(term)) terms.add(term);
-    }
-  }
-  return [...terms];
-}
-
-const GROUNDING_STOP_TERMS = new Set([
-  "ai",
-  "api",
-  "model",
-  "models",
-  "agent",
-  "agents",
-  "发布",
-  "推出",
-  "上线",
-  "开放",
-  "开源",
-  "宣布",
-  "完成",
-  "更新",
-  "新增",
-  "支持",
-  "降低",
-  "提升",
-  "修复",
-  "披露",
-  "生效",
-  "预告",
-  "提供",
-  "报道",
-  "即将",
-  "正式",
-]);
 
 function normalizeEvidence(input: DailyAiEvidence[]): DailyAiEvidence[] {
   const ids = new Set<string>();
@@ -210,53 +203,16 @@ function normalizeEvidence(input: DailyAiEvidence[]): DailyAiEvidence[] {
   });
 }
 
-function isPublishableGroup(group: DailyAiEvidence[]): boolean {
-  if (!group.some((item) => item.tier !== "aggregator")) return false;
-  return group.some((item) => isEventHeadline(item.title));
-}
-
-function toFallbackItem(group: DailyAiEvidence[]): DailyAiEditorialItem {
-  const representative = group.find((item) => item.tier === "official") ?? group[0]!;
-  return {
-    category: categoryFor(representative),
-    headline: representative.title.replace(/[。.!！]+$/u, ""),
-    refs: group.map(({ id }) => id),
-  };
-}
-
-function categoryFor(item: DailyAiEvidence): DailyAiCategory {
-  if (item.topicId === "ai-model-releases" || /模型|model|权重|参数/iu.test(item.title))
-    return "模型发布";
-  if (item.topicId === "developer-tools" || /开发|API|SDK|开源|release|CLI/iu.test(item.title))
-    return "开发生态";
-  if (item.topicId === "capital-industry" || /融资|收购|估值|投资/iu.test(item.title))
-    return "行业动态";
-  if (item.topicId === "tech-policy" || /政策|监管|法案/iu.test(item.title)) return "概览/要闻";
-  if (/研究|论文|benchmark|技术/iu.test(item.title)) return "技术与洞察";
-  return "产品应用";
-}
-
 function isSameEntityEvent(left: DailyAiEvidence, right: DailyAiEvidence): boolean {
   if (left.url === right.url) return true;
-  return isSameTitleEvent(left, right);
+  return isSameHeadline(left.title, right.title);
 }
 
-function isEventHeadline(value: string): boolean {
-  const headline = cleanText(value);
-  if (!/\p{Script=Han}/u.test(headline)) return false;
-  if (/GitHub Home 在 GitHub Home 推荐了/u.test(headline)) return false;
-  return EVENT_ACTION_PATTERN.test(headline);
-}
-
-const EVENT_ACTION_PATTERN =
-  /发布|推出|上线|开放|开源|宣布|完成|收购|融资|更新|新增|支持|降低|提升|提高|修复|披露|生效|预告|提供|添加|保持|位列|升级|重置|敦促|暂停|合作|计划|扩大|停止|阐述|发文|启用/u;
-
-const COLLECTION_LABEL_PATTERN = /\b(?:blog|changelog|releases)\b/iu;
-
-function hasCollectionLabelSubject(headline: string): boolean {
-  const actionIndex = headline.search(EVENT_ACTION_PATTERN);
-  const subject = actionIndex > 0 ? headline.slice(0, actionIndex) : headline;
-  return COLLECTION_LABEL_PATTERN.test(subject);
+function isSameHeadline(left: string, right: string): boolean {
+  return (
+    cleanText(left).normalize("NFKC").toLowerCase() ===
+    cleanText(right).normalize("NFKC").toLowerCase()
+  );
 }
 
 function cleanText(value: string): string {

@@ -98,7 +98,7 @@ Both jobs are intended to be required checks in the branch protection rule for `
 
 ## Known Trade-Offs
 
-- The Daily AI Digest uses a two-phase model-editor protocol: `collect` exposes normalized evidence, and `render` accepts structured `{category, headline, refs}` records. The validator rejects unknown references, unrelated entities and unsupported numeric claims before Markdown exists; invalid drafts use deterministic source-grounded fallback headlines.
+- The Daily AI Digest uses a two-phase Agent-editor protocol: `collect` exposes normalized evidence from the rolling 24-hour window, and `render` accepts structured `{category, headline, refs}` records. The Agent owns selection, translation/summarization and classification. Code performs per-item structural, category, length and reference checks only; valid siblings survive an invalid item, while an all-invalid draft returns a typed retryable error against the cached evidence snapshot.
 
 - Shallow Effect adoption means an ordered, bounded Promise worker pool rather than Effect structured concurrency; behavior parity and provider-safe concurrency were prioritized over idiomatic Effect during the refactor.
 - Browser automation (`github-home.ts` and `browser-article-research.ts`) is isolated behind client classes and v8-ignored with documented manual/smoke test paths. Article research uses an isolated context with no storage state, only navigates the selected public URL, and falls back to bounded HTTP extraction when browser rendering fails.

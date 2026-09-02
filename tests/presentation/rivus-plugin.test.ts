@@ -261,9 +261,10 @@ describe("rss-summary Rivus Plugin", () => {
     expect(dailyAi.createInput({ occurrence }).text).toContain(RSS_SUMMARY_DAILY_AI_TOOL_ID);
     expect(dailyAi.createInput({ occurrence }).text).toContain('"phase":"collect"');
     expect(dailyAi.createInput({ occurrence }).text).toContain('"phase":"render"');
-    expect(dailyAi.createInput({ occurrence }).text).toContain("只能引用 collect 返回的 evidence");
-    expect(dailyAi.createInput({ occurrence }).text).toContain("主体、动作、具体变化或结果与影响");
-    expect(dailyAi.createInput({ occurrence }).text).toContain("Blog/Changelog/Releases");
+    expect(dailyAi.createInput({ occurrence }).text).toContain("只能陈述 evidence 支持的信息");
+    expect(dailyAi.createInput({ occurrence }).text).toContain("自主判断值得纳入的事件");
+    expect(dailyAi.createInput({ occurrence }).text).toContain("滚动 24 小时 evidence");
+    expect(dailyAi.createInput({ occurrence }).text).toContain("DAILY_AI_DRAFT_VALIDATION_FAILED");
     expect(morning.createInput({ occurrence }).text).toContain("对齐 Daily AI Digest");
     expect(noon.createInput({ occurrence }).text).toContain('"edition":"noon"');
     expect(evening.createInput({ occurrence }).text).toContain('"edition":"evening"');
