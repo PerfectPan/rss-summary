@@ -297,7 +297,7 @@ export function createRssSummaryPlugin(
       registry.registerAutomation(
         presentationAutomation({
           createInput: ({ occurrence }) => ({
-            text: `请严格按顺序完成 Daily AI Digest：\n1. 调用 ${RSS_SUMMARY_DAILY_AI_TOOL_ID}，输入 ${JSON.stringify({ occurrence, phase: "collect" })}。\n2. 基于 collect 返回的滚动 24 小时 evidence，自主判断值得纳入的事件，翻译或归纳为简洁中文 headline，并选择最合适的 category。目标 12–24 条，但质量优先、不凑数。每条使用一个或多个真实 evidence id 作为 refs，headline 不超过 90 字；只能陈述 evidence 支持的信息，不得补写事实。输出 Array<{category, headline, refs}>。\n3. 再调用同一 Tool，输入 ${JSON.stringify({ occurrence, phase: "render" })} 并增加 draft 字段。若返回 DAILY_AI_DRAFT_VALIDATION_FAILED，只修正结构或引用有误的条目后重试。\n4. 仅将 render 返回的 markdown 字段原样返回，不得自行改写、添加或删除事实。`,
+            text: `请严格按顺序完成 Daily AI Digest：\n\n1. 调用 ${RSS_SUMMARY_DAILY_AI_TOOL_ID}，输入 ${JSON.stringify({ occurrence, phase: "collect" })}，获取指定时间窗口内的候选内容。\n2. 根据 collect 返回的 evidence 自主筛选、去重、归类并生成结构化草稿 Array<{category, headline, refs}>。仅依据 evidence 写作，不补充未经来源支持的事实；单条内容不合格时跳过该条，不影响其他条目。\n3. 调用 ${RSS_SUMMARY_DAILY_AI_TOOL_ID}，输入 ${JSON.stringify({ occurrence, phase: "render" })} 并增加 draft 字段，生成最终 Markdown。若校验失败，根据错误信息修正对应条目并重试，最多两次。\n4. render 成功后，直接将返回结果中的 markdown 字段作为最终回复。最终回复只包含该字段内容，不描述执行步骤、调用结果或校验过程，不添加任何说明或代码围栏，也不改写该字段。`,
           }),
           createPresentation: ({ text }) => createRssAutomationPresentation(text, "daily-ai"),
           id: RSS_SUMMARY_DAILY_AI_AUTOMATION_ID,
