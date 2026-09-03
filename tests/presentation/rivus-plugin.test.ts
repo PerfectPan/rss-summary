@@ -261,10 +261,21 @@ describe("rss-summary Rivus Plugin", () => {
     expect(dailyAi.createInput({ occurrence }).text).toContain(RSS_SUMMARY_DAILY_AI_TOOL_ID);
     expect(dailyAi.createInput({ occurrence }).text).toContain('"phase":"collect"');
     expect(dailyAi.createInput({ occurrence }).text).toContain('"phase":"render"');
-    expect(dailyAi.createInput({ occurrence }).text).toContain("只能陈述 evidence 支持的信息");
-    expect(dailyAi.createInput({ occurrence }).text).toContain("自主判断值得纳入的事件");
+    expect(dailyAi.createInput({ occurrence }).text).toContain("仅依据 evidence 写作");
+    expect(dailyAi.createInput({ occurrence }).text).toContain("自主筛选、去重、归类");
     expect(dailyAi.createInput({ occurrence }).text).toContain("滚动 24 小时 evidence");
     expect(dailyAi.createInput({ occurrence }).text).toContain("DAILY_AI_DRAFT_VALIDATION_FAILED");
+    expect(dailyAi.createInput({ occurrence }).text).toContain(
+      "单条内容不合格时跳过该条，不影响其他条目",
+    );
+    expect(dailyAi.createInput({ occurrence }).text).toContain("最多两次");
+    expect(dailyAi.createInput({ occurrence }).text).toContain("最终回复只包含该字段内容");
+    expect(dailyAi.createInput({ occurrence }).text).toContain(
+      "不描述执行步骤、调用结果或校验过程",
+    );
+    expect(dailyAi.createInput({ occurrence }).text).toContain("不添加任何说明或代码围栏");
+    expect(dailyAi.createInput({ occurrence }).text).not.toContain("第一个字符必须是 #");
+    expect(dailyAi.createInput({ occurrence }).text).not.toContain("机器消费");
     expect(morning.createInput({ occurrence }).text).toContain("对齐 Daily AI Digest");
     expect(noon.createInput({ occurrence }).text).toContain('"edition":"noon"');
     expect(evening.createInput({ occurrence }).text).toContain('"edition":"evening"');
