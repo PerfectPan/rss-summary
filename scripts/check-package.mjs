@@ -1,11 +1,29 @@
 import { execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repository = fileURLToPath(new URL("..", import.meta.url));
+const configuredCoreArchive = process.env.RIVUS_CORE_PACKAGE_TGZ?.trim();
+const configuredCoreSha256 = process.env.RIVUS_CORE_PACKAGE_SHA256?.trim().toLowerCase();
+const coreSpec = configuredCoreArchive ? resolve(configuredCoreArchive) : "@rivus/agent@0.12.7";
+
+if (configuredCoreArchive) {
+  if (!configuredCoreSha256 || !/^[0-9a-f]{64}$/.test(configuredCoreSha256)) {
+    throw new Error("RIVUS_CORE_PACKAGE_SHA256 must be a 64-character lowercase SHA256 when an archive is configured");
+  }
+  requireFile(coreSpec);
+  const actual = createHash("sha256").update(readFileSync(coreSpec)).digest("hex");
+  if (actual !== configuredCoreSha256) {
+    throw new Error(
+      `RIVUS_CORE_PACKAGE_TGZ SHA256 mismatch: expected ${configuredCoreSha256}, received ${actual}`,
+    );
+  }
+}
+
 const root = await mkdtemp(join(tmpdir(), "rss-summary-package-"));
 
 try {
@@ -23,7 +41,7 @@ try {
       "--no-fund",
       "--package-lock=false",
       archive,
-      "@rivus/agent@0.12.7",
+      coreSpec,
     ],
     consumer,
   );
