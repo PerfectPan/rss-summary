@@ -1,4 +1,6 @@
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vite-plus/test";
 
@@ -27,7 +29,7 @@ describe("package CLI metadata", () => {
       types: "./dist/presentation/rivus-plugin.d.ts",
       default: "./dist/presentation/rivus-plugin.js",
     });
-    expect(pkg.peerDependencies?.["@rivus/agent"]).toBe(">=0.12.7 <0.14.0");
+    expect(pkg.peerDependencies?.["@rivus/agent"]).toBe(">=0.12.7 <0.16.0");
     expect(pkg.devDependencies?.["@rivus/agent"]).toBe("0.12.7");
     expect(pkg.engines?.node).toBe("^24.11.0");
     expect(pkg.files).toEqual([
@@ -44,4 +46,37 @@ describe("package CLI metadata", () => {
     );
     expect(buildConfig.compilerOptions?.declaration).toBe(true);
   });
+
+  it.each(["", "invalid-sha256"])(
+    "rejects a local Core archive with missing or malformed digest (%j)",
+    (digest) => {
+      const result = checkLocalArchive(digest);
+      expect(result.status).toBe(1);
+      expect(result.stdout).toBe("");
+      expect(result.stderr).toContain("RIVUS_CORE_PACKAGE_SHA256 must be a 64-character");
+    },
+  );
+
+  it("rejects a local Core archive whose bytes do not match its digest", () => {
+    const result = checkLocalArchive("0".repeat(64));
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("RIVUS_CORE_PACKAGE_TGZ SHA256 mismatch");
+  });
 });
+
+function checkLocalArchive(digest: string) {
+  return spawnSync(
+    process.execPath,
+    [fileURLToPath(new URL("../../scripts/check-package.mjs", import.meta.url))],
+    {
+      cwd: fileURLToPath(new URL("../../", import.meta.url)),
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        RIVUS_CORE_PACKAGE_TGZ: fileURLToPath(new URL("../../package.json", import.meta.url)),
+        RIVUS_CORE_PACKAGE_SHA256: digest,
+      },
+    },
+  );
+}

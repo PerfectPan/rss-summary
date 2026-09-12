@@ -37,8 +37,21 @@ cd /path/to/rivus-project
 npm install /path/to/rss-summary
 ```
 
-The supported `@rivus/agent` peer range is `>=0.12.7 <0.14.0`, covering the 0.12 and 0.13 runtime lines used by
+The supported `@rivus/agent` peer range is `>=0.12.7 <0.16.0`, covering the 0.12 through 0.15 runtime lines used by
 the production deployment and the version exercised by repository tests.
+
+`pnpm package:check` keeps the 0.12.7 minimum-runtime check by default. A deployment can prove compatibility with
+an exact, hash-verified local Core archive without changing the lockfile or downloading an unpinned replacement:
+
+```bash
+RIVUS_CORE_PACKAGE_TGZ=/absolute/path/to/rivus-agent.tgz \
+RIVUS_CORE_PACKAGE_SHA256=<sha256-of-that-archive> \
+pnpm package:check
+```
+
+The package check verifies the archive before installing it into an isolated consumer, then runs the same Plugin
+conformance and packaged-source checks. The archive path and digest are inputs only; they are never written into the
+package or repository state.
 
 ## Bind the Plugin
 
