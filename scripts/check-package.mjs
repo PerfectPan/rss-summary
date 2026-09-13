@@ -9,7 +9,13 @@ import { fileURLToPath } from "node:url";
 const repository = fileURLToPath(new URL("..", import.meta.url));
 const configuredCoreArchive = process.env.RIVUS_CORE_PACKAGE_TGZ?.trim();
 const configuredCoreSha256 = process.env.RIVUS_CORE_PACKAGE_SHA256?.trim().toLowerCase();
-const coreSpec = configuredCoreArchive ? resolve(configuredCoreArchive) : "@rivus/agent@0.12.7";
+const configuredCoreVersion = process.env.RIVUS_CORE_PACKAGE_VERSION?.trim();
+if (configuredCoreVersion && (!/^\d+\.\d+\.\d+$/.test(configuredCoreVersion) || configuredCoreArchive)) {
+  throw new Error("RIVUS_CORE_PACKAGE_VERSION must be an exact release version and cannot be combined with an archive");
+}
+const coreSpec = configuredCoreArchive
+  ? resolve(configuredCoreArchive)
+  : `@rivus/agent@${configuredCoreVersion ?? "0.12.7"}`;
 
 if (configuredCoreArchive) {
   if (!configuredCoreSha256 || !/^[0-9a-f]{64}$/.test(configuredCoreSha256)) {
@@ -40,6 +46,7 @@ try {
       "--no-audit",
       "--no-fund",
       "--package-lock=false",
+      "--registry=https://registry.npmjs.org",
       archive,
       coreSpec,
     ],
