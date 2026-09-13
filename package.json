@@ -1,6 +1,6 @@
 {
   "name": "rss-summary",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.7.0",
@@ -60,6 +60,6 @@
     "playwright": "^1.61.1"
   },
   "peerDependencies": {
-    "@rivus/agent": ">=0.12.7 <0.16.0"
+    "@rivus/agent": ">=0.12.7 <0.17.0"
   }
 }
