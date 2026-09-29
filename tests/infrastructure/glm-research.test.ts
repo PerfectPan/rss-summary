@@ -88,12 +88,19 @@ describe("GLM research MCP", () => {
       "file:///etc/passwd",
       "https://user:secret@example.com/",
       "https://intranet.local/",
-      "https://example.com:8443/",
     ]) {
       await expect(client.read(url)).rejects.toThrow("public HTTP");
     }
     await expect(client.search("query", ["example.com/path"])).rejects.toThrow("hostnames");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps public search and Reader URLs with custom ports", async () => {
+    const url = "https://example.com:8443/category/news";
+    const search = clientWith([{ title: "News", link: url }]);
+    expect((await search.client.search("news", []))[0]?.url).toBe(url);
+    const reader = clientWith({ title: "News", url, content: "News content" });
+    expect((await reader.client.read(url)).url).toBe(url);
   });
 
   it("reports tool and HTTP errors without echoing provider credentials", async () => {
