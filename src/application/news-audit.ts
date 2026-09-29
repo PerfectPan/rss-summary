@@ -15,6 +15,8 @@ export type NewsQueryAudit = {
   topicId: string;
   topicLabel: string;
   status: "ok" | "failed";
+  provider?: DoubaoSearchPage["provider"];
+  fallback?: DoubaoSearchPage["fallback"];
   logId?: string;
   reportedResultCount?: number;
   fetched: number;
@@ -75,6 +77,8 @@ export function buildNewsAudit(
       topicLabel: topic.label,
       status: "ok",
       ...(result.value.logId ? { logId: result.value.logId } : {}),
+      ...(result.value.provider ? { provider: result.value.provider } : {}),
+      ...(result.value.fallback ? { fallback: result.value.fallback } : {}),
       reportedResultCount: result.value.resultCount,
       fetched: result.value.results.length,
       accepted: queryDecisions.filter(({ status }) => status === "accepted").length,

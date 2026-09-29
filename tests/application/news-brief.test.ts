@@ -473,3 +473,88 @@ function newsTopic(id: string, queryIds: string[]) {
     queries: queryIds.map((queryId) => newsQuery(queryId, queryId)),
   };
 }
+
+it("runs hybrid search through the news application, merges evidence and preserves quota state", async () => {
+  const url = "https://devblogs.microsoft.com/typescript/release";
+  const publishedAt = "2026-07-29T01:00:00Z";
+  const search = vi.fn(async () => ({
+    resultCount: 1,
+    results: [
+      {
+        id: "primary",
+        title: "TypeScript released",
+        url,
+        summary: "TypeScript released a new compiler.",
+        publishTime: publishedAt,
+        authInfoLevel: 1,
+        rankPosition: 1,
+      },
+    ],
+  }));
+  search.mockImplementationOnce(async () => ({
+    resultCount: 1,
+    results: [
+      {
+        id: "primary",
+        title: "TypeScript released",
+        url,
+        summary: "TypeScript released a new compiler.",
+        publishTime: publishedAt,
+        authInfoLevel: 1,
+        rankPosition: 1,
+      },
+    ],
+  }));
+  search.mockImplementation(async () => {
+    throw new DoubaoSearchError("10406", "quota exhausted");
+  });
+  const glm = {
+    search: vi.fn(async () => [
+      { title: "TypeScript released", url, snippet: "TypeScript released a compiler" },
+    ]),
+    read: vi.fn(async () => ({
+      title: "TypeScript released",
+      url,
+      content: "TypeScript released a new compiler.",
+      truncated: false,
+      publishedAt,
+    })),
+  };
+  const result = await Effect.runPromise(
+    generateRivusNewsBrief(
+      { edition: "noon", occurrence: "2026-07-29T04:30:00Z" },
+      {
+        env: { NEWS_SEARCH_MODE: "hybrid" },
+        search,
+        glm,
+        topics: [
+          {
+            id: "tools",
+            label: "开发工具",
+            icon: "💻",
+            enabled: true,
+            sourcePolicy: "official",
+            maxItems: 3,
+            queries: ["primary", "fallback", "skip-quota"].map((id) => ({
+              id,
+              text: id,
+              intent: "developer-change",
+              subjectAny: ["TypeScript"],
+              eventAny: ["released"],
+              excludedAny: [],
+              glm: { query: "TypeScript released", domains: ["devblogs.microsoft.com"] },
+            })),
+          },
+        ],
+      },
+    ),
+  );
+  expect(search).toHaveBeenCalledTimes(2);
+  expect(glm.search).toHaveBeenCalledTimes(2);
+  expect(glm.read).toHaveBeenCalledTimes(1);
+  expect(result.itemCount).toBe(1);
+  expect(result.stories[0].queryHits).toBe(3);
+  expect(result.audit.counts).toMatchObject({ acceptedHits: 3, canonicalDuplicates: 2 });
+  expect(result.audit.queries.map(({ provider }) => provider)).toEqual(["doubao", "glm", "glm"]);
+  expect(result.warnings.join(" ")).toContain("豆包免费额度耗尽");
+});

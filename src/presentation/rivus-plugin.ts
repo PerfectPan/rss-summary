@@ -148,7 +148,7 @@ export function createRssSummaryPlugin(
                   content: { maxLength: 16_000, type: "string" },
                   error: { type: "string" },
                   fetchedUrl: { format: "uri", type: "string" },
-                  method: { enum: ["browser", "http"], type: "string" },
+                  method: { enum: ["browser", "http", "glm"], type: "string" },
                   ref: { minLength: 1, type: "string" },
                   status: { enum: ["failed", "ok"], type: "string" },
                   title: { type: "string" },

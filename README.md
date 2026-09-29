@@ -6,6 +6,8 @@
 
 Rivus 的 `morning-feed-digest` 保留稳定 automation ID，并继续推送前一北京时间自然日的“我的订阅”；source-grounded Daily AI Digest 使用独立的 `daily-ai-digest` automation，覆盖每次运行时刻往前 24 小时。Daily AI Digest 使用现有七个新闻查询和经过验证的官方 RSS；Agent 自主筛选、翻译/归纳并选择六个栏目，代码只校验结构与证据引用，单条无效不会拖垮其他条目。重叠的新闻采集时段与官方源彼此隔离，单个时段全挂时会保留逐查询审计、显示降级告警并继续使用其他来源，只有所有来源都没有可用证据时才整体失败。质量不足时不凑数。每个 Automation 同时产出 Markdown 兼容视图与渠道无关的展示 IR：插件决定栏目、条目和来源，Rivus Renderer 决定飞书卡片组件与视觉样式。具体时间由 Rivus manifest 分别绑定，避免两类产品互相覆盖。
 
+豆包搜索可以通过 `NEWS_SEARCH_MODE=hybrid` 启用 GLM 补查：额度耗尽或查询没有合格结果时，从配置的可信来源搜索并读取原文，再通过同一时间与主题校验。默认每个新闻窗口最多 4 次补查、6 次原文读取；详见 [混合搜索配置](docs/glm-search.md)。
+
 ## 示例输出
 
 **我的订阅**（`rss-summary digest`）

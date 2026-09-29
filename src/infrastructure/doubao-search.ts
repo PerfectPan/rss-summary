@@ -1,4 +1,4 @@
-import type { NewsSourcePolicy } from "../domain/news.js";
+import type { NewsSourcePolicy, NewsSourceVerification } from "../domain/news.js";
 import { asRecord, number, text } from "./parsing.js";
 
 export type DoubaoSearchInput = {
@@ -20,9 +20,12 @@ export type DoubaoSearchResult = {
   authInfoDescription?: string;
   authInfoLevel?: number;
   rankPosition: number;
+  sourceVerification?: NewsSourceVerification;
 };
 
 export type DoubaoSearchPage = {
+  provider?: "doubao" | "glm" | "mixed";
+  fallback?: { reason: string; searched: boolean; reads: number; warnings: string[] };
   logId?: string;
   resultCount: number;
   timeCostMs?: number;

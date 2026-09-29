@@ -105,6 +105,7 @@ function parseQuery(
     id,
     text,
     intent,
+    ...(record.glm === undefined ? {} : { glm: parseGlmQuery(record.glm, context) }),
     subjectAny: parseTerms(record.subjectAny, `${context} subjectAny`, true),
     eventAny: parseTerms(record.eventAny, `${context} eventAny`, true),
     excludedAny: parseTerms(record.excludedAny, `${context} excludedAny`, false),
@@ -129,4 +130,24 @@ function parseTerms(value: unknown, context: string, required: boolean): string[
 function parseSourcePolicy(value: unknown, id: string): NewsSourcePolicy {
   if (value === "authoritative" || value === "official") return value;
   throw new Error(`News topic ${id} sourcePolicy must be authoritative or official.`);
+}
+
+function parseGlmQuery(value: unknown, context: string): NonNullable<NewsTopicQuery["glm"]> {
+  const record = requireRecord(value, `${context} glm`);
+  const query = requiredString(record.query, `${context} glm query`);
+  if (query.length > 70) throw new Error(`${context} glm query must not exceed 70 characters.`);
+  if (!Array.isArray(record.domains) || record.domains.length < 1 || record.domains.length > 8) {
+    throw new Error(`${context} glm domains must contain 1 to 8 hostnames.`);
+  }
+  const domains = record.domains.map((value) => {
+    const domain = requiredString(value, `${context} glm domain`).toLowerCase();
+    if (
+      !/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/u.test(domain) ||
+      /\.(?:local|internal|test|invalid)$/u.test(domain)
+    ) {
+      throw new Error(`${context} glm domain must be a public hostname.`);
+    }
+    return domain;
+  });
+  return { query, domains: [...new Set(domains)] };
 }

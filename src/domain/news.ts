@@ -14,6 +14,12 @@ export type NewsQueryIntent =
   | "policy-action"
   | "capital-event";
 
+export type NewsSourceVerification = {
+  method: "configured-domain";
+  domain: string;
+  policy: NewsSourcePolicy;
+};
+
 export type NewsTopicQuery = {
   id: string;
   text: string;
@@ -21,6 +27,7 @@ export type NewsTopicQuery = {
   subjectAny: string[];
   eventAny: string[];
   excludedAny: string[];
+  glm?: { query: string; domains: string[] };
 };
 
 export type NewsTopic = {
@@ -53,6 +60,7 @@ export type NewsSearchHit = {
   eventAny: string[];
   excludedAny: string[];
   rankPosition: number;
+  sourceVerification?: NewsSourceVerification;
 };
 
 export type NewsScoreBreakdown = {
@@ -225,7 +233,7 @@ function rejectionReasonForHit(
     : Number.NaN;
   if (!Number.isFinite(publishedAt)) return "invalid-publish-time";
   if (publishedAt < window.since || publishedAt >= window.until) return "outside-window";
-  const authLevel = hit.authInfoLevel ?? 4;
+  const authLevel = authorityLevel(hit);
   if (hit.sourcePolicy === "official" ? authLevel !== 1 : authLevel > 2) {
     return "insufficient-authority";
   }
@@ -258,7 +266,7 @@ function toStory(
   const queries = uniq(matches.map(({ queryText }) => queryText));
   const topicIds = uniq(matches.map(({ topicId }) => topicId));
   const topicLabels = uniq(matches.map(({ topicLabel }) => topicLabel));
-  const authInfoLevel = Math.min(...matches.map(({ authInfoLevel }) => authInfoLevel ?? 4));
+  const authInfoLevel = Math.min(...matches.map(authorityLevel));
   const rankScore = Math.max(...matches.map(({ rankScore }) => rankScore ?? 0));
   const queryHits = queryIds.length;
   const bestRankPosition = Math.min(...matches.map(({ rankPosition }) => rankPosition));
@@ -312,4 +320,19 @@ function containsSearchTerm(content: string, term: string): boolean {
   }
   const escaped = normalizedTerm.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
   return new RegExp(`(?:^|[^a-z0-9])${escaped}(?=$|[^a-z0-9])`, "u").test(content);
+}
+
+function authorityLevel(hit: NewsSearchHit): number {
+  if (hit.sourceVerification) {
+    let host: string;
+    try {
+      host = new URL(hit.url).hostname;
+    } catch {
+      return 4;
+    }
+    const { domain, policy } = hit.sourceVerification;
+    if (host !== domain && !host.endsWith(`.${domain}`)) return 4;
+    return policy === "official" ? 1 : 2;
+  }
+  return hit.authInfoLevel ?? 4;
 }

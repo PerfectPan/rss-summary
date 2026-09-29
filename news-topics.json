@@ -11,6 +11,10 @@
         "id": "frontier-model-release",
         "text": "OpenAI、Anthropic、Google DeepMind、Meta 或 xAI 正式发布新模型、Agent 或 API；只要官方公告",
         "intent": "model-release",
+        "glm": {
+          "query": "OpenAI Anthropic Google DeepMind new model announcement",
+          "domains": ["openai.com", "anthropic.com", "deepmind.google", "blog.google", "x.ai"]
+        },
         "subjectAny": ["OpenAI", "Anthropic", "Google DeepMind", "Meta", "xAI"],
         "eventAny": ["正式发布", "正式上线", "开放 API", "进入 GA", "general availability", "launches", "released", "introducing"],
         "excludedAny": ["教程", "评测", "传闻", "预测", "盘点", "tutorial", "review", "rumor", "prediction", "roundup"]
@@ -19,6 +23,10 @@
         "id": "coding-agent-release",
         "text": "Codex、Claude Code、Gemini CLI、GitHub Copilot、Cursor 或 Windsurf 进入 GA、发布重大版本或破坏性变更；只要官方公告",
         "intent": "developer-change",
+        "glm": {
+          "query": "Codex Claude Code GitHub Copilot Cursor major release",
+          "domains": ["openai.com", "anthropic.com", "github.blog", "cursor.com", "windsurf.com"]
+        },
         "subjectAny": ["Codex", "Claude Code", "Gemini CLI", "GitHub Copilot", "Cursor", "Windsurf"],
         "eventAny": ["进入 GA", "重大版本", "破坏性变更", "general availability", "major release", "breaking change"],
         "excludedAny": ["教程", "评测", "传闻", "预测", "盘点", "tutorial", "review", "rumor", "prediction", "roundup"]
@@ -37,6 +45,10 @@
         "id": "runtime-toolchain-change",
         "text": "TypeScript、Rust、Node.js、Deno、Bun 或主流 IDE 发布重大版本、弃用、破坏性变更或安全更新；只要项目官方公告",
         "intent": "developer-change",
+        "glm": {
+          "query": "TypeScript Rust Node.js Deno Bun release security update",
+          "domains": ["devblogs.microsoft.com", "blog.rust-lang.org", "nodejs.org", "deno.com", "bun.sh"]
+        },
         "subjectAny": ["TypeScript", "Rust", "Node.js", "Deno", "Bun", "IDE"],
         "eventAny": ["重大版本", "弃用", "破坏性变更", "安全更新", "major release", "breaking change", "deprecation", "security update"],
         "excludedAny": ["教程", "评测", "传闻", "预测", "盘点", "tutorial", "review", "rumor", "prediction", "roundup"]
@@ -55,6 +67,10 @@
         "id": "cloud-service-incident",
         "text": "AWS、Azure、Google Cloud 或 Cloudflare 发生大规模服务中断、数据泄露或安全事件；只要官方通报或状态页",
         "intent": "service-incident",
+        "glm": {
+          "query": "AWS Azure Google Cloud Cloudflare service outage incident",
+          "domains": ["aws.amazon.com", "azure.status.microsoft", "status.cloud.google.com", "cloudflarestatus.com", "blog.cloudflare.com"]
+        },
         "subjectAny": ["AWS", "Azure", "Google Cloud", "Cloudflare"],
         "eventAny": ["服务中断", "大规模中断", "故障", "数据泄露", "安全事件", "outage", "service disruption", "data breach", "security incident"],
         "excludedAny": ["教程", "评测", "传闻", "预测", "盘点", "tutorial", "review", "rumor", "prediction", "roundup"]
@@ -63,6 +79,10 @@
         "id": "open-source-security",
         "text": "开源开发工具发生高危 CVE、供应链攻击或紧急弃用；只要项目维护者或安全机构公告",
         "intent": "security-advisory",
+        "glm": {
+          "query": "GitHub npm package critical vulnerability security advisory",
+          "domains": ["github.blog", "cisa.gov"]
+        },
         "subjectAny": ["开源", "GitHub", "npm", "PyPI", "软件包", "dependency", "package"],
         "eventAny": ["CVE-", "高危漏洞", "供应链攻击", "紧急弃用", "critical vulnerability", "supply-chain attack", "security advisory"],
         "excludedAny": ["教程", "评测", "传闻", "预测", "盘点", "tutorial", "review", "rumor", "prediction", "roundup"]
@@ -81,6 +101,10 @@
         "id": "ai-policy-action",
         "text": "AI 模型、芯片或数据相关监管政策正式发布或生效；只要政府、法院或监管机构原文",
         "intent": "policy-action",
+        "glm": {
+          "query": "AI semiconductor data regulation takes effect official",
+          "domains": ["gov.cn", "cac.gov.cn", "ec.europa.eu", "ftc.gov"]
+        },
         "subjectAny": ["AI", "人工智能", "模型", "芯片", "数据"],
         "eventAny": ["正式发布", "生效", "通过", "裁定", "takes effect", "effective", "regulation", "ruling"],
         "excludedAny": ["解读", "观点", "传闻", "预测", "盘点", "opinion", "rumor", "prediction", "roundup"]
@@ -99,6 +123,10 @@
         "id": "major-capital-event",
         "text": "AI 公司完成超过 1 亿美元融资、收购、合并、IPO 或发布关键财报；只要公司公告或权威财经报道",
         "intent": "capital-event",
+        "glm": {
+          "query": "OpenAI Anthropic AI funding acquisition announcement",
+          "domains": ["openai.com", "anthropic.com", "x.ai", "mistral.ai", "cohere.com"]
+        },
         "subjectAny": ["AI", "人工智能", "大模型", "模型公司", "OpenAI", "Anthropic", "xAI", "Mistral", "Cohere", "Scale AI", "Hugging Face", "Cursor", "Windsurf", "Perplexity"],
         "eventAny": ["融资", "收购", "合并", "IPO", "财报", "funding", "acquisition", "merger", "earnings"],
         "excludedAny": ["传闻", "预测", "盘点", "教程", "opinion", "rumor", "prediction", "roundup"]

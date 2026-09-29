@@ -9,7 +9,7 @@ export type ArticleResearchResult =
   | {
       content: string;
       fetchedUrl: string;
-      method?: "browser" | "http";
+      method?: "browser" | "http" | "glm";
       ref: string;
       retrievedAt: string;
       status: "ok";
@@ -18,7 +18,7 @@ export type ArticleResearchResult =
     }
   | {
       error: string;
-      method?: "browser" | "http";
+      method?: "browser" | "http" | "glm";
       ref: string;
       retrievedAt: string;
       status: "failed";

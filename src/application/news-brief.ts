@@ -21,6 +21,8 @@ import {
   type DoubaoSearchInput,
   type DoubaoSearchPage,
 } from "../infrastructure/doubao-search.js";
+import { GlmResearchClient } from "../infrastructure/glm-research.js";
+import { createHybridNewsSearch, type NewsSearchRequest } from "./hybrid-news-search.js";
 import { attempt } from "./effect.js";
 import { buildNewsAudit, type NewsBriefAudit } from "./news-audit.js";
 
@@ -63,6 +65,7 @@ export class AllDoubaoQueriesFailedError extends Error {
 }
 
 type NewsBriefDependencies = {
+  glm?: Pick<GlmResearchClient, "search" | "read">;
   env?: NodeJS.ProcessEnv;
   now?: () => Date;
   random?: () => number;
@@ -138,18 +141,44 @@ export function generateRivusNewsBrief(
         },
       })),
     );
+    const mode = env.NEWS_SEARCH_MODE ?? "doubao";
+    if (mode !== "doubao" && mode !== "hybrid") {
+      return yield* Effect.fail(new Error("NEWS_SEARCH_MODE must be doubao or hybrid."));
+    }
+    const primarySearch = (input: DoubaoSearchInput) =>
+      searchWithRetry(input, search, {
+        random: dependencies.random ?? Math.random,
+        sleep: dependencies.sleep ?? sleep,
+      });
+    const execute = yield* Effect.try({
+      try: () =>
+        mode === "hybrid"
+          ? createHybridNewsSearch({
+              search: primarySearch,
+              glm:
+                dependencies.glm ?? new GlmResearchClient({ apiKey: env.GLM_CODING_API_KEY ?? "" }),
+              window,
+              maxSearches: boundedInteger(env.NEWS_GLM_MAX_SEARCHES, 4, 1, 8),
+              maxReads: boundedInteger(env.NEWS_GLM_MAX_READS, 6, 1, 12),
+            })
+          : (request: NewsSearchRequest) => primarySearch(request.input),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+    });
     const settled = yield* attempt(
-      settleSearchRequests(requests, (input) =>
-        searchWithRetry(input, search, {
-          random: dependencies.random ?? Math.random,
-          sleep: dependencies.sleep ?? sleep,
-        }),
-      ),
+      settleSearchRequests(requests, execute, mode === "hybrid" ? 1 : newsSearchConcurrency),
     );
     const successful = settled.filter(
       (result): result is PromiseFulfilledResult<DoubaoSearchPage> => result.status === "fulfilled",
     );
     const topicFailureWarnings = topicWarnings(requests, settled);
+    for (const [index, result] of settled.entries()) {
+      if (result.status !== "fulfilled" || !result.value.fallback) continue;
+      const fallback = result.value.fallback;
+      topicFailureWarnings.push(
+        `${requests[index]!.topic.label}：${fallback.reason === "10406" ? "豆包免费额度耗尽" : fallback.reason === "no-eligible-results" ? "豆包未找到可用结果" : "豆包查询不可用"}，${fallback.searched ? "已尝试 GLM 补查" : "未执行 GLM 补查"}`,
+      );
+      topicFailureWarnings.push(...fallback.warnings);
+    }
     const generatedAt = (dependencies.now ?? (() => new Date()))().toISOString();
     if (successful.length === 0) {
       const failures = settled.flatMap((result) =>
@@ -201,7 +230,7 @@ export function generateRivusNewsBrief(
       missingPublishTimeCount > 0
         ? [
             ...topicFailureWarnings,
-            `Doubao 搜索：${missingPublishTimeCount} 条结果缺少有效的发布时间被丢弃`,
+            `${mode === "hybrid" ? "混合" : "Doubao"} 搜索：${missingPublishTimeCount} 条结果缺少有效的发布时间被丢弃`,
           ]
         : topicFailureWarnings;
     const selection = selectNewsStoriesWithAudit(built.stories, topics);
@@ -229,8 +258,9 @@ export function generateRivusNewsBrief(
 }
 
 async function settleSearchRequests(
-  requests: Array<{ input: DoubaoSearchInput }>,
-  execute: (input: DoubaoSearchInput) => Promise<DoubaoSearchPage>,
+  requests: NewsSearchRequest[],
+  execute: (request: NewsSearchRequest) => Promise<DoubaoSearchPage>,
+  concurrency = newsSearchConcurrency,
 ): Promise<PromiseSettledResult<DoubaoSearchPage>[]> {
   const settled: PromiseSettledResult<DoubaoSearchPage>[] = [];
   settled.length = requests.length;
@@ -240,15 +270,13 @@ async function settleSearchRequests(
       const index = nextIndex;
       nextIndex += 1;
       try {
-        settled[index] = { status: "fulfilled", value: await execute(requests[index]!.input) };
+        settled[index] = { status: "fulfilled", value: await execute(requests[index]!) };
       } catch (reason) {
         settled[index] = { status: "rejected", reason };
       }
     }
   };
-  await Promise.all(
-    Array.from({ length: Math.min(newsSearchConcurrency, requests.length) }, () => worker()),
-  );
+  await Promise.all(Array.from({ length: Math.min(concurrency, requests.length) }, () => worker()));
   return settled;
 }
 
