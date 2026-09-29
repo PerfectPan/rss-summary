@@ -128,8 +128,8 @@ function parseTerms(value: unknown, context: string, required: boolean): string[
 }
 
 function parseSourcePolicy(value: unknown, id: string): NewsSourcePolicy {
-  if (value === "authoritative" || value === "official") return value;
-  throw new Error(`News topic ${id} sourcePolicy must be authoritative or official.`);
+  if (value === "authoritative" || value === "official" || value === "news") return value;
+  throw new Error(`News topic ${id} sourcePolicy must be news, authoritative or official.`);
 }
 
 function parseGlmQuery(value: unknown, context: string): NonNullable<NewsTopicQuery["glm"]> {

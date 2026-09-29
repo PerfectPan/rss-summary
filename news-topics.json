@@ -4,12 +4,12 @@
     "label": "AI 模型与 Agent 发布",
     "icon": "🤖",
     "enabled": true,
-    "sourcePolicy": "official",
+    "sourcePolicy": "news",
     "maxItems": 2,
     "queries": [
       {
         "id": "frontier-model-release",
-        "text": "OpenAI、Anthropic、Google DeepMind、Meta 或 xAI 正式发布新模型、Agent 或 API；只要官方公告",
+        "text": "OpenAI、Anthropic、Google DeepMind、Meta 或 xAI 正式发布新模型、Agent 或 API",
         "intent": "model-release",
         "glm": {
           "query": "OpenAI Anthropic Google DeepMind new model announcement",
@@ -28,7 +28,7 @@
       },
       {
         "id": "coding-agent-release",
-        "text": "Codex、Claude Code、Gemini CLI、GitHub Copilot、Cursor 或 Windsurf 进入 GA、发布重大版本或破坏性变更；只要官方公告",
+        "text": "Codex、Claude Code、Gemini CLI、GitHub Copilot、Cursor 或 Windsurf 进入 GA、发布重大版本或破坏性变更",
         "intent": "developer-change",
         "glm": {
           "query": "Codex Claude Code GitHub Copilot Cursor major release",
@@ -52,12 +52,12 @@
     "label": "开发工具关键变更",
     "icon": "💻",
     "enabled": true,
-    "sourcePolicy": "official",
+    "sourcePolicy": "news",
     "maxItems": 2,
     "queries": [
       {
         "id": "runtime-toolchain-change",
-        "text": "TypeScript、Rust、Node.js、Deno、Bun 或主流 IDE 发布重大版本、弃用、破坏性变更或安全更新；只要项目官方公告",
+        "text": "TypeScript、Rust、Node.js、Deno、Bun 或主流 IDE 发布重大版本、弃用、破坏性变更或安全更新",
         "intent": "developer-change",
         "glm": {
           "query": "TypeScript Rust Node.js Deno Bun release security update",
@@ -81,12 +81,12 @@
     "label": "基础设施与安全事件",
     "icon": "🛡️",
     "enabled": true,
-    "sourcePolicy": "authoritative",
+    "sourcePolicy": "news",
     "maxItems": 2,
     "queries": [
       {
         "id": "cloud-service-incident",
-        "text": "AWS、Azure、Google Cloud 或 Cloudflare 发生大规模服务中断、数据泄露或安全事件；只要官方通报或状态页",
+        "text": "AWS、Azure、Google Cloud 或 Cloudflare 发生大规模服务中断、数据泄露或安全事件",
         "intent": "service-incident",
         "glm": {
           "query": "AWS Azure Google Cloud Cloudflare service outage incident",
@@ -105,7 +105,7 @@
       },
       {
         "id": "open-source-security",
-        "text": "开源开发工具发生高危 CVE、供应链攻击或紧急弃用；只要项目维护者或安全机构公告",
+        "text": "开源开发工具发生高危 CVE、供应链攻击或紧急弃用",
         "intent": "security-advisory",
         "glm": {
           "query": "GitHub npm package critical vulnerability security advisory",
@@ -126,12 +126,12 @@
     "label": "科技政策生效",
     "icon": "⚖️",
     "enabled": true,
-    "sourcePolicy": "official",
+    "sourcePolicy": "news",
     "maxItems": 1,
     "queries": [
       {
         "id": "ai-policy-action",
-        "text": "AI 模型、芯片或数据相关监管政策正式发布或生效；只要政府、法院或监管机构原文",
+        "text": "AI 模型、芯片或数据相关监管政策正式发布或生效",
         "intent": "policy-action",
         "glm": {
           "query": "AI semiconductor data regulation takes effect official",
@@ -154,12 +154,12 @@
     "label": "重大资本事件",
     "icon": "💰",
     "enabled": true,
-    "sourcePolicy": "authoritative",
+    "sourcePolicy": "news",
     "maxItems": 1,
     "queries": [
       {
         "id": "major-capital-event",
-        "text": "AI 公司完成超过 1 亿美元融资、收购、合并、IPO 或发布关键财报；只要公司公告或权威财经报道",
+        "text": "AI 公司完成超过 1 亿美元融资、收购、合并、IPO 或发布关键财报",
         "intent": "capital-event",
         "glm": {
           "query": "OpenAI Anthropic AI funding acquisition announcement",

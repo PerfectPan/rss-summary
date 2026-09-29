@@ -44,7 +44,6 @@ export class GlmResearchClient {
   ): Promise<ResearchSearchResult[]> {
     if (!query.trim() || query.length > 70)
       throw new Error("Search query must contain 1 to 70 characters.");
-    if (!domains.length) throw new Error("At least one source domain is required.");
     const allowed = domains.map((domain) => {
       const url = publicUrl(`https://${domain}`);
       if (url.host !== domain.toLowerCase() || url.pathname !== "/" || url.search || url.hash) {
@@ -78,6 +77,7 @@ export class GlmResearchClient {
         continue;
       }
       if (
+        allowed.length > 0 &&
         !allowed.some((domain) => url.hostname === domain || url.hostname.endsWith(`.${domain}`))
       ) {
         domainRejected++;

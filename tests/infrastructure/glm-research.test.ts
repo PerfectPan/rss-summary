@@ -92,7 +92,6 @@ describe("GLM research MCP", () => {
     ]) {
       await expect(client.read(url)).rejects.toThrow("public HTTP");
     }
-    await expect(client.search("query", [])).rejects.toThrow("source domain");
     await expect(client.search("query", ["example.com/path"])).rejects.toThrow("hostnames");
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -190,4 +189,14 @@ it("passes source, week and region constraints and reports discarded raw hits", 
     location: "us",
   });
   expect(observe).toHaveBeenCalledWith({ rawResults: 1, domainRejected: 1 });
+});
+
+it("keeps media results and omits the provider domain filter for unrestricted news search", async () => {
+  const { client, fetchMock } = clientWith([
+    { title: "Media report", link: "https://media.example.com/news/story" },
+  ]);
+  expect(await client.search("news", [])).toHaveLength(1);
+  expect(
+    JSON.parse(String(fetchMock.mock.calls[2][1]?.body)).params.arguments.search_domain_filter,
+  ).toBeUndefined();
 });

@@ -301,3 +301,15 @@ it("defers date-only articles until their whole publication day fits the collect
   };
   expect(buildNewsStoriesWithAudit([base], daily).stories[0].publishTime).toBe("2026-07-29");
 });
+
+it("allows relevant media without official certification in general news, retaining explicit official-only policy", () => {
+  const media = hit({
+    sourcePolicy: "news",
+    authInfoLevel: undefined,
+    sourceVerification: undefined,
+  });
+  expect(buildNewsStoriesWithAudit([media], window).stories).toHaveLength(1);
+  expect(
+    buildNewsStoriesWithAudit([{ ...media, sourcePolicy: "official" }], window).decisions[0].reason,
+  ).toBe("insufficient-authority");
+});

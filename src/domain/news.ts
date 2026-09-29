@@ -3,7 +3,7 @@ import uniq from "lodash-es/uniq.js";
 import { newsPublicationRange } from "./news-time.js";
 import { canonicalizeUrl, compactSummary, isSameTitleEvent, parsePublishTime } from "./text.js";
 
-export type NewsSourcePolicy = "authoritative" | "official";
+export type NewsSourcePolicy = "authoritative" | "official" | "news";
 
 export type NewsBriefEdition = "noon" | "evening";
 
@@ -16,7 +16,7 @@ export type NewsQueryIntent =
   | "capital-event";
 
 export type NewsSourceVerification = {
-  method: "configured-domain";
+  method: "configured-domain" | "article-read";
   domain: string;
   policy: NewsSourcePolicy;
 };
@@ -236,7 +236,10 @@ function rejectionReasonForHit(
   if (!publication) return "invalid-publish-time";
   if (publication.since < window.since || publication.until > window.until) return "outside-window";
   const authLevel = authorityLevel(hit);
-  if (hit.sourcePolicy === "official" ? authLevel !== 1 : authLevel > 2) {
+  if (
+    hit.sourcePolicy !== "news" &&
+    (hit.sourcePolicy === "official" ? authLevel !== 1 : authLevel > 2)
+  ) {
     return "insufficient-authority";
   }
   const content = normalizeSearchText(
@@ -343,6 +346,7 @@ function containsSearchTerm(content: string, term: string): boolean {
 
 function authorityLevel(hit: NewsSearchHit): number {
   if (hit.sourceVerification) {
+    if (hit.sourceVerification.method === "article-read") return 4;
     let host: string;
     try {
       host = new URL(hit.url).hostname;

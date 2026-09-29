@@ -28,12 +28,12 @@ describe("news topics", () => {
     expect(
       topics
         .filter(({ id }) => ["ai-model-releases", "developer-tools", "tech-policy"].includes(id))
-        .every(({ sourcePolicy }) => sourcePolicy === "official"),
+        .every(({ sourcePolicy }) => sourcePolicy === "news"),
     ).toBe(true);
     expect(
       topics
         .filter(({ id }) => ["infrastructure-security", "capital-industry"].includes(id))
-        .every(({ sourcePolicy }) => sourcePolicy === "authoritative"),
+        .every(({ sourcePolicy }) => sourcePolicy === "news"),
     ).toBe(true);
   });
 

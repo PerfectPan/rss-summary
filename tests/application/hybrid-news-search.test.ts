@@ -281,3 +281,29 @@ it("combined mode collects complementary evidence even after a valid primary hit
   expect(page.results).toHaveLength(2);
   expect(page.fallback?.reason).toBe("complement");
 });
+
+it("admits a media article in general news without domain restriction or invented authority", async () => {
+  const mediaUrl = "https://news.example.com/technology/typescript-release";
+  const glm = {
+    search: vi.fn(async (_query: string, _domains: string[]) => [{ ...candidate, url: mediaUrl }]),
+    read: async () => ({ ...article, url: mediaUrl }),
+  };
+  const execute = createHybridNewsSearch({
+    search: async () => empty,
+    glm,
+    window,
+    maxSearches: 1,
+    maxReads: 1,
+  });
+  const page = await execute({
+    ...request,
+    topic: { ...request.topic, sourcePolicy: "news" },
+    input: { ...request.input, sourcePolicy: "news" },
+  });
+  expect(glm.search.mock.calls[0][1]).toEqual([]);
+  expect(page.results[0]).toMatchObject({
+    url: mediaUrl,
+    sourceVerification: { method: "article-read", policy: "news" },
+  });
+  expect(page.results[0].authInfoLevel).toBeUndefined();
+});

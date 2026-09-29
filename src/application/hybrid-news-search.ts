@@ -124,7 +124,7 @@ export function createHybridNewsSearch(options: Options) {
       try {
         const found = await options.glm.search(
           config.sourceQueries?.[domain] ?? config.query,
-          [domain],
+          request.topic.sourcePolicy === "news" ? [] : [domain],
           options.recency ?? "oneWeek",
           (counts) => {
             fallback.rawResults += counts.rawResults;
@@ -157,7 +157,7 @@ export function createHybridNewsSearch(options: Options) {
         (host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`),
       );
       if (
-        !domain ||
+        (!domain && request.topic.sourcePolicy !== "news") ||
         !["https:", "http:"].includes(parsed.protocol) ||
         parsed.username ||
         parsed.password ||
@@ -216,11 +216,13 @@ export function createHybridNewsSearch(options: Options) {
         siteName: parsed.hostname,
         rankPosition: result.results.length + 1,
         sourceVerification: {
-          method: "configured-domain",
-          domain,
-          policy: request.topic.sourcePolicy,
+          method: domain ? "configured-domain" : "article-read",
+          domain: domain ?? parsed.hostname,
+          policy: domain ? "official" : "news",
         },
-        authInfoDescription: "配置的可信来源 · 原文发布时间已校验",
+        authInfoDescription: domain
+          ? "优先参考来源 · 原文发布时间已校验"
+          : "原文已读取 · 来源可信度未评级",
       });
     }
     if (
