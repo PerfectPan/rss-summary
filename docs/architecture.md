@@ -11,7 +11,7 @@ The source type does not decide the product. The user's relationship to the sour
 | My subscriptions | What did sources I deliberately follow publish? | GitHub Home + `feeds.json` personal blogs | `.state/feed-state.json` |
 | Industry frontier | What changed at companies and projects I should know about? | curated official RSS/Atom plus verified News / Changelog pages in `industry-feeds.json` | `.state/industry-state.json` |
 | Noon/evening news | What happened in the last hours? | event-specific Doubao queries from `news-topics.json`, with official/authoritative source policy | none |
-| Daily AI Digest | What important AI events happened yesterday? | the seven bounded Doubao queries + curated first-party `industry-feeds.json` | delivery receipt + public evidence audit |
+| Daily AI Digest | What important AI events happened in the last 24 hours? | the seven bounded Doubao queries + curated first-party `industry-feeds.json` | delivery receipt + public evidence audit |
 
 GitHub Home belongs to subscriptions because it is already personalized. Public GitHub Repository Search and Hacker News discovery are intentionally not a product: they optimize for popularity and novelty rather than the user's explicit subscriptions or curated official sources.
 
@@ -24,8 +24,9 @@ flowchart LR
   Collect --> Window["calendar window"]
   Window --> Rank["rank + explain"]
   Rank --> State["only-new / research state"]
-  State --> Depth["link / summary / research"]
-  Depth --> Render["Markdown or JSON"]
+  State --> Depth["link / semantic summary / research"]
+  Depth --> Edit["grounded subscription editorial pass"]
+  Edit --> Render["Markdown or JSON"]
   Render --> Delivery["stdout / webhook / Rivus"]
   Delivery --> Audit["run artifact / Rivus trace + ledger"]
 ```
@@ -33,7 +34,7 @@ flowchart LR
 The output depth is separate from ranking:
 
 - `link`: a trusted but ordinary update is one sentence plus its original link.
-- `summary`: an explicit interest match or content-level importance marker (major/GA/breaking/deprecation/security) receives a short excerpt-based summary. Repeated mentions, an announcement label, a merged PR, a score, or a release label alone never expands an item.
+- `summary`: RSS articles and pull requests always receive semantic space; other candidates expand for an explicit interest match or content-level importance marker (major/GA/breaking/deprecation/security). Repeated mentions, an announcement label, a score, or a release label alone never expands an item.
 - `research`: papers are withheld from direct Markdown until the research workflow verifies the original source.
 
 `src/domain/attention.ts` owns this decision. Renderers do not reinterpret scores.
@@ -60,11 +61,14 @@ deployments can bind both products without one replacing the other.
 1. Load GitHub Home configuration and `feeds.json`.
 2. Fetch GitHub Home and every RSS feed independently. A failed source is recorded and does not erase successful sources.
 3. Filter the explicit calendar day or rolling window.
-4. Enrich GitHub candidates with followed users, repository metadata, and bounded PR details when credentials permit.
+4. Enrich GitHub candidates with followed users, repository metadata, and bounded PR details when credentials permit. Repository discovery remains grouped by repository; each PR and publication keeps a separate content identity.
 5. Rank candidates and bound the paper queue.
 6. Under `--only-new`, filter only previously delivered event IDs. Research cache entries do not suppress new subscription events.
 7. Assign `link`, `summary`, or `research` presentation depth.
-8. Render, deliver, record an audit artifact, then update seen state after successful non-dry delivery.
+8. In Rivus, run the subscription Tool in three phases. `collect` returns typed evidence, `select` requires the model to decide whether every RSS/GitHub item is worth pushing with a reason, and the Agent uses the read-only `research-article` Tool for selected public URLs before writing per-item summaries. The RSS/GitHub collection, selection, deduplication and delivery path remains unchanged. `render` accepts those research results, filters to `selected=true`, and validates `Array<{ref, summary}>` plus grounded numeric claims. An empty selection is an auditable suppressed run rather than an empty card.
+9. Render, deliver, record an audit artifact, then update seen state after successful non-dry delivery.
+
+The CLI remains deterministic and renders source excerpts directly. The scheduled Rivus path adds the model editorial and bounded source-research pass only for selected subscription items. This keeps candidate ingestion/ranking, RSS/GitHub selection, deduplication and delivery inside the existing path, lets the Agent fetch only selected public article bodies through a constrained Tool, and leaves channel layout to Rivus Renderer. The industry frontier, noon/evening news, and Daily AI products retain their existing workflows; an already edited frontier headline is not summarized again by the subscription pass.
 
 GitHub Home uses the saved `.state/github-home-storage.json` session. `GITHUB_HOME_FETCH=conduit` first reads GitHub's conduit response and falls back to a rendered browser page. `GITHUB_FEED_SOURCE=events` is the REST fallback.
 
@@ -83,28 +87,36 @@ The tracked frontier list deliberately excludes secondary daily aggregators and 
 
 ## Daily AI Digest workflow
 
-The Daily AI Digest covers the previous Asia/Shanghai calendar day. It reuses both halves of the
-seven-query news search and combines them with the official frontier sources. Evidence is normalized
-to public IDs, titles, canonical URLs, timestamps, cleaned excerpts and source tiers. Entity/event
-duplicates merge their references. The deterministic validator permits only known references,
-the six declared categories, event-shaped Chinese headlines and public URLs. The production Tool
-first returns evidence in a `collect` phase, then accepts only structured editorial records in a
-`render` phase. It verifies that entities overlap referenced evidence and that every numeric claim
-is present in that evidence; invalid editorial output falls back only to a source-grounded event
-title. A 12–24 item target is never a fill quota, and only `render` returns deliverable Markdown.
-Each source reference is rendered as a clickable inline badge beside its event; the document does
-not repeat the same references in a trailing source section.
+The Daily AI Digest covers the rolling 24 hours before its scheduled occurrence. It collects every
+noon/evening news segment that overlaps that window and combines them with official frontier sources
+queried with the same exact `since`/`until` bounds. Evidence is normalized to public IDs, titles,
+canonical URLs, timestamps, cleaned excerpts and source tiers; the final evidence set is filtered to
+the half-open interval `[occurrence - 24h, occurrence)`. Exact URL/title duplicates merge their
+references; semantic deduplication remains Agent-owned. The production Tool first returns evidence in a `collect` phase. The Agent decides what
+is newsworthy, translates or summarizes it, and chooses one of the six categories. `render` accepts
+structured `{category, headline, refs}` records and validates only their schema, category, length and
+known evidence references. Each record is validated independently, so a bad record cannot discard
+valid siblings. If all records are invalid while evidence exists, a typed validation error triggers a
+bounded retry against the cached snapshot; there is no title fallback or code-side keyword inference.
+A 12–24 item target is never a fill quota, and only `render` returns deliverable Markdown. Source references are
+rendered as clickable inline badges beside each event; repeated labels from the same provider
+collapse to one badge, and the document does not repeat references in a trailing source section.
+Each overlapping news segment and official-source collection are separate failure domains. If every
+query in one segment fails, Daily AI records that segment's full per-query audit, renders a visible
+source-status warning, and continues with the remaining segments and official sources. Official
+evidence can still produce the digest when all Doubao segments fail. Generation fails only when all
+collectors yield no usable evidence; configuration and programming errors are never degraded.
 
 ## Research workflow
 
-The deterministic CLI emits candidates; the portable `$feed-research-digest` skill performs source-based judgment:
+The deterministic CLI emits candidates; the portable `$feed-research-digest` skill and the scheduled Rivus `research-article` Tool perform source-based judgment:
 
 ```bash
 rss-summary digest --json --only-new --dry-run
 rss-summary industry --json --only-new --dry-run
 ```
 
-Normal subscription/frontier entries need no deep research. The skill spends attention on `summary` candidates and papers, opens the original article/repository/release/arXiv page, and writes research decisions with `rss-summary research add`. Personal research cache avoids repeated investigation but does not hide later subscription events; frontier research state also participates in only-new filtering.
+Normal subscription/frontier entries need no deep research. The skill or Agent Tool spends attention on selected `summary` candidates and papers, opens the original article/repository/release/arXiv page, and keeps the extracted body bounded before editorial validation. Personal research cache avoids repeated investigation but does not hide later subscription events; frontier research state also participates in only-new filtering.
 
 ## Audit artifacts
 
@@ -134,7 +146,7 @@ rss-summary runs show <run-label-or-json-path>
 
 ## Rendering and limits
 
-`src/presentation/candidate-brief.ts` owns the shared two-depth layout. Product renderers supply only labels and metadata. Both preserve all selected categories instead of applying one global slice; each expanded section is capped at 8 and each compact section at 20. Papers are counted but hidden from direct Markdown.
+`src/presentation/candidate-brief.ts` owns the shared two-depth layout. Product renderers supply only labels and metadata. Both preserve all selected categories instead of applying one global slice; each expanded and compact section is capped at 20. Papers are counted but hidden from direct Markdown.
 
 The news product keeps its own domain because authority validation, topic quotas, time windows, and eight-story cap differ materially from subscription ranking.
 
@@ -164,7 +176,7 @@ News ranking uses within-query position, source authority, and freshness. A URL 
 
 - GitHub Home parsing depends on GitHub's internal conduit/DOM shape.
 - On machines that require `HTTP_PROXY`/`HTTPS_PROXY`, Node 24 must start with `NODE_USE_ENV_PROXY=1` for native fetch to use those variables.
-- Expanded summaries use feed/repository text unless the research skill has inspected the original source.
+- CLI summaries use feed/repository text unless the research skill has inspected the original source. Scheduled Rivus subscription summaries are model-edited from bounded PR/RSS evidence, and selected URLs can be upgraded with the Agent's bounded research result before validation; failed research falls back to source text only when the item remains explicitly selected.
 - RSS identity dedupe is deterministic, not semantic.
 - Official page ingestion depends on stable same-origin links and explicit date markup. Zero valid dated links is audited as parser failure instead of an empty day.
 - The generic webhook cannot confirm downstream rendering; Rivus provides the stronger delivery ledger.

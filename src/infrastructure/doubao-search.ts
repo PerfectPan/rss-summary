@@ -1,10 +1,11 @@
-import type { NewsSourcePolicy } from "../domain/news.js";
+import type { NewsSourcePolicy, NewsSourceVerification } from "../domain/news.js";
 import { asRecord, number, text } from "./parsing.js";
 
 export type DoubaoSearchInput = {
   query: string;
   count: number;
   day: string;
+  sinceDay?: string;
   sourcePolicy: NewsSourcePolicy;
 };
 
@@ -20,9 +21,24 @@ export type DoubaoSearchResult = {
   authInfoDescription?: string;
   authInfoLevel?: number;
   rankPosition: number;
+  sourceVerification?: NewsSourceVerification;
 };
 
 export type DoubaoSearchPage = {
+  provider?: "doubao" | "glm" | "mixed";
+  fallback?: {
+    reason: string;
+    searched: boolean;
+    reads: number;
+    warnings: string[];
+    searches?: number;
+    incomplete?: boolean;
+    sources?: string[];
+    skippedSources?: string[];
+    rawResults?: number;
+    domainRejected?: number;
+    invalidLinks?: number;
+  };
   logId?: string;
   resultCount: number;
   timeCostMs?: number;
@@ -67,35 +83,44 @@ export class DoubaoSearchClient {
     const filter: Record<string, unknown> = { NeedUrl: true };
     if (input.sourcePolicy === "official") filter.AuthInfoLevel = 1;
 
-    const response = await this.fetchImpl(this.baseUrl, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        Query: input.query,
-        SearchType: "web",
-        Count: input.count,
-        Filter: filter,
-        TimeRange: `${input.day}..${input.day}`,
-        // Topic queries already encode one bounded event intent. Rewriting broadens them back
-        // into generic discovery queries and lowers precision.
-        QueryControl: { QueryRewrite: false },
-        ContentFormats: "markdown",
-      }),
-      signal: AbortSignal.timeout(this.timeoutMs),
-    });
+    let response: Response;
+    try {
+      response = await this.fetchImpl(this.baseUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          Query: input.query,
+          SearchType: "web",
+          Count: input.count,
+          Filter: filter,
+          TimeRange: `${input.sinceDay ?? input.day}..${input.day}`,
+          // Topic queries already encode one bounded event intent. Rewriting broadens them back
+          // into generic discovery queries and lowers precision.
+          QueryControl: { QueryRewrite: false },
+          ContentFormats: "markdown",
+        }),
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+    } catch (cause) {
+      throw new DoubaoSearchError("network_error", errorText(cause));
+    }
     const retryAfterMs = parseRetryAfter(response.headers.get("Retry-After"));
     if (!response.ok) {
       if (response.status === 429) {
         throw new DoubaoSearchError("http_429", "HTTP 429", { retryAfterMs });
       }
-      throw new Error(`Doubao search HTTP ${response.status}`);
+      throw new DoubaoSearchError(`http_${response.status}`, `HTTP ${response.status}`);
     }
 
     return parseResponse(await response.json(), retryAfterMs);
   }
+}
+
+function errorText(value: unknown): string {
+  return value instanceof Error ? value.message : String(value);
 }
 
 function validateInput(input: DoubaoSearchInput): void {
@@ -105,6 +130,11 @@ function validateInput(input: DoubaoSearchInput): void {
   if (!Number.isInteger(input.count) || input.count < 1 || input.count > 50) {
     throw new Error("Doubao web search count must be between 1 and 50.");
   }
+  if (
+    input.sinceDay &&
+    (!/^\d{4}-\d{2}-\d{2}$/u.test(input.sinceDay) || input.sinceDay > input.day)
+  )
+    throw new Error("Invalid search start date.");
   if (!/^\d{4}-\d{2}-\d{2}$/u.test(input.day))
     throw new Error("Doubao search day must use YYYY-MM-DD.");
 }

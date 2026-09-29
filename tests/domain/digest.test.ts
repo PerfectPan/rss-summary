@@ -2,6 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   buildCandidateProjects,
+  candidateIdentity,
   normalizeEvent,
   selectResearchCandidates,
 } from "../../src/domain/digest.js";
@@ -80,6 +81,88 @@ describe("github feed domain", () => {
     expect(candidates[0]?.category).toBe("discovery");
     expect(candidates[0]?.score).toBeGreaterThan(candidates[1]?.score ?? 0);
     expect(candidates[0]?.reasons).toContain("followee starred this repository");
+  });
+
+  it("keeps pull requests distinct from repository discovery and from each other", () => {
+    const candidates = buildCandidateProjects(
+      [
+        {
+          id: "star-1",
+          type: "watch",
+          actor: "alice",
+          repo: "example/project",
+          createdAt: "2026-08-15T09:00:00Z",
+        },
+        {
+          id: "pr-41",
+          type: "pull_request",
+          actor: "bob",
+          repo: "example/project",
+          createdAt: "2026-08-15T10:00:00Z",
+          action: "opened",
+          prNumber: 41,
+          title: "Add resumable uploads",
+          summary: "Adds checkpointed upload state so interrupted transfers can resume.",
+          htmlUrl: "https://github.com/example/project/pull/41",
+        },
+        {
+          id: "pr-42",
+          type: "pull_request",
+          actor: "carol",
+          repo: "example/project",
+          createdAt: "2026-08-15T11:00:00Z",
+          action: "merged",
+          prNumber: 42,
+          title: "Bound retry backoff",
+          summary: "Caps retry delays and reports the final failure reason.",
+          htmlUrl: "https://github.com/example/project/pull/42",
+        },
+      ],
+      { followees: new Set(), interests: [], repositories: new Map() },
+    );
+
+    expect(candidates).toHaveLength(3);
+    expect(candidates.map(({ category }) => category).sort()).toEqual([
+      "activity",
+      "activity",
+      "discovery",
+    ]);
+    expect(candidates.find(({ label }) => label?.includes("#41"))).toMatchObject({
+      label: "example/project #41 · Add resumable uploads",
+      url: "https://github.com/example/project/pull/41",
+      description: "Adds checkpointed upload state so interrupted transfers can resume.",
+    });
+  });
+
+  it("uses the event identity for publications without an item URL", () => {
+    const candidates = buildCandidateProjects(
+      [
+        {
+          id: "feed-item-1",
+          type: "article",
+          source: "rss",
+          actor: "Example Feed",
+          repo: "rss:https://example.com/feed.xml",
+          createdAt: "2026-08-15T10:00:00Z",
+          title: "First",
+        },
+        {
+          id: "feed-item-2",
+          type: "article",
+          source: "rss",
+          actor: "Example Feed",
+          repo: "rss:https://example.com/feed.xml",
+          createdAt: "2026-08-15T11:00:00Z",
+          title: "Second",
+        },
+      ],
+      { followees: new Set(), interests: [], repositories: new Map() },
+    );
+
+    expect(candidates.map(candidateIdentity)).toEqual([
+      "publication:feed-item-1",
+      "publication:feed-item-2",
+    ]);
   });
 
   it("does not treat branch creation as project discovery", () => {
@@ -323,7 +406,7 @@ describe("github feed domain", () => {
   });
 
   it("records repeated mentions as corroboration without calling them important", () => {
-    const [candidate] = buildCandidateProjects(
+    const candidates = buildCandidateProjects(
       [
         {
           id: "star-1",
@@ -351,8 +434,14 @@ describe("github feed domain", () => {
       { followees: new Set(["alice", "bob"]), interests: [], repositories: new Map() },
     );
 
-    expect(candidate?.reasons).toContain("multiple followed mentions");
-    expect(candidate?.reasons).toContain("pull request merged");
-    expect(candidate?.reasons.join(" ")).not.toMatch(/important|signal/iu);
+    const repository = candidates.find((candidate) => candidate.category === "discovery");
+    const pullRequest = candidates.find((candidate) =>
+      candidate.eventTypes.includes("pull_request"),
+    );
+    expect(repository?.reasons).toContain("multiple followed mentions");
+    expect(pullRequest?.reasons).toContain("pull request merged");
+    expect(candidates.flatMap(({ reasons }) => reasons).join(" ")).not.toMatch(
+      /important|signal/iu,
+    );
   });
 });

@@ -30,10 +30,33 @@ type RivusDigestDependencies = {
   env?: NodeJS.ProcessEnv;
 };
 
+export type CollectedRivusDigest = {
+  day?: string;
+  document: DigestDocument;
+};
+
 export async function generateRivusDigest(
   value: unknown,
   dependencies: RivusDigestDependencies = {},
 ): Promise<RivusDigestResult> {
+  const { day, document } = await collectRivusDigest(value, dependencies);
+  const paperCandidateCount = document.candidates.filter(
+    (candidate) => candidate.category === "paper",
+  ).length;
+  return {
+    candidateCount: document.candidates.length - paperCandidateCount,
+    generatedAt: document.generatedAt,
+    markdown: renderMarkdownDigest(day ? { ...document, displayDate: day } : document),
+    paperCandidateCount,
+    ...(document.windowLabel ? { windowLabel: document.windowLabel } : {}),
+    ...(document.audit ? { audit: document.audit } : {}),
+  };
+}
+
+export async function collectRivusDigest(
+  value: unknown,
+  dependencies: RivusDigestDependencies = {},
+): Promise<CollectedRivusDigest> {
   const input = parseInput(value);
   if (input.day && input.occurrence) {
     throw new Error("day and occurrence cannot be used together.");
@@ -67,16 +90,9 @@ export async function generateRivusDigest(
   const document = await Effect.runPromise(
     (dependencies.buildDigestDocument ?? buildDigestDocument)(loadConfig(configEnv, argv)),
   );
-  const paperCandidateCount = document.candidates.filter(
-    (candidate) => candidate.category === "paper",
-  ).length;
   return {
-    candidateCount: document.candidates.length - paperCandidateCount,
-    generatedAt: document.generatedAt,
-    markdown: renderMarkdownDigest(day ? { ...document, displayDate: day } : document),
-    paperCandidateCount,
-    ...(document.windowLabel ? { windowLabel: document.windowLabel } : {}),
-    ...(document.audit ? { audit: document.audit } : {}),
+    ...(day ? { day } : {}),
+    document,
   };
 }
 

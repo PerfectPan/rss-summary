@@ -15,9 +15,14 @@ describe("run audit candidate decisions", () => {
       presentationEvidence: "agent",
       reason: "selected for expanded summary: interest-match (agent)",
     });
-    expect(candidateDecision(filtered, [selected], () => "already delivered")).toMatchObject({
+    expect(
+      candidateDecision(filtered, [selected], () => "already delivered", {
+        semanticSummaries: true,
+      }),
+    ).toMatchObject({
       status: "filtered",
-      depth: "link",
+      depth: "summary",
+      presentationReasonCode: "semantic-summary",
       reason: "already delivered",
     });
   });

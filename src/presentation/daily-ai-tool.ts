@@ -9,9 +9,11 @@ export type RivusDailyAiToolResult =
   | {
       phase: "collect";
       day: string;
+      windowLabel: string;
       generatedAt: string;
       evidence: DailyAiDigestResult["evidence"];
       warnings: string[];
+      sourceAudit: DailyAiDigestResult["sourceAudit"];
       editorialContract: {
         categories: readonly string[];
         itemTarget: string;
@@ -42,9 +44,11 @@ export function createRivusDailyAiDigestExecutor(
       return {
         phase: "collect",
         day: collected.day,
+        windowLabel: collected.windowLabel,
         generatedAt: collected.generatedAt,
         evidence: collected.evidence,
         warnings: collected.warnings,
+        sourceAudit: collected.sourceAudit,
         editorialContract: {
           categories: dailyAiCategories,
           itemTarget: "12–24; quality is a ceiling, never a fill quota",
@@ -69,6 +73,7 @@ export function createRivusDailyAiDigestExecutor(
       itemCount: result.items.length,
       markdown: renderDailyAiDigest({
         day: result.day,
+        windowLabel: result.windowLabel,
         items: result.items,
         evidence: result.evidence,
         warnings: result.warnings,

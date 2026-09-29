@@ -81,3 +81,33 @@ describe("presentation/news-render", () => {
     expect(markdown).toContain("数据源状态：某源：1 个查询暂不可用");
   });
 });
+
+it("does not present incomplete collection as no news and keeps recovery informational", () => {
+  const document = {
+    day: "2026-09-29",
+    edition: "noon" as const,
+    generatedAt: "2026-09-29T04:30:00Z",
+    stories: [],
+    topics: [],
+    warnings: [],
+    windowLabel: "00:00–12:30",
+  };
+  const status = {
+    state: "partial" as const,
+    queries: 2,
+    completed: 1,
+    recovered: 0,
+    incompleteTopics: ["安全"],
+    notes: [],
+  };
+  expect(renderNewsBrief({ ...document, sourceStatus: status })).toContain("部分来源尚未完成");
+  const recovered = renderNewsBrief({
+    ...document,
+    sourceStatus: { ...status, state: "recovered", notes: ["备用来源已完成"] },
+  });
+  expect(recovered).toContain("采集说明：备用来源已完成");
+  expect(recovered).not.toContain("数据源状态：");
+  expect(
+    renderNewsBrief({ ...document, sourceStatus: { ...status, state: "unavailable" } }),
+  ).toContain("无法判断是否有新增");
+});

@@ -270,3 +270,46 @@ function hit(overrides: Partial<NewsSearchHit>): NewsSearchHit {
     ...overrides,
   };
 }
+
+it("accepts event inflections and does not confuse a migration instruction with a review article", () => {
+  const base = hit({
+    title: "TypeScript announcement",
+    subjectAny: ["TypeScript"],
+    eventAny: ["breaking change"],
+    excludedAny: ["review"],
+    summary: "TypeScript has breaking changes. Please review the migration guide.",
+  });
+  expect(buildNewsStoriesWithAudit([base], window).stories).toHaveLength(1);
+  expect(
+    buildNewsStoriesWithAudit([{ ...base, title: "TypeScript review" }], window).decisions[0]
+      .reason,
+  ).toBe("excluded-content");
+  expect(
+    buildNewsStoriesWithAudit([{ ...base, summary: "TypeScript unchanged" }], window).decisions[0]
+      .reason,
+  ).toBe("intent-mismatch");
+});
+
+it("defers date-only articles until their whole publication day fits the collection window", () => {
+  const base = hit({ publishTime: "2026-07-29" });
+  expect(buildNewsStoriesWithAudit([base], window).decisions[0].reason).toBe("outside-window");
+  const daily = {
+    ...window,
+    since: Date.parse("2026-07-28T10:00:00Z"),
+    until: Date.parse("2026-07-30T12:00:00Z"),
+    timezoneOffset: "+08:00",
+  };
+  expect(buildNewsStoriesWithAudit([base], daily).stories[0].publishTime).toBe("2026-07-29");
+});
+
+it("allows relevant media without official certification in general news, retaining explicit official-only policy", () => {
+  const media = hit({
+    sourcePolicy: "news",
+    authInfoLevel: undefined,
+    sourceVerification: undefined,
+  });
+  expect(buildNewsStoriesWithAudit([media], window).stories).toHaveLength(1);
+  expect(
+    buildNewsStoriesWithAudit([{ ...media, sourcePolicy: "official" }], window).decisions[0].reason,
+  ).toBe("insufficient-authority");
+});

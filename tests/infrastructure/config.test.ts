@@ -1,4 +1,6 @@
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { describe, expect, it } from "vite-plus/test";
 
@@ -36,6 +38,37 @@ describe("config", () => {
     );
 
     expect(config.rssFeeds).toEqual(expectedFeeds);
+  });
+
+  it("loads packaged industry sources independently of the process working directory", () => {
+    const originalWorkingDirectory = process.cwd();
+    const unrelatedWorkingDirectory = mkdtempSync(join(tmpdir(), "rss-summary-config-"));
+
+    try {
+      process.chdir(unrelatedWorkingDirectory);
+      const config = loadConfig({}, ["--dry-run"]);
+      const expectedSources = parseIndustrySources(
+        readFileSync(new URL("../../industry-feeds.json", import.meta.url), "utf8"),
+      );
+
+      expect(config.industrySources).toEqual(expectedSources);
+    } finally {
+      process.chdir(originalWorkingDirectory);
+      rmSync(unrelatedWorkingDirectory, { force: true, recursive: true });
+    }
+  });
+
+  it("rejects an explicit industry source file that does not exist", () => {
+    const temporaryDirectory = mkdtempSync(join(tmpdir(), "rss-summary-config-"));
+    const missingFile = join(temporaryDirectory, "missing-industry-feeds.json");
+
+    try {
+      expect(() => loadConfig({ INDUSTRY_SOURCES_FILE: missingFile }, ["--dry-run"])).toThrow(
+        `Industry source configuration file does not exist: ${missingFile}`,
+      );
+    } finally {
+      rmSync(temporaryDirectory, { force: true, recursive: true });
+    }
   });
 
   it("allows RSS feed subscriptions from env", () => {

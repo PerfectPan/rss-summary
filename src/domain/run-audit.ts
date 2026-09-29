@@ -1,6 +1,7 @@
-import type { CandidateProject } from "./digest.js";
+import { candidateIdentity, type CandidateProject } from "./digest.js";
 import {
   presentationDecisionForCandidate,
+  type PresentationPolicy,
   type PresentationDepth,
   type PresentationReasonCode,
 } from "./attention.js";
@@ -28,6 +29,12 @@ export type RunCandidateDecision = {
   reason: string;
 };
 
+export type RunEditorialSelectionDecision = {
+  ref: string;
+  selected: boolean;
+  reason: string;
+};
+
 export type RunAudit = {
   version: 1 | 2;
   runId: string;
@@ -43,6 +50,10 @@ export type RunAudit = {
     researchPending: number;
   };
   candidates: RunCandidateDecision[];
+  editorialSelection?: {
+    selectedCount: number;
+    decisions: RunEditorialSelectionDecision[];
+  };
 };
 
 export type RunDelivery = {
@@ -59,12 +70,13 @@ export function candidateDecision(
   candidate: CandidateProject,
   selectedCandidates: CandidateProject[],
   reasonWhenFiltered: (candidate: CandidateProject) => string,
+  presentationPolicy: PresentationPolicy = {},
 ): RunCandidateDecision {
   const selected = selectedCandidates.includes(candidate);
-  const presentation = presentationDecisionForCandidate(candidate);
+  const presentation = presentationDecisionForCandidate(candidate, presentationPolicy);
   const depth = presentation.depth;
   return {
-    key: candidate.repo,
+    key: candidateIdentity(candidate),
     label: candidate.label ?? candidate.repo,
     ...(candidate.url ? { url: candidate.url } : {}),
     score: candidate.score,

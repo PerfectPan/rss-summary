@@ -1,12 +1,17 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { buildNewsAudit, type NewsAuditRequest } from "../../src/application/news-audit.js";
+import {
+  buildNewsAudit,
+  summarizeNewsSources,
+  type NewsAuditRequest,
+} from "../../src/application/news-audit.js";
 import type {
   NewsHitDecision,
   NewsSearchHit,
   NewsStory,
   NewsStoryDecision,
 } from "../../src/domain/news.js";
+import { DoubaoSearchError } from "../../src/infrastructure/doubao-search.js";
 
 describe("news audit", () => {
   it("explains query failures and every stage of the selection funnel", () => {
@@ -40,7 +45,7 @@ describe("news audit", () => {
           rankPosition: value.rankPosition,
         })),
       }),
-      Promise.reject(new Error("search unavailable")),
+      Promise.reject(new DoubaoSearchError("10406", "search unavailable")),
     ];
 
     return Promise.allSettled(settled).then((results) => {
@@ -59,7 +64,8 @@ describe("news audit", () => {
         expect.objectContaining({
           queryId: "failed",
           status: "failed",
-          error: "search unavailable",
+          errorCode: "10406",
+          error: "Doubao search API error 10406: search unavailable",
         }),
       ]);
       expect(audit.counts).toEqual({
@@ -137,3 +143,47 @@ function story(id: string): NewsStory {
     score: 29,
   };
 }
+
+it("separates empty success, recovery, budget sampling, missing coverage and outage", () => {
+  const requests = [request("working")];
+  const base = { results: [], resultCount: 0 };
+  const empty = summarizeNewsSources(requests, [{ status: "fulfilled", value: base }]);
+  expect(empty.sourceStatus.state).toBe("healthy");
+  expect(empty.warnings).toEqual([]);
+  const recovery = summarizeNewsSources(requests, [
+    {
+      status: "fulfilled",
+      value: {
+        ...base,
+        fallback: {
+          reason: "10406",
+          searched: true,
+          reads: 0,
+          warnings: [],
+          sources: ["example.com"],
+          skippedSources: ["other.com"],
+        },
+      },
+    },
+  ]);
+  expect(recovery.sourceStatus.state).toBe("recovered");
+  expect(recovery.warnings).toEqual([]);
+  expect(recovery.sourceStatus.notes.join(" ")).toContain("另 1 组");
+  const partial = summarizeNewsSources(requests, [
+    {
+      status: "fulfilled",
+      value: {
+        ...base,
+        fallback: { reason: "10406", searched: true, reads: 0, warnings: [], incomplete: true },
+      },
+    },
+  ]);
+  expect(partial.sourceStatus.state).toBe("partial");
+  expect(partial.sourceStatus.recovered).toBe(0);
+  expect(partial.warnings).toHaveLength(1);
+  expect(
+    summarizeNewsSources(requests, [
+      { status: "rejected", reason: new DoubaoSearchError("10406", "quota") },
+    ]).sourceStatus.state,
+  ).toBe("unavailable");
+});

@@ -4,6 +4,7 @@ export type PresentationDepth = "link" | "summary" | "research";
 
 export type PresentationReasonCode =
   | "ordinary-update"
+  | "semantic-summary"
   | "interest-match"
   | "major-release"
   | "breaking-change"
@@ -16,6 +17,20 @@ export type PresentationDecision = {
   depth: PresentationDepth;
   reasonCode: PresentationReasonCode;
   evidence?: string;
+};
+
+export type PresentationPolicy = {
+  linkLimit?: number;
+  semanticSummaries?: boolean;
+  summaryLimit?: number;
+};
+
+export const DEFAULT_LINK_SECTION_LIMIT = 20;
+export const DEFAULT_SUMMARY_SECTION_LIMIT = 8;
+
+export type CandidatePresentationSections = {
+  links: CandidateProject[];
+  summaries: CandidateProject[];
 };
 
 const importantContentRules: Array<{
@@ -50,12 +65,16 @@ const importantContentRules: Array<{
 ];
 
 /** Decide how much space a candidate deserves without coupling ranking to Markdown. */
-export function presentationDepthForCandidate(candidate: CandidateProject): PresentationDepth {
-  return presentationDecisionForCandidate(candidate).depth;
+export function presentationDepthForCandidate(
+  candidate: CandidateProject,
+  policy: PresentationPolicy = {},
+): PresentationDepth {
+  return presentationDecisionForCandidate(candidate, policy).depth;
 }
 
 export function presentationDecisionForCandidate(
   candidate: CandidateProject,
+  policy: PresentationPolicy = {},
 ): PresentationDecision {
   if (candidate.category === "paper") return { depth: "research", reasonCode: "paper-research" };
   const interest = candidate.matchedInterests?.[0];
@@ -73,5 +92,27 @@ export function presentationDecisionForCandidate(
     const match = rule.pattern.exec(content);
     if (match) return { depth: "summary", reasonCode: rule.reasonCode, evidence: match[0] };
   }
+  if (
+    policy.semanticSummaries &&
+    (candidate.category === "article" || candidate.eventTypes.includes("pull_request"))
+  ) {
+    return { depth: "summary", reasonCode: "semantic-summary" };
+  }
   return { depth: "link", reasonCode: "ordinary-update" };
+}
+
+/** Select the exact bounded candidates that a brief can render. */
+export function selectCandidatePresentationSections(
+  candidates: CandidateProject[],
+  policy: PresentationPolicy = {},
+): CandidatePresentationSections {
+  const publishable = candidates.filter((candidate) => candidate.category !== "paper");
+  return {
+    summaries: publishable
+      .filter((candidate) => presentationDepthForCandidate(candidate, policy) === "summary")
+      .slice(0, policy.summaryLimit ?? DEFAULT_SUMMARY_SECTION_LIMIT),
+    links: publishable
+      .filter((candidate) => presentationDepthForCandidate(candidate, policy) === "link")
+      .slice(0, policy.linkLimit ?? DEFAULT_LINK_SECTION_LIMIT),
+  };
 }

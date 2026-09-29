@@ -1,6 +1,6 @@
 {
   "name": "rss-summary",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.7.0",
@@ -10,6 +10,9 @@
   "files": [
     "dist",
     "docs/rivus-plugin.md",
+    "docs/glm-search.md",
+    "docs/glm-search-review.md",
+    "docs/news-search-best-practices.md",
     "industry-feeds.json",
     "news-topics.json",
     "README.md"
@@ -60,6 +63,6 @@
     "playwright": "^1.61.1"
   },
   "peerDependencies": {
-    "@rivus/agent": "^0.12.7"
+    "@rivus/agent": ">=0.12.7 <0.17.0"
   }
 }

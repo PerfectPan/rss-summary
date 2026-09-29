@@ -6,6 +6,7 @@ import {
 
 export type DailyAiDigestDocument = {
   day: string;
+  windowLabel: string;
   items: DailyAiEditorialItem[];
   evidence: DailyAiEvidence[];
   warnings: string[];
@@ -15,7 +16,7 @@ export function renderDailyAiDigest(document: DailyAiDigestDocument): string {
   const lines = [
     `# Daily AI Digest · ${document.day}`,
     "",
-    `${document.items.length} 条可信动态 · 来源可追溯 · 质量不足不凑数`,
+    `${document.items.length} 条可信动态 · ${document.windowLabel} · 来源可追溯 · 质量不足不凑数`,
     "",
   ];
   const usedRefs: string[] = [];

@@ -136,4 +136,32 @@ describe("Doubao search source", () => {
     expect(error).toBeInstanceOf(DoubaoSearchError);
     expect(error).toMatchObject({ code: "rate_limit_exceeded", retryAfterMs: 2_000 });
   });
+
+  it("normalizes network and HTTP failures as provider errors", async () => {
+    const input = {
+      query: "科技新闻",
+      count: 10,
+      day: "2026-07-29",
+      sourcePolicy: "authoritative" as const,
+    };
+    const networkClient = new DoubaoSearchClient({
+      apiKey: "test-key",
+      fetch: async () => {
+        throw new TypeError("fetch failed");
+      },
+    });
+    const httpClient = new DoubaoSearchClient({
+      apiKey: "test-key",
+      fetch: async () => new Response(null, { status: 503 }),
+    });
+
+    await expect(networkClient.search(input)).rejects.toMatchObject({
+      code: "network_error",
+      message: "Doubao search API error network_error: fetch failed",
+    });
+    await expect(httpClient.search(input)).rejects.toMatchObject({
+      code: "http_503",
+      message: "Doubao search API error http_503: HTTP 503",
+    });
+  });
 });

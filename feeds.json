@@ -327,5 +327,21 @@
       "Articles",
       "Blog"
     ]
+  },
+  {
+    "name": "Earendil Posts",
+    "url": "https://earendil.com/posts/feed.atom",
+    "tags": [
+      "Articles",
+      "Blog"
+    ]
+  },
+  {
+    "name": "Leon7hao",
+    "url": "https://leon7hao.com/rss.xml",
+    "tags": [
+      "Articles",
+      "Blog"
+    ]
   }
 ]
