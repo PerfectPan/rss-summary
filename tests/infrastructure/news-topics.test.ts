@@ -206,3 +206,30 @@ it("validates optional GLM query and trusted-source configuration", () => {
     ).toThrow();
   }
 });
+
+it("rejects per-source queries that escape the configured domains or query limit", () => {
+  const topic = {
+    id: "test",
+    label: "Test",
+    sourcePolicy: "official",
+    maxItems: 1,
+    queries: [rawQuery("release")],
+  };
+  for (const sourceQueries of [{ "other.com": "release" }, { "example.com": "x".repeat(71) }]) {
+    expect(() =>
+      parseNewsTopics(
+        JSON.stringify([
+          {
+            ...topic,
+            queries: [
+              {
+                ...topic.queries[0],
+                glm: { query: "release", domains: ["example.com"], sourceQueries },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toThrow();
+  }
+});

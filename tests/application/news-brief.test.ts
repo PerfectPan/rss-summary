@@ -8,7 +8,10 @@ import {
   type RivusNewsBriefResult,
 } from "../../src/application/news-brief.js";
 import type { NewsTopicQuery } from "../../src/domain/news.js";
-import { DoubaoSearchError } from "../../src/infrastructure/doubao-search.js";
+import {
+  DoubaoSearchError,
+  type DoubaoSearchInput,
+} from "../../src/infrastructure/doubao-search.js";
 import { renderNewsBrief } from "../../src/presentation/news-render.js";
 
 function withNewsMarkdown(result: RivusNewsBriefResult) {
@@ -155,7 +158,7 @@ describe("Rivus news brief Tool adapter", () => {
         },
       ),
     );
-    expect(partial.warnings).toEqual(["科技新闻：1 个查询暂不可用"]);
+    expect(partial.warnings).toEqual(["采集覆盖不完整：科技新闻；详见采集审计"]);
     expect(partial.audit.queries).toEqual([
       expect.objectContaining({ queryId: "working", status: "ok" }),
       expect.objectContaining({
@@ -321,7 +324,7 @@ describe("Rivus news brief Tool adapter", () => {
     expect(search).toHaveBeenCalledTimes(4);
     expect(sleep).toHaveBeenCalledTimes(2);
     expect(sleepDelays).toEqual([125, 250]);
-    expect(result.warnings).toEqual(["technology：1 个查询暂不可用"]);
+    expect(result.warnings).toEqual(["采集覆盖不完整：technology；详见采集审计"]);
     expect(result.audit.queries).toEqual([
       expect.objectContaining({ queryId: "limited", status: "failed" }),
       expect.objectContaining({ queryId: "working", status: "ok" }),
@@ -382,7 +385,7 @@ describe("Rivus news brief Tool adapter", () => {
     expect(sleep).toHaveBeenCalledWith(1_500);
   });
 
-  it("warns when Doubao hits lack a parseable publish time", async () => {
+  it("audits invalid publication dates without alarming on routine filtering", async () => {
     const result = await Effect.runPromise(
       generateRivusNewsBrief(
         { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
@@ -433,7 +436,7 @@ describe("Rivus news brief Tool adapter", () => {
       ),
     );
 
-    expect(result.warnings).toContain("Doubao 搜索：1 条结果缺少有效的发布时间被丢弃");
+    expect(result.warnings).toEqual([]);
     expect(result.audit).toMatchObject({
       counts: { fetched: 2, acceptedHits: 1, rejectedHits: 1 },
       queries: [
@@ -556,5 +559,150 @@ it("runs hybrid search through the news application, merges evidence and preserv
   expect(result.stories[0].queryHits).toBe(3);
   expect(result.audit.counts).toMatchObject({ acceptedHits: 3, canonicalDuplicates: 2 });
   expect(result.audit.queries.map(({ provider }) => provider)).toEqual(["doubao", "glm", "glm"]);
-  expect(result.warnings.join(" ")).toContain("豆包免费额度耗尽");
+  expect(result.warnings).toEqual([]);
+  expect(result.sourceStatus?.state).toBe("recovered");
+});
+
+it("does not warn when both providers successfully return no candidates", async () => {
+  const result = await Effect.runPromise(
+    generateRivusNewsBrief(
+      { edition: "noon", occurrence: "2026-07-29T12:30:00+08:00" },
+      {
+        env: { NEWS_SEARCH_MODE: "hybrid" },
+        search: async () => ({ results: [], resultCount: 0 }),
+        glm: {
+          search: async () => [],
+          read: async () => {
+            throw new Error("unused");
+          },
+        },
+        topics: [
+          {
+            id: "test",
+            label: "test",
+            icon: "",
+            enabled: true,
+            maxItems: 2,
+            sourcePolicy: "official",
+            queries: [
+              {
+                ...newsQuery("empty", "empty", ["TypeScript"], ["release"]),
+                glm: { query: "TypeScript release", domains: ["devblogs.microsoft.com"] },
+              },
+            ],
+          },
+        ],
+      },
+    ),
+  );
+  expect(result.itemCount).toBe(0);
+  expect(result.warnings).toEqual([]);
+  expect(result.sourceStatus?.state).toBe("healthy");
+});
+
+it("recovers late-indexed and date-only articles in explicit catch-up without repeating delivered links", async () => {
+  const make = (id: string, publishTime: string) => ({
+    id,
+    title: `TypeScript release ${id}`,
+    summary: "TypeScript release",
+    url: `https://example.com/${id}`,
+    publishTime,
+    authInfoLevel: 1,
+    rankPosition: 1,
+  });
+  const calls: DoubaoSearchInput[] = [];
+  const result = await Effect.runPromise(
+    generateRivusNewsBrief(
+      {
+        edition: "evening",
+        occurrence: "2026-07-29T22:00:00+08:00",
+        since: "2026-07-27T18:00:00+08:00",
+        reportedUrls: ["https://example.com/delivered?utm_source=feed"],
+      },
+      {
+        env: {},
+        search: async (input) => {
+          calls.push(input);
+          return {
+            results: [
+              make("late", "2026-07-29T09:00:00+08:00"),
+              make("date-only", "2026-07-28"),
+              make("delivered", "2026-07-29T09:00:00+08:00"),
+              make("uncertain", "2026-07-29"),
+            ],
+            resultCount: 4,
+          };
+        },
+        topics: [
+          {
+            id: "test",
+            label: "test",
+            icon: "",
+            enabled: true,
+            maxItems: 4,
+            sourcePolicy: "official",
+            queries: [newsQuery("ts", "TypeScript release", ["TypeScript"], ["release"])],
+          },
+        ],
+      },
+    ),
+  );
+  expect(calls[0].sinceDay).toBe("2026-07-27");
+  expect(result.stories.map((s) => s.canonicalUrl).sort()).toEqual([
+    "https://example.com/date-only",
+    "https://example.com/late",
+  ]);
+  expect(result.audit.queries[0].rejected).toMatchObject({
+    "already-reported": 1,
+    "outside-window": 1,
+  });
+});
+
+it("rotates source plans between local noon and evening, including even-sized source lists", async () => {
+  const calls: string[] = [];
+  for (const [edition, occurrence] of [
+    ["noon", "2026-07-29T12:30:00+08:00"],
+    ["evening", "2026-07-29T18:00:00+08:00"],
+    ["noon", "2026-07-30T12:30:00+08:00"],
+    ["evening", "2026-07-30T18:00:00+08:00"],
+  ] as const) {
+    await Effect.runPromise(
+      generateRivusNewsBrief(
+        { edition, occurrence },
+        {
+          env: {},
+          search: async (input) => {
+            calls.push(input.query);
+            return { results: [], resultCount: 0 };
+          },
+          topics: [
+            {
+              id: "test",
+              label: "test",
+              icon: "",
+              enabled: true,
+              maxItems: 1,
+              sourcePolicy: "official",
+              queries: [
+                {
+                  ...newsQuery("test", "broad", ["AI"], ["release"]),
+                  glm: {
+                    query: "release",
+                    domains: ["a.com", "b.com", "c.com", "d.com"],
+                    sourceQueries: {
+                      "a.com": "A release",
+                      "b.com": "B release",
+                      "c.com": "C release",
+                      "d.com": "D release",
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ),
+    );
+  }
+  expect(new Set(calls).size).toBe(4);
 });

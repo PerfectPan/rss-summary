@@ -145,10 +145,10 @@ describe("GLM research MCP", () => {
   });
 });
 
-it("only accepts unambiguous publication metadata with an explicit timezone", async () => {
+it("preserves date precision and rejects ambiguous or modified-only dates", async () => {
   for (const metadata of [
     { "article:modified_time": "2026-09-29T09:00:00Z" },
-    { datePublished: "2026-09-29" },
+
     { datePublished: "2026-09-29T09:00:00" },
     { datePublished: "yesterday" },
     { datePublished: "2026-02-30T09:00:00Z" },
@@ -168,4 +168,26 @@ it("only accepts unambiguous publication metadata with an explicit timezone", as
       }).client.read("https://example.com/article")
     ).publishedAt,
   ).toBe("2026-09-29T01:00:00.000Z");
+});
+
+it("preserves a publication date without inventing a time", async () => {
+  expect(
+    (
+      await clientWith({ content: "body", metadata: { datePublished: "2026-09-29" } }).client.read(
+        "https://example.com/article",
+      )
+    ).publishedAt,
+  ).toBe("2026-09-29");
+});
+
+it("passes source, week and region constraints and reports discarded raw hits", async () => {
+  const { client, fetchMock } = clientWith([{ title: "outside", link: "https://other.com/post" }]);
+  const observe = vi.fn();
+  await client.search("release", ["example.com"], "oneWeek", observe, "us");
+  expect(JSON.parse(String(fetchMock.mock.calls[2][1]?.body)).params.arguments).toMatchObject({
+    search_domain_filter: "example.com",
+    search_recency_filter: "oneWeek",
+    location: "us",
+  });
+  expect(observe).toHaveBeenCalledWith({ rawResults: 1, domainRejected: 1 });
 });

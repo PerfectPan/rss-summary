@@ -123,7 +123,7 @@ describe("Daily AI digest use case", () => {
     );
 
     expect(result.evidence.map(({ id }) => id)).toEqual(["official:rss-1"]);
-    expect(result.warnings).toEqual(["Doubao 搜索暂不可用：所有查询均失败，本期仅使用官方来源"]);
+    expect(result.warnings).toEqual(["新闻搜索暂不可用：所有查询均失败，本期仅使用官方来源"]);
     expect(result.sourceAudit.news[1]?.audit.queries[0]).toMatchObject({ errorCode: "10406" });
   });
 

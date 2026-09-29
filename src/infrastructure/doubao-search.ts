@@ -5,6 +5,7 @@ export type DoubaoSearchInput = {
   query: string;
   count: number;
   day: string;
+  sinceDay?: string;
   sourcePolicy: NewsSourcePolicy;
 };
 
@@ -25,7 +26,19 @@ export type DoubaoSearchResult = {
 
 export type DoubaoSearchPage = {
   provider?: "doubao" | "glm" | "mixed";
-  fallback?: { reason: string; searched: boolean; reads: number; warnings: string[] };
+  fallback?: {
+    reason: string;
+    searched: boolean;
+    reads: number;
+    warnings: string[];
+    searches?: number;
+    incomplete?: boolean;
+    sources?: string[];
+    skippedSources?: string[];
+    rawResults?: number;
+    domainRejected?: number;
+    invalidLinks?: number;
+  };
   logId?: string;
   resultCount: number;
   timeCostMs?: number;
@@ -83,7 +96,7 @@ export class DoubaoSearchClient {
           SearchType: "web",
           Count: input.count,
           Filter: filter,
-          TimeRange: `${input.day}..${input.day}`,
+          TimeRange: `${input.sinceDay ?? input.day}..${input.day}`,
           // Topic queries already encode one bounded event intent. Rewriting broadens them back
           // into generic discovery queries and lowers precision.
           QueryControl: { QueryRewrite: false },
@@ -117,6 +130,11 @@ function validateInput(input: DoubaoSearchInput): void {
   if (!Number.isInteger(input.count) || input.count < 1 || input.count > 50) {
     throw new Error("Doubao web search count must be between 1 and 50.");
   }
+  if (
+    input.sinceDay &&
+    (!/^\d{4}-\d{2}-\d{2}$/u.test(input.sinceDay) || input.sinceDay > input.day)
+  )
+    throw new Error("Invalid search start date.");
   if (!/^\d{4}-\d{2}-\d{2}$/u.test(input.day))
     throw new Error("Doubao search day must use YYYY-MM-DD.");
 }

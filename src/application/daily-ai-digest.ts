@@ -136,7 +136,7 @@ function doubaoAvailabilityWarnings(
 ): string[] {
   const failed = collections.filter(({ unavailable }) => unavailable);
   if (failed.length === collections.length) {
-    return ["Doubao 搜索暂不可用：所有查询均失败，本期仅使用官方来源"];
+    return ["新闻搜索暂不可用：所有查询均失败，本期仅使用官方来源"];
   }
   if (failed.length > 0) {
     const labels = failed.map(({ day, edition }) => `${day} ${edition}`).join("、");

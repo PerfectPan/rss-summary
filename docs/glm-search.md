@@ -1,61 +1,59 @@
 # 豆包与 GLM 混合搜索
 
-`NEWS_SEARCH_MODE=hybrid` 在现有午间、晚间新闻采集和 Daily AI Digest 的新闻采集窗口中启用补查。默认仍为 `doubao`，部署时显式启用；程序不读取 ZCode 私有配置，不启动反代。
+默认 `NEWS_SEARCH_MODE=doubao`。套餐 Key 通过 `GLM_CODING_API_KEY` 注入，程序不读取 ZCode 私有配置，不启动反代、不切换到普通付费 API。使用范围仍需符合[服务方 FAQ](https://docs.bigmodel.cn/cn/coding-plan/faq)。本改动不自动部署。
 
-## 行为
+## 查询与预算
 
-每个查询先走豆包。通过现有时间、来源和主题校验的结果至少有一条时，不再调用 GLM。若没有合格结果，或豆包发生提供方错误，则用该查询的 `glm.query` 与 `glm.domains` 补查。查到的文章与其他查询的豆包结果一起经过原有规范化 URL 去重、主题匹配、排序和栏目限额，不额外增加推送条数。
+- `doubao`：只调用豆包。
+- `hybrid`：豆包没有合格结果或提供方失败时，调用 GLM 补查。
+- `combined`：两家都查，结果通过同一套核验、去重、排序与栏目限额。用于评估互补覆盖，不保证提高质量。
 
-豆包返回额度耗尽代码 `10406` 后，同一个新闻窗口的后续查询跳过豆包。其他窗口或下一次执行会重新尝试，不把临时额度状态永久缓存。已有 429 重试保留；编程错误不伪装成提供方不可用。混合模式串行执行，避免额度耗尽后已经发出整批请求。
+默认主题保留事件类别，每个官网的短查询配置在 `glm.sourceQueries` 中。豆包每轮选择一个实体查询；GLM 每个请求只检索一个域名，并继续在本地复核域名。没有来源查询映射的自定义配置继续使用原查询。
 
-GLM 不按每次查询无条件并行调用。默认每个新闻窗口最多补查 4 次、读取 6 篇原文；相同 URL 的读取成功或失败结果在该窗口内复用。Daily AI Digest 如果采集多个新闻窗口，每个窗口分别计算预算。预算不足、无结果及 Reader 失败不触发额外付费 API。
+默认每个新闻窗口最多 14 次 GLM 搜索、14 次原文读取，配置范围 1–64。每个主题查询预先分配份额，来源结果按名次交错进入 Reader，避免第一组用光读取额度。余数份额和官网顺序按本地日期的午间/晚间轮次轮换；同一 occurrence 的回放计划固定。为保证覆盖公平，预留而未使用的份额不会被前面的查询占走。
 
-## 接受结果的条件
+预算内轮换部分官网是计划采样，不等于来源故障。审计保留已查与未查域名，普通采集说明展示本轮范围；某个主题查询完全没有预算、搜索失败、Reader 失败或候选因读取预算未核验时，才提示覆盖不完整。配置来源不是全网覆盖承诺。Daily AI Digest 多个新闻窗口分别计算预算。
 
-- 结果必须匹配 `news-topics.json` 中当前查询明确配置的可信域名或其子域名。域名配置代表维护者对该主题来源的选择，不是假造的豆包认证等级；审计数据保留 `configured-domain` 依据。
-- 拒绝站点首页、已识别的栏目/Feed/标签页；Reader 必须返回选中文章本身的 URL、标题与正文。
-- 发布时间只接受 Reader 原文元数据中的 `article:published_time` 或 `datePublished`，必须有明确时刻和时区。仅日期、相对日期、修改时间或冲突的发布时间不用于入选；缺失则舍弃，不用抓取时刻代替。
-- 原文时间仍须落在本期窗口内，内容仍须满足原来的主体词、事件词及排除词规则。GLM 的 `oneDay` 只减少过期候选，不替代本地时间校验。
+豆包返回 `10406` 后，同一窗口后续查询停止请求豆包。下一窗口重新尝试；429 保留已有有界重试。GLM 不自动重试。原文成功和失败结果都在窗口内缓存，避免重复请求。
 
-搜索和原文均是不可信外部材料。程序不会执行页面里的命令，Reader 结果不被当成模型指令。正文用于已有摘要/证据流程，不证明网页中的主张为真。
+## 核验与审计
 
-## 配置
+首页、已识别栏目和不可信域名不能作为文章。Reader 需要返回选中文章链接、标题和正文。来源记录 `configured-domain`，不伪造豆包认证等级。搜索结果和网页都是不可信外部材料，不执行其中的指令。
 
-通过既有私有环境注入方式提供 `GLM_CODING_API_KEY`，不要把 Key 写进命令参数或 Git。
+GLM 日常使用 `oneWeek` 发现候选，支持最多 72 小时补采；回放一周以前的窗口才用 `noLimit`。最终由原文时间决定是否入选。按目标来源使用 cn/us 检索区域（.cn 使用 cn，其余使用 us），这只是搜索参数，不改变来源可信规则。`article:published_time` / `datePublished` 是发布时间证据，修改时间不代替发布时间。冲突或缺失时间留在审计，不拿抓取时间填充。
 
-```dotenv
-NEWS_SEARCH_MODE=hybrid
-NEWS_GLM_MAX_SEARCHES=4
-NEWS_GLM_MAX_READS=6
-RSS_ARTICLE_GLM_FALLBACK=true
-```
+日期值保留为日期，不补造零点；只有整个出版日落在采集窗口内才可接受。元数据没有给出来源时区时，按 UTC+14 至 UTC-12 包围全部可能时刻；只有这个保守范围整体落在采集窗口内才入选，不擅自采用用户时区。当前半日内的仅日期文章会被推迟，补采时可收入。显示时明确标为“仅日期”。
 
-`RSS_ARTICLE_GLM_FALLBACK` 独立控制“我的订阅”的 `research-article` Tool：仅在 `auto` 模式的浏览器与 HTTP 都失败后尝试 Reader。显式 `http` 或 `browser` 模式不会改用 GLM。不开启该选项时行为保持原样。
+主体和事件词匹配支持有限的常用事件词形变化（例如 release/released、change/changes），不任意改写产品名。文体排除词只检查标题，避免正文里的“please review the migration guide”误杀发布稿；这不能代替对原文事实的核验。
 
-`news-topics.json` 的每条查询可增加：
+`audit.queries` 记录实际豆包查询和 GLM 已查域名、原始返回数、域名过滤数、无效链接数、搜索/读取次数及丢弃原因。常规旧闻、无效日期和不相关内容的淘汰属于审计明细，不逐条推送为告警。全部只返回错误链接时会标记覆盖不完整。
+
+`sourceStatus` 区分 `healthy`、`recovered`、`partial`、`unavailable`。两家正常但结果为空不告警；备用成功显示普通说明；覆盖缺口只汇总一次；整体失败保留异常语义，不能写成“本期没有新闻”。
+
+## 补采与投递边界
+
+原有定时窗口保持不变。Tool 支持显式传入 `since`（至 occurrence 最多 72 小时）和 `reportedUrls`（最多 1000 条已确认投递的链接）：
 
 ```json
-"glm": {
-  "query": "site:devblogs.microsoft.com/typescript TypeScript release",
-  "domains": ["devblogs.microsoft.com"]
+{
+  "edition": "evening",
+  "occurrence": "2026-09-29T18:00:00+08:00",
+  "since": "2026-09-27T18:00:00+08:00",
+  "reportedUrls": ["https://example.com/already-delivered"]
 }
 ```
 
-查询最多 70 字符，域名最多 8 个；自定义查询未配置 `glm` 时不会自动放宽来源去补查。现有配置为官方技术发布、维护者通报、监管原文和企业公告指定来源，新增来源须按主题审阅。
+豆包查询日期范围随补采窗口扩大，原文仍按该窗口核验；规范化 URL 后排除已报告文章，淘汰原因保留在审计。采集本身不写入已读状态。调用方应在投递成功后维护 reportedUrls，不能在读取成功时提前标记。这里提供补采能力，并未替现有自动化建立持久投递记录或自动扩大窗口。
 
-## 手动调研与审计
+已知官网的持续追踪继续复用现有 industry RSS/公告列表采集；Daily AI Digest 已将其与新闻搜索证据合并。不要为了增加一个搜索提供方另建一套订阅系统。
+
+## 调研命令
 
 ```sh
 rss-summary research search --query "TypeScript release" --domains devblogs.microsoft.com
 rss-summary research read --url https://devblogs.microsoft.com/typescript/announcing-typescript-6-0/
 ```
 
-命令输出 JSON，不投递消息、不更新已读状态。已有 `research add` 命令保留。
+这两个命令只输出研究材料，不投递消息、不更新已读。原有 `research add` 保留。`RSS_ARTICLE_GLM_FALLBACK=true` 独立控制订阅文章 Tool 在 auto 模式浏览器与 HTTP 均失败后使用 Reader；显式 http/browser 模式保持不变。
 
-新闻结果的 `audit.queries` 增加可选 `provider` 与 `fallback`：记录触发原因、是否搜索、读取次数及丢弃/预算提示。最终仍有数据源告警。两家都失败时保留原有失败语义，Daily AI Digest 可继续采用其余来源；成功搜索但所有候选不合格时返回空结果，不凑数。
-
-## 实测依据与限制
-
-小样本测试中豆包返回免费额度耗尽，不能据此比较两家整体质量。旧查询集的两组宽泛 GLM 新闻搜索共返回 13 条站点首页链接，缺少发布时间；明确限定微软官方站点的查询找到了真实 TypeScript 发布文章。该观察支持“具体查询补查 + 原文校验”，不支持无条件替换豆包。当前主线已把旧宽泛查询改为事件型查询，不能把旧样本当作当前主线的完整效果评估。
-
-Search 与 Reader 已使用现有套餐 Key 验证连通。MCP 调用共享套餐额度；连通性不代表服务方对所有自建应用场景的授权，使用范围见[官方 FAQ](https://docs.bigmodel.cn/cn/coding-plan/faq)。Reader 元数据不完整的站点可能全部被丢弃，这是精确新闻时间窗口的限制。部署切换与消息投递不属于此 PR。
+[初始效果评审](./glm-search-review.md)针对初始实现，[最佳实践调研](./news-search-best-practices.md)记录设计依据。搜索服务曾返回文章标题对应首页链接，查询优化不能修复供应商提供的错误 URL；必须持续实测，不能用测试通过宣称召回率已改善。

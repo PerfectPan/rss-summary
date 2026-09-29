@@ -1,5 +1,6 @@
 import uniq from "lodash-es/uniq.js";
 
+import { newsPublicationRange } from "./news-time.js";
 import { canonicalizeUrl, compactSummary, isSameTitleEvent, parsePublishTime } from "./text.js";
 
 export type NewsSourcePolicy = "authoritative" | "official";
@@ -27,7 +28,7 @@ export type NewsTopicQuery = {
   subjectAny: string[];
   eventAny: string[];
   excludedAny: string[];
-  glm?: { query: string; domains: string[] };
+  glm?: { query: string; domains: string[]; sourceQueries?: Record<string, string> };
 };
 
 export type NewsTopic = {
@@ -113,6 +114,7 @@ export type NewsStorySelectionResult = {
 export type NewsTimeWindow = {
   since: number;
   until: number;
+  reportedUrls?: string[];
   timezoneOffset?: string;
 };
 
@@ -121,6 +123,7 @@ export type NewsHitRejectionReason =
   | "invalid-publish-time"
   | "outside-window"
   | "insufficient-authority"
+  | "already-reported"
   | "excluded-content"
   | "subject-mismatch"
   | "intent-mismatch"
@@ -228,11 +231,10 @@ function rejectionReasonForHit(
   window: NewsTimeWindow,
 ): NewsHitRejectionReason | undefined {
   if (!hit.title.trim() || !hit.url.trim()) return "missing-fields";
-  const publishedAt = hit.publishTime
-    ? parsePublishTime(hit.publishTime, window.timezoneOffset)
-    : Number.NaN;
-  if (!Number.isFinite(publishedAt)) return "invalid-publish-time";
-  if (publishedAt < window.since || publishedAt >= window.until) return "outside-window";
+  if (window.reportedUrls?.includes(canonicalizeUrl(hit.url) ?? "")) return "already-reported";
+  const publication = newsPublicationRange(hit.publishTime, window.timezoneOffset);
+  if (!publication) return "invalid-publish-time";
+  if (publication.since < window.since || publication.until > window.until) return "outside-window";
   const authLevel = authorityLevel(hit);
   if (hit.sourcePolicy === "official" ? authLevel !== 1 : authLevel > 2) {
     return "insufficient-authority";
@@ -241,7 +243,7 @@ function rejectionReasonForHit(
     [hit.title, hit.summary, hit.snippet].filter(Boolean).join(" "),
   );
   const subjectContent = normalizeSearchText(`${content} ${hit.siteName ?? ""}`);
-  if (hit.excludedAny.some((term) => containsSearchTerm(content, term))) {
+  if (hit.excludedAny.some((term) => containsSearchTerm(normalizeSearchText(hit.title), term))) {
     return "excluded-content";
   }
   if (!hit.subjectAny.some((term) => containsSearchTerm(subjectContent, term))) {
@@ -318,7 +320,24 @@ function containsSearchTerm(content: string, term: string): boolean {
   if (/\p{Script=Han}/u.test(normalizedTerm) || normalizedTerm.endsWith("-")) {
     return content.includes(normalizedTerm);
   }
-  const escaped = normalizedTerm.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  // Normalize only inflections of known event words, not product names or arbitrary suffixes.
+  const eventForms: Record<string, string> = {
+    releases: "release",
+    released: "release",
+    releasing: "release",
+    changes: "change",
+    announcements: "announcement",
+    vulnerabilities: "vulnerability",
+    updates: "update",
+    launched: "launch",
+    launches: "launch",
+    outages: "outage",
+    deprecations: "deprecation",
+    deprecated: "deprecation",
+  };
+  const fold = (value: string) => value.replace(/\b[a-z]+\b/gu, (word) => eventForms[word] ?? word);
+  content = fold(content);
+  const escaped = fold(normalizedTerm).replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
   return new RegExp(`(?:^|[^a-z0-9])${escaped}(?=$|[^a-z0-9])`, "u").test(content);
 }
 

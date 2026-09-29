@@ -1,3 +1,4 @@
+import { newsPublicationRange } from "../domain/news-time.js";
 import {
   buildNewsStoriesWithAudit,
   type NewsSearchHit,
@@ -11,7 +12,11 @@ import {
   type DoubaoSearchInput,
   type DoubaoSearchPage,
 } from "../infrastructure/doubao-search.js";
-import type { GlmResearchClient, ResearchPage } from "../infrastructure/glm-research.js";
+import type {
+  GlmResearchClient,
+  ResearchPage,
+  ResearchSearchResult,
+} from "../infrastructure/glm-research.js";
 
 export type NewsSearchRequest = {
   input: DoubaoSearchInput;
@@ -25,18 +30,29 @@ type Options = {
   window: NewsTimeWindow;
   maxSearches: number;
   maxReads: number;
+  queryIds?: string[];
+  rotation?: number;
+  combine?: boolean;
+  recency?: "noLimit" | "oneWeek";
 };
 
-/** One sequential brief run owns the quota circuit, Reader cache and fallback budgets. */
-export function createHybridNewsSearch(
-  options: Options,
-): (request: NewsSearchRequest) => Promise<DoubaoSearchPage> {
+/** A brief owns its quota circuit and cache. Reserve budgets before any provider runs. */
+export function createHybridNewsSearch(options: Options) {
   let quotaExhausted = false;
   let searches = 0;
   let reads = 0;
   const pages = new Map<string, Promise<ResearchPage>>();
+  const rotation = Math.max(0, options.rotation ?? 0);
+  const share = (budget: number, id: string) => {
+    const ids = options.queryIds;
+    if (!ids?.length) return budget;
+    const index = ids.indexOf(id);
+    if (index < 0) return 0;
+    const priority = (index - (rotation % ids.length) + ids.length) % ids.length;
+    return Math.floor(budget / ids.length) + (priority < budget % ids.length ? 1 : 0);
+  };
 
-  return async (request) => {
+  return async (request: NewsSearchRequest): Promise<DoubaoSearchPage> => {
     let primary: DoubaoSearchPage | undefined;
     let primaryError: DoubaoSearchError | undefined;
     try {
@@ -53,49 +69,91 @@ export function createHybridNewsSearch(
       baseline.map((result) => toHit(result, request)),
       options.window,
     ).stories;
-    if (accepted.length > 0) return { ...primary!, provider: "doubao" };
+    if (accepted.length > 0 && !options.combine) return { ...primary!, provider: "doubao" };
 
     const fallback = {
-      reason: primaryError?.code ?? "no-eligible-results",
+      reason: primaryError?.code ?? (accepted.length ? "complement" : "no-eligible-results"),
       searched: false,
+      searches: 0,
       reads: 0,
+      incomplete: false,
+      sources: [] as string[],
+      skippedSources: [] as string[],
       warnings: [] as string[],
+      rawResults: 0,
+      domainRejected: 0,
+      invalidLinks: 0,
     };
-    const page = (): DoubaoSearchPage => ({
+    const result: DoubaoSearchPage = {
       ...primary,
       provider: primary ? "mixed" : "glm",
       fallback,
       resultCount: baseline.length,
       results: [...baseline],
-    });
-    if (!request.query.glm || searches >= options.maxSearches) {
+    };
+    const config = request.query.glm;
+    if (!config) {
       if (primaryError) throw primaryError;
-      fallback.warnings.push(request.query.glm ? "GLM 搜索预算已用完" : "未配置 GLM 可信来源");
-      return page();
-    }
-    const result = page();
-    const { query, domains } = request.query.glm;
-    searches++;
-    fallback.searched = true;
-    let candidates;
-    try {
-      candidates = await options.glm.search(query, domains, "oneDay");
-    } catch {
-      if (primaryError)
-        throw new DoubaoSearchError(
-          "hybrid_unavailable",
-          `Primary ${primaryError.code}; GLM search unavailable.`,
-        );
-      fallback.warnings.push("GLM 搜索不可用，保留原搜索结果");
+      fallback.incomplete = true;
+      fallback.warnings.push("未配置 GLM 可信来源");
       return result;
     }
+    const searchLimit = Math.min(
+      share(options.maxSearches, request.query.id),
+      options.maxSearches - searches,
+    );
+    const readLimit = share(options.maxReads, request.query.id);
+    const offset = rotation % config.domains.length;
+    const domains = [...config.domains.slice(offset), ...config.domains.slice(0, offset)];
+    const targets = domains.slice(0, searchLimit);
+    fallback.skippedSources = domains.slice(searchLimit);
+    if (fallback.skippedSources.length) {
+      fallback.incomplete = targets.length === 0;
+      fallback.warnings.push("GLM 搜索预算已用完");
+    }
+    if (!targets.length && primaryError)
+      throw new DoubaoSearchError("search_budget", "Fallback search budget unavailable.");
+    let completed = 0;
+    const sourceResults: ResearchSearchResult[][] = [];
+    // Each call has one source constraint; rotate sources within the reserved query budget.
+    for (const domain of targets) {
+      searches++;
+      fallback.searches++;
+      fallback.searched = true;
+      fallback.sources.push(domain);
+      try {
+        const found = await options.glm.search(
+          config.sourceQueries?.[domain] ?? config.query,
+          [domain],
+          options.recency ?? "oneWeek",
+          (counts) => {
+            fallback.rawResults += counts.rawResults;
+            fallback.domainRejected += counts.domainRejected;
+          },
+          domain.endsWith(".cn") ? "cn" : "us",
+        );
+        sourceResults.push(found);
+        completed++;
+      } catch {
+        fallback.incomplete = true;
+        fallback.warnings.push("GLM 搜索不可用，保留原搜索结果");
+      }
+    }
+    if (!completed && primaryError)
+      throw new DoubaoSearchError(
+        "hybrid_unavailable",
+        `Primary ${primaryError.code}; GLM search unavailable.`,
+      );
     const seen = new Set<string>();
+    const candidates = Array.from({ length: request.input.count }, (_, rank) =>
+      sourceResults.flatMap((items) => (items[rank] ? [items[rank]!] : [])),
+    ).flat();
     for (const candidate of candidates.slice(0, request.input.count)) {
       const url = canonicalizeUrl(candidate.url);
       if (!url || seen.has(url)) continue;
       seen.add(url);
       const parsed = new URL(url);
-      const domain = domains.find(
+      const domain = config.domains.find(
         (host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`),
       );
       if (
@@ -107,12 +165,14 @@ export function createHybridNewsSearch(
         parsed.pathname === "/" ||
         /\/(?:feed|rss|category|tag)(?:\/|$)/iu.test(parsed.pathname)
       ) {
+        fallback.invalidLinks++;
         fallback.warnings.push("GLM 候选不是可信文章链接，已丢弃");
         continue;
       }
       let pending = pages.get(url);
       if (!pending) {
-        if (reads >= options.maxReads) {
+        if (reads >= options.maxReads || fallback.reads >= readLimit) {
+          fallback.incomplete = true;
           fallback.warnings.push("GLM 原文读取预算已用完");
           break;
         }
@@ -125,10 +185,10 @@ export function createHybridNewsSearch(
       try {
         article = await pending;
       } catch {
+        fallback.incomplete = true;
         fallback.warnings.push("GLM 原文读取失败，未采用该候选");
         continue;
       }
-      // Reader must attest the selected page, not a same-site landing page reached by redirect.
       if (
         canonicalizeUrl(article.url) !== url ||
         !article.title.trim() ||
@@ -138,13 +198,13 @@ export function createHybridNewsSearch(
         fallback.warnings.push("GLM 原文缺少可验证的发布时间、正文或链接，未采用该候选");
         continue;
       }
-      const publishedAt = Date.parse(article.publishedAt);
+      const publication = newsPublicationRange(article.publishedAt, options.window.timezoneOffset);
       if (
-        !Number.isFinite(publishedAt) ||
-        publishedAt < options.window.since ||
-        publishedAt >= options.window.until
+        !publication ||
+        publication.since < options.window.since ||
+        publication.until > options.window.until
       ) {
-        fallback.warnings.push("GLM 原文不在本期时间窗口，未采用该候选");
+        fallback.warnings.push("GLM 原文不在本期时间窗口或日期精度不足，未采用该候选");
         continue;
       }
       result.results.push({
@@ -162,6 +222,13 @@ export function createHybridNewsSearch(
         },
         authInfoDescription: "配置的可信来源 · 原文发布时间已校验",
       });
+    }
+    if (
+      (fallback.invalidLinks > 0 && result.results.length === baseline.length) ||
+      (fallback.rawResults > 0 && fallback.domainRejected === fallback.rawResults)
+    ) {
+      fallback.incomplete = true;
+      fallback.warnings.push("搜索结果无法提供可核验的文章链接");
     }
     fallback.warnings = [...new Set(fallback.warnings)];
     result.resultCount = result.results.length;

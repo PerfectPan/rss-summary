@@ -149,5 +149,18 @@ function parseGlmQuery(value: unknown, context: string): NonNullable<NewsTopicQu
     }
     return domain;
   });
-  return { query, domains: [...new Set(domains)] };
+  let sourceQueries: Record<string, string> | undefined;
+  if (record.sourceQueries !== undefined) {
+    const entries = requireRecord(record.sourceQueries, `${context} glm sourceQueries`);
+    sourceQueries = {};
+    for (const [domain, value] of Object.entries(entries)) {
+      if (!domains.includes(domain))
+        throw new Error(`${context} source query must use a configured domain.`);
+      const text = requiredString(value, `${context} source query`);
+      if (text.length > 70)
+        throw new Error(`${context} source query must not exceed 70 characters.`);
+      sourceQueries[domain] = text;
+    }
+  }
+  return { query, domains: [...new Set(domains)], ...(sourceQueries ? { sourceQueries } : {}) };
 }

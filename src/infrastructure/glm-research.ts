@@ -38,7 +38,9 @@ export class GlmResearchClient {
   async search(
     query: string,
     domains: string[],
-    recency: "noLimit" | "oneDay" = "noLimit",
+    recency: "noLimit" | "oneDay" | "oneWeek" = "noLimit",
+    observe?: (counts: { rawResults: number; domainRejected: number }) => void,
+    location: "cn" | "us" = "cn",
   ): Promise<ResearchSearchResult[]> {
     if (!query.trim() || query.length > 70)
       throw new Error("Search query must contain 1 to 70 characters.");
@@ -52,12 +54,14 @@ export class GlmResearchClient {
     });
     const value = await this.call("search", "web_search_prime", {
       search_query: query.trim(),
+      location,
       ...(allowed.length === 1 ? { search_domain_filter: allowed[0] } : {}),
       content_size: "medium",
       search_recency_filter: recency,
     });
     if (!Array.isArray(value)) throw new Error("GLM search returned an invalid result list.");
     const results: ResearchSearchResult[] = [];
+    let domainRejected = 0;
     const seen = new Set<string>();
     for (const item of value) {
       const record = asRecord(item);
@@ -73,8 +77,12 @@ export class GlmResearchClient {
       } catch {
         continue;
       }
-      if (!allowed.some((domain) => url.hostname === domain || url.hostname.endsWith(`.${domain}`)))
+      if (
+        !allowed.some((domain) => url.hostname === domain || url.hostname.endsWith(`.${domain}`))
+      ) {
+        domainRejected++;
         continue;
+      }
       if (seen.has(url.href)) continue;
       seen.add(url.href);
       results.push({
@@ -84,6 +92,7 @@ export class GlmResearchClient {
       });
       if (results.length === 10) break;
     }
+    observe?.({ rawResults: value.length, domainRejected });
     return results;
   }
 
@@ -272,10 +281,20 @@ function text(value: unknown): string {
 
 function publicationTime(metadata: unknown): { publishedAt?: string } {
   const record = asRecord(metadata);
-  // Modified dates and date-only values cannot establish an intra-day publication window.
+  // Keep date-only precision. The consumer decides whether the entire day fits its window.
   const values = [record["article:published_time"], record.datePublished, record["datepublished"]]
     .filter((value): value is string => typeof value === "string")
     .map((value) => value.trim());
+  if (values.length && values.every((value) => /^\d{4}-\d{2}-\d{2}$/u.test(value))) {
+    const day = new Date(`${values[0]}T00:00:00Z`);
+    if (
+      new Set(values).size === 1 &&
+      Number.isFinite(day.getTime()) &&
+      day.toISOString().slice(0, 10) === values[0]
+    )
+      return { publishedAt: values[0] };
+    return {};
+  }
   const times = values.map((value) => {
     if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/u.test(value))
       return Number.NaN;

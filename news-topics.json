@@ -13,7 +13,14 @@
         "intent": "model-release",
         "glm": {
           "query": "OpenAI Anthropic Google DeepMind new model announcement",
-          "domains": ["openai.com", "anthropic.com", "deepmind.google", "blog.google", "x.ai"]
+          "domains": ["openai.com", "anthropic.com", "deepmind.google", "blog.google", "x.ai"],
+          "sourceQueries": {
+            "openai.com": "OpenAI new model announcement",
+            "anthropic.com": "Claude new model announcement",
+            "deepmind.google": "Gemini new model announcement",
+            "blog.google": "Gemini model release",
+            "x.ai": "Grok model release"
+          }
         },
         "subjectAny": ["OpenAI", "Anthropic", "Google DeepMind", "Meta", "xAI"],
         "eventAny": ["正式发布", "正式上线", "开放 API", "进入 GA", "general availability", "launches", "released", "introducing"],
@@ -25,7 +32,14 @@
         "intent": "developer-change",
         "glm": {
           "query": "Codex Claude Code GitHub Copilot Cursor major release",
-          "domains": ["openai.com", "anthropic.com", "github.blog", "cursor.com", "windsurf.com"]
+          "domains": ["openai.com", "anthropic.com", "github.blog", "cursor.com", "windsurf.com"],
+          "sourceQueries": {
+            "openai.com": "Codex release",
+            "anthropic.com": "Claude Code release",
+            "github.blog": "GitHub Copilot general availability",
+            "cursor.com": "Cursor release",
+            "windsurf.com": "Windsurf release"
+          }
         },
         "subjectAny": ["Codex", "Claude Code", "Gemini CLI", "GitHub Copilot", "Cursor", "Windsurf"],
         "eventAny": ["进入 GA", "重大版本", "破坏性变更", "general availability", "major release", "breaking change"],
@@ -47,7 +61,14 @@
         "intent": "developer-change",
         "glm": {
           "query": "TypeScript Rust Node.js Deno Bun release security update",
-          "domains": ["devblogs.microsoft.com", "blog.rust-lang.org", "nodejs.org", "deno.com", "bun.sh"]
+          "domains": ["devblogs.microsoft.com", "blog.rust-lang.org", "nodejs.org", "deno.com", "bun.sh"],
+          "sourceQueries": {
+            "devblogs.microsoft.com": "TypeScript release breaking changes",
+            "blog.rust-lang.org": "Rust release security",
+            "nodejs.org": "Node.js release security",
+            "deno.com": "Deno release",
+            "bun.sh": "Bun release"
+          }
         },
         "subjectAny": ["TypeScript", "Rust", "Node.js", "Deno", "Bun", "IDE"],
         "eventAny": ["重大版本", "弃用", "破坏性变更", "安全更新", "major release", "breaking change", "deprecation", "security update"],
@@ -69,7 +90,14 @@
         "intent": "service-incident",
         "glm": {
           "query": "AWS Azure Google Cloud Cloudflare service outage incident",
-          "domains": ["aws.amazon.com", "azure.status.microsoft", "status.cloud.google.com", "cloudflarestatus.com", "blog.cloudflare.com"]
+          "domains": ["aws.amazon.com", "azure.status.microsoft", "status.cloud.google.com", "cloudflarestatus.com", "blog.cloudflare.com"],
+          "sourceQueries": {
+            "aws.amazon.com": "AWS service outage",
+            "azure.status.microsoft": "Azure service incident",
+            "status.cloud.google.com": "Google Cloud service disruption",
+            "cloudflarestatus.com": "Cloudflare incident",
+            "blog.cloudflare.com": "Cloudflare outage"
+          }
         },
         "subjectAny": ["AWS", "Azure", "Google Cloud", "Cloudflare"],
         "eventAny": ["服务中断", "大规模中断", "故障", "数据泄露", "安全事件", "outage", "service disruption", "data breach", "security incident"],
@@ -81,7 +109,11 @@
         "intent": "security-advisory",
         "glm": {
           "query": "GitHub npm package critical vulnerability security advisory",
-          "domains": ["github.blog", "cisa.gov"]
+          "domains": ["github.blog", "cisa.gov"],
+          "sourceQueries": {
+            "github.blog": "npm supply chain security advisory",
+            "cisa.gov": "software critical vulnerability"
+          }
         },
         "subjectAny": ["开源", "GitHub", "npm", "PyPI", "软件包", "dependency", "package"],
         "eventAny": ["CVE-", "高危漏洞", "供应链攻击", "紧急弃用", "critical vulnerability", "supply-chain attack", "security advisory"],
@@ -103,7 +135,13 @@
         "intent": "policy-action",
         "glm": {
           "query": "AI semiconductor data regulation takes effect official",
-          "domains": ["gov.cn", "cac.gov.cn", "ec.europa.eu", "ftc.gov"]
+          "domains": ["gov.cn", "cac.gov.cn", "ec.europa.eu", "ftc.gov"],
+          "sourceQueries": {
+            "gov.cn": "人工智能 数据 监管 政策 发布",
+            "cac.gov.cn": "人工智能 数据 规定 生效",
+            "ec.europa.eu": "AI regulation takes effect",
+            "ftc.gov": "AI ruling"
+          }
         },
         "subjectAny": ["AI", "人工智能", "模型", "芯片", "数据"],
         "eventAny": ["正式发布", "生效", "通过", "裁定", "takes effect", "effective", "regulation", "ruling"],
@@ -125,7 +163,14 @@
         "intent": "capital-event",
         "glm": {
           "query": "OpenAI Anthropic AI funding acquisition announcement",
-          "domains": ["openai.com", "anthropic.com", "x.ai", "mistral.ai", "cohere.com"]
+          "domains": ["openai.com", "anthropic.com", "x.ai", "mistral.ai", "cohere.com"],
+          "sourceQueries": {
+            "openai.com": "OpenAI funding announcement",
+            "anthropic.com": "Anthropic funding announcement",
+            "x.ai": "xAI funding acquisition",
+            "mistral.ai": "Mistral funding announcement",
+            "cohere.com": "Cohere funding announcement"
+          }
         },
         "subjectAny": ["AI", "人工智能", "大模型", "模型公司", "OpenAI", "Anthropic", "xAI", "Mistral", "Cohere", "Scale AI", "Hugging Face", "Cursor", "Windsurf", "Perplexity"],
         "eventAny": ["融资", "收购", "合并", "IPO", "财报", "funding", "acquisition", "merger", "earnings"],

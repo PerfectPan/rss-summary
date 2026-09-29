@@ -138,7 +138,10 @@ describe("hybrid news search", () => {
 
   it("bounds searches and reads for the entire brief, and does not refetch failed URLs", async () => {
     const glm = {
-      search: vi.fn(async () => [candidate, { ...candidate, url: `${url}-2` }]),
+      search: vi.fn(async (_query: string, _domains: string[]) => [
+        candidate,
+        { ...candidate, url: `${url}-2` },
+      ]),
       read: vi.fn(async (): Promise<ResearchPage> => {
         throw new Error("unavailable");
       }),
@@ -185,4 +188,96 @@ describe("hybrid news search", () => {
     await expect(broken.execute(request)).rejects.toThrow("bug");
     expect(broken.glm.search).not.toHaveBeenCalled();
   });
+});
+
+it("reserves every query a source search and Reader slot before a greedy first query", async () => {
+  const ids = ["a", "b", "c"];
+  const glm = {
+    search: vi.fn(async (_query: string, _domains: string[]) => [
+      candidate,
+      { ...candidate, url: `${url}-2` },
+    ]),
+    read: vi.fn(async (url: string) => ({ ...article, url })),
+  };
+  const execute = createHybridNewsSearch({
+    search: async () => empty,
+    glm,
+    window,
+    maxSearches: 3,
+    maxReads: 3,
+    queryIds: ids,
+  });
+  for (const id of ids) {
+    const page = await execute({
+      ...request,
+      query: {
+        ...request.query,
+        id,
+        glm: {
+          query: "release",
+          domains: ["devblogs.microsoft.com", "example.com"],
+          sourceQueries: { "devblogs.microsoft.com": "TypeScript release" },
+        },
+      },
+    });
+    expect(page.fallback?.sources).toEqual(["devblogs.microsoft.com"]);
+    expect(page.fallback?.skippedSources).toEqual(["example.com"]);
+  }
+  expect(glm.search).toHaveBeenCalledTimes(3);
+  expect(glm.search.mock.calls.every((call) => call[1].length === 1)).toBe(true);
+  expect(glm.read).toHaveBeenCalledTimes(2);
+});
+
+it("rotates scarce budgets across runs instead of permanently skipping the final query", async () => {
+  const searched: string[] = [];
+  for (const rotation of [0, 1, 2]) {
+    const execute = createHybridNewsSearch({
+      search: async () => empty,
+      glm: {
+        search: async (query) => {
+          searched.push(query);
+          return [];
+        },
+        read: async () => article,
+      },
+      window,
+      maxSearches: 1,
+      maxReads: 1,
+      queryIds: ["a", "b", "c"],
+      rotation,
+    });
+    for (const id of ["a", "b", "c"])
+      await execute({
+        ...request,
+        query: { ...request.query, id, glm: { query: id, domains: ["devblogs.microsoft.com"] } },
+      });
+  }
+  expect(searched).toEqual(["a", "b", "c"]);
+});
+
+it("combined mode collects complementary evidence even after a valid primary hit", async () => {
+  const primary = {
+    id: "primary",
+    title: article.title,
+    url,
+    summary: article.content,
+    publishTime: article.publishedAt,
+    authInfoLevel: 1,
+    rankPosition: 1,
+  };
+  const glm = {
+    search: vi.fn(async () => [{ ...candidate, url: `${url}-new` }]),
+    read: async () => ({ ...article, url: `${url}-new` }),
+  };
+  const execute = createHybridNewsSearch({
+    search: async () => ({ results: [primary], resultCount: 1 }),
+    glm,
+    window,
+    maxSearches: 1,
+    maxReads: 1,
+    combine: true,
+  });
+  const page = await execute(request);
+  expect(page.results).toHaveLength(2);
+  expect(page.fallback?.reason).toBe("complement");
 });
