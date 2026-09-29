@@ -48,7 +48,10 @@ const article: ResearchPage = {
 const empty: DoubaoSearchPage = { resultCount: 0, results: [] };
 const candidate = { title: "TypeScript release", url, snippet: "TypeScript release" };
 function setup(search = vi.fn(async (): Promise<DoubaoSearchPage> => empty)) {
-  const glm = { search: vi.fn(async () => [candidate]), read: vi.fn(async () => article) };
+  const glm = {
+    search: vi.fn(async () => [candidate]),
+    read: vi.fn(async (_url: string) => article),
+  };
   return {
     search,
     glm,
@@ -109,18 +112,32 @@ describe("hybrid news search", () => {
     expect(await execute(request)).toMatchObject({ provider: "mixed", results: [bad, { url }] });
   });
 
-  it("does not read homepages, category pages or untrusted domains", async () => {
+  it("keeps explicit official-source restrictions", async () => {
     const { execute, glm } = setup();
     glm.search.mockResolvedValue(
-      [
-        "https://devblogs.microsoft.com/",
-        "https://devblogs.microsoft.com/category/typescript",
-        "https://devblogs.microsoft.com.evil.org/article",
-        "https://other.com/article",
-      ].map((url) => ({ ...candidate, url })),
+      ["https://devblogs.microsoft.com.evil.org/article", "https://other.com/article"].map(
+        (url) => ({ ...candidate, url }),
+      ),
     );
     expect((await execute(request)).results).toEqual([]);
     expect(glm.read).not.toHaveBeenCalled();
+  });
+
+  it("reads news candidates regardless of homepage, path or custom port", async () => {
+    const { execute, glm } = setup();
+    const urls = [
+      "https://media.example.com/",
+      "https://media.example.com/category/news",
+      "https://media.example.com/tag/release",
+      "https://media.example.com/feed/update",
+      "https://media.example.com:8443/rss/update",
+    ];
+    glm.search.mockResolvedValue(urls.map((url) => ({ ...candidate, url })));
+    glm.read.mockImplementation(async (url: string) => ({ ...article, url }));
+    const result = await execute({ ...request, topic: { ...request.topic, sourcePolicy: "news" } });
+    expect(glm.read.mock.calls.map(([url]) => url)).toEqual(urls);
+    expect(result.results.map(({ url }) => url)).toEqual(urls);
+    expect(result.fallback?.invalidLinks).toBe(0);
   });
 
   it("rejects missing timestamps, old articles and Reader redirects to other pages", async () => {

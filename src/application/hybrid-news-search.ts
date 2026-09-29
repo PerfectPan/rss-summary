@@ -160,13 +160,10 @@ export function createHybridNewsSearch(options: Options) {
         (!domain && request.topic.sourcePolicy !== "news") ||
         !["https:", "http:"].includes(parsed.protocol) ||
         parsed.username ||
-        parsed.password ||
-        parsed.port ||
-        parsed.pathname === "/" ||
-        /\/(?:feed|rss|category|tag)(?:\/|$)/iu.test(parsed.pathname)
+        parsed.password
       ) {
         fallback.invalidLinks++;
-        fallback.warnings.push("GLM 候选不是可信文章链接，已丢弃");
+        fallback.warnings.push("GLM 候选不符合来源策略或 HTTP(S) 地址要求，已丢弃");
         continue;
       }
       let pending = pages.get(url);

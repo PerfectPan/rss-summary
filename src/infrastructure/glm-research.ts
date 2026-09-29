@@ -258,13 +258,12 @@ function publicUrl(input: string): URL {
     !["http:", "https:"].includes(url.protocol) ||
     url.username ||
     url.password ||
-    url.port ||
     !host.includes(".") ||
     host.includes(":") ||
     /^[\d.]+$/u.test(host) ||
     /(?:^|\.)(?:localhost|local|internal|test|invalid)$/iu.test(host)
   ) {
-    throw new Error("A public HTTP(S) URL without credentials or a custom port is required.");
+    throw new Error("A public HTTP(S) URL without credentials is required.");
   }
   return url;
 }
