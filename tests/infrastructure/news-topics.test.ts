@@ -28,12 +28,12 @@ describe("news topics", () => {
     expect(
       topics
         .filter(({ id }) => ["ai-model-releases", "developer-tools", "tech-policy"].includes(id))
-        .every(({ sourcePolicy }) => sourcePolicy === "official"),
+        .every(({ sourcePolicy }) => sourcePolicy === "news"),
     ).toBe(true);
     expect(
       topics
         .filter(({ id }) => ["infrastructure-security", "capital-industry"].includes(id))
-        .every(({ sourcePolicy }) => sourcePolicy === "authoritative"),
+        .every(({ sourcePolicy }) => sourcePolicy === "news"),
     ).toBe(true);
   });
 
@@ -166,3 +166,70 @@ function rawQuery(id: string, text = "AI 正式发布") {
     excludedAny: ["评测"],
   };
 }
+
+it("validates optional GLM query and trusted-source configuration", () => {
+  const topic = {
+    id: "tools",
+    label: "Tools",
+    icon: "x",
+    enabled: true,
+    sourcePolicy: "official",
+    maxItems: 1,
+    queries: [
+      {
+        id: "release",
+        text: "TypeScript release",
+        intent: "developer-change",
+        subjectAny: ["TypeScript"],
+        eventAny: ["release"],
+        excludedAny: [],
+        glm: { query: "TypeScript release", domains: ["devblogs.microsoft.com"] },
+      },
+    ],
+  };
+  expect(parseNewsTopics(JSON.stringify([topic]))[0].queries[0].glm?.domains).toEqual([
+    "devblogs.microsoft.com",
+  ]);
+  for (const domains of [
+    [],
+    ["https://example.com"],
+    ["example.com/path"],
+    ["host.local"],
+    ["127.0.0.1"],
+  ]) {
+    expect(() =>
+      parseNewsTopics(
+        JSON.stringify([
+          { ...topic, queries: [{ ...topic.queries[0], glm: { query: "release", domains } }] },
+        ]),
+      ),
+    ).toThrow();
+  }
+});
+
+it("rejects per-source queries that escape the configured domains or query limit", () => {
+  const topic = {
+    id: "test",
+    label: "Test",
+    sourcePolicy: "official",
+    maxItems: 1,
+    queries: [rawQuery("release")],
+  };
+  for (const sourceQueries of [{ "other.com": "release" }, { "example.com": "x".repeat(71) }]) {
+    expect(() =>
+      parseNewsTopics(
+        JSON.stringify([
+          {
+            ...topic,
+            queries: [
+              {
+                ...topic.queries[0],
+                glm: { query: "release", domains: ["example.com"], sourceQueries },
+              },
+            ],
+          },
+        ]),
+      ),
+    ).toThrow();
+  }
+});

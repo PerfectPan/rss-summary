@@ -97,3 +97,41 @@ describe("research CLI", () => {
     expect(stderr.join("")).toContain("No research suggestions");
   });
 });
+
+it("searches configured domains and returns research JSON without changing state", async () => {
+  const output: string[] = [];
+  const calls: unknown[] = [];
+  const code = await runResearchCommand(
+    ["search", "--query", "TypeScript", "--domains", "devblogs.microsoft.com"],
+    {
+      glmClient: {
+        search: async (query, domains) => {
+          calls.push({ query, domains });
+          return [];
+        },
+        read: async () => {
+          throw new Error("unexpected read");
+        },
+      },
+      stdout: { write: (chunk) => output.push(chunk) },
+    },
+  );
+  expect(code).toBe(0);
+  expect(calls).toEqual([{ query: "TypeScript", domains: ["devblogs.microsoft.com"] }]);
+  expect(JSON.parse(output.join(""))).toMatchObject({ source: "glm-coding-plan-mcp", data: [] });
+});
+
+it("requires explicit research arguments and credentials", async () => {
+  const errors: string[] = [];
+  const output: string[] = [];
+  const deps = {
+    env: {},
+    stdout: { write: (s: string) => output.push(s) },
+    stderr: { write: (s: string) => errors.push(s) },
+  };
+  expect(await runResearchCommand(["search", "--query", "TypeScript"], deps)).toBe(1);
+  expect(errors.join("")).toContain("--domains");
+  expect(await runResearchCommand(["read", "--url", "https://example.com/article"], deps)).toBe(1);
+  expect(errors.join("")).toContain("GLM_CODING_API_KEY is required");
+  expect(output).toEqual([]);
+});

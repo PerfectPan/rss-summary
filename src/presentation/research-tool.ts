@@ -1,3 +1,4 @@
+import { GlmResearchClient } from "../infrastructure/glm-research.js";
 import {
   ArticleResearchClient,
   type ArticleResearchClientOptions,
@@ -10,6 +11,8 @@ export type RivusArticleResearchResult = ArticleResearchResult & {
 };
 
 export type ArticleResearchToolDependencies = {
+  env?: NodeJS.ProcessEnv;
+  glmClient?: Pick<GlmResearchClient, "read">;
   browserClient?: Pick<BrowserArticleResearchClient, "research">;
   client?: Pick<ArticleResearchClient, "research">;
 };
@@ -20,6 +23,7 @@ export type ArticleResearchMode = "auto" | "browser" | "http";
 export function createArticleResearchExecutor(
   dependencies: ArticleResearchToolDependencies = {},
 ): (value: unknown) => Promise<RivusArticleResearchResult> {
+  const env = dependencies.env ?? process.env;
   const client = dependencies.client ?? new ArticleResearchClient();
   const browserClient =
     dependencies.browserClient ??
@@ -47,6 +51,30 @@ export function createArticleResearchExecutor(
     const httpResult = await client.research(researchRequest);
     if (httpResult.status === "ok") {
       return { ...httpResult, tool: "article-research" };
+    }
+    if (env.RSS_ARTICLE_GLM_FALLBACK === "true") {
+      try {
+        const glm =
+          dependencies.glmClient ?? new GlmResearchClient({ apiKey: env.GLM_CODING_API_KEY ?? "" });
+        const page = await glm.read(request.url);
+        if (page.content.trim().length < 80) throw new Error("Reader body too short");
+        return {
+          ...researchRequest,
+          content: page.content,
+          fetchedUrl: page.url,
+          retrievedAt: new Date().toISOString(),
+          title: page.title,
+          status: "ok",
+          method: "glm",
+          tool: "article-research",
+        };
+      } catch {
+        return {
+          ...httpResult,
+          error: "Browser, HTTP and GLM Reader unavailable.",
+          tool: "article-research",
+        };
+      }
     }
     return {
       ...httpResult,

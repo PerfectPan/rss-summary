@@ -1,4 +1,5 @@
 import { Effect } from "effect";
+import { canonicalizeUrl } from "../domain/text.js";
 
 import {
   buildNewsStoriesWithAudit,
@@ -21,14 +22,23 @@ import {
   type DoubaoSearchInput,
   type DoubaoSearchPage,
 } from "../infrastructure/doubao-search.js";
+import { GlmResearchClient } from "../infrastructure/glm-research.js";
+import { createHybridNewsSearch, type NewsSearchRequest } from "./hybrid-news-search.js";
 import { attempt } from "./effect.js";
-import { buildNewsAudit, type NewsBriefAudit } from "./news-audit.js";
+import {
+  buildNewsAudit,
+  summarizeNewsSources,
+  type NewsSourceStatus,
+  type NewsBriefAudit,
+} from "./news-audit.js";
 
 export type { NewsBriefEdition };
 
 export type RivusNewsBriefInput = {
   occurrence: string;
   edition: NewsBriefEdition;
+  since?: string;
+  reportedUrls?: string[];
 };
 
 /** Application result: pure document fields. Presentation adds `markdown`. */
@@ -39,6 +49,7 @@ export type RivusNewsBriefResult = {
   generatedAt: string;
   itemCount: number;
   warnings: string[];
+  sourceStatus?: NewsSourceStatus;
   windowLabel: string;
   stories: SelectedNewsStory[];
   topics: NewsTopic[];
@@ -63,6 +74,7 @@ export class AllDoubaoQueriesFailedError extends Error {
 }
 
 type NewsBriefDependencies = {
+  glm?: Pick<GlmResearchClient, "search" | "read">;
   env?: NodeJS.ProcessEnv;
   now?: () => Date;
   random?: () => number;
@@ -111,9 +123,30 @@ export function generateRivusNewsBrief(
     const env = dependencies.env ?? process.env;
     const timezoneOffset = env.FEED_TIMEZONE_OFFSET ?? "+08:00";
     const window = yield* Effect.try({
-      try: () => resolveNewsEditionWindow(input.occurrence, timezoneOffset, input.edition),
+      try: () => {
+        const editionWindow = resolveNewsEditionWindow(
+          input.occurrence,
+          timezoneOffset,
+          input.edition,
+        );
+        if (input.since && Date.parse(input.since) >= editionWindow.until)
+          throw new Error("Catch-up start must precede the edition cutoff.");
+        return {
+          ...editionWindow,
+          ...(input.since
+            ? {
+                since: Date.parse(input.since),
+                label: `${input.since}–${input.occurrence}（补采）`,
+              }
+            : {}),
+          reportedUrls: input.reportedUrls,
+        };
+      },
       catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
     });
+    const rotation =
+      Math.floor(Date.parse(`${window.day}T00:00:00Z`) / 86_400_000) * 2 +
+      (input.edition === "evening" ? 1 : 0);
     const topics = (dependencies.topics ?? loadNewsTopics(env.NEWS_TOPICS_FILE)).filter(
       ({ enabled }) => enabled,
     );
@@ -131,25 +164,54 @@ export function generateRivusNewsBrief(
         query,
         topic,
         input: {
-          query: query.text,
+          query: query.glm?.sourceQueries
+            ? (query.glm.sourceQueries[query.glm.domains[rotation % query.glm.domains.length]!] ??
+              query.text)
+            : query.text,
           count,
           day: window.day,
+          sinceDay: calendarDayAtOffset(new Date(window.since).toISOString(), timezoneOffset),
           sourcePolicy: topic.sourcePolicy,
         },
       })),
     );
+    const mode = env.NEWS_SEARCH_MODE ?? "doubao";
+    if (mode !== "doubao" && mode !== "hybrid" && mode !== "combined") {
+      return yield* Effect.fail(new Error("NEWS_SEARCH_MODE must be doubao, hybrid or combined."));
+    }
+    const primarySearch = (input: DoubaoSearchInput) =>
+      searchWithRetry(input, search, {
+        random: dependencies.random ?? Math.random,
+        sleep: dependencies.sleep ?? sleep,
+      });
+    const execute = yield* Effect.try({
+      try: () =>
+        mode !== "doubao"
+          ? createHybridNewsSearch({
+              search: primarySearch,
+              glm:
+                dependencies.glm ?? new GlmResearchClient({ apiKey: env.GLM_CODING_API_KEY ?? "" }),
+              window,
+              maxSearches: boundedInteger(env.NEWS_GLM_MAX_SEARCHES, 14, 1, 64),
+              queryIds: requests.map(({ query }) => query.id),
+              rotation,
+              combine: mode === "combined",
+              recency:
+                (dependencies.now?.() ?? new Date()).getTime() - window.since > 7 * 86_400_000
+                  ? "noLimit"
+                  : "oneWeek",
+              maxReads: boundedInteger(env.NEWS_GLM_MAX_READS, 14, 1, 64),
+            })
+          : (request: NewsSearchRequest) => primarySearch(request.input),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+    });
     const settled = yield* attempt(
-      settleSearchRequests(requests, (input) =>
-        searchWithRetry(input, search, {
-          random: dependencies.random ?? Math.random,
-          sleep: dependencies.sleep ?? sleep,
-        }),
-      ),
+      settleSearchRequests(requests, execute, mode !== "doubao" ? 1 : newsSearchConcurrency),
     );
     const successful = settled.filter(
       (result): result is PromiseFulfilledResult<DoubaoSearchPage> => result.status === "fulfilled",
     );
-    const topicFailureWarnings = topicWarnings(requests, settled);
+    const { sourceStatus, warnings } = summarizeNewsSources(requests, settled);
     const generatedAt = (dependencies.now ?? (() => new Date()))().toISOString();
     if (successful.length === 0) {
       const failures = settled.flatMap((result) =>
@@ -167,7 +229,8 @@ export function generateRivusNewsBrief(
           edition: input.edition,
           generatedAt,
           itemCount: 0,
-          warnings: topicFailureWarnings,
+          warnings,
+          sourceStatus,
           windowLabel: window.label,
           stories: [],
           topics,
@@ -194,16 +257,6 @@ export function generateRivusNewsBrief(
       );
     });
     const built = buildNewsStoriesWithAudit(hits, window);
-    const missingPublishTimeCount = built.decisions.filter(
-      ({ reason }) => reason === "invalid-publish-time",
-    ).length;
-    const warnings =
-      missingPublishTimeCount > 0
-        ? [
-            ...topicFailureWarnings,
-            `Doubao 搜索：${missingPublishTimeCount} 条结果缺少有效的发布时间被丢弃`,
-          ]
-        : topicFailureWarnings;
     const selection = selectNewsStoriesWithAudit(built.stories, topics);
     const stories = selection.stories;
     const audit = buildNewsAudit(
@@ -221,6 +274,7 @@ export function generateRivusNewsBrief(
       generatedAt,
       itemCount: stories.length,
       warnings,
+      sourceStatus,
       windowLabel: window.label,
       stories,
       topics,
@@ -229,8 +283,9 @@ export function generateRivusNewsBrief(
 }
 
 async function settleSearchRequests(
-  requests: Array<{ input: DoubaoSearchInput }>,
-  execute: (input: DoubaoSearchInput) => Promise<DoubaoSearchPage>,
+  requests: NewsSearchRequest[],
+  execute: (request: NewsSearchRequest) => Promise<DoubaoSearchPage>,
+  concurrency = newsSearchConcurrency,
 ): Promise<PromiseSettledResult<DoubaoSearchPage>[]> {
   const settled: PromiseSettledResult<DoubaoSearchPage>[] = [];
   settled.length = requests.length;
@@ -240,15 +295,13 @@ async function settleSearchRequests(
       const index = nextIndex;
       nextIndex += 1;
       try {
-        settled[index] = { status: "fulfilled", value: await execute(requests[index]!.input) };
+        settled[index] = { status: "fulfilled", value: await execute(requests[index]!) };
       } catch (reason) {
         settled[index] = { status: "rejected", reason };
       }
     }
   };
-  await Promise.all(
-    Array.from({ length: Math.min(newsSearchConcurrency, requests.length) }, () => worker()),
-  );
+  await Promise.all(Array.from({ length: Math.min(concurrency, requests.length) }, () => worker()));
   return settled;
 }
 
@@ -300,7 +353,26 @@ function parseInput(value: unknown): RivusNewsBriefInput {
   if (typeof input.occurrence !== "string" || input.occurrence.trim() === "") {
     throw new Error("occurrence must be a non-empty date-time string.");
   }
-  return { edition: input.edition, occurrence: input.occurrence };
+  let since: string | undefined;
+  if (input.since !== undefined) {
+    if (typeof input.since !== "string" || !Number.isFinite(Date.parse(input.since)))
+      throw new Error("since must be an ISO date-time.");
+    const duration = Date.parse(input.occurrence) - Date.parse(input.since);
+    if (!(duration > 0 && duration <= 72 * 3_600_000))
+      throw new Error("Catch-up window must be within 72 hours of occurrence.");
+    since = input.since;
+  }
+  let reportedUrls: string[] | undefined;
+  if (input.reportedUrls !== undefined) {
+    if (
+      !Array.isArray(input.reportedUrls) ||
+      input.reportedUrls.length > 1000 ||
+      input.reportedUrls.some((url) => typeof url !== "string" || !canonicalizeUrl(url))
+    )
+      throw new Error("reportedUrls must contain at most 1000 valid URLs.");
+    reportedUrls = input.reportedUrls.map((url) => canonicalizeUrl(url as string)!);
+  }
+  return { edition: input.edition, occurrence: input.occurrence, since, reportedUrls };
 }
 
 function createSearch(
@@ -314,21 +386,6 @@ function createSearch(
     timeoutMs: boundedInteger(env.NEWS_SEARCH_TIMEOUT_MS, 15_000, 1_000, 60_000),
   });
   return (input) => client.search(input);
-}
-
-function topicWarnings(
-  requests: Array<{ topic: NewsTopic }>,
-  settled: PromiseSettledResult<DoubaoSearchPage>[],
-): string[] {
-  const failures = new Map<string, { label: string; count: number }>();
-  settled.forEach((result, index) => {
-    if (result.status === "fulfilled") return;
-    const topic = requests[index]!.topic;
-    const current = failures.get(topic.id) ?? { label: topic.label, count: 0 };
-    current.count += 1;
-    failures.set(topic.id, current);
-  });
-  return [...failures.values()].map(({ label, count }) => `${label}：${count} 个查询暂不可用`);
 }
 
 function timeAtOffset(instant: number, timezoneOffset: string): string {

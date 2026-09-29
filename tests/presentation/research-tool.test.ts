@@ -87,3 +87,43 @@ describe("article research Tool", () => {
     expect(http).toHaveBeenCalledWith({ ref: "article:1", url: "https://example.com/article" });
   });
 });
+
+it("uses opt-in GLM Reader only after browser and HTTP failures", async () => {
+  const failed = {
+    error: "unavailable",
+    ref: "article:1",
+    retrievedAt: "2026-09-29T01:00:00Z",
+    status: "failed" as const,
+    url: "https://example.com/article",
+  };
+  const research = vi.fn(async () => failed);
+  const read = vi.fn(async () => ({
+    title: "Article",
+    url: failed.url,
+    content: "Source content. ".repeat(10),
+    truncated: false,
+  }));
+  const execute = createArticleResearchExecutor({
+    env: { RSS_ARTICLE_GLM_FALLBACK: "true" },
+    client: { research },
+    browserClient: { research },
+    glmClient: { read },
+  });
+  expect(await execute({ ref: failed.ref, url: failed.url })).toMatchObject({
+    status: "ok",
+    method: "glm",
+    tool: "article-research",
+  });
+  expect(read).toHaveBeenCalledTimes(1);
+  read.mockClear();
+  await execute({ ref: failed.ref, url: failed.url, mode: "http" });
+  expect(read).not.toHaveBeenCalled();
+  const disabled = createArticleResearchExecutor({
+    env: {},
+    client: { research },
+    browserClient: { research },
+    glmClient: { read },
+  });
+  expect(await disabled({ ref: failed.ref, url: failed.url })).toMatchObject({ status: "failed" });
+  expect(read).not.toHaveBeenCalled();
+});

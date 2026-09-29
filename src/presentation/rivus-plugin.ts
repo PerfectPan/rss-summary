@@ -55,6 +55,7 @@ function withNewsMarkdown(result: RivusNewsBriefResult): RivusNewsBriefOutput {
       stories: result.stories,
       topics: result.topics,
       warnings: result.warnings,
+      sourceStatus: result.sourceStatus,
       windowLabel: result.windowLabel,
     }),
   };
@@ -148,7 +149,7 @@ export function createRssSummaryPlugin(
                   content: { maxLength: 16_000, type: "string" },
                   error: { type: "string" },
                   fetchedUrl: { format: "uri", type: "string" },
-                  method: { enum: ["browser", "http"], type: "string" },
+                  method: { enum: ["browser", "http", "glm"], type: "string" },
                   ref: { minLength: 1, type: "string" },
                   status: { enum: ["failed", "ok"], type: "string" },
                   title: { type: "string" },
@@ -225,6 +226,17 @@ export function createRssSummaryPlugin(
           additionalProperties: false,
           properties: {
             edition: { enum: ["noon", "evening"], type: "string" },
+            since: {
+              type: "string",
+              format: "date-time",
+              description: "Optional catch-up start, at most 72 hours before occurrence",
+            },
+            reportedUrls: {
+              type: "array",
+              maxItems: 1000,
+              items: { type: "string" },
+              description: "URLs confirmed delivered; suppress duplicates during catch-up",
+            },
             occurrence: {
               description: "Scheduled occurrence as an ISO date-time",
               format: "date-time",

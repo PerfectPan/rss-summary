@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { buildNewsAudit, type NewsAuditRequest } from "../../src/application/news-audit.js";
+import {
+  buildNewsAudit,
+  summarizeNewsSources,
+  type NewsAuditRequest,
+} from "../../src/application/news-audit.js";
 import type {
   NewsHitDecision,
   NewsSearchHit,
@@ -139,3 +143,47 @@ function story(id: string): NewsStory {
     score: 29,
   };
 }
+
+it("separates empty success, recovery, budget sampling, missing coverage and outage", () => {
+  const requests = [request("working")];
+  const base = { results: [], resultCount: 0 };
+  const empty = summarizeNewsSources(requests, [{ status: "fulfilled", value: base }]);
+  expect(empty.sourceStatus.state).toBe("healthy");
+  expect(empty.warnings).toEqual([]);
+  const recovery = summarizeNewsSources(requests, [
+    {
+      status: "fulfilled",
+      value: {
+        ...base,
+        fallback: {
+          reason: "10406",
+          searched: true,
+          reads: 0,
+          warnings: [],
+          sources: ["example.com"],
+          skippedSources: ["other.com"],
+        },
+      },
+    },
+  ]);
+  expect(recovery.sourceStatus.state).toBe("recovered");
+  expect(recovery.warnings).toEqual([]);
+  expect(recovery.sourceStatus.notes.join(" ")).toContain("另 1 组");
+  const partial = summarizeNewsSources(requests, [
+    {
+      status: "fulfilled",
+      value: {
+        ...base,
+        fallback: { reason: "10406", searched: true, reads: 0, warnings: [], incomplete: true },
+      },
+    },
+  ]);
+  expect(partial.sourceStatus.state).toBe("partial");
+  expect(partial.sourceStatus.recovered).toBe(0);
+  expect(partial.warnings).toHaveLength(1);
+  expect(
+    summarizeNewsSources(requests, [
+      { status: "rejected", reason: new DoubaoSearchError("10406", "quota") },
+    ]).sourceStatus.state,
+  ).toBe("unavailable");
+});

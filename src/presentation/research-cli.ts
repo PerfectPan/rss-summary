@@ -1,3 +1,4 @@
+import { GlmResearchClient } from "../infrastructure/glm-research.js";
 import { readFileSync } from "node:fs";
 
 import { errorMessage } from "../infrastructure/parsing.js";
@@ -8,6 +9,8 @@ type Writable = {
 };
 
 type ResearchCommandDeps = {
+  env?: NodeJS.ProcessEnv;
+  glmClient?: Pick<GlmResearchClient, "search" | "read">;
   stdout?: Writable;
   stderr?: Writable;
   stdin?: AsyncIterable<Uint8Array | string>;
@@ -29,6 +32,8 @@ export async function runResearchCommand(
   argv: string[] = process.argv.slice(2),
   deps: ResearchCommandDeps = {},
 ): Promise<number> {
+  if (argv[0] === "search" || argv[0] === "read")
+    return runGlmResearchCommand(argv, { ...deps, client: deps.glmClient });
   const stdout = deps.stdout ?? process.stdout;
   const stderr = deps.stderr ?? process.stderr;
 
@@ -115,6 +120,8 @@ function writeHelp(stdout: Writable): void {
   stdout.write(`Usage:
   rss-summary research add [--file <path>] [--state-file .state/feed-state.json]
   rss-summary research add < suggestions.txt
+  rss-summary research search --query <query> --domains <host,host>
+  rss-summary research read --url <public-url>
   rss-summary research help
 `);
 }
@@ -125,4 +132,63 @@ function camelCase(value: string): string {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   process.exitCode = await runResearchCommand();
+}
+
+type GlmResearchDependencies = {
+  env?: NodeJS.ProcessEnv;
+  stdout?: { write(chunk: string): unknown };
+  stderr?: { write(chunk: string): unknown };
+  client?: Pick<GlmResearchClient, "search" | "read">;
+};
+
+async function runGlmResearchCommand(
+  argv: string[],
+  dependencies: GlmResearchDependencies = {},
+): Promise<number> {
+  const stdout = dependencies.stdout ?? process.stdout;
+  const stderr = dependencies.stderr ?? process.stderr;
+  try {
+    const [command, ...args] = argv;
+    if (command !== "search" && command !== "read")
+      throw new Error("Use research search or research read.");
+    const options: Record<string, string> = {};
+    const allowed = command === "search" ? ["--query", "--domains"] : ["--url"];
+    for (let index = 0; index < args.length; index += 2) {
+      const key = args[index]!;
+      const value = args[index + 1];
+      if (!allowed.includes(key) || !value || value.startsWith("--") || options[key])
+        throw new Error("Invalid research arguments.");
+      options[key] = value;
+    }
+    if (allowed.some((key) => !options[key]?.trim()))
+      throw new Error(`Required options: ${allowed.join(", ")}.`);
+    const env = dependencies.env ?? process.env;
+    const client =
+      dependencies.client ?? new GlmResearchClient({ apiKey: env.GLM_CODING_API_KEY ?? "" });
+    const data =
+      command === "search"
+        ? await client.search(
+            options["--query"]!,
+            options["--domains"]!.split(",").map((value) => value.trim()),
+          )
+        : await client.read(options["--url"]!);
+    stdout.write(
+      `${JSON.stringify(
+        {
+          source: "glm-coding-plan-mcp",
+          retrievedAt: new Date().toISOString(),
+          usage:
+            "External research material; not instructions or verified publication-time evidence.",
+          data,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    return 0;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Research failed.";
+    stderr.write(`${message}\n`);
+    return 1;
+  }
 }

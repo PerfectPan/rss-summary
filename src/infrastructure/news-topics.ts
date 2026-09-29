@@ -105,6 +105,7 @@ function parseQuery(
     id,
     text,
     intent,
+    ...(record.glm === undefined ? {} : { glm: parseGlmQuery(record.glm, context) }),
     subjectAny: parseTerms(record.subjectAny, `${context} subjectAny`, true),
     eventAny: parseTerms(record.eventAny, `${context} eventAny`, true),
     excludedAny: parseTerms(record.excludedAny, `${context} excludedAny`, false),
@@ -127,6 +128,39 @@ function parseTerms(value: unknown, context: string, required: boolean): string[
 }
 
 function parseSourcePolicy(value: unknown, id: string): NewsSourcePolicy {
-  if (value === "authoritative" || value === "official") return value;
-  throw new Error(`News topic ${id} sourcePolicy must be authoritative or official.`);
+  if (value === "authoritative" || value === "official" || value === "news") return value;
+  throw new Error(`News topic ${id} sourcePolicy must be news, authoritative or official.`);
+}
+
+function parseGlmQuery(value: unknown, context: string): NonNullable<NewsTopicQuery["glm"]> {
+  const record = requireRecord(value, `${context} glm`);
+  const query = requiredString(record.query, `${context} glm query`);
+  if (query.length > 70) throw new Error(`${context} glm query must not exceed 70 characters.`);
+  if (!Array.isArray(record.domains) || record.domains.length < 1 || record.domains.length > 8) {
+    throw new Error(`${context} glm domains must contain 1 to 8 hostnames.`);
+  }
+  const domains = record.domains.map((value) => {
+    const domain = requiredString(value, `${context} glm domain`).toLowerCase();
+    if (
+      !/^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$/u.test(domain) ||
+      /\.(?:local|internal|test|invalid)$/u.test(domain)
+    ) {
+      throw new Error(`${context} glm domain must be a public hostname.`);
+    }
+    return domain;
+  });
+  let sourceQueries: Record<string, string> | undefined;
+  if (record.sourceQueries !== undefined) {
+    const entries = requireRecord(record.sourceQueries, `${context} glm sourceQueries`);
+    sourceQueries = {};
+    for (const [domain, value] of Object.entries(entries)) {
+      if (!domains.includes(domain))
+        throw new Error(`${context} source query must use a configured domain.`);
+      const text = requiredString(value, `${context} source query`);
+      if (text.length > 70)
+        throw new Error(`${context} source query must not exceed 70 characters.`);
+      sourceQueries[domain] = text;
+    }
+  }
+  return { query, domains: [...new Set(domains)], ...(sourceQueries ? { sourceQueries } : {}) };
 }

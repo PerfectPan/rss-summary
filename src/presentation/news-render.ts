@@ -1,3 +1,4 @@
+import type { NewsSourceStatus } from "../application/news-audit.js";
 import { displayTime, markdownLinkText } from "./markdown.js";
 import type { NewsBriefEdition, NewsTopic, SelectedNewsStory } from "../domain/news.js";
 
@@ -10,6 +11,7 @@ export type NewsBriefDocument = {
   stories: SelectedNewsStory[];
   topics: NewsTopic[];
   warnings: string[];
+  sourceStatus?: NewsSourceStatus;
   windowLabel: string;
 };
 
@@ -30,10 +32,20 @@ export function renderNewsBrief(document: NewsBriefDocument): string {
   }
 
   if (document.stories.length === 0) {
-    lines.push("本时段没有筛出同时符合时间、来源和事件意图的热点。", "");
+    lines.push(
+      document.sourceStatus?.state === "unavailable"
+        ? "本期资讯采集失败，无法判断是否有新增。"
+        : document.sourceStatus?.state === "partial"
+          ? "已完成采集的范围内未发现符合条件的新资讯；部分来源尚未完成。"
+          : "本期未发现符合条件的新资讯。",
+      "",
+    );
   }
   if (document.warnings.length > 0) {
     lines.push(`数据源状态：${document.warnings.join("；")}`, "");
+  }
+  if (!document.warnings.length && document.sourceStatus?.notes.length) {
+    lines.push(`采集说明：${document.sourceStatus.notes.join("；")}`, "");
   }
   return `${lines.join("\n").trim()}\n`;
 }
@@ -41,7 +53,10 @@ export function renderNewsBrief(document: NewsBriefDocument): string {
 function appendStory(lines: string[], story: SelectedNewsStory, index: number): void {
   lines.push(`**${index}. [${markdownLinkText(story.title)}](${story.canonicalUrl})**`);
   lines.push(story.summary);
-  lines.push(`${story.siteName} · ${displayTime(story.publishTime) ?? story.publishTime}`, "");
+  lines.push(
+    `${story.siteName} · ${/^\d{4}-\d{2}-\d{2}$/u.test(story.publishTime) ? `${story.publishTime}（仅日期）` : (displayTime(story.publishTime) ?? story.publishTime)}`,
+    "",
+  );
 }
 
 function shortTopicLabel(value: string): string {
