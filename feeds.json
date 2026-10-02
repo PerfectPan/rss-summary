@@ -343,5 +343,13 @@
       "Articles",
       "Blog"
     ]
+  },
+  {
+    "name": "Tetral Blog",
+    "url": "https://tetral.ai/rss.xml",
+    "tags": [
+      "Articles",
+      "Blog"
+    ]
   }
 ]
