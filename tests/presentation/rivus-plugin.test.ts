@@ -164,6 +164,10 @@ describe("rss-summary Rivus Plugin", () => {
   it("uses the Node process environment when the Host invokes the packaged news Tool", async () => {
     vi.stubEnv("DOUBAO_SEARCH_API_KEY", "runtime-key");
     vi.stubEnv("FEED_TIMEZONE_OFFSET", "+08:00");
+    // The request count below describes the default Doubao-only path, so pin it
+    // instead of inheriting an ambient hybrid/combined mode or GLM credentials.
+    vi.stubEnv("NEWS_SEARCH_MODE", "doubao");
+    vi.stubEnv("GLM_CODING_API_KEY", "");
     const fetch = vi.fn(
       async (_url: string | URL | Request, _init?: RequestInit) =>
         new Response(JSON.stringify({ ResponseMetadata: {}, Result: { WebResults: [] } }), {
