@@ -351,5 +351,13 @@
       "Articles",
       "Blog"
     ]
+  },
+  {
+    "name": "Vercel News",
+    "url": "https://vercel.com/atom",
+    "tags": [
+      "Articles",
+      "News"
+    ]
   }
 ]
