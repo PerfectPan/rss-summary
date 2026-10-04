@@ -34,7 +34,7 @@ export function renderNewsBrief(document: NewsBriefDocument): string {
   if (document.stories.length === 0) {
     lines.push(
       document.sourceStatus?.state === "unavailable"
-        ? "本期资讯采集失败，无法判断是否有新增。"
+        ? "本期资讯采集未完成，无法判断是否有新增。"
         : document.sourceStatus?.state === "partial"
           ? "已完成采集的范围内未发现符合条件的新资讯；部分来源尚未完成。"
           : "本期未发现符合条件的新资讯。",

@@ -14,8 +14,9 @@ export type NewsQueryAudit = {
   intent: NewsQueryIntent;
   topicId: string;
   topicLabel: string;
-  status: "ok" | "failed";
+  status: "ok" | "failed" | "skipped";
   provider?: DoubaoSearchPage["provider"];
+  searchUsage?: DoubaoSearchPage["searchUsage"];
   fallback?: DoubaoSearchPage["fallback"];
   logId?: string;
   reportedResultCount?: number;
@@ -65,7 +66,11 @@ export function buildNewsAudit(
         intent: query.intent,
         topicId: topic.id,
         topicLabel: topic.label,
-        status: "failed",
+        status:
+          result.reason instanceof DoubaoSearchError &&
+          ["query_deferred", "local_budget_exhausted"].includes(result.reason.code)
+            ? "skipped"
+            : "failed",
         fetched: 0,
         accepted: 0,
         rejected: {},
@@ -82,6 +87,7 @@ export function buildNewsAudit(
       status: "ok",
       ...(result.value.logId ? { logId: result.value.logId } : {}),
       ...(result.value.provider ? { provider: result.value.provider } : {}),
+      ...(result.value.searchUsage ? { searchUsage: result.value.searchUsage } : {}),
       ...(result.value.fallback ? { fallback: result.value.fallback } : {}),
       reportedResultCount: result.value.resultCount,
       fetched: result.value.results.length,
@@ -154,7 +160,11 @@ export function summarizeNewsSources(
       requests
         .filter((_, index) => {
           const result = settled[index]!;
-          return result.status === "rejected" || result.value.fallback?.incomplete;
+          return (
+            result.status === "rejected" ||
+            result.value.fallback?.incomplete ||
+            result.value.searchUsage?.source === "cache"
+          );
         })
         .map(({ topic }) => topic.label),
     ),
@@ -179,6 +189,32 @@ export function summarizeNewsSources(
     0,
   );
   const notes = recovered ? [`${recovered} 个查询已由备用来源完成；不代表覆盖全部新闻`] : [];
+  const deferred = settled.filter(
+    (result) =>
+      result.status === "rejected" &&
+      result.reason instanceof DoubaoSearchError &&
+      result.reason.code === "query_deferred",
+  ).length;
+  const limited = settled.filter(
+    (result) =>
+      result.status === "rejected" &&
+      result.reason instanceof DoubaoSearchError &&
+      result.reason.code === "local_budget_exhausted",
+  ).length;
+  const cached = settled.flatMap((result) =>
+    result.status === "fulfilled" && result.value.searchUsage?.source === "cache"
+      ? [result.value.searchUsage.fetchedAt]
+      : [],
+  );
+  if (deferred)
+    notes.push(
+      `按预算轮换查询，本轮执行至多 ${requests.length - deferred}/${requests.length} 组，其余 ${deferred} 组延后`,
+    );
+  if (limited) notes.push(`搜索请求预算已用完，${limited} 组未刷新；未转用其他付费搜索`);
+  if (cached.length)
+    notes.push(
+      `复用 ${cached.length} 组搜索缓存，最早采集于 ${cached.sort()[0]}；不代表此后没有更新`,
+    );
   if (deferredSources)
     notes.push(
       `本轮按预算轮换检索 ${searchedSources} 组官网查询，另 ${deferredSources} 组留待后续轮次`,
@@ -194,9 +230,14 @@ export function summarizeNewsSources(
     },
     warnings:
       state === "unavailable"
-        ? ["资讯采集失败，无法判断本期是否有新增资讯"]
+        ? [
+            limited
+              ? "搜索预算已用完，无法判断本期是否有新增资讯"
+              : "资讯采集失败，无法判断本期是否有新增资讯",
+            ...notes,
+          ]
         : state === "partial"
-          ? [`采集覆盖不完整：${incompleteTopics.join("、")}；详见采集审计`]
+          ? [`采集覆盖不完整：${incompleteTopics.join("、")}；详见采集审计`, ...notes]
           : [],
   };
 }

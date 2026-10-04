@@ -38,6 +38,7 @@ describe("package CLI metadata", () => {
       "docs/glm-search.md",
       "docs/glm-search-review.md",
       "docs/news-search-best-practices.md",
+      "docs/news-search-budget.md",
       "industry-feeds.json",
       "news-topics.json",
       "README.md",
