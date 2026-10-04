@@ -10,8 +10,8 @@ The source type does not decide the product. The user's relationship to the sour
 | --- | --- | --- | --- |
 | My subscriptions | What did sources I deliberately follow publish? | GitHub Home + `feeds.json` personal blogs | `.state/feed-state.json` |
 | Industry frontier | What changed at companies and projects I should know about? | curated official RSS/Atom plus verified News / Changelog pages in `industry-feeds.json` | `.state/industry-state.json` |
-| Noon/evening news | What happened in the last hours? | event-specific Doubao queries from `news-topics.json`, with official/authoritative source policy | none |
-| Daily AI Digest | What important AI events happened in the last 24 hours? | the seven bounded Doubao queries + curated first-party `industry-feeds.json` | delivery receipt + public evidence audit |
+| Noon/evening news | What happened in the last hours? | rotating event-specific Doubao queries from `news-topics.json`, with official/authoritative source policy | operational request budget + raw search cache |
+| Daily AI Digest | What important AI events happened in the last 24 hours? | one bounded rolling-window news collection + curated first-party `industry-feeds.json` | delivery receipt + public evidence audit + shared news operational state |
 
 GitHub Home belongs to subscriptions because it is already personalized. Public GitHub Repository Search and Hacker News discovery are intentionally not a product: they optimize for popularity and novelty rather than the user's explicit subscriptions or curated official sources.
 
@@ -87,8 +87,8 @@ The tracked frontier list deliberately excludes secondary daily aggregators and 
 
 ## Daily AI Digest workflow
 
-The Daily AI Digest covers the rolling 24 hours before its scheduled occurrence. It collects every
-noon/evening news segment that overlaps that window and combines them with official frontier sources
+The Daily AI Digest covers the rolling 24 hours before its scheduled occurrence. It collects news once
+for the complete rolling window and combines it with official frontier sources
 queried with the same exact `since`/`until` bounds. Evidence is normalized to public IDs, titles,
 canonical URLs, timestamps, cleaned excerpts and source tiers; the final evidence set is filtered to
 the half-open interval `[occurrence - 24h, occurrence)`. Exact URL/title duplicates merge their
@@ -101,11 +101,16 @@ bounded retry against the cached snapshot; there is no title fallback or code-si
 A 12–24 item target is never a fill quota, and only `render` returns deliverable Markdown. Source references are
 rendered as clickable inline badges beside each event; repeated labels from the same provider
 collapse to one badge, and the document does not repeat references in a trailing source section.
-Each overlapping news segment and official-source collection are separate failure domains. If every
-query in one segment fails, Daily AI records that segment's full per-query audit, renders a visible
-source-status warning, and continues with the remaining segments and official sources. Official
-evidence can still produce the digest when all Doubao segments fail. Generation fails only when all
+The news collection and official-source collection are separate failure domains. If every
+news query fails, Daily AI records the full per-query audit, renders a visible
+source-status warning, and continues with official sources. Official
+evidence can still produce the digest when all Doubao queries fail. Generation fails only when all
 collectors yield no usable evidence; configuration and programming errors are never degraded.
+
+The shared news search adapter owns persistent request reservations and raw Doubao response caching.
+Query selection, budget exhaustion and cache reuse remain visible in the public audit; reduced query
+coverage or reused evidence is reported as partial coverage. Defaults, locking, fallback boundaries
+and deployment recovery are defined in [News search budget](news-search-budget.md).
 
 ## Research workflow
 
@@ -142,7 +147,7 @@ rss-summary runs failures
 rss-summary runs show <run-label-or-json-path>
 ```
 
-`FEED_RUN_LOG_DIR` changes the root. The directory remains under `.state/` by default and must not be committed. Rivus Tools remain read-only: their structured result includes the source/candidate audit, while Rivus records actual card delivery in its trace and delivery ledger.
+`FEED_RUN_LOG_DIR` changes the root. The directory remains under `.state/` by default and must not be committed. Rivus Tools do not send messages or write business seen state; news collection does persist its operational budget and raw response cache. Their structured result includes the source/candidate audit, while Rivus records actual card delivery in its trace and delivery ledger.
 
 ## Rendering and limits
 
@@ -150,7 +155,7 @@ rss-summary runs show <run-label-or-json-path>
 
 The news product keeps its own domain because authority validation, topic quotas, time windows, and eight-story cap differ materially from subscription ranking.
 
-Its search configuration contains structured event intents rather than umbrella topics: a stable query ID, required subjects, required event terms, an intent code, explicit noise exclusions, and an allowed source class. Requests are restricted to the local calendar day, automatic query rewriting is disabled, and the application then applies the exact noon/evening window and relevance policy to each result. The time filter protects delivery boundaries; it is not used as a substitute for a precise query.
+Its search configuration contains structured event intents rather than umbrella topics: a stable query ID, required subjects, required event terms, an intent code, explicit noise exclusions, and an allowed source class. The enabled query IDs rotate by local day and edition within a per-run cap. Requests cover the local calendar dates touched by the requested window, automatic query rewriting is disabled, and the application then applies the exact window and relevance policy to each result. The time filter protects delivery boundaries; it is not used as a substitute for a precise query.
 
 News ranking uses within-query position, source authority, and freshness. A URL returned by multiple queries receives only a bounded tie-break bonus; it is not treated as independent corroboration. The Tool result carries a per-query audit with provider log ID, fetched/accepted counts, rejection reasons, canonical duplicate counts, semantic-title duplicate counts, quota filtering, and the eight-item cap.
 
@@ -161,6 +166,7 @@ News ranking uses within-query position, source authority, and freshness. A URL 
 - `--json`: expose candidates plus audit for agent workflows.
 - `.state/feed-state.json`: subscription delivery state and reusable research cache.
 - `.state/industry-state.json`: independent frontier delivery/research state.
+- `.state/news-search.json`: operational news request attempts and raw response cache, shared by Daily AI and standalone news; configure a persistent absolute path for deployment as described in [News search budget](news-search-budget.md).
 - `.state/runs`: append-only operational evidence, not filtering state.
 
 ## Extension points

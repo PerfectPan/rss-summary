@@ -1,3 +1,6 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { assertRivusPluginConforms } from "@rivus/agent/testing";
 import type {
   RivusAgentProfile,
@@ -162,8 +165,10 @@ describe("rss-summary Rivus Plugin", () => {
   });
 
   it("uses the Node process environment when the Host invokes the packaged news Tool", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "news-plugin-budget-"));
     vi.stubEnv("DOUBAO_SEARCH_API_KEY", "runtime-key");
     vi.stubEnv("FEED_TIMEZONE_OFFSET", "+08:00");
+    vi.stubEnv("NEWS_SEARCH_STATE_FILE", join(directory, "budget.json"));
     const fetch = vi.fn(
       async (_url: string | URL | Request, _init?: RequestInit) =>
         new Response(JSON.stringify({ ResponseMetadata: {}, Result: { WebResults: [] } }), {
@@ -186,13 +191,14 @@ describe("rss-summary Rivus Plugin", () => {
         );
 
       expect(result).toMatchObject({ edition: "evening", itemCount: 0 });
-      expect(fetch).toHaveBeenCalledTimes(7);
+      expect(fetch).toHaveBeenCalledTimes(4);
       expect(fetch.mock.calls[0]?.[1]?.headers).toMatchObject({
         Authorization: "Bearer runtime-key",
       });
     } finally {
       vi.unstubAllEnvs();
       vi.unstubAllGlobals();
+      await rm(directory, { recursive: true, force: true });
     }
   });
 

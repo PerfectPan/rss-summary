@@ -20,7 +20,7 @@ Each Automation returns two compatible views of the same result: canonical Markd
 | Automation | `rss-summary/noon-news-brief` | current day 00:00 through noon occurrence |
 | Automation | `rss-summary/evening-news-brief` | current day 12:30 through evening occurrence |
 
-All Tools have `observe` risk. Feed Tools force dry-run mode: they read only-new state but do not send a webhook, write seen state, or write local run artifacts. Their structured result includes the source/candidate audit. The news Tool includes its query/rejection/selection audit. Daily AI's `collect` result exposes every news segment overlapping its rolling window plus the official-source audit; a provider-wide Doubao failure retains each normalized error code while successful remaining collectors continue. Rivus records the subsequent card delivery in its trace and Feishu delivery ledger.
+All Tools have `observe` risk. Feed Tools force dry-run mode: they read only-new state but do not send a webhook, write seen state, or write local run artifacts. News collection also leaves business seen state and message delivery untouched, but it writes operational request reservations and raw response cache entries. Its result includes the query/rejection/selection audit. Daily AI's `collect` result exposes one complete rolling-window news audit plus the official-source audit; a provider-wide Doubao failure retains each normalized error code while official collection continues. Rivus records the subsequent card delivery in its trace and Feishu delivery ledger.
 
 Public GitHub Repository Search and Hacker News discovery are intentionally absent. GitHub Home belongs to personal subscriptions; industry discovery comes from curated first-party RSS/Atom and explicitly configured official pages.
 
@@ -134,11 +134,17 @@ INDUSTRY_STATE_FILE=/path/to/rss-summary/.state/industry-state.json
 FEED_MAX_PAPERS=8
 DOUBAO_SEARCH_API_KEY=replace-with-doubao-search-api-key
 NEWS_TOPICS_FILE=/path/to/rss-summary/news-topics.json
+NEWS_SEARCH_STATE_FILE=/path/to/persistent-state/news-search.json
 GH_FEED_TOKEN=replace-with-github-token
 RIVUS_RSS_DIGEST_TARGET=replace-with-union-id
 ```
 
 Do not set `NOTIFY_WEBHOOK_URL` for the Plugin path; Rivus owns delivery. Browser storage, API keys, and tokens remain local secrets.
+
+Keep `NEWS_SEARCH_STATE_FILE` outside replaceable package directories and use the same persistent file
+for Daily AI, standalone news and CLI callers in this deployment. Before enabling the new budget,
+carry forward observed current-month usage rather than starting an empty ledger. Query caps, limits,
+cache behavior and recovery steps are defined in [News search budget](news-search-budget.md).
 
 The subscription research Tool uses browser-first mode by default. On a Mac mini with Chrome installed, set
 `RSS_ARTICLE_BROWSER_CHANNEL=chrome` (the default), keep `RSS_ARTICLE_BROWSER_HEADLESS=true` for daemon runs,
@@ -163,7 +169,7 @@ The digest and industry Tool results contain an `audit` object with:
 - fetched/in-window/ranked/selected counts;
 - per-candidate score, presentation depth, typed presentation reason/evidence, and decision.
 
-The news Tool's `audit` records each structured query's provider log ID, normalized provider error code, result counts, deterministic rejection reasons (`outside-window`, `insufficient-authority`, `intent-mismatch`, and others), canonical/title deduplication, topic quota filtering, and the final brief cap. Selected stories also expose a score breakdown for query rank, authority, freshness, and the bounded cross-query tie-break.
+The news Tool's `audit` records each structured query's provider log ID, normalized provider error code, result counts, deterministic rejection reasons (`outside-window`, `insufficient-authority`, `intent-mismatch`, and others), canonical/title deduplication, topic quota filtering, and the final brief cap. Query entries also expose request usage and the original fetch timestamp when served from the raw search cache; deferred queries, exhausted budgets and cached coverage appear in source-status warnings. Selected stories also expose a score breakdown for query rank, authority, freshness, and the bounded cross-query tie-break.
 
 The subscriptions Tool uses a bounded three-phase contract in scheduled runs. `collect` returns typed evidence and deterministic repository facts. The profile model must then make a second-pass decision for every evidence item through `select`, with a short reason; ordinary star/watch activity, duplicates, low-information changes, title-only changes, and items without a user-relevant value should be rejected. For selected public URLs, the Agent calls `rss-summary/research-article` with `mode:"auto"`; the Tool opens an isolated Chrome/Chromium page first, waits for rendered content, and falls back to HTTP if browser research fails. The Agent passes the bounded body into `render` as research evidence. This research step improves only the selected item's grounded summary; the RSS/GitHub collection, selection, deduplication and delivery path stays the same. Summary wording follows the Daily AI Digest single-event style: subject, action, concrete change/result and impact, with a hard limit of 180 characters; sentence and clause punctuation remains model-owned. `render` accepts the complete selection plus research and `Array<{ref, summary}>`, filters the document to `selected=true`, validates references, numeric claims and the length limit, and returns Markdown. If a draft fails validation, it returns `SUBSCRIPTION_SUMMARY_VALIDATION_FAILED` so the Agent can regenerate the affected summary; it never silently substitutes RSS text. If the selection is empty, the profile returns `RIVUS_AUTOMATION_SUPPRESSED:` with a reason so Rivus records the run without creating a delivery. The frontier/news products do not pass through this subscription editor.
 

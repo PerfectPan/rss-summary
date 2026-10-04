@@ -2,6 +2,7 @@
   "name": "rss-summary",
   "version": "0.1.1",
   "private": true,
+  "license": "GPL-3.0-only",
   "type": "module",
   "packageManager": "pnpm@11.7.0",
   "engines": {
@@ -13,6 +14,7 @@
     "docs/glm-search.md",
     "docs/glm-search-review.md",
     "docs/news-search-best-practices.md",
+    "docs/news-search-budget.md",
     "industry-feeds.json",
     "news-topics.json",
     "README.md"

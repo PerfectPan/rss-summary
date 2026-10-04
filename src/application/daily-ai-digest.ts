@@ -15,12 +15,11 @@ import {
 } from "../domain/daily-ai.js";
 import {
   calendarDayAtOffset,
-  endOfCalendarDay,
   parseOffsetMilliseconds,
-  shiftCalendarDay,
   startOfCalendarDay,
 } from "../domain/time.js";
 import { loadConfig } from "../infrastructure/config.js";
+import { boundedInteger } from "../infrastructure/parsing.js";
 
 export type DailyAiDigestResult = DailyAiDigest & {
   day: string;
@@ -39,7 +38,11 @@ export type DailyAiWindow = { since: string; until: string };
 type DailyAiDigestDependencies = {
   env?: NodeJS.ProcessEnv;
   industry?: (window: DailyAiWindow, env: NodeJS.ProcessEnv) => Promise<IndustryBriefDocument>;
-  news?: (occurrence: string, edition: "noon" | "evening") => Promise<RivusNewsBriefResult>;
+  news?: (
+    occurrence: string,
+    edition: "noon" | "evening",
+    since: string,
+  ) => Promise<RivusNewsBriefResult>;
   now?: () => Date;
   draft?: unknown;
 };
@@ -60,18 +63,14 @@ export async function generateDailyAiDigest(
   const day = calendarDayAtOffset(input.occurrence, timezoneOffset);
   const windowLabel = formatWindowLabel(since, until, timezoneOffset);
   const news =
-    dependencies.news ?? ((occurrence, edition) => runNewsBrief({ occurrence, edition }, env));
+    dependencies.news ??
+    ((occurrence, edition, since) => runNewsBrief({ occurrence, edition, since }, env));
   const industry = dependencies.industry ?? defaultIndustry;
-  // Keep the shared Doubao search budget at two in-flight requests. Each news
-  // edition owns a concurrency-two pool, so editions must not overlap.
-  const newsCollections: Array<NewsEditionCollection & NewsSegment> = [];
-  for (const segment of newsSegments(since, until, timezoneOffset)) {
-    const collected = await collectNewsEdition(news, segment.occurrence, segment.edition);
-    newsCollections.push({ ...segment, ...collected });
-  }
+  const noonCutoff = startOfCalendarDay(day, timezoneOffset) + (12 * 60 + 30) * 60_000;
+  const edition = until <= noonCutoff ? "noon" : "evening";
+  const newsCollection = await collectNewsEdition(news, input.occurrence, edition, window.since);
   const official = await industry(window, env);
-  const evidence = newsCollections
-    .flatMap(({ result }) => newsEvidence(result))
+  const evidence = newsEvidence(newsCollection.result)
     .concat(industryEvidence(official))
     .filter(({ publishedAt }) => isWithinWindow(publishedAt, since, until));
   const digest = buildDailyAiDigest(evidence, { draft: dependencies.draft });
@@ -84,15 +83,13 @@ export async function generateDailyAiDigest(
     windowLabel,
     generatedAt: (dependencies.now ?? (() => new Date()))().toISOString(),
     warnings: [
-      ...newsCollections.flatMap(({ result, unavailable }) => (unavailable ? [] : result.warnings)),
-      ...doubaoAvailabilityWarnings(newsCollections),
+      ...newsCollection.result.warnings,
+      ...(newsCollection.unavailable
+        ? ["新闻搜索暂不可用：所有查询均失败，本期仅使用官方来源"]
+        : []),
     ],
     sourceAudit: {
-      news: newsCollections.map(({ day: segmentDay, edition, result }) => ({
-        day: segmentDay,
-        edition,
-        audit: result.audit,
-      })),
+      news: [{ day, edition, audit: newsCollection.result.audit }],
       ...(official.audit ? { industry: official.audit } : {}),
     },
     deliveryReceipt: createDailyAiDeliveryReceipt(
@@ -103,19 +100,15 @@ export async function generateDailyAiDigest(
 }
 
 type NewsEditionCollection = { result: RivusNewsBriefResult; unavailable: boolean };
-type NewsSegment = {
-  day: string;
-  edition: "noon" | "evening";
-  occurrence: string;
-};
 
 async function collectNewsEdition(
   news: NonNullable<DailyAiDigestDependencies["news"]>,
   occurrence: string,
   edition: "noon" | "evening",
+  since: string,
 ): Promise<NewsEditionCollection> {
   try {
-    return { result: await news(occurrence, edition), unavailable: false };
+    return { result: await news(occurrence, edition, since), unavailable: false };
   } catch (error) {
     if (!(error instanceof AllDoubaoQueriesFailedError)) throw error;
     return { result: error.result, unavailable: true };
@@ -123,56 +116,17 @@ async function collectNewsEdition(
 }
 
 async function runNewsBrief(
-  input: { occurrence: string; edition: "noon" | "evening" },
+  input: { occurrence: string; edition: "noon" | "evening"; since: string },
   env: NodeJS.ProcessEnv,
 ): Promise<RivusNewsBriefResult> {
-  const exit = await Effect.runPromiseExit(generateRivusNewsBrief(input, { env }));
+  const exit = await Effect.runPromiseExit(
+    generateRivusNewsBrief(input, {
+      env,
+      maxQueries: boundedInteger(env.DAILY_AI_NEWS_MAX_QUERIES, 6, 1, 32),
+    }),
+  );
   if (Exit.isSuccess(exit)) return exit.value;
   throw Cause.squash(exit.cause);
-}
-
-function doubaoAvailabilityWarnings(
-  collections: Array<NewsEditionCollection & NewsSegment>,
-): string[] {
-  const failed = collections.filter(({ unavailable }) => unavailable);
-  if (failed.length === collections.length) {
-    return ["新闻搜索暂不可用：所有查询均失败，本期仅使用官方来源"];
-  }
-  if (failed.length > 0) {
-    const labels = failed.map(({ day, edition }) => `${day} ${edition}`).join("、");
-    return [`Doubao 搜索部分不可用：${labels}，已继续使用其余新闻和官方来源`];
-  }
-  return [];
-}
-
-function newsSegments(since: number, until: number, timezoneOffset: string): NewsSegment[] {
-  const firstDay = calendarDayAtOffset(new Date(since).toISOString(), timezoneOffset);
-  const lastDay = calendarDayAtOffset(new Date(until).toISOString(), timezoneOffset);
-  const segments: NewsSegment[] = [];
-  for (let day = firstDay; ; day = shiftCalendarDay(day, 1)) {
-    const dayStart = startOfCalendarDay(day, timezoneOffset);
-    const dayEnd = endOfCalendarDay(day, timezoneOffset);
-    const noon = dayStart + (12 * 60 + 30) * 60_000;
-    appendNewsSegment(segments, { since, until }, day, "noon", dayStart, noon);
-    appendNewsSegment(segments, { since, until }, day, "evening", noon, dayEnd);
-    if (day === lastDay) break;
-  }
-  return segments;
-}
-
-function appendNewsSegment(
-  segments: NewsSegment[],
-  window: { since: number; until: number },
-  day: string,
-  edition: "noon" | "evening",
-  segmentStart: number,
-  segmentEnd: number,
-): void {
-  const overlapEnd = Math.min(window.until, segmentEnd);
-  if (Math.max(window.since, segmentStart) >= overlapEnd) return;
-  const occurrence =
-    overlapEnd === segmentEnd && edition === "evening" ? overlapEnd - 1 : overlapEnd;
-  segments.push({ day, edition, occurrence: new Date(occurrence).toISOString() });
 }
 
 function isWithinWindow(publishedAt: string, since: number, until: number): boolean {

@@ -1,3 +1,6 @@
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { Effect } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
 
@@ -30,6 +33,208 @@ function withNewsMarkdown(result: RivusNewsBriefResult) {
 }
 
 describe("Rivus news brief Tool adapter", () => {
+  it("rotates four of seven queries and reports deferred coverage", async () => {
+    const queryIds = ["one", "two", "three", "four", "five", "six", "seven"];
+    const covered = new Set<string>();
+    for (const occurrence of [
+      "2026-10-04T12:30:00+08:00",
+      "2026-10-05T12:30:00+08:00",
+      "2026-10-06T12:30:00+08:00",
+    ]) {
+      const search = vi.fn(async () => ({ resultCount: 0, results: [] }));
+      const result = await Effect.runPromise(
+        generateRivusNewsBrief(
+          { edition: "noon", occurrence },
+          { env: {}, search, topics: [newsTopic("technology", queryIds)] },
+        ),
+      );
+      expect(search).toHaveBeenCalledTimes(4);
+      expect(result.audit.queries.filter(({ status }) => status === "skipped")).toHaveLength(3);
+      expect(result.sourceStatus?.state).toBe("partial");
+      expect(result.warnings.join(" ")).toContain("4/7");
+      for (const query of result.audit.queries)
+        if (query.status === "ok") covered.add(query.queryId);
+    }
+    expect([...covered].sort()).toEqual([...queryIds].sort());
+  });
+
+  it.each(["2026-10-04T00:00:00+08:00", "2026-10-04T16:00:00+08:00"])(
+    "uses the complete explicit window at %s regardless of edition cutoff",
+    async (occurrence) => {
+      const until = Date.parse(occurrence);
+      const search = vi.fn(async () => ({
+        resultCount: 2,
+        results: [
+          {
+            id: "inside",
+            title: "TypeScript release",
+            url: "https://example.com/inside",
+            publishTime: new Date(until - 60_000).toISOString(),
+            authInfoLevel: 1,
+            rankPosition: 1,
+          },
+          {
+            id: "boundary",
+            title: "TypeScript release at boundary",
+            url: "https://example.com/boundary",
+            publishTime: occurrence,
+            authInfoLevel: 1,
+            rankPosition: 2,
+          },
+        ],
+      }));
+      const result = await Effect.runPromise(
+        generateRivusNewsBrief(
+          { occurrence, edition: "noon", since: new Date(until - 86_400_000).toISOString() },
+          {
+            env: {},
+            search,
+            topics: [
+              {
+                ...newsTopic("technology", []),
+                queries: [
+                  newsQuery("typescript", "TypeScript release", ["TypeScript"], ["release"]),
+                ],
+              },
+            ],
+          },
+        ),
+      );
+      expect(result.stories.map(({ canonicalUrl }) => canonicalUrl)).toEqual([
+        "https://example.com/inside",
+      ]);
+      expect(search).toHaveBeenCalledWith(
+        expect.objectContaining({ sinceDay: "2026-10-03", day: "2026-10-04" }),
+      );
+    },
+  );
+
+  it("counts HTTP retries across invocations and explains a local cap without GLM fallback", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "news-budget-integration-"));
+    const stateFile = join(directory, "budget.json");
+    const fetch = vi.fn(async () => new Response("rate limit", { status: 429 }));
+    const glm = {
+      search: vi.fn(async () => []),
+      read: vi.fn(async () => {
+        throw new Error("unused");
+      }),
+    };
+    vi.stubGlobal("fetch", fetch);
+    try {
+      const dependencies = {
+        env: {
+          DOUBAO_SEARCH_API_KEY: "test",
+          NEWS_SEARCH_STATE_FILE: stateFile,
+          NEWS_SEARCH_DAILY_LIMIT: "2",
+          NEWS_SEARCH_MODE: "hybrid",
+        },
+        now: () => new Date("2026-10-04T12:30:00+08:00"),
+        sleep: async () => undefined,
+        glm,
+        topics: [newsTopic("technology", ["one"])],
+      };
+      const input = { edition: "noon", occurrence: "2026-10-04T12:30:00+08:00" };
+      const first = await Effect.runPromise(generateRivusNewsBrief(input, dependencies));
+      const next = await Effect.runPromise(generateRivusNewsBrief(input, dependencies));
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(glm.search).not.toHaveBeenCalled();
+      expect(glm.read).not.toHaveBeenCalled();
+      for (const result of [first, next]) {
+        expect(result.sourceStatus?.state).toBe("unavailable");
+        expect(result.audit.queries[0]).toMatchObject({
+          status: "skipped",
+          errorCode: "local_budget_exhausted",
+        });
+        expect(result.warnings.join(" ")).toContain("预算已用完");
+      }
+      expect(await readFile(stateFile, "utf8")).not.toContain("test");
+    } finally {
+      vi.unstubAllGlobals();
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("preserves cache timestamps and discloses that later updates were not searched", async () => {
+    const searchUsage = {
+      source: "cache" as const,
+      fetchedAt: "2026-10-04T01:10:00Z",
+      dailyUsed: 6,
+      monthlyUsed: 56,
+      dailyLimit: 14,
+      monthlyLimit: 420,
+    };
+    const result = await Effect.runPromise(
+      generateRivusNewsBrief(
+        { edition: "noon", occurrence: "2026-10-04T12:30:00+08:00" },
+        {
+          env: {},
+          topics: [newsTopic("technology", ["one"])],
+          search: async () => ({ results: [], resultCount: 0, searchUsage }),
+        },
+      ),
+    );
+    expect(result.audit.queries[0]?.searchUsage).toEqual(searchUsage);
+    expect(result.sourceStatus?.state).toBe("partial");
+    expect(result.warnings.join(" ")).toContain("不代表此后没有更新");
+    expect(result.warnings.join(" ")).toContain(searchUsage.fetchedAt);
+  });
+
+  it("checks the shared local cap even after the provider quota circuit opens", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "news-quota-circuit-"));
+    const fetch = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            ResponseMetadata: { Error: { Code: "10406", Message: "free quota exhausted" } },
+          }),
+          { status: 200 },
+        ),
+    );
+    const glm = {
+      search: vi.fn(async () => []),
+      read: vi.fn(async () => {
+        throw new Error("unused");
+      }),
+    };
+    vi.stubGlobal("fetch", fetch);
+    try {
+      const topic = newsTopic("technology", ["one", "two"]);
+      const result = await Effect.runPromise(
+        generateRivusNewsBrief(
+          { edition: "noon", occurrence: "2026-10-04T12:30:00+08:00" },
+          {
+            env: {
+              DOUBAO_SEARCH_API_KEY: "test",
+              NEWS_SEARCH_STATE_FILE: join(directory, "budget.json"),
+              NEWS_SEARCH_DAILY_LIMIT: "1",
+              NEWS_SEARCH_MODE: "hybrid",
+            },
+            now: () => new Date("2026-10-04T12:30:00+08:00"),
+            glm,
+            topics: [
+              {
+                ...topic,
+                queries: topic.queries.map((query) => ({
+                  ...query,
+                  glm: { query: query.text, domains: ["example.com"] },
+                })),
+              },
+            ],
+          },
+        ),
+      );
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(glm.search).toHaveBeenCalledTimes(1);
+      expect(result.audit.queries[1]).toMatchObject({
+        status: "skipped",
+        errorCode: "local_budget_exhausted",
+      });
+    } finally {
+      vi.unstubAllGlobals();
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
   it("resolves non-overlapping noon and evening windows in the configured offset", () => {
     expect(resolveNewsEditionWindow("2026-07-29T04:30:00.000Z", "+08:00", "noon")).toMatchObject({
       day: "2026-07-29",
@@ -225,6 +430,7 @@ describe("Rivus news brief Tool adapter", () => {
         {
           env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
           search,
+          maxQueries: 5,
           topics: [newsTopic("technology", ["one", "two", "three", "four", "five"])],
         },
       ),
