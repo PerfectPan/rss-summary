@@ -167,4 +167,6 @@ pnpm verify   # test:layout + check + test + build + package:check
 
 ## License
 
-个人项目（`private: true`），暂未授予公开许可证。`.state/`、`.env`、token 等本地机密不入 git。
+本项目采用 [GNU General Public License v3.0 only](LICENSE)（`GPL-3.0-only`），与 Rivus 保持一致。
+
+`package.json` 的 `private: true` 用于防止误发布到 npm，不影响 GitHub 仓库的公开状态或源码许可证。`.state/`、`.env`、token 等本地机密不入 git。
