@@ -29,8 +29,8 @@ describe("package CLI metadata", () => {
       types: "./dist/presentation/rivus-plugin.d.ts",
       default: "./dist/presentation/rivus-plugin.js",
     });
-    expect(pkg.peerDependencies?.["@rivus/agent"]).toBe(">=0.12.7 <0.17.0");
-    expect(pkg.devDependencies?.["@rivus/agent"]).toBe("0.12.7");
+    expect(pkg.peerDependencies?.["@rivus/agent"]).toBe("*");
+    expect(pkg.devDependencies?.["@rivus/agent"]).toBe("0.18.0");
     expect(pkg.engines?.node).toBe("^24.11.0");
     expect(pkg.files).toEqual([
       "dist",

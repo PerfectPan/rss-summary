@@ -37,14 +37,19 @@ cd /path/to/rivus-project
 npm install /path/to/rss-summary
 ```
 
-The supported `@rivus/agent` peer range is `>=0.12.7 <0.17.0`, covering the 0.12 through 0.16 runtime lines used by
-the production deployment and the version exercised by repository tests.
+The `@rivus/agent` peer is `*`, without a version restriction. Repository tests use the exact
+0.18.0 release; package checks also exercise the historical 0.12.7 baseline. Each deployed Core upgrade must still pass
+Plugin conformance and no-send Tool checks.
 
-`pnpm package:check` keeps the 0.12.7 minimum-runtime check by default. Test a newer exact official release from the
+The Plugin passes Promises and plain data to the Host. Its internal Effect 3 computations are completed
+inside its application adapters before returning to the Host, so they remain separate from Core Effect 4.
+Do not pass Effect or Stream values across this boundary.
+
+`pnpm package:check` keeps the 0.12.7 baseline check by default. Test a newer exact official release from the
 public npm registry without changing the development lockfile:
 
 ```bash
-RIVUS_CORE_PACKAGE_VERSION=0.16.0 pnpm package:check
+RIVUS_CORE_PACKAGE_VERSION=0.18.0 pnpm package:check
 ```
 
 Version ranges and dist-tags are rejected. The registry version option cannot be combined with an archive.
