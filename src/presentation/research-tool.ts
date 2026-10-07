@@ -1,6 +1,7 @@
 import { GlmResearchClient } from "../infrastructure/glm-research.js";
 import {
   ArticleResearchClient,
+  validateArticleResearchUrl,
   type ArticleResearchClientOptions,
   type ArticleResearchResult,
 } from "../infrastructure/article-research.js";
@@ -37,6 +38,17 @@ export function createArticleResearchExecutor(
   return async (value) => {
     const request = parseInput(value);
     const researchRequest = { ref: request.ref, url: request.url };
+    try {
+      validateArticleResearchUrl(request.url);
+    } catch (error) {
+      return {
+        ...researchRequest,
+        error: error instanceof Error ? error.message : String(error),
+        retrievedAt: new Date().toISOString(),
+        status: "failed",
+        tool: "article-research",
+      };
+    }
     if (request.mode === "http") {
       return { ...(await client.research(researchRequest)), tool: "article-research" };
     }

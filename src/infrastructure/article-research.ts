@@ -109,12 +109,11 @@ export function extractArticle(
       $("title").first().text() ||
       new URL(url).hostname,
   );
+  // Clean the whole document because pages without an article root use its text as fallback.
+  $(
+    "script,style,noscript,template,svg,nav,footer,header,aside,form,button,iframe,video,audio",
+  ).remove();
   const root = selectContentRoot($);
-  root
-    .find(
-      "script,style,noscript,template,svg,nav,footer,header,aside,form,button,iframe,video,audio",
-    )
-    .remove();
   const lines = root
     .find("h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,td,th")
     .map((_index, element) => cleanText($(element).text()))
@@ -175,7 +174,25 @@ export function validateArticleResearchUrl(value: string): string {
   ) {
     throw new Error("article URL points to a private or local host");
   }
+  if (isVideoUrl(url)) throw new Error("video research requires captions or a transcript");
   return url.toString();
+}
+
+function isVideoUrl(url: URL): boolean {
+  const hostname = url.hostname.toLowerCase();
+  const youtube =
+    hostname === "youtube.com" ||
+    hostname.endsWith(".youtube.com") ||
+    hostname === "youtube-nocookie.com" ||
+    hostname.endsWith(".youtube-nocookie.com");
+  return (
+    hostname === "youtu.be" ||
+    hostname === "www.youtu.be" ||
+    (youtube &&
+      ((url.pathname === "/watch" && url.searchParams.has("v")) ||
+        /^\/(?:shorts|live|embed)\/[^/]+/u.test(url.pathname))) ||
+    /\.(?:mp4|m4v|webm|mov|m3u8)$/iu.test(url.pathname)
+  );
 }
 
 function isPrivateIpv4(hostname: string): boolean {

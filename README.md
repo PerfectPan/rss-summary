@@ -110,6 +110,8 @@ rss-summary runs show <run-label>
 
 更多选项 `rss-summary <command> --help`。深度研究流水线：加 `--json --only-new --dry-run` 输出候选 JSON，配合 [prompts/feed-research.md](prompts/feed-research.md) 或 [skills/feed-research-digest](skills/feed-research-digest/SKILL.md) 生成最终简报。
 
+个人 RSS 可以收录文章和视频混合的订阅源，保留视频标题、推荐语、链接和订阅源给出的时间。当前视频仍按文章候选处理：CLI 可展示链接，但 `research-article` 只提取网页文字，不获取字幕或转写音视频。对 YouTube 视频及 MP4、WebM 等已知视频链接，研究工具会明确返回“需要字幕或转写”，避免把页面脚本或页脚误当成视频内容；其他页面读取成功也不代表已取得字幕。定时订阅简报会取消推送研究失败的条目，因此目前只覆盖视频链接收录，尚未覆盖可靠的视频内容摘要。
+
 ## Configuration
 
 | 变量                             | 作用                                                              | 默认                         |

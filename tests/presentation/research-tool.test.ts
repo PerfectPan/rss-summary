@@ -36,6 +36,30 @@ describe("article research Tool", () => {
     expect(research).not.toHaveBeenCalled();
   });
 
+  it.each(["auto", "browser", "http"])(
+    "rejects video research before any browser, HTTP or GLM fallback in %s mode",
+    async (mode) => {
+      const research = vi.fn();
+      const read = vi.fn();
+      const execute = createArticleResearchExecutor({
+        env: { RSS_ARTICLE_GLM_FALLBACK: "true" },
+        browserClient: { research },
+        client: { research },
+        glmClient: { read },
+      });
+
+      await expect(
+        execute({ mode, ref: "video:1", url: "https://www.youtube.com/watch?v=example" }),
+      ).resolves.toMatchObject({
+        status: "failed",
+        error: "video research requires captions or a transcript",
+        tool: "article-research",
+      });
+      expect(research).not.toHaveBeenCalled();
+      expect(read).not.toHaveBeenCalled();
+    },
+  );
+
   it("uses browser research first in auto mode and skips HTTP on success", async () => {
     const browser = vi.fn(async ({ ref, url }: { ref: string; url: string }) => ({
       content: "Rendered browser content with enough detail for a grounded single-item summary.",
