@@ -110,7 +110,11 @@ rss-summary runs show <run-label>
 
 更多选项 `rss-summary <command> --help`。深度研究流水线：加 `--json --only-new --dry-run` 输出候选 JSON，配合 [prompts/feed-research.md](prompts/feed-research.md) 或 [skills/feed-research-digest](skills/feed-research-digest/SKILL.md) 生成最终简报。
 
-个人 RSS 可以收录文章和视频混合的订阅源，保留视频标题、推荐语、链接和订阅源给出的时间。当前视频仍按文章候选处理：CLI 可展示链接，但 `research-article` 只提取网页文字，不获取字幕或转写音视频。对 YouTube 视频及 MP4、WebM 等已知视频链接，研究工具会明确返回“需要字幕或转写”，避免把页面脚本或页脚误当成视频内容；其他页面读取成功也不代表已取得字幕。定时订阅简报会取消推送研究失败的条目，因此目前只覆盖视频链接收录，尚未覆盖可靠的视频内容摘要。
+个人 RSS 可以收录文章和视频混合的订阅源。定时简报的 `research-article` 会把 YouTube 及 MP4、WebM 等视频链接交给 [Summarize](https://github.com/steipete/summarize)：优先读取字幕，没有字幕时转写音频；只接受实际字幕或转写，不会把视频简介当成正文。普通 CLI digest 仍只收集订阅信息，视频研究由定时简报或 Agent 调用研究工具完成。
+
+视频研究需要安装 Summarize CLI（已验证 `0.25.1`）及媒体工具；[官方 summarize skill](https://github.com/steipete/summarize/tree/v0.25.1/.agents/skills/summarize) 可供 Agent 直接调用，但只安装技能不会安装底层工具。在 macOS 上安装 `npm install -g @steipete/summarize@0.25.1` 和 `brew install yt-dlp ffmpeg whisper-cpp`，再按 [Whisper 模型说明](https://github.com/ggml-org/whisper.cpp/tree/master/models) 下载多语言 `ggml-base.bin` 到 `~/.summarize/cache/whisper-cpp/models/`，即可本地转写而不依赖付费 API。运行自动简报的机器也需要这些依赖。
+
+研究结果保留原视频链接并标明字幕/转写来源。长转录会返回覆盖开头至结尾的五段节选，并明确提示证据范围；音频转写不包含画面信息。直接媒体下载限制为 1 GB，操作超时为 10 分钟，临时媒体文件会清理。抓取或转写失败的条目仍会取消推送。
 
 ## Configuration
 

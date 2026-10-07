@@ -9,7 +9,7 @@ export type ArticleResearchResult =
   | {
       content: string;
       fetchedUrl: string;
-      method?: "browser" | "http" | "glm";
+      method?: "browser" | "http" | "glm" | "captions" | "transcription";
       ref: string;
       retrievedAt: string;
       status: "ok";
@@ -18,7 +18,7 @@ export type ArticleResearchResult =
     }
   | {
       error: string;
-      method?: "browser" | "http" | "glm";
+      method?: "browser" | "http" | "glm" | "captions" | "transcription";
       ref: string;
       retrievedAt: string;
       status: "failed";
@@ -157,6 +157,12 @@ async function readResponseBody(response: Response, maxBytes: number): Promise<s
 }
 
 export function validateArticleResearchUrl(value: string): string {
+  const url = validateResearchUrl(value);
+  if (isVideoResearchUrl(url)) throw new Error("video research requires captions or a transcript");
+  return url;
+}
+
+export function validateResearchUrl(value: string): string {
   const url = new URL(value);
   if (url.protocol !== "https:" && url.protocol !== "http:") {
     throw new Error("article URL must use http or https");
@@ -174,11 +180,11 @@ export function validateArticleResearchUrl(value: string): string {
   ) {
     throw new Error("article URL points to a private or local host");
   }
-  if (isVideoUrl(url)) throw new Error("video research requires captions or a transcript");
   return url.toString();
 }
 
-function isVideoUrl(url: URL): boolean {
+export function isVideoResearchUrl(value: string): boolean {
+  const url = new URL(value);
   const hostname = url.hostname.toLowerCase();
   const youtube =
     hostname === "youtube.com" ||

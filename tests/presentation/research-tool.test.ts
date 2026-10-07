@@ -37,26 +37,38 @@ describe("article research Tool", () => {
   });
 
   it.each(["auto", "browser", "http"])(
-    "rejects video research before any browser, HTTP or GLM fallback in %s mode",
+    "routes videos to transcript research instead of browser, HTTP or GLM in %s mode",
     async (mode) => {
       const research = vi.fn();
       const read = vi.fn();
+      const video = vi.fn(async ({ ref, url }: { ref: string; url: string }) => ({
+        ref,
+        url,
+        fetchedUrl: url,
+        title: "Video",
+        retrievedAt: "2026-10-07T15:00:00Z",
+        content: "Verified captions. ".repeat(10),
+        method: "captions" as const,
+        status: "ok" as const,
+      }));
       const execute = createArticleResearchExecutor({
         env: { RSS_ARTICLE_GLM_FALLBACK: "true" },
         browserClient: { research },
         client: { research },
         glmClient: { read },
+        videoClient: { research: video },
       });
 
       await expect(
         execute({ mode, ref: "video:1", url: "https://www.youtube.com/watch?v=example" }),
       ).resolves.toMatchObject({
-        status: "failed",
-        error: "video research requires captions or a transcript",
+        status: "ok",
+        method: "captions",
         tool: "article-research",
       });
       expect(research).not.toHaveBeenCalled();
       expect(read).not.toHaveBeenCalled();
+      expect(video).toHaveBeenCalledOnce();
     },
   );
 

@@ -1,11 +1,13 @@
 import { GlmResearchClient } from "../infrastructure/glm-research.js";
 import {
   ArticleResearchClient,
-  validateArticleResearchUrl,
+  validateResearchUrl,
+  isVideoResearchUrl,
   type ArticleResearchClientOptions,
   type ArticleResearchResult,
 } from "../infrastructure/article-research.js";
 import { BrowserArticleResearchClient } from "../infrastructure/browser-article-research.js";
+import { VideoResearchClient } from "../infrastructure/video-research.js";
 
 export type RivusArticleResearchResult = ArticleResearchResult & {
   tool: "article-research";
@@ -16,6 +18,7 @@ export type ArticleResearchToolDependencies = {
   glmClient?: Pick<GlmResearchClient, "read">;
   browserClient?: Pick<BrowserArticleResearchClient, "research">;
   client?: Pick<ArticleResearchClient, "research">;
+  videoClient?: Pick<VideoResearchClient, "research">;
 };
 
 export type ArticleResearchMode = "auto" | "browser" | "http";
@@ -26,6 +29,7 @@ export function createArticleResearchExecutor(
 ): (value: unknown) => Promise<RivusArticleResearchResult> {
   const env = dependencies.env ?? process.env;
   const client = dependencies.client ?? new ArticleResearchClient();
+  const videoClient = dependencies.videoClient ?? new VideoResearchClient({ env });
   const browserClient =
     dependencies.browserClient ??
     (dependencies.client
@@ -39,7 +43,7 @@ export function createArticleResearchExecutor(
     const request = parseInput(value);
     const researchRequest = { ref: request.ref, url: request.url };
     try {
-      validateArticleResearchUrl(request.url);
+      validateResearchUrl(request.url);
     } catch (error) {
       return {
         ...researchRequest,
@@ -48,6 +52,9 @@ export function createArticleResearchExecutor(
         status: "failed",
         tool: "article-research",
       };
+    }
+    if (isVideoResearchUrl(request.url)) {
+      return { ...(await videoClient.research(researchRequest)), tool: "article-research" };
     }
     if (request.mode === "http") {
       return { ...(await client.research(researchRequest)), tool: "article-research" };
