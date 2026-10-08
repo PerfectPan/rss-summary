@@ -5,29 +5,29 @@ import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { createBudgetedDoubaoSearch } from "../../src/infrastructure/doubao-search-budget.js";
+import { createBudgetedNewsSearch } from "../../src/infrastructure/news-search-budget.js";
 import {
-  DoubaoSearchError,
-  type DoubaoSearchInput,
-  type DoubaoSearchPage,
-} from "../../src/infrastructure/doubao-search.js";
+  NewsSearchError,
+  type NewsSearchInput,
+  type NewsSearchPage,
+} from "../../src/infrastructure/news-search.js";
 
 const executeFile = promisify(execFile);
 const directories: string[] = [];
-const input: DoubaoSearchInput = {
+const input: NewsSearchInput = {
   query: "TypeScript release",
   count: 5,
   day: "2026-09-29",
   sourcePolicy: "official",
 };
-const page: DoubaoSearchPage = {
+const page: NewsSearchPage = {
   resultCount: 1,
   logId: "raw-log",
   results: [
     { id: "release", title: "Release", url: "https://example.com/release", rankPosition: 1 },
   ],
 };
-type Options = Parameters<typeof createBudgetedDoubaoSearch>[0];
+type Options = Parameters<typeof createBudgetedNewsSearch>[0];
 
 afterEach(async () => {
   await Promise.all(directories.splice(0).map((directory) => rm(directory, { recursive: true })));
@@ -37,7 +37,7 @@ async function setup(overrides: Partial<Options> = {}) {
   const directory = await mkdtemp(join(tmpdir(), "doubao-budget-"));
   directories.push(directory);
   let instant = new Date("2026-09-29T03:00:00.000Z");
-  const providerSearch = vi.fn(async (): Promise<DoubaoSearchPage> => structuredClone(page));
+  const providerSearch = vi.fn(async (): Promise<NewsSearchPage> => structuredClone(page));
   const options: Options = {
     stateFile: join(directory, "private", "budget.json"),
     dailyLimit: 10,
@@ -52,12 +52,12 @@ async function setup(overrides: Partial<Options> = {}) {
   return {
     options,
     providerSearch,
-    search: createBudgetedDoubaoSearch(options),
+    search: createBudgetedNewsSearch(options),
     setNow: (value: string) => (instant = new Date(value)),
   };
 }
 
-describe("persistent Doubao search budget", () => {
+describe("persistent news search budget", () => {
   it("persists every reserved attempt and applies the allowance after recreating an instance", async () => {
     const { options, search, providerSearch } = await setup({ dailyLimit: 2 });
     expect((await search(input)).searchUsage).toEqual({
@@ -68,7 +68,7 @@ describe("persistent Doubao search budget", () => {
       dailyLimit: 2,
       monthlyLimit: 20,
     });
-    const rebuilt = createBudgetedDoubaoSearch(options);
+    const rebuilt = createBudgetedNewsSearch(options);
     expect((await rebuilt(input)).searchUsage.dailyUsed).toBe(2);
     await expect(rebuilt(input)).rejects.toMatchObject({ code: "local_budget_exhausted" });
     expect(providerSearch).toHaveBeenCalledTimes(2);
@@ -79,7 +79,7 @@ describe("persistent Doubao search budget", () => {
 
   it("allows only one of two independent instances to reserve the final slot", async () => {
     const { options, search, providerSearch } = await setup({ dailyLimit: 1 });
-    const other = createBudgetedDoubaoSearch(options);
+    const other = createBudgetedNewsSearch(options);
     const settled = await Promise.allSettled([
       search(input),
       other({ ...input, query: "Other release" }),
@@ -93,12 +93,12 @@ describe("persistent Doubao search budget", () => {
 
   it("serializes reservations from separate processes sharing the same state file", async () => {
     const { options } = await setup({ dailyLimit: 1 });
-    const moduleUrl = new URL("../../src/infrastructure/doubao-search-budget.ts", import.meta.url)
+    const moduleUrl = new URL("../../src/infrastructure/news-search-budget.ts", import.meta.url)
       .href;
     const script = `
-      import { createBudgetedDoubaoSearch } from ${JSON.stringify(moduleUrl)};
+      import { createBudgetedNewsSearch } from ${JSON.stringify(moduleUrl)};
       const options = ${JSON.stringify({ ...options, now: undefined, search: undefined })};
-      const search = createBudgetedDoubaoSearch({
+      const search = createBudgetedNewsSearch({
         ...options,
         now: () => new Date("2026-09-29T03:00:00.000Z"),
         search: async () => ({ resultCount: 0, results: [] }),
@@ -127,12 +127,12 @@ describe("persistent Doubao search budget", () => {
   it("keeps failed attempts charged and reserves again for every retry", async () => {
     const { options } = await setup({ dailyLimit: 3 });
     let attempts = 0;
-    const providerSearch = vi.fn(async (): Promise<DoubaoSearchPage> => {
+    const providerSearch = vi.fn(async (): Promise<NewsSearchPage> => {
       attempts += 1;
-      if (attempts <= 2) throw new DoubaoSearchError("http_429", "rate limit");
+      if (attempts <= 2) throw new NewsSearchError("http_429", "rate limit");
       return page;
     });
-    const search = createBudgetedDoubaoSearch({ ...options, search: providerSearch });
+    const search = createBudgetedNewsSearch({ ...options, search: providerSearch });
     await expect(search(input)).rejects.toMatchObject({ code: "http_429" });
     await expect(search(input)).rejects.toMatchObject({ code: "http_429" });
     expect((await search(input)).searchUsage.dailyUsed).toBe(3);
@@ -142,20 +142,20 @@ describe("persistent Doubao search budget", () => {
 
   it("releases the reservation lock before waiting for the provider", async () => {
     const { options } = await setup();
-    let complete!: (value: DoubaoSearchPage) => void;
+    let complete!: (value: NewsSearchPage) => void;
     let started!: () => void;
     const providerStarted = new Promise<void>((resolve) => (started = resolve));
-    const search = createBudgetedDoubaoSearch({
+    const search = createBudgetedNewsSearch({
       ...options,
       search: () => {
         started();
-        return new Promise<DoubaoSearchPage>((resolve) => (complete = resolve));
+        return new Promise<NewsSearchPage>((resolve) => (complete = resolve));
       },
     });
     const first = search(input);
     await providerStarted;
     await expect(access(`${options.stateFile}.lock`)).rejects.toMatchObject({ code: "ENOENT" });
-    const independent = createBudgetedDoubaoSearch(options);
+    const independent = createBudgetedNewsSearch(options);
     expect((await independent({ ...input, query: "Second query" })).searchUsage.dailyUsed).toBe(2);
     complete(page);
     await first;
@@ -195,7 +195,7 @@ describe("persistent Doubao search budget", () => {
       provider: "https://user:secret-key@search.example.com/web_search/?key=secret-key",
     });
     const credential = "private-provider-key";
-    const search = createBudgetedDoubaoSearch({
+    const search = createBudgetedNewsSearch({
       ...options,
       search: async () => {
         expect(credential).toBe("private-provider-key");
@@ -240,7 +240,7 @@ describe("persistent Doubao search budget", () => {
   it("fails closed when the configured timezone differs from persisted counters", async () => {
     const { options, search, providerSearch } = await setup();
     await search(input);
-    const changed = createBudgetedDoubaoSearch({ ...options, timezoneOffset: "-08:00" });
+    const changed = createBudgetedNewsSearch({ ...options, timezoneOffset: "-08:00" });
     await expect(changed(input)).rejects.toMatchObject({ code: "local_budget_state" });
     expect(providerSearch).toHaveBeenCalledTimes(1);
   });
@@ -273,10 +273,10 @@ describe("cached search budget probe", () => {
     "rejects after a provider quota failure consumed the last local allowance (%j)",
     async (limit) => {
       const { options } = await setup(limit);
-      const providerSearch = vi.fn(async (): Promise<DoubaoSearchPage> => {
-        throw new DoubaoSearchError("10406", "provider quota exhausted");
+      const providerSearch = vi.fn(async (): Promise<NewsSearchPage> => {
+        throw new NewsSearchError("10406", "provider quota exhausted");
       });
-      const search = createBudgetedDoubaoSearch({ ...options, search: providerSearch });
+      const search = createBudgetedNewsSearch({ ...options, search: providerSearch });
       await expect(search(input)).rejects.toMatchObject({ code: "10406" });
       await expect(search.cachedSearch(input)).rejects.toMatchObject({
         code: "local_budget_exhausted",
@@ -293,7 +293,7 @@ describe("cached search budget probe", () => {
     });
     await search(input);
     const before = await readFile(options.stateFile, "utf8");
-    const rebuilt = createBudgetedDoubaoSearch(options);
+    const rebuilt = createBudgetedNewsSearch(options);
     expect((await rebuilt.cachedSearch(input))?.searchUsage).toMatchObject({
       source: "cache",
       fetchedAt: "2026-09-29T03:00:00.000Z",
@@ -332,7 +332,7 @@ describe("raw Doubao response cache", () => {
     const result = await search(input);
     result.results[0]!.title = "Mutated by consumer";
     setNow("2026-09-29T03:00:30.000Z");
-    const rebuilt = createBudgetedDoubaoSearch(options);
+    const rebuilt = createBudgetedNewsSearch(options);
     const cached = await rebuilt({ ...input, sinceDay: input.day });
     expect(cached.results).toEqual(page.results);
     expect(cached.searchUsage).toMatchObject({
@@ -356,7 +356,7 @@ describe("raw Doubao response cache", () => {
   it("keeps provider, query, count and source policy in separate cache identities", async () => {
     const { options, search, providerSearch } = await setup({ cacheTtlMs: 60_000 });
     await search(input);
-    const otherProvider = createBudgetedDoubaoSearch({
+    const otherProvider = createBudgetedNewsSearch({
       ...options,
       provider: "https://other.example.com/web_search",
     });
@@ -381,7 +381,7 @@ describe("raw Doubao response cache", () => {
   it("shares an in-flight request in one instance without consuming another attempt", async () => {
     const { options } = await setup({ dailyLimit: 1 });
     const providerSearch = vi.fn(async () => page);
-    const search = createBudgetedDoubaoSearch({ ...options, search: providerSearch });
+    const search = createBudgetedNewsSearch({ ...options, search: providerSearch });
     const [first, second] = await Promise.all([search(input), search(input)]);
     expect(first).toBe(second);
     expect(first.searchUsage.dailyUsed).toBe(1);
@@ -390,11 +390,45 @@ describe("raw Doubao response cache", () => {
 
   it.each(["glm", "mixed"] as const)("never caches %s responses", async (provider) => {
     const { options } = await setup({ cacheTtlMs: 60_000 });
-    const providerSearch = vi.fn(async (): Promise<DoubaoSearchPage> => ({ ...page, provider }));
-    const search = createBudgetedDoubaoSearch({ ...options, search: providerSearch });
+    const providerSearch = vi.fn(async (): Promise<NewsSearchPage> => ({ ...page, provider }));
+    const search = createBudgetedNewsSearch({ ...options, search: providerSearch });
     await search(input);
     await search(input);
     expect(providerSearch).toHaveBeenCalledTimes(2);
     expect(JSON.parse(await readFile(options.stateFile, "utf8")).cache).toEqual({});
+  });
+});
+
+it("isolates Grok cache by model/provider while sharing attempt counters with Doubao", async () => {
+  const grokPage: NewsSearchPage = {
+    ...page,
+    provider: "grok",
+    grok: { nativeTools: ["x_keyword_search"], rejectedResults: 1, costUsd: 0.01 },
+  };
+  const { options, search: doubao } = await setup({ cacheTtlMs: 60_000 });
+  await doubao(input);
+  const provider = vi.fn(async () => grokPage);
+  const grok = createBudgetedNewsSearch({
+    ...options,
+    provider: "grok://cli/v1/default",
+    search: provider,
+  });
+  expect((await grok(input)).searchUsage).toMatchObject({ source: "network", dailyUsed: 2 });
+  const reused = await createBudgetedNewsSearch({
+    ...options,
+    provider: "grok://cli/v1/default",
+    search: provider,
+  })(input);
+  expect(reused.searchUsage).toMatchObject({ source: "cache", dailyUsed: 2 });
+  expect(reused.grok).toEqual(grokPage.grok);
+  expect(provider).toHaveBeenCalledTimes(1);
+  const anotherModel = createBudgetedNewsSearch({
+    ...options,
+    provider: "grok://cli/v1/custom-model",
+    search: provider,
+  });
+  expect((await anotherModel(input)).searchUsage).toMatchObject({
+    source: "network",
+    dailyUsed: 3,
   });
 });

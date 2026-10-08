@@ -8,10 +8,10 @@ import {
 } from "../domain/news.js";
 import { canonicalizeUrl } from "../domain/text.js";
 import {
-  DoubaoSearchError,
-  type DoubaoSearchInput,
-  type DoubaoSearchPage,
-} from "../infrastructure/doubao-search.js";
+  NewsSearchError,
+  type NewsSearchInput,
+  type NewsSearchPage,
+} from "../infrastructure/news-search.js";
 import type {
   GlmResearchClient,
   ResearchPage,
@@ -19,14 +19,14 @@ import type {
 } from "../infrastructure/glm-research.js";
 
 export type NewsSearchRequest = {
-  input: DoubaoSearchInput;
+  input: NewsSearchInput;
   query: NewsTopicQuery;
   topic: NewsTopic;
 };
 
 type Options = {
-  cachedSearch?: (input: DoubaoSearchInput) => Promise<DoubaoSearchPage | undefined>;
-  search: (input: DoubaoSearchInput) => Promise<DoubaoSearchPage>;
+  cachedSearch?: (input: NewsSearchInput) => Promise<NewsSearchPage | undefined>;
+  search: (input: NewsSearchInput) => Promise<NewsSearchPage>;
   glm: Pick<GlmResearchClient, "search" | "read">;
   window: NewsTimeWindow;
   maxSearches: number;
@@ -53,19 +53,18 @@ export function createHybridNewsSearch(options: Options) {
     return Math.floor(budget / ids.length) + (priority < budget % ids.length ? 1 : 0);
   };
 
-  return async (request: NewsSearchRequest): Promise<DoubaoSearchPage> => {
-    let primary: DoubaoSearchPage | undefined;
-    let primaryError: DoubaoSearchError | undefined;
+  return async (request: NewsSearchRequest): Promise<NewsSearchPage> => {
+    let primary: NewsSearchPage | undefined;
+    let primaryError: NewsSearchError | undefined;
     try {
       if (quotaExhausted) {
         primary = await options.cachedSearch?.(request.input);
-        if (!primary)
-          throw new DoubaoSearchError("10406", "Free quota exhausted in this brief run.");
+        if (!primary) throw new NewsSearchError("10406", "Free quota exhausted in this brief run.");
       } else {
         primary = await options.search(request.input);
       }
     } catch (error) {
-      if (!(error instanceof DoubaoSearchError)) throw error;
+      if (!(error instanceof NewsSearchError)) throw error;
       // A local spending boundary must not silently spend another provider's quota.
       if (error.code.startsWith("local_budget_")) throw error;
       primaryError = error;
@@ -92,7 +91,7 @@ export function createHybridNewsSearch(options: Options) {
       domainRejected: 0,
       invalidLinks: 0,
     };
-    const result: DoubaoSearchPage = {
+    const result: NewsSearchPage = {
       ...primary,
       provider: primary ? "mixed" : "glm",
       fallback,
@@ -120,7 +119,7 @@ export function createHybridNewsSearch(options: Options) {
       fallback.warnings.push("GLM 搜索预算已用完");
     }
     if (!targets.length && primaryError)
-      throw new DoubaoSearchError("search_budget", "Fallback search budget unavailable.");
+      throw new NewsSearchError("search_budget", "Fallback search budget unavailable.");
     let completed = 0;
     const sourceResults: ResearchSearchResult[][] = [];
     // Each call has one source constraint; rotate sources within the reserved query budget.
@@ -148,7 +147,7 @@ export function createHybridNewsSearch(options: Options) {
       }
     }
     if (!completed && primaryError)
-      throw new DoubaoSearchError(
+      throw new NewsSearchError(
         "hybrid_unavailable",
         `Primary ${primaryError.code}; GLM search unavailable.`,
       );
@@ -244,7 +243,7 @@ export function createHybridNewsSearch(options: Options) {
 }
 
 function toHit(
-  result: DoubaoSearchPage["results"][number],
+  result: NewsSearchPage["results"][number],
   { query, topic }: NewsSearchRequest,
 ): NewsSearchHit {
   return {

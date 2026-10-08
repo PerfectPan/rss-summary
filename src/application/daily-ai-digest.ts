@@ -3,7 +3,7 @@ import { Cause, Effect, Exit } from "effect";
 import { buildIndustryDocument, type IndustryBriefDocument } from "./industry-brief.js";
 import { createDailyAiDeliveryReceipt, type DailyAiDeliveryReceipt } from "./daily-ai-receipt.js";
 import {
-  AllDoubaoQueriesFailedError,
+  AllNewsQueriesFailedError,
   generateRivusNewsBrief,
   type RivusNewsBriefResult,
 } from "./news-brief.js";
@@ -75,7 +75,7 @@ export async function generateDailyAiDigest(
     .filter(({ publishedAt }) => isWithinWindow(publishedAt, since, until));
   const digest = buildDailyAiDigest(evidence, { draft: dependencies.draft });
   if (digest.evidence.length === 0) {
-    throw new Error("Daily AI digest has no usable evidence from Doubao or official sources.");
+    throw new Error("Daily AI digest has no usable evidence from news search or official sources.");
   }
   return {
     ...digest,
@@ -110,7 +110,7 @@ async function collectNewsEdition(
   try {
     return { result: await news(occurrence, edition, since), unavailable: false };
   } catch (error) {
-    if (!(error instanceof AllDoubaoQueriesFailedError)) throw error;
+    if (!(error instanceof AllNewsQueriesFailedError)) throw error;
     return { result: error.result, unavailable: true };
   }
 }
@@ -152,7 +152,12 @@ function newsEvidence(result: RivusNewsBriefResult): DailyAiEvidence[] {
     url: story.canonicalUrl,
     publishedAt: story.publishTime,
     excerpt: story.summary,
-    tier: story.authInfoLevel === 1 ? "official" : "authoritative",
+    tier:
+      story.authInfoLevel === 1
+        ? "official"
+        : story.authInfoLevel === 2
+          ? "authoritative"
+          : "unverified",
     sourceName: story.siteName,
     topicId: story.selectedTopicId,
   }));

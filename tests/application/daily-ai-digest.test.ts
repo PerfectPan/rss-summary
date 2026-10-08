@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 
 import { generateDailyAiDigest } from "../../src/application/daily-ai-digest.js";
 import {
-  AllDoubaoQueriesFailedError,
+  AllNewsQueriesFailedError,
   type RivusNewsBriefResult,
 } from "../../src/application/news-brief.js";
 import * as newsBrief from "../../src/application/news-brief.js";
@@ -213,7 +213,9 @@ describe("Daily AI digest use case", () => {
           },
         },
       ),
-    ).rejects.toThrow("Daily AI digest has no usable evidence from Doubao or official sources.");
+    ).rejects.toThrow(
+      "Daily AI digest has no usable evidence from news search or official sources.",
+    );
   });
 
   it("does not degrade unexpected news collector errors", async () => {
@@ -352,8 +354,8 @@ function story(id: string, publishTime: string): RivusNewsBriefResult["stories"]
   };
 }
 
-function failedEdition(edition: "noon" | "evening"): AllDoubaoQueriesFailedError {
-  return new AllDoubaoQueriesFailedError({
+function failedEdition(edition: "noon" | "evening"): AllNewsQueriesFailedError {
+  return new AllNewsQueriesFailedError({
     ...newsResult(edition),
     audit: {
       ...emptyNewsAudit(),
@@ -426,3 +428,27 @@ function officialDocument(): IndustryBriefDocument {
     ],
   };
 }
+
+it("retains unverified Grok source labels and warnings in Daily AI evidence", async () => {
+  const item = {
+    ...story("grok", "2026-08-10T12:00:00Z"),
+    authInfoLevel: 4,
+    siteName: "@OpenAI · X（Grok 整理）",
+  };
+  const result = await generateDailyAiDigest(
+    { occurrence: "2026-08-11T01:00:00Z" },
+    {
+      env: {},
+      news: async (_occurrence, edition) => ({
+        ...newsResult(edition, [item]),
+        warnings: ["Grok 内容未独立核验"],
+      }),
+      industry: async () => ({ generatedAt: "2026-08-11T01:00:00Z", candidates: [] }),
+    },
+  );
+  expect(result.evidence[0]).toMatchObject({
+    tier: "unverified",
+    sourceName: "@OpenAI · X（Grok 整理）",
+  });
+  expect(result.warnings).toContain("Grok 内容未独立核验");
+});
