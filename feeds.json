@@ -343,5 +343,13 @@
       "Articles",
       "Blog"
     ]
+  },
+  {
+    "name": "/dev/michael",
+    "url": "https://michaellivs.com/rss.xml",
+    "tags": [
+      "Articles",
+      "Blog"
+    ]
   }
 ]
