@@ -39,12 +39,12 @@ ledger conservatively counts every reserved attempt, including failed attempts a
 | `NEWS_SEARCH_MAX_QUERIES` | `4` | integer `1..32` | Maximum configured query IDs selected for each standalone noon/evening run |
 | `NEWS_SEARCH_DAILY_LIMIT` | `14` | integer `0..100000` | Shared new-request attempt cap for the current local calendar day |
 | `NEWS_SEARCH_MONTHLY_LIMIT` | `420` | integer `0..1000000` | Shared new-request attempt cap for the current local calendar month |
-| `NEWS_SEARCH_CACHE_TTL_MINUTES` | `360` | integer `0..43200` | Raw Doubao cache lifetime; `0` disables reuse |
+| `NEWS_SEARCH_CACHE_TTL_MINUTES` | `360` | integer `0..43200` | Search page cache lifetime; `0` disables reuse |
 | `NEWS_SEARCH_STATE_FILE` | `.state/news-search.json` | nonempty path | Budget ledger and raw response cache; deployment must set a persistent absolute path |
 | `FEED_TIMEZONE_OFFSET` | `+08:00` for news | supported fixed offset | Calendar boundary for request accounting |
 
 Query caps are bounded by the number of enabled configured queries. A zero daily or monthly limit
-blocks new Doubao requests; an eligible cache entry may still be read. The caps constrain attempts,
+blocks new provider requests; an eligible cache entry may still be read. The caps constrain attempts,
 so a retry can consume another slot without completing another query.
 
 Set these values in the Node process environment used by the CLI or Rivus Host, as described in
@@ -55,9 +55,9 @@ included in the package.
 
 ## Reservation and failure behavior
 
-`src/infrastructure/doubao-search-budget.ts` wraps the raw Doubao client. Under a short cross-process
+`src/infrastructure/news-search-budget.ts` wraps the selected Doubao or Grok client. Under a short cross-process
 file lock it loads and validates state, checks the cache, checks both caps, and atomically persists
-one reserved attempt before the HTTP request starts. HTTP runs outside the lock. A reservation is
+one reserved attempt before the provider request starts. The provider runs outside the lock. A reservation is
 not refunded if the request fails, the process exits, or the successful response cannot be cached.
 Retries pass through the same wrapper and reserve again. Concurrent identical requests in one
 process share a pending operation; different processes still reserve independently on a cache miss.
@@ -79,7 +79,7 @@ without reserving another request or contacting Doubao; the circuit cannot bypas
 
 ## Raw cache and coverage
 
-Only raw Doubao responses are cached, including successful responses with zero results. GLM results,
+Raw Doubao responses and validated Grok search pages are cached, including successful responses with zero results. GLM results,
 hybrid compositions and editorial outputs are not stored in this cache. Cache identity includes the
 actual outgoing query text, requested result count, provider endpoint, source policy and calendar
 date range. A fresh entry can satisfy a narrower date range it already covers only when the other
@@ -131,3 +131,20 @@ ledger to zero as a repair. If counts cannot be reconstructed reliably, leave se
 report the missing accounting evidence. A timezone change also requires a deliberate stopped-state
 migration; it must not silently reinterpret or discard earlier counters. Resume only after the
 state, timezone and persistent path have been checked.
+
+
+## Grok mode
+
+`NEWS_SEARCH_MODE=grok` uses the same ledger and locking rules. Its defaults are 4 attempts/day
+and 120/month, with a separate `NEWS_GROK_MAX_QUERIES=1` per-run cap that also bounds Daily AI's
+query override. Explicit common budget variables take precedence. Modes sharing one state file
+share counters; cache identities remain separate (`grok://cli/v1/<model>` versus HTTP endpoint).
+Existing version-1 Doubao state is accepted without resetting its counters. Once Grok cache entries
+have been written, older releases without Grok support cannot read those entries; preserve the
+ledger and remove only Grok cache entries while callers are stopped if a rollback is required.
+
+One reserved Grok attempt is one CLI process, not one underlying X tool call, token or dollar.
+A process can perform multiple X searches within its two-turn limit. There is no automatic retry
+or paid fallback after a Grok failure. Cached `grok.costUsd` and token fields describe the original
+fetch; do not count them as new spending when `searchUsage.source=cache`.
+See [Grok X search](grok-x-search.md) for authentication and evidence limitations.

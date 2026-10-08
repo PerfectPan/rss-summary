@@ -20,7 +20,7 @@ Each Automation returns two compatible views of the same result: canonical Markd
 | Automation | `rss-summary/noon-news-brief` | current day 00:00 through noon occurrence |
 | Automation | `rss-summary/evening-news-brief` | current day 12:30 through evening occurrence |
 
-All Tools have `observe` risk. Feed Tools force dry-run mode: they read only-new state but do not send a webhook, write seen state, or write local run artifacts. News collection also leaves business seen state and message delivery untouched, but it writes operational request reservations and raw response cache entries. Its result includes the query/rejection/selection audit. Daily AI's `collect` result exposes one complete rolling-window news audit plus the official-source audit; a provider-wide Doubao failure retains each normalized error code while official collection continues. Rivus records the subsequent card delivery in its trace and Feishu delivery ledger.
+All Tools have `observe` risk. Feed Tools force dry-run mode: they read only-new state but do not send a webhook, write seen state, or write local run artifacts. News collection also leaves business seen state and message delivery untouched, but it writes operational request reservations and raw response cache entries. Its result includes the query/rejection/selection audit. Daily AI's `collect` result exposes one complete rolling-window news audit plus the official-source audit; a provider-wide search failure retains each normalized error code while official collection continues. Rivus records the subsequent card delivery in its trace and Feishu delivery ledger.
 
 Public GitHub Repository Search and Hacker News discovery are intentionally absent. GitHub Home belongs to personal subscriptions; industry discovery comes from curated first-party RSS/Atom and explicitly configured official pages.
 
@@ -187,3 +187,13 @@ npm run check-config
 ```
 
 Invoke each enabled template once in the foreground. Confirm the morning subscriptions trace contains `collect`, `select`, `research-article`, and `render` calls, every evidence item has an AI decision and reason, research results are URL-matched and bounded, repository rows retain deterministic stars/language facts, PR/RSS rows contain grounded summaries only when selected, and an empty selection is recorded as suppressed without a delivery. Confirm the separate Daily AI card covers `[occurrence - 24h, occurrence)`, invalid draft items do not remove valid siblings, the frontier trace lists only official `industry-feeds.json` sources (including `web-page` source health), standalone noon/evening windows do not overlap, the structured card keeps semantic source links inline with each item without right-side button columns or a duplicate source appendix, and the delivery ledger records the card outcome before enabling the service manager.
+
+
+### Grok X search
+
+Set `NEWS_SEARCH_MODE=grok` in the Rivus Host process environment to use native X search
+for the existing noon/evening news Tool and Daily AI collection. The host's OS user must
+already have an authenticated Grok CLI. No Doubao or GLM key is needed in this mode;
+Daily AI's independent official feed collection still runs.
+See [Grok X search](grok-x-search.md) for caps, usage interpretation and a no-send trial.
+Changing these variables does not install the updated plugin or reload an existing host.

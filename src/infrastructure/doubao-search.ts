@@ -1,67 +1,15 @@
-import type { NewsSourcePolicy, NewsSourceVerification } from "../domain/news.js";
 import { asRecord, number, text } from "./parsing.js";
+import {
+  NewsSearchError,
+  type NewsSearchInput,
+  type NewsSearchPage,
+  type NewsSearchResult,
+} from "./news-search.js";
 
-export type DoubaoSearchInput = {
-  query: string;
-  count: number;
-  day: string;
-  sinceDay?: string;
-  sourcePolicy: NewsSourcePolicy;
-};
-
-export type DoubaoSearchResult = {
-  id: string;
-  title: string;
-  siteName?: string;
-  url: string;
-  snippet?: string;
-  summary?: string;
-  publishTime?: string;
-  rankScore?: number;
-  authInfoDescription?: string;
-  authInfoLevel?: number;
-  rankPosition: number;
-  sourceVerification?: NewsSourceVerification;
-};
-
-export type DoubaoSearchPage = {
-  searchUsage?: {
-    source: "network" | "cache";
-    fetchedAt: string;
-    dailyUsed: number;
-    monthlyUsed: number;
-    dailyLimit: number;
-    monthlyLimit: number;
-  };
-  provider?: "doubao" | "glm" | "mixed";
-  fallback?: {
-    reason: string;
-    searched: boolean;
-    reads: number;
-    warnings: string[];
-    searches?: number;
-    incomplete?: boolean;
-    sources?: string[];
-    skippedSources?: string[];
-    rawResults?: number;
-    domainRejected?: number;
-    invalidLinks?: number;
-  };
-  logId?: string;
-  resultCount: number;
-  timeCostMs?: number;
-  results: DoubaoSearchResult[];
-};
-
-export class DoubaoSearchError extends Error {
-  readonly code: string;
-  readonly retryAfterMs?: number;
-
+export class DoubaoSearchError extends NewsSearchError {
   constructor(code: string, message: string, options: { retryAfterMs?: number } = {}) {
-    super(`Doubao search API error ${code}: ${message}`);
+    super(code, `Doubao search API error ${code}: ${message}`, options);
     this.name = "DoubaoSearchError";
-    this.code = code;
-    this.retryAfterMs = options.retryAfterMs;
   }
 }
 
@@ -86,7 +34,7 @@ export class DoubaoSearchClient {
     this.timeoutMs = options.timeoutMs ?? 15_000;
   }
 
-  async search(input: DoubaoSearchInput): Promise<DoubaoSearchPage> {
+  async search(input: NewsSearchInput): Promise<NewsSearchPage> {
     validateInput(input);
     const filter: Record<string, unknown> = { NeedUrl: true };
     if (input.sourcePolicy === "official") filter.AuthInfoLevel = 1;
@@ -131,7 +79,7 @@ function errorText(value: unknown): string {
   return value instanceof Error ? value.message : String(value);
 }
 
-function validateInput(input: DoubaoSearchInput): void {
+function validateInput(input: NewsSearchInput): void {
   if (input.query.trim() === "" || input.query.length > 100) {
     throw new Error("Doubao search query must contain 1 to 100 characters.");
   }
@@ -147,7 +95,7 @@ function validateInput(input: DoubaoSearchInput): void {
     throw new Error("Doubao search day must use YYYY-MM-DD.");
 }
 
-function parseResponse(value: unknown, retryAfterMs?: number): DoubaoSearchPage {
+function parseResponse(value: unknown, retryAfterMs?: number): NewsSearchPage {
   const root = asRecord(value);
   const metadata = asRecord(root.ResponseMetadata);
   const error = asRecord(metadata.Error);
@@ -160,7 +108,7 @@ function parseResponse(value: unknown, retryAfterMs?: number): DoubaoSearchPage 
   const result = asRecord(root.Result);
   const results = Array.isArray(result.WebResults)
     ? result.WebResults.map((item, index) => parseResult(item, index + 1)).filter(
-        (item): item is DoubaoSearchResult => item !== undefined,
+        (item): item is NewsSearchResult => item !== undefined,
       )
     : [];
   return {
@@ -180,7 +128,7 @@ function parseRetryAfter(value: string | null): number | undefined {
   return Math.max(0, date - Date.now());
 }
 
-function parseResult(value: unknown, fallbackRankPosition: number): DoubaoSearchResult | undefined {
+function parseResult(value: unknown, fallbackRankPosition: number): NewsSearchResult | undefined {
   const item = asRecord(value);
   const id = text(item.Id);
   const title = text(item.Title);

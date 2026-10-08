@@ -15,14 +15,15 @@ import {
   startOfCalendarDay,
 } from "../domain/time.js";
 import { boundedInteger } from "../infrastructure/parsing.js";
-import { createBudgetedDoubaoSearch } from "../infrastructure/doubao-search-budget.js";
+import { createBudgetedNewsSearch } from "../infrastructure/news-search-budget.js";
 import { loadNewsTopics } from "../infrastructure/news-topics.js";
+import { GrokSearchClient } from "../infrastructure/grok-search.js";
+import { DoubaoSearchClient } from "../infrastructure/doubao-search.js";
 import {
-  DoubaoSearchError,
-  DoubaoSearchClient,
-  type DoubaoSearchInput,
-  type DoubaoSearchPage,
-} from "../infrastructure/doubao-search.js";
+  NewsSearchError,
+  type NewsSearchInput,
+  type NewsSearchPage,
+} from "../infrastructure/news-search.js";
 import { GlmResearchClient } from "../infrastructure/glm-research.js";
 import { createHybridNewsSearch, type NewsSearchRequest } from "./hybrid-news-search.js";
 import { attempt } from "./effect.js";
@@ -64,12 +65,12 @@ export type RivusNewsBriefOutput = RivusNewsBriefResult & { markdown: string };
  * Standalone news briefs still fail; aggregate products may safely degrade by
  * consuming the attached empty result and its complete per-query audit.
  */
-export class AllDoubaoQueriesFailedError extends Error {
+export class AllNewsQueriesFailedError extends Error {
   readonly result: RivusNewsBriefResult;
 
   constructor(result: RivusNewsBriefResult) {
-    super("All Doubao search queries failed.");
-    this.name = "AllDoubaoQueriesFailedError";
+    super("All news search queries failed.");
+    this.name = "AllNewsQueriesFailedError";
     this.result = result;
   }
 }
@@ -80,7 +81,7 @@ type NewsBriefDependencies = {
   env?: NodeJS.ProcessEnv;
   now?: () => Date;
   random?: () => number;
-  search?: (input: DoubaoSearchInput) => Promise<DoubaoSearchPage>;
+  search?: (input: NewsSearchInput) => Promise<NewsSearchPage>;
   sleep?: (milliseconds: number) => Promise<void>;
   topics?: NewsTopic[];
 };
@@ -150,6 +151,12 @@ export function generateRivusNewsBrief(
     if (topics.length === 0) {
       return yield* Effect.fail(new Error("At least one news topic must be enabled."));
     }
+    const mode = env.NEWS_SEARCH_MODE ?? "doubao";
+    if (!["doubao", "hybrid", "combined", "grok"].includes(mode)) {
+      return yield* Effect.fail(
+        new Error("NEWS_SEARCH_MODE must be doubao, hybrid, combined or grok."),
+      );
+    }
     const count = boundedInteger(env.NEWS_SEARCH_COUNT_PER_QUERY, 10, 1, 50);
     const managedSearch = yield* Effect.try({
       try: () => (dependencies.search ? undefined : createSearch(env, dependencies.now)),
@@ -162,10 +169,11 @@ export function generateRivusNewsBrief(
         query,
         topic,
         input: {
-          query: query.glm?.sourceQueries
-            ? (query.glm.sourceQueries[query.glm.domains[rotation % query.glm.domains.length]!] ??
-              query.text)
-            : query.text,
+          query:
+            mode !== "grok" && query.glm?.sourceQueries
+              ? (query.glm.sourceQueries[query.glm.domains[rotation % query.glm.domains.length]!] ??
+                query.text)
+              : query.text,
           count,
           day: window.day,
           sinceDay: calendarDayAtOffset(new Date(window.since).toISOString(), timezoneOffset),
@@ -173,7 +181,7 @@ export function generateRivusNewsBrief(
         },
       })),
     );
-    const maxQueries = yield* Effect.try({
+    const requestedMaxQueries = yield* Effect.try({
       try: () =>
         boundedInteger(
           dependencies.maxQueries === undefined
@@ -185,24 +193,24 @@ export function generateRivusNewsBrief(
         ),
       catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
     });
+    const maxQueries =
+      mode === "grok"
+        ? Math.min(requestedMaxQueries, boundedInteger(env.NEWS_GROK_MAX_QUERIES, 1, 1, 4))
+        : requestedMaxQueries;
     const selectedQueryIds = new Set(
       Array.from(
         { length: Math.min(maxQueries, requests.length) },
         (_, offset) => requests[(rotation + offset) % requests.length]!.query.id,
       ),
     );
-    const mode = env.NEWS_SEARCH_MODE ?? "doubao";
-    if (mode !== "doubao" && mode !== "hybrid" && mode !== "combined") {
-      return yield* Effect.fail(new Error("NEWS_SEARCH_MODE must be doubao, hybrid or combined."));
-    }
-    const primarySearch = (input: DoubaoSearchInput) =>
+    const primarySearch = (input: NewsSearchInput) =>
       searchWithRetry(input, search, {
         random: dependencies.random ?? Math.random,
         sleep: dependencies.sleep ?? sleep,
       });
     const execute = yield* Effect.try({
       try: () =>
-        mode !== "doubao"
+        mode === "hybrid" || mode === "combined"
           ? createHybridNewsSearch({
               search: primarySearch,
               cachedSearch: managedSearch?.cachedSearch,
@@ -230,10 +238,7 @@ export function generateRivusNewsBrief(
         (request) => {
           if (!selectedQueryIds.has(request.query.id)) {
             return Promise.reject(
-              new DoubaoSearchError(
-                "query_deferred",
-                "Query deferred by the per-run search limit.",
-              ),
+              new NewsSearchError("query_deferred", "Query deferred by the per-run search limit."),
             );
           }
           return execute(request);
@@ -242,7 +247,7 @@ export function generateRivusNewsBrief(
       ),
     );
     const successful = settled.filter(
-      (result): result is PromiseFulfilledResult<DoubaoSearchPage> => result.status === "fulfilled",
+      (result): result is PromiseFulfilledResult<NewsSearchPage> => result.status === "fulfilled",
     );
     const { sourceStatus, warnings } = summarizeNewsSources(requests, settled);
     const generatedAt = (dependencies.now ?? (() => new Date()))().toISOString();
@@ -250,10 +255,8 @@ export function generateRivusNewsBrief(
       const failures = settled.flatMap((result) =>
         result.status === "rejected" ? [result.reason] : [],
       );
-      if (!failures.every((error) => error instanceof DoubaoSearchError)) {
-        return yield* Effect.fail(
-          new AggregateError(failures, "All Doubao search queries failed."),
-        );
+      if (!failures.every((error) => error instanceof NewsSearchError)) {
+        return yield* Effect.fail(new AggregateError(failures, "All news search queries failed."));
       }
       const unavailable: RivusNewsBriefResult = {
         audit: buildNewsAudit(requests, settled, [], [], 0, 0),
@@ -270,12 +273,12 @@ export function generateRivusNewsBrief(
       if (
         failures.every(
           (error) =>
-            error instanceof DoubaoSearchError &&
+            error instanceof NewsSearchError &&
             ["local_budget_exhausted", "query_deferred"].includes(error.code),
         )
       )
         return unavailable;
-      return yield* Effect.fail(new AllDoubaoQueriesFailedError(unavailable));
+      return yield* Effect.fail(new AllNewsQueriesFailedError(unavailable));
     }
 
     const hits: NewsSearchHit[] = [];
@@ -324,10 +327,10 @@ export function generateRivusNewsBrief(
 
 async function settleSearchRequests(
   requests: NewsSearchRequest[],
-  execute: (request: NewsSearchRequest) => Promise<DoubaoSearchPage>,
+  execute: (request: NewsSearchRequest) => Promise<NewsSearchPage>,
   concurrency = newsSearchConcurrency,
-): Promise<PromiseSettledResult<DoubaoSearchPage>[]> {
-  const settled: PromiseSettledResult<DoubaoSearchPage>[] = [];
+): Promise<PromiseSettledResult<NewsSearchPage>[]> {
+  const settled: PromiseSettledResult<NewsSearchPage>[] = [];
   settled.length = requests.length;
   let nextIndex = 0;
   const worker = async () => {
@@ -346,10 +349,10 @@ async function settleSearchRequests(
 }
 
 async function searchWithRetry(
-  input: DoubaoSearchInput,
-  search: (input: DoubaoSearchInput) => Promise<DoubaoSearchPage>,
+  input: NewsSearchInput,
+  search: (input: NewsSearchInput) => Promise<NewsSearchPage>,
   dependencies: { random: () => number; sleep: (milliseconds: number) => Promise<void> },
-): Promise<DoubaoSearchPage> {
+): Promise<NewsSearchPage> {
   for (let attemptNumber = 1; attemptNumber <= newsSearchMaxAttempts; attemptNumber += 1) {
     try {
       return await search(input);
@@ -358,21 +361,17 @@ async function searchWithRetry(
       await dependencies.sleep(retryDelayMs(error, attemptNumber, dependencies.random));
     }
   }
-  throw new Error("Doubao search retry attempts exhausted.");
+  throw new Error("News search retry attempts exhausted.");
 }
 
-function isTransientSearchError(error: unknown): error is DoubaoSearchError {
+function isTransientSearchError(error: unknown): error is NewsSearchError {
   return (
-    error instanceof DoubaoSearchError &&
+    error instanceof NewsSearchError &&
     (error.code === "rate_limit_exceeded" || error.code === "http_429")
   );
 }
 
-function retryDelayMs(
-  error: DoubaoSearchError,
-  attemptNumber: number,
-  random: () => number,
-): number {
+function retryDelayMs(error: NewsSearchError, attemptNumber: number, random: () => number): number {
   if (error.retryAfterMs !== undefined) return error.retryAfterMs;
   const jitter = 0.5 + Math.min(1, Math.max(0, random()));
   return Math.round(newsSearchRetryBaseMs * 2 ** (attemptNumber - 1) * jitter);
@@ -418,7 +417,27 @@ function parseInput(value: unknown): RivusNewsBriefInput {
 function createSearch(
   env: NodeJS.ProcessEnv,
   now?: () => Date,
-): ReturnType<typeof createBudgetedDoubaoSearch> {
+): ReturnType<typeof createBudgetedNewsSearch> {
+  if (env.NEWS_SEARCH_MODE === "grok") {
+    const model = env.NEWS_GROK_MODEL?.trim() || undefined;
+    if (model && !/^[a-zA-Z0-9._-]+$/u.test(model)) throw new Error("Invalid NEWS_GROK_MODEL.");
+    const client = new GrokSearchClient({
+      executable: env.NEWS_GROK_EXECUTABLE?.trim() || undefined,
+      model,
+      timeoutMs: boundedInteger(env.NEWS_GROK_TIMEOUT_MS, 120_000, 1_000, 180_000),
+      timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00",
+    });
+    return createBudgetedNewsSearch({
+      search: (input) => client.search(input),
+      provider: `grok://cli/v1/${model ?? "default"}`,
+      stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || ".state/news-search.json",
+      dailyLimit: boundedInteger(env.NEWS_SEARCH_DAILY_LIMIT, 4, 0, 100_000),
+      monthlyLimit: boundedInteger(env.NEWS_SEARCH_MONTHLY_LIMIT, 120, 0, 1_000_000),
+      timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00",
+      cacheTtlMs: boundedInteger(env.NEWS_SEARCH_CACHE_TTL_MINUTES, 360, 0, 43_200) * 60_000,
+      now,
+    });
+  }
   const apiKey = env.DOUBAO_SEARCH_API_KEY?.trim();
   if (!apiKey) throw new Error("DOUBAO_SEARCH_API_KEY is required for news briefs.");
   const client = new DoubaoSearchClient({
@@ -426,7 +445,7 @@ function createSearch(
     baseUrl: env.DOUBAO_SEARCH_BASE_URL?.trim() || undefined,
     timeoutMs: boundedInteger(env.NEWS_SEARCH_TIMEOUT_MS, 15_000, 1_000, 60_000),
   });
-  return createBudgetedDoubaoSearch({
+  return createBudgetedNewsSearch({
     search: (input) => client.search(input),
     stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || ".state/news-search.json",
     provider:

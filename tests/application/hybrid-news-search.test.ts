@@ -3,10 +3,8 @@ import {
   createHybridNewsSearch,
   type NewsSearchRequest,
 } from "../../src/application/hybrid-news-search.js";
-import {
-  DoubaoSearchError,
-  type DoubaoSearchPage,
-} from "../../src/infrastructure/doubao-search.js";
+import { DoubaoSearchError } from "../../src/infrastructure/doubao-search.js";
+import type { NewsSearchPage } from "../../src/infrastructure/news-search.js";
 import type { ResearchPage } from "../../src/infrastructure/glm-research.js";
 
 const window = {
@@ -45,9 +43,9 @@ const article: ResearchPage = {
   truncated: false,
   publishedAt: "2026-09-29T01:00:00Z",
 };
-const empty: DoubaoSearchPage = { resultCount: 0, results: [] };
+const empty: NewsSearchPage = { resultCount: 0, results: [] };
 const candidate = { title: "TypeScript release", url, snippet: "TypeScript release" };
-function setup(search = vi.fn(async (): Promise<DoubaoSearchPage> => empty)) {
+function setup(search = vi.fn(async (): Promise<NewsSearchPage> => empty)) {
   const glm = {
     search: vi.fn(async () => [candidate]),
     read: vi.fn(async (_url: string) => article),
@@ -106,7 +104,7 @@ describe("hybrid news search", () => {
 
   it("opens the quota circuit after 10406 and reuses verified Reader pages across queries", async () => {
     const { execute, search, glm } = setup(
-      vi.fn(async (): Promise<DoubaoSearchPage> => {
+      vi.fn(async (): Promise<NewsSearchPage> => {
         throw new DoubaoSearchError("10406", "quota exhausted");
       }),
     );
@@ -209,7 +207,7 @@ describe("hybrid news search", () => {
 
   it("distinguishes both providers failing from a successful empty result", async () => {
     const { execute, glm } = setup(
-      vi.fn(async (): Promise<DoubaoSearchPage> => {
+      vi.fn(async (): Promise<NewsSearchPage> => {
         throw new DoubaoSearchError("network_error", "offline");
       }),
     );
@@ -227,7 +225,7 @@ describe("hybrid news search", () => {
     await execute({ ...request, query: { ...request.query, glm: undefined } });
     expect(glm.search).not.toHaveBeenCalled();
     const broken = setup(
-      vi.fn(async (): Promise<DoubaoSearchPage> => {
+      vi.fn(async (): Promise<NewsSearchPage> => {
         throw new TypeError("bug");
       }),
     );

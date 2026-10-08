@@ -8,6 +8,8 @@ Rivus 的 `morning-feed-digest` 保留稳定 automation ID，并继续推送前�
 
 豆包搜索可以通过 `NEWS_SEARCH_MODE=hybrid` 启用 GLM 补查：供应商额度耗尽或查询没有合格结果时，从配置的可信来源搜索并读取原文，再通过同一时间与主题校验；详见 [混合搜索配置](docs/glm-search.md)。新闻请求另受持久的每日、每月预算和原始响应缓存约束；本地预算或状态失败不会转用 GLM，命中缓存也不补查。[搜索预算与部署说明](docs/news-search-budget.md)集中说明额度计算、配置、覆盖限制与状态恢复。
 
+已有 Grok CLI 登录时，可设置 `NEWS_SEARCH_MODE=grok`，让午间、晚间新闻与 Daily AI 改用原生 X 搜索。默认每轮最多一次调用，保留原生工具与 CLI 用量记录；结果明确标注为模型整理、未独立核验。[Grok X 搜索配置](docs/grok-x-search.md)包含试用步骤与限制。
+
 ## 示例输出
 
 **我的订阅**（`rss-summary digest`）
