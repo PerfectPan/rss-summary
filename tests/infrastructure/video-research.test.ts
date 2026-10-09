@@ -25,10 +25,68 @@ function output(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function createVideoClient(options: ConstructorParameters<typeof VideoResearchClient>[0] = {}) {
+  return new VideoResearchClient({
+    captureFrames: async () => ({
+      visuals: {
+        status: "unavailable",
+        frames: [],
+        reason: "Not exercised in transcription-only tests",
+      },
+    }),
+    ...options,
+  });
+}
+
 describe("video research", () => {
+  it("fuses image-derived facts into bounded evidence and passes the full transcript to storage", async () => {
+    const content = "Spoken explanation. ".repeat(1000);
+    const captureFrames = vi.fn(async () => ({
+      visuals: {
+        status: "analyzed" as const,
+        frames: [
+          {
+            index: 1,
+            timestampSeconds: 59.4,
+            imagePath: "/generated/frame.png",
+            visualText: "画面显示 SQLite、JSONL 和 Memory 三个内置存储选项。",
+          },
+        ],
+      },
+      materials: {
+        transcriptPath: "/generated/transcript.txt",
+        manifestPath: "/generated/research.json",
+      },
+    }));
+    const result = await createVideoClient({
+      env: {
+        RSS_VIDEO_VISION_MODEL: "provider/vision",
+        RSS_VIDEO_VISION_CLI: "unused",
+        RSS_VIDEO_RESEARCH_DIR: ".state/example",
+      },
+      captureFrames,
+      runCommand: async () => output({ content, transcriptCharacters: content.length }),
+    }).research({ ref: "video:1", url });
+    expect(captureFrames).toHaveBeenCalledWith(
+      expect.objectContaining({
+        transcript: content.trim(),
+        sourceUrl: url,
+        visionArgs: ["--model", "provider/vision"],
+        directory: ".state/example",
+      }),
+    );
+    expect(result.status).toBe("ok");
+    if (result.status !== "ok") return;
+    expect(result.content.length).toBeLessThanOrEqual(5500);
+    expect(result.content).toContain("[画面 59.4 秒]");
+    expect(result.content).toContain("SQLite");
+    expect(result.visuals?.status).toBe("analyzed");
+    expect(result.materials?.transcriptPath).toBe("/generated/transcript.txt");
+  });
+
   it("extracts actual captions without invoking a summary model", async () => {
     const runCommand = vi.fn(async () => output());
-    const result = await new VideoResearchClient({ runCommand }).research({ ref: "video:1", url });
+    const result = await createVideoClient({ runCommand }).research({ ref: "video:1", url });
     expect(result).toMatchObject({
       status: "ok",
       method: "captions",
@@ -46,7 +104,7 @@ describe("video research", () => {
   });
 
   it("preserves audio transcription provenance when YouTube has no captions", async () => {
-    const client = new VideoResearchClient({
+    const client = createVideoClient({
       runCommand: async () => output({ transcriptSource: "whisper" }),
     });
     expect(await client.research({ ref: "video:1", url })).toMatchObject({
@@ -65,13 +123,13 @@ describe("video research", () => {
     { content: "Too short" },
     { truncated: true },
   ])("rejects missing, description-only or incomplete transcripts: %j", async (overrides) => {
-    const client = new VideoResearchClient({ runCommand: async () => output(overrides) });
+    const client = createVideoClient({ runCommand: async () => output(overrides) });
     expect(await client.research({ ref: "video:1", url })).toMatchObject({ status: "failed" });
   });
 
   it("keeps excerpts from the start and end within the editorial evidence budget", async () => {
     const content = `Opening argument. ${"Middle evidence. ".repeat(1200)}Final caveat.`;
-    const client = new VideoResearchClient({
+    const client = createVideoClient({
       runCommand: async () => output({ content, transcriptCharacters: content.length }),
     });
     const result = await client.research({ ref: "video:1", url });
@@ -88,7 +146,7 @@ describe("video research", () => {
     async (input) => {
       const runCommand = vi.fn();
       const fetch = vi.fn();
-      const client = new VideoResearchClient({ runCommand, fetch });
+      const client = createVideoClient({ runCommand, fetch });
       expect(await client.research({ ref: "video:1", url: input })).toMatchObject({
         status: "failed",
       });
@@ -98,7 +156,7 @@ describe("video research", () => {
   );
 
   it("returns a structured error for invalid CLI JSON", async () => {
-    const client = new VideoResearchClient({ runCommand: async () => ({ stdout: "not JSON" }) });
+    const client = createVideoClient({ runCommand: async () => ({ stdout: "not JSON" }) });
     expect(await client.research({ ref: "video:1", url })).toMatchObject({
       status: "failed",
       error: "Summarize returned invalid transcript JSON.",
@@ -108,7 +166,7 @@ describe("video research", () => {
   it.each(["ENOENT", "ETIMEDOUT"])(
     "reports CLI failures without leaking process stderr: %s",
     async (code) => {
-      const client = new VideoResearchClient({
+      const client = createVideoClient({
         runCommand: async () => {
           throw Object.assign(new Error("private config and process output"), { code });
         },
@@ -126,7 +184,7 @@ describe("video research", () => {
     const fetch = vi.fn(
       async () => new Response("media bytes", { headers: { "content-type": "video/mp4" } }),
     );
-    const client = new VideoResearchClient({
+    const client = createVideoClient({
       fetch,
       runCommand: async (_command, args) => {
         mediaPath = args[0];
@@ -149,7 +207,7 @@ describe("video research", () => {
 
   it("removes downloaded media after transcription failure", async () => {
     let mediaPath = "";
-    const client = new VideoResearchClient({
+    const client = createVideoClient({
       fetch: async () => new Response("media", { headers: { "content-type": "video/mp4" } }),
       runCommand: async (_command, args) => {
         mediaPath = args[0];
@@ -185,7 +243,7 @@ describe("video research", () => {
             },
           }),
       );
-      const client = new VideoResearchClient({ fetch, runCommand, maxBytes: 10 });
+      const client = createVideoClient({ fetch, runCommand, maxBytes: 10 });
       expect(await client.research({ ref: "video:2", url: mediaUrl })).toMatchObject({
         status: "failed",
       });
@@ -204,7 +262,7 @@ describe("video research", () => {
         }),
       )
       .mockResolvedValueOnce(new Response("media", { headers: { "content-type": "video/mp4" } }));
-    const client = new VideoResearchClient({
+    const client = createVideoClient({
       fetch,
       runCommand: async () => ({ stdout: `Transcript:\n${transcript}` }),
     });
@@ -215,7 +273,7 @@ describe("video research", () => {
   });
 
   it("stops redirect loops", async () => {
-    const client = new VideoResearchClient({
+    const client = createVideoClient({
       fetch: async () =>
         new Response(null, {
           status: 302,

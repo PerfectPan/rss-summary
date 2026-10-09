@@ -35,7 +35,7 @@ FEED_STATE_JSON=
 - PR：说清项目是什么、具体改了什么、是否值得注意，不能只写“重要 PR 已合并”。
 - Release：核对 breaking changes、迁移成本与是否需要行动。
 - 文章：原文可访问时必须打开；提炼核心观点、证据质量和实践相关性。
-- 视频：通过 `research-article` 获取字幕或音频转写后再概括，保留视频链接。仅依据标题、推荐语或视频简介不能生成内容摘要；返回节选时只总结节选支持的内容，音频转写不能作为画面内容的证据。
+- 视频：通过 `research-article` 获取字幕/音频转写和带时间点的关键帧视觉记录，保留视频链接。只使用 `content` 中已取得的文字与画面证据；`visuals.status` 为 `partial` / `unavailable` 时不能宣称完整看过画面。仅有图片路径或 OCR 不算完成看图；返回节选时只总结节选支持的内容。完整转录和画面材料保存在 `materials` 指向的本项目运行目录。
 - 论文：候选队列最多 8 篇；逐篇打开 `arxiv.org/abs/<id>`，核对作者/机构、问题、方法、结果、限制和代码链接。只有很可能进入最终 2–3 篇时才读取 `ar5iv.labs.arxiv.org/html/<id>` 正文。
 - 已研究 GitHub repo 复用 `state.researched["github:owner/repo"]`，但新的订阅事件仍可作为一句话更新出现。
 

@@ -1,4 +1,5 @@
 import { load } from "cheerio";
+import type { VideoVisuals } from "./video-frames.js";
 
 export type ArticleResearchRequest = {
   ref: string;
@@ -15,6 +16,8 @@ export type ArticleResearchResult =
       status: "ok";
       title: string;
       url: string;
+      visuals?: VideoVisuals;
+      materials?: { transcriptPath: string; manifestPath: string };
     }
   | {
       error: string;

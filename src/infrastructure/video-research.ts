@@ -12,6 +12,7 @@ import {
   type ArticleResearchResult,
 } from "./article-research.js";
 import { asRecord, text } from "./parsing.js";
+import { captureVideoFrames, videoVisualEvidence } from "./video-frames.js";
 
 type RunCommand = (
   command: string,
@@ -20,6 +21,7 @@ type RunCommand = (
 ) => Promise<{ stdout: string }>;
 
 type VideoResearchOptions = {
+  captureFrames?: typeof captureVideoFrames;
   command?: string;
   env?: NodeJS.ProcessEnv;
   fetch?: typeof fetch;
@@ -33,6 +35,7 @@ const MAX_CONTENT_CHARS = 5_500;
 
 /** Use Summarize's caption/transcription pipeline; never accept its description-only fallback. */
 export class VideoResearchClient {
+  private readonly captureFrames: typeof captureVideoFrames;
   private readonly command: string;
   private readonly env: NodeJS.ProcessEnv;
   private readonly fetchImpl: typeof fetch;
@@ -41,6 +44,7 @@ export class VideoResearchClient {
   private readonly timeoutMs: number;
 
   constructor(options: VideoResearchOptions = {}) {
+    this.captureFrames = options.captureFrames ?? captureVideoFrames;
     this.command = options.command ?? "summarize";
     this.env = options.env ?? process.env;
     this.fetchImpl = options.fetch ?? fetch;
@@ -92,8 +96,26 @@ export class VideoResearchClient {
         method = source === "whisper" ? "transcription" : "captions";
       }
       if (transcript.length < 80) throw new Error("Video transcript was too short.");
+      const visualResearch = await this.captureFrames({
+        input,
+        sourceUrl: url,
+        transcript,
+        directory: this.env.RSS_VIDEO_RESEARCH_DIR ?? ".state/video-research",
+        visionArgs: this.env.RSS_VIDEO_VISION_MODEL?.trim()
+          ? ["--model", this.env.RSS_VIDEO_VISION_MODEL.trim()]
+          : ["--cli", this.env.RSS_VIDEO_VISION_CLI?.trim() || "codex"],
+        timeoutMs: this.timeoutMs,
+        run: (args, timeout) =>
+          this.runCommand(this.command, args, {
+            timeout,
+            maxBuffer: 4_000_000,
+            env: this.env,
+          }),
+      });
+      const visualText = videoVisualEvidence(visualResearch.visuals).slice(0, 3_300);
       return {
-        content: transcriptEvidence(transcript, method),
+        ...visualResearch,
+        content: `${transcriptEvidence(transcript, method, MAX_CONTENT_CHARS - visualText.length - 2)}\n\n${visualText}`,
         fetchedUrl: url,
         method,
         ref: request.ref,
@@ -200,14 +222,18 @@ export class VideoResearchClient {
   }
 }
 
-function transcriptEvidence(transcript: string, method: "captions" | "transcription"): string {
+function transcriptEvidence(
+  transcript: string,
+  method: "captions" | "transcription",
+  maximum = MAX_CONTENT_CHARS,
+): string {
   const note =
     method === "captions"
       ? "视频字幕（可能含自动字幕识别错误）。"
       : "视频音频转写（自动识别，可能有错字；不包含画面信息）。";
-  if (transcript.length + note.length + 1 <= MAX_CONTENT_CHARS) return `${note}\n${transcript}`;
+  if (transcript.length + note.length + 1 <= maximum) return `${note}\n${transcript}`;
   const excerpts = Array.from({ length: 5 }, (_, index) => {
-    const width = 1_000;
+    const width = Math.floor((maximum - 200) / 5);
     const start = Math.floor(((transcript.length - width) * index) / 4);
     return transcript.slice(start, start + width);
   });
