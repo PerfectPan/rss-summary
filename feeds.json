@@ -345,6 +345,14 @@
     ]
   },
   {
+    "name": "/dev/michael",
+    "url": "https://michaellivs.com/rss.xml",
+    "tags": [
+      "Articles",
+      "Blog"
+    ]
+  },
+  {
     "name": "Dennis Morello",
     "url": "https://morello.dev/rss.xml",
     "tags": [
