@@ -3,6 +3,44 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { createArticleResearchExecutor } from "../../src/presentation/research-tool.js";
 
 describe("article research Tool", () => {
+  it("preserves visual provenance and material links in the scheduled research result", async () => {
+    const url = "https://www.youtube.com/watch?v=example";
+    const execute = createArticleResearchExecutor({
+      videoClient: {
+        research: async ({ ref }) => ({
+          ref,
+          url,
+          fetchedUrl: url,
+          status: "ok",
+          method: "captions",
+          retrievedAt: "2026-10-09T12:00:00Z",
+          title: "Demo",
+          content: "视频音频与已经核验的画面证据。".repeat(10),
+          visuals: {
+            status: "analyzed",
+            frames: [
+              {
+                index: 1,
+                timestampSeconds: 59,
+                imagePath: "/generated/frame.png",
+                visualText: "画面显示 SQLite 存储初始化代码。",
+              },
+            ],
+          },
+          materials: {
+            transcriptPath: "/generated/transcript.txt",
+            manifestPath: "/generated/research.json",
+          },
+        }),
+      },
+    });
+    expect(await execute({ ref: "video:1", url })).toMatchObject({
+      tool: "article-research",
+      visuals: { status: "analyzed" },
+      materials: { transcriptPath: "/generated/transcript.txt" },
+    });
+  });
+
   it("validates the Agent request and returns structured research evidence", async () => {
     const research = vi.fn(async ({ ref, url }: { ref: string; url: string }) => ({
       content: "A sufficiently long article body for a grounded summary.",
@@ -35,6 +73,42 @@ describe("article research Tool", () => {
     );
     expect(research).not.toHaveBeenCalled();
   });
+
+  it.each(["auto", "browser", "http"])(
+    "routes videos to transcript research instead of browser, HTTP or GLM in %s mode",
+    async (mode) => {
+      const research = vi.fn();
+      const read = vi.fn();
+      const video = vi.fn(async ({ ref, url }: { ref: string; url: string }) => ({
+        ref,
+        url,
+        fetchedUrl: url,
+        title: "Video",
+        retrievedAt: "2026-10-07T15:00:00Z",
+        content: "Verified captions. ".repeat(10),
+        method: "captions" as const,
+        status: "ok" as const,
+      }));
+      const execute = createArticleResearchExecutor({
+        env: { RSS_ARTICLE_GLM_FALLBACK: "true" },
+        browserClient: { research },
+        client: { research },
+        glmClient: { read },
+        videoClient: { research: video },
+      });
+
+      await expect(
+        execute({ mode, ref: "video:1", url: "https://www.youtube.com/watch?v=example" }),
+      ).resolves.toMatchObject({
+        status: "ok",
+        method: "captions",
+        tool: "article-research",
+      });
+      expect(research).not.toHaveBeenCalled();
+      expect(read).not.toHaveBeenCalled();
+      expect(video).toHaveBeenCalledOnce();
+    },
+  );
 
   it("uses browser research first in auto mode and skips HTTP on success", async () => {
     const browser = vi.fn(async ({ ref, url }: { ref: string; url: string }) => ({
