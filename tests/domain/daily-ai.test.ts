@@ -91,7 +91,7 @@ describe("Daily AI editorial domain", () => {
     expect(result.audit.editorialIssues).toEqual([]);
   });
 
-  it("caps the concise digest and audits evidence left outside the cap", () => {
+  it("preserves valid selected events beyond eight without a count quota", () => {
     const sources = Array.from({ length: 9 }, (_, index) =>
       evidence({
         id: `source-${index}`,
@@ -106,10 +106,10 @@ describe("Daily AI editorial domain", () => {
         refs: [id],
       })),
     });
-    expect(result.items).toHaveLength(8);
+    expect(result.items).toHaveLength(9);
     expect(result.audit.decisions.at(-1)).toMatchObject({
       evidenceIds: ["source-8"],
-      status: "filtered",
+      status: "selected",
     });
   });
 

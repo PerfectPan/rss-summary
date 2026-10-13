@@ -12,8 +12,6 @@ export const dailyAiCategories = [
 export type DailyAiCategory = (typeof dailyAiCategories)[number];
 export type DailyAiSourceTier = "official" | "authoritative" | "aggregator";
 
-export const dailyAiItemLimit = 8;
-
 export type DailyAiEvidence = {
   id: string;
   title: string;
@@ -96,7 +94,7 @@ export function buildDailyAiDigest(
   let editorialIssues: DailyAiEditorialIssue[] = [];
   if (options.draft !== undefined) {
     const validation = validateEditorialDraft(options.draft, evidence);
-    items = validation.items.slice(0, dailyAiItemLimit);
+    items = validation.items;
     editorialIssues = validation.issues;
     if (items.length === 0 && editorialIssues.length > 0) {
       throw new DailyAiDraftValidationError(editorialIssues);

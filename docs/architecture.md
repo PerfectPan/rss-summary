@@ -98,7 +98,7 @@ structured `{category, headline, refs}` records and validates only their schema,
 known evidence references. Each record is validated independently, so a bad record cannot discard
 valid siblings. If all records are invalid while evidence exists, a typed validation error triggers a
 bounded retry against the cached snapshot; there is no title fallback or code-side keyword inference.
-The digest has no minimum and at most 8 events; at most 2 CLI update items, each with concrete
+The digest has no fixed item count; CLI updates need concrete
 changes and one item per tool. Version-only releases are omitted and an explicit empty editorial
 array is valid. Only `render` returns deliverable Markdown. Source references are
 rendered as clickable inline badges beside each event; repeated labels from the same provider

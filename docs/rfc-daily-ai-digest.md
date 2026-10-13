@@ -34,7 +34,7 @@ bounded retry.
 - Evidence with the same canonical URL or exact normalized title is merged and cites every
   supporting source; semantic deduplication remains Agent-owned.
 - RSS boilerplate, navigation and subscription promotion are removed before editorial use.
-- At most 8 events, ordered by user impact, without a minimum. CLI updates use at most 2 items;
+- Select and order events by user impact without a fixed item count;
   combine versions and changes from the same tool into one event. Version/build-only releases,
   including alpha, beta, preview, rc and nightly builds, are omitted. A prerelease is worth
   including only when evidence supports an important feature, security fix or breaking change;

@@ -11,7 +11,7 @@ import {
   type RivusNewsBriefOutput,
   type RivusNewsBriefResult,
 } from "../application/news-brief.js";
-import { dailyAiCategories, dailyAiItemLimit } from "../domain/daily-ai.js";
+import { dailyAiCategories } from "../domain/daily-ai.js";
 import { generateRivusIndustryBrief, type RivusIndustryBriefResult } from "./rivus-industry.js";
 import type { RivusDigestResult } from "./rivus-digest.js";
 import { renderNewsBrief } from "./news-render.js";
@@ -91,7 +91,7 @@ export function createRssSummaryPlugin(
         createExecutor: () => ({ execute: (input) => executeDailyAiDigest(input) }),
         description:
           "Generate a source-grounded Daily AI Digest for the rolling 24 hours before the occurrence",
-        digest: "sha256:rss-summary-generate-daily-ai-digest-v5",
+        digest: "sha256:rss-summary-generate-daily-ai-digest-v6",
         id: RSS_SUMMARY_DAILY_AI_TOOL_ID,
         idempotency: "none",
         inputSchema: {
@@ -100,7 +100,6 @@ export function createRssSummaryPlugin(
             draft: {
               description:
                 "Editorial Array<{category, headline, refs}> produced only from collect evidence; required for render; [] when no meaningful updates",
-              maxItems: dailyAiItemLimit,
               items: {
                 additionalProperties: false,
                 properties: {
