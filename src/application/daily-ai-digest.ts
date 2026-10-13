@@ -84,6 +84,10 @@ export async function generateDailyAiDigest(
     generatedAt: (dependencies.now ?? (() => new Date()))().toISOString(),
     warnings: [
       ...newsCollection.result.warnings,
+      ...(official.audit?.sources
+        .filter(({ status }) => status !== "ok")
+        .map(({ name, error }) => `官方来源采集不完整：${name}${error ? `（${error}）` : ""}`) ??
+        []),
       ...(newsCollection.unavailable
         ? ["新闻搜索暂不可用：所有查询均失败，本期仅使用官方来源"]
         : []),

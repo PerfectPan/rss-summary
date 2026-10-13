@@ -92,7 +92,8 @@ export function extractWebPageEntries(html: string, source: WebPageSubscription)
       .find("h1, h2, h3, h4, [role='heading'], [class*='title'], [class*='headline']")
       .first();
     const ariaTitle = cleanTitle(element.attr("aria-label"));
-    const structuredTitle = cleanTitle(titleElement.text());
+    const structuredTitle =
+      cleanTitle(titleElement.text()) ?? cleanTitle(element.find("article p").first().text());
     const textTitle = cleanTitle(element.clone().find("time").remove().end().text());
     const [title, titleScore] = ariaTitle
       ? [ariaTitle, 3]
@@ -101,7 +102,27 @@ export function extractWebPageEntries(html: string, source: WebPageSubscription)
         : textTitle
           ? [textTitle, 1]
           : [undefined, 0];
-    const summary = cleanText(element.find("p").first().text());
+    const article = element.closest("article");
+    // A changelog's date/title links and body can be siblings. Only borrow a body
+    // when that article identifies one entry, so neighboring updates cannot leak in.
+    const articleUrls = new Set(
+      article
+        .find("a[href]")
+        .toArray()
+        .map((link) => canonicalUrl($(link).attr("href"), source.url))
+        .filter(
+          (link) => link && isSameHost(link, source.url) && matchesPath(link, source.pathPrefixes),
+        ),
+    );
+    const paragraphs = articleUrls.size === 1 ? article.find("p") : element.find("p");
+    const summary = cleanText(
+      paragraphs
+        .toArray()
+        .filter((paragraph) => $(paragraph).find("time").length === 0)
+        .map((paragraph) => cleanText($(paragraph).text()))
+        .filter((text) => text && text !== title)
+        .join(" "),
+    )?.slice(0, 4000);
 
     entries.set(url, {
       title: titleScore > current.titleScore ? title : current.title,

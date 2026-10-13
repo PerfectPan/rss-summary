@@ -12,6 +12,8 @@ export const dailyAiCategories = [
 export type DailyAiCategory = (typeof dailyAiCategories)[number];
 export type DailyAiSourceTier = "official" | "authoritative" | "aggregator";
 
+export const dailyAiItemLimit = 8;
+
 export type DailyAiEvidence = {
   id: string;
   title: string;
@@ -40,7 +42,6 @@ export type DailyAiEditorialIssueReason =
   | "invalid-item"
   | "invalid-category"
   | "invalid-headline"
-  | "empty-draft"
   | "unknown-reference";
 
 export type DailyAiEditorialIssue = {
@@ -95,19 +96,9 @@ export function buildDailyAiDigest(
   let editorialIssues: DailyAiEditorialIssue[] = [];
   if (options.draft !== undefined) {
     const validation = validateEditorialDraft(options.draft, evidence);
-    items = validation.items.slice(0, 24);
+    items = validation.items.slice(0, dailyAiItemLimit);
     editorialIssues = validation.issues;
-    if (evidence.length > 0 && items.length === 0) {
-      if (editorialIssues.length === 0) {
-        editorialIssues = [
-          {
-            index: -1,
-            refs: [],
-            reason: "empty-draft",
-            message: "editorial draft is empty",
-          },
-        ];
-      }
+    if (items.length === 0 && editorialIssues.length > 0) {
       throw new DailyAiDraftValidationError(editorialIssues);
     }
   }

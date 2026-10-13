@@ -22,6 +22,12 @@ Each Automation returns two compatible views of the same result: canonical Markd
 
 All Tools have `observe` risk. Feed Tools force dry-run mode: they read only-new state but do not send a webhook, write seen state, or write local run artifacts. News collection also leaves business seen state and message delivery untouched, but it writes operational request reservations and raw response cache entries. Its result includes the query/rejection/selection audit. Daily AI's `collect` result exposes one complete rolling-window news audit plus the official-source audit; a provider-wide Doubao failure retains each normalized error code while official collection continues. Rivus records the subsequent card delivery in its trace and Feishu delivery ledger.
 
+The official registry includes Anthropic News, Research and Engineering; Cursor Changelog and Blog;
+alongside OpenAI RSS. xAI News remains excluded while its production fetch is blocked by HTTP 403.
+HTTP or parser failures remain visible in source audit and the
+Daily AI source-status warning; a configured page does not imply successful coverage. Cursor
+changelog bodies are kept with their own article links so the editor can explain actual changes.
+
 Public GitHub Repository Search and Hacker News discovery are intentionally absent. GitHub Home belongs to personal subscriptions; industry discovery comes from curated first-party RSS/Atom and explicitly configured official pages.
 
 ## Install

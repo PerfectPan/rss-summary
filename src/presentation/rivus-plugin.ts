@@ -11,12 +11,16 @@ import {
   type RivusNewsBriefOutput,
   type RivusNewsBriefResult,
 } from "../application/news-brief.js";
-import { dailyAiCategories } from "../domain/daily-ai.js";
+import { dailyAiCategories, dailyAiItemLimit } from "../domain/daily-ai.js";
 import { generateRivusIndustryBrief, type RivusIndustryBriefResult } from "./rivus-industry.js";
 import type { RivusDigestResult } from "./rivus-digest.js";
 import { renderNewsBrief } from "./news-render.js";
 import { createRivusSubscriptionExecutor } from "./subscription-tool.js";
-import { createRivusDailyAiDigestExecutor, type RivusDailyAiToolResult } from "./daily-ai-tool.js";
+import {
+  createRivusDailyAiDigestExecutor,
+  dailyAiEditorialPolicy,
+  type RivusDailyAiToolResult,
+} from "./daily-ai-tool.js";
 import { createArticleResearchExecutor, type RivusArticleResearchResult } from "./research-tool.js";
 import {
   createRssAutomationPresentation,
@@ -87,7 +91,7 @@ export function createRssSummaryPlugin(
         createExecutor: () => ({ execute: (input) => executeDailyAiDigest(input) }),
         description:
           "Generate a source-grounded Daily AI Digest for the rolling 24 hours before the occurrence",
-        digest: "sha256:rss-summary-generate-daily-ai-digest-v4",
+        digest: "sha256:rss-summary-generate-daily-ai-digest-v5",
         id: RSS_SUMMARY_DAILY_AI_TOOL_ID,
         idempotency: "none",
         inputSchema: {
@@ -95,7 +99,8 @@ export function createRssSummaryPlugin(
           properties: {
             draft: {
               description:
-                "Editorial Array<{category, headline, refs}> produced only from collect evidence; required for render",
+                "Editorial Array<{category, headline, refs}> produced only from collect evidence; required for render; [] when no meaningful updates",
+              maxItems: dailyAiItemLimit,
               items: {
                 additionalProperties: false,
                 properties: {
@@ -349,7 +354,7 @@ export function createRssSummaryPlugin(
       registry.registerAutomation(
         presentationAutomation({
           createInput: ({ occurrence }) => ({
-            text: `请严格按顺序完成 Daily AI Digest：\n\n1. 调用 ${RSS_SUMMARY_DAILY_AI_TOOL_ID}，输入 ${JSON.stringify({ occurrence, phase: "collect" })}，获取指定时间窗口内的候选内容。\n2. 根据 collect 返回的 evidence 自主筛选、去重、归类并生成结构化草稿 Array<{category, headline, refs}>。仅依据 evidence 写作，不补充未经来源支持的事实；单条内容不合格时跳过该条，不影响其他条目。\n3. 调用 ${RSS_SUMMARY_DAILY_AI_TOOL_ID}，输入 ${JSON.stringify({ occurrence, phase: "render" })} 并增加 draft 字段，生成最终 Markdown。若校验失败，根据错误信息修正对应条目并重试，最多两次。\n4. render 成功后，直接将返回结果中的 markdown 字段作为最终回复。最终回复只包含该字段内容，不描述执行步骤、调用结果或校验过程，不添加任何说明或代码围栏，也不改写该字段。`,
+            text: `请严格按顺序完成 Daily AI Digest：\n\n1. 调用 ${RSS_SUMMARY_DAILY_AI_TOOL_ID}，输入 ${JSON.stringify({ occurrence, phase: "collect" })}，获取指定时间窗口内的候选内容。\n2. 根据 collect 返回的 evidence 自主筛选、去重、归类并生成结构化草稿 Array<{category, headline, refs}>。仅依据 evidence 写作，不补充未经来源支持的事实；单条内容不合格时跳过该条，不影响其他条目。\n${dailyAiEditorialPolicy}\n3. 调用 ${RSS_SUMMARY_DAILY_AI_TOOL_ID}，输入 ${JSON.stringify({ occurrence, phase: "render" })} 并增加 draft 字段，生成最终 Markdown。若校验失败，根据错误信息修正对应条目并重试，最多两次。\n4. render 成功后，直接将返回结果中的 markdown 字段作为最终回复。最终回复只包含该字段内容，不描述执行步骤、调用结果或校验过程，不添加任何说明或代码围栏，也不改写该字段。`,
           }),
           createPresentation: ({ text }) => createRssAutomationPresentation(text, "daily-ai"),
           id: RSS_SUMMARY_DAILY_AI_AUTOMATION_ID,

@@ -50,13 +50,19 @@ Example:
   to the production Node client and Meta's robots policy restricts automated collection, so neither
   is included in the initial set.
 
-## Initial Sources
+## Sources
 
 - Anthropic News: `https://www.anthropic.com/news`, articles under `/news/`.
+- Anthropic Research: `https://www.anthropic.com/research`, articles under `/research/`.
+- Anthropic Engineering: `https://www.anthropic.com/engineering`, articles under `/engineering/`.
 - Cursor Changelog: `https://cursor.com/changelog`, entries under `/changelog/`.
+- Cursor Blog: `https://cursor.com/blog`, entries under `/blog/`.
 
-Both were verified through the production CLI in a dry-run window: 13 Anthropic entries and 5
-Cursor entries were collected, and dated candidates retained their real titles and canonical URLs.
+These listing routes allow automated access in their robots policies. Production-client and CLI
+dry-run checks cover dated links, canonical URLs and source health. Blog card titles omit author and
+reading-time labels. Changelog paragraphs are retained only when the enclosing article identifies
+one update, so summaries cannot borrow a neighboring entry's changes. xAI remains excluded while
+its direct fetch returns HTTP 403.
 
 ## Operational Consequences
 

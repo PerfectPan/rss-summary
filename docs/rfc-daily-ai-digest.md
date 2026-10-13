@@ -22,8 +22,8 @@ The Rivus Tool uses a two-phase contract. `collect` returns normalized evidence 
 deliverable Markdown. The agent edits only structured `{category, headline, refs}` data
 from that evidence, then calls `render`. The second phase resolves the original cached
 evidence, validates each draft item independently and is the only phase allowed to produce final
-Markdown. One malformed item cannot discard valid siblings. When evidence exists but no draft item
-is valid, the Tool returns `DAILY_AI_DRAFT_VALIDATION_FAILED` and keeps the evidence snapshot for a
+Markdown. One malformed item cannot discard valid siblings. An explicit empty array is a valid editorial decision when no evidence merits delivery. When a
+nonempty or malformed draft contains no valid item, the Tool returns `DAILY_AI_DRAFT_VALIDATION_FAILED` and keeps the evidence snapshot for a
 bounded retry.
 
 ## Safety and quality invariants
@@ -34,13 +34,19 @@ bounded retry.
 - Evidence with the same canonical URL or exact normalized title is merged and cites every
   supporting source; semantic deduplication remains Agent-owned.
 - RSS boilerplate, navigation and subscription promotion are removed before editorial use.
-- A target of 12–24 is a budget, not a quota; low-quality evidence is omitted.
+- At most 8 events, ordered by user impact, without a minimum. CLI updates use at most 2 items;
+  combine versions and changes from the same tool into one event. Version/build-only releases,
+  including alpha, beta, preview, rc and nightly builds, are omitted. A prerelease is worth
+  including only when evidence supports an important feature, security fix or breaking change;
+  explicitly label it as a prerelease. Headlines explain the concrete change and impact, never
+  infer features from version numbers. The Tool returns these instructions with collect evidence.
 - Model/editor output is data, never directly deliverable prose. Code does not infer categories or
   semantic validity from title keyword lists, and it never substitutes a source title as fallback.
 - Public audit records evidence and decisions but never cookies, tokens or private HTML.
 - The rolling-window news collection and official-source collection are independent
   failure domains. An all-query Doubao failure is retained as a per-query audit and visible
-  source-status warning while official collection continues; the aggregate fails only when no
+  source-status warning while official collection continues; official-source failures also appear
+  in the final source-status warning; the aggregate fails only when no
   collector yields usable evidence.
 - Each event links its evidence through compact inline source badges. Repeated labels from the same
   provider collapse to one visible badge, and there is no repeated trailing source list.
