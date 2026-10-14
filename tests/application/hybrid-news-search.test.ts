@@ -60,6 +60,35 @@ function setup(search = vi.fn(async (): Promise<DoubaoSearchPage> => empty)) {
 }
 
 describe("hybrid news search", () => {
+  it.each(["local_budget_exhausted", "local_budget_state"])(
+    "never falls back to GLM after %s",
+    async (code) => {
+      const { execute, glm } = setup(
+        vi.fn(async () => {
+          throw new DoubaoSearchError(code, "local spending boundary");
+        }),
+      );
+      await expect(execute(request)).rejects.toMatchObject({ code });
+      expect(glm.search).not.toHaveBeenCalled();
+      expect(glm.read).not.toHaveBeenCalled();
+    },
+  );
+
+  it("reuses an empty raw cache without spending GLM quota again", async () => {
+    const searchUsage = {
+      source: "cache" as const,
+      fetchedAt: "2026-09-29T01:00:00Z",
+      dailyUsed: 14,
+      monthlyUsed: 420,
+      dailyLimit: 14,
+      monthlyLimit: 420,
+    };
+    const { execute, glm } = setup(vi.fn(async () => ({ ...empty, searchUsage })));
+    expect(await execute(request)).toMatchObject({ provider: "doubao", searchUsage, results: [] });
+    expect(glm.search).not.toHaveBeenCalled();
+    expect(glm.read).not.toHaveBeenCalled();
+  });
+
   it("keeps eligible Doubao results without spending GLM quota", async () => {
     const hit = {
       id: "d1",

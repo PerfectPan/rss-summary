@@ -13,10 +13,31 @@
   },
   {
     "type": "page",
+    "name": "Anthropic Research",
+    "url": "https://www.anthropic.com/research",
+    "pathPrefixes": ["/research/"],
+    "tags": ["Articles", "Research"]
+  },
+  {
+    "type": "page",
+    "name": "Anthropic Engineering",
+    "url": "https://www.anthropic.com/engineering",
+    "pathPrefixes": ["/engineering/"],
+    "tags": ["Articles", "Developer Tools"]
+  },
+  {
+    "type": "page",
     "name": "Cursor Changelog",
     "url": "https://cursor.com/changelog",
     "pathPrefixes": ["/changelog/"],
     "tags": ["Developer Tools", "News"]
+  },
+  {
+    "type": "page",
+    "name": "Cursor Blog",
+    "url": "https://cursor.com/blog",
+    "pathPrefixes": ["/blog/"],
+    "tags": ["Articles", "Developer Tools"]
   },
   {
     "name": "Hugging Face Blog",

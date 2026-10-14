@@ -25,6 +25,14 @@ export type DoubaoSearchResult = {
 };
 
 export type DoubaoSearchPage = {
+  searchUsage?: {
+    source: "network" | "cache";
+    fetchedAt: string;
+    dailyUsed: number;
+    monthlyUsed: number;
+    dailyLimit: number;
+    monthlyLimit: number;
+  };
   provider?: "doubao" | "glm" | "mixed";
   fallback?: {
     reason: string;

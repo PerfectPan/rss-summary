@@ -10,7 +10,7 @@ Each Automation returns two compatible views of the same result: canonical Markd
 | --- | --- | --- |
 | Agent profile | `rss-digest` | Allows only the five rss-summary Tools |
 | Tool | `rss-summary/generate-digest` | GitHub Home + explicitly subscribed personal RSS |
-| Tool | `rss-summary/research-article` | render or fetch one Agent-selected public article URL |
+| Tool | `rss-summary/research-article` | read an article or research video transcripts and visual key frames |
 | Tool | `rss-summary/generate-industry-brief` | curated official feeds and verified pages; papers stay pending |
 | Tool | `rss-summary/generate-news-brief` | bounded noon/evening authoritative web news |
 | Tool | `rss-summary/generate-daily-ai-digest` | two-phase grounded Daily AI evidence editing and rendering |
@@ -20,7 +20,13 @@ Each Automation returns two compatible views of the same result: canonical Markd
 | Automation | `rss-summary/noon-news-brief` | current day 00:00 through noon occurrence |
 | Automation | `rss-summary/evening-news-brief` | current day 12:30 through evening occurrence |
 
-All Tools have `observe` risk. Feed Tools force dry-run mode: they read only-new state but do not send a webhook, write seen state, or write local run artifacts. Their structured result includes the source/candidate audit. The news Tool includes its query/rejection/selection audit. Daily AI's `collect` result exposes every news segment overlapping its rolling window plus the official-source audit; a provider-wide Doubao failure retains each normalized error code while successful remaining collectors continue. Rivus records the subsequent card delivery in its trace and Feishu delivery ledger.
+All Tools have `observe` risk. Feed Tools force dry-run mode: they read only-new state but do not send a webhook, write seen state, or write local run artifacts. News collection also leaves business seen state and message delivery untouched, but it writes operational request reservations and raw response cache entries. Its result includes the query/rejection/selection audit. Daily AI's `collect` result exposes one complete rolling-window news audit plus the official-source audit; a provider-wide Doubao failure retains each normalized error code while official collection continues. Rivus records the subsequent card delivery in its trace and Feishu delivery ledger.
+
+The official registry includes Anthropic News, Research and Engineering; Cursor Changelog and Blog;
+alongside OpenAI RSS. xAI News remains excluded while its production fetch is blocked by HTTP 403.
+HTTP or parser failures remain visible in source audit and the
+Daily AI source-status warning; a configured page does not imply successful coverage. Cursor
+changelog bodies are kept with their own article links so the editor can explain actual changes.
 
 Public GitHub Repository Search and Hacker News discovery are intentionally absent. GitHub Home belongs to personal subscriptions; industry discovery comes from curated first-party RSS/Atom and explicitly configured official pages.
 
@@ -37,14 +43,19 @@ cd /path/to/rivus-project
 npm install /path/to/rss-summary
 ```
 
-The supported `@rivus/agent` peer range is `>=0.12.7 <0.17.0`, covering the 0.12 through 0.16 runtime lines used by
-the production deployment and the version exercised by repository tests.
+The `@rivus/agent` peer is `*`, without a version restriction. Repository tests use the exact
+0.18.0 release; package checks also exercise the historical 0.12.7 baseline. Each deployed Core upgrade must still pass
+Plugin conformance and no-send Tool checks.
 
-`pnpm package:check` keeps the 0.12.7 minimum-runtime check by default. Test a newer exact official release from the
+The Plugin passes Promises and plain data to the Host. Its internal Effect 3 computations are completed
+inside its application adapters before returning to the Host, so they remain separate from Core Effect 4.
+Do not pass Effect or Stream values across this boundary.
+
+`pnpm package:check` keeps the 0.12.7 baseline check by default. Test a newer exact official release from the
 public npm registry without changing the development lockfile:
 
 ```bash
-RIVUS_CORE_PACKAGE_VERSION=0.16.0 pnpm package:check
+RIVUS_CORE_PACKAGE_VERSION=0.18.0 pnpm package:check
 ```
 
 Version ranges and dist-tags are rejected. The registry version option cannot be combined with an archive.
@@ -129,13 +140,19 @@ INDUSTRY_STATE_FILE=/path/to/rss-summary/.state/industry-state.json
 FEED_MAX_PAPERS=8
 DOUBAO_SEARCH_API_KEY=replace-with-doubao-search-api-key
 NEWS_TOPICS_FILE=/path/to/rss-summary/news-topics.json
+NEWS_SEARCH_STATE_FILE=/path/to/persistent-state/news-search.json
 GH_FEED_TOKEN=replace-with-github-token
 RIVUS_RSS_DIGEST_TARGET=replace-with-union-id
 ```
 
 Do not set `NOTIFY_WEBHOOK_URL` for the Plugin path; Rivus owns delivery. Browser storage, API keys, and tokens remain local secrets.
 
-The subscription research Tool uses browser-first mode by default. On a Mac mini with Chrome installed, set
+Keep `NEWS_SEARCH_STATE_FILE` outside replaceable package directories and use the same persistent file
+for Daily AI, standalone news and CLI callers in this deployment. Before enabling the new budget,
+carry forward observed current-month usage rather than starting an empty ledger. Query caps, limits,
+cache behavior and recovery steps are defined in [News search budget](news-search-budget.md).
+
+For articles, the subscription research Tool uses browser-first mode by default. On a Mac mini with Chrome installed, set
 `RSS_ARTICLE_BROWSER_CHANNEL=chrome` (the default), keep `RSS_ARTICLE_BROWSER_HEADLESS=true` for daemon runs,
 and optionally tune `RSS_ARTICLE_BROWSER_TIMEOUT_MS`. If the browser cannot render a page, the Tool falls back
 to its bounded HTTP extractor; pass `mode:"browser"` to require browser research or `mode:"http"` to skip it.
@@ -158,9 +175,9 @@ The digest and industry Tool results contain an `audit` object with:
 - fetched/in-window/ranked/selected counts;
 - per-candidate score, presentation depth, typed presentation reason/evidence, and decision.
 
-The news Tool's `audit` records each structured query's provider log ID, normalized provider error code, result counts, deterministic rejection reasons (`outside-window`, `insufficient-authority`, `intent-mismatch`, and others), canonical/title deduplication, topic quota filtering, and the final brief cap. Selected stories also expose a score breakdown for query rank, authority, freshness, and the bounded cross-query tie-break.
+The news Tool's `audit` records each structured query's provider log ID, normalized provider error code, result counts, deterministic rejection reasons (`outside-window`, `insufficient-authority`, `intent-mismatch`, and others), canonical/title deduplication, topic quota filtering, and the final brief cap. Query entries also expose request usage and the original fetch timestamp when served from the raw search cache; deferred queries, exhausted budgets and cached coverage appear in source-status warnings. Selected stories also expose a score breakdown for query rank, authority, freshness, and the bounded cross-query tie-break.
 
-The subscriptions Tool uses a bounded three-phase contract in scheduled runs. `collect` returns typed evidence and deterministic repository facts. The profile model must then make a second-pass decision for every evidence item through `select`, with a short reason; ordinary star/watch activity, duplicates, low-information changes, title-only changes, and items without a user-relevant value should be rejected. For selected public URLs, the Agent calls `rss-summary/research-article` with `mode:"auto"`; the Tool opens an isolated Chrome/Chromium page first, waits for rendered content, and falls back to HTTP if browser research fails. The Agent passes the bounded body into `render` as research evidence. This research step improves only the selected item's grounded summary; the RSS/GitHub collection, selection, deduplication and delivery path stays the same. Summary wording follows the Daily AI Digest single-event style: subject, action, concrete change/result and impact, with a hard limit of 180 characters; sentence and clause punctuation remains model-owned. `render` accepts the complete selection plus research and `Array<{ref, summary}>`, filters the document to `selected=true`, validates references, numeric claims and the length limit, and returns Markdown. If a draft fails validation, it returns `SUBSCRIPTION_SUMMARY_VALIDATION_FAILED` so the Agent can regenerate the affected summary; it never silently substitutes RSS text. If the selection is empty, the profile returns `RIVUS_AUTOMATION_SUPPRESSED:` with a reason so Rivus records the run without creating a delivery. The frontier/news products do not pass through this subscription editor.
+The subscriptions Tool uses a bounded three-phase contract in scheduled runs. `collect` returns typed evidence and deterministic repository facts. The profile model must then make a second-pass decision for every evidence item through `select`, with a short reason; ordinary star/watch activity, duplicates, low-information changes, title-only changes, and items without a user-relevant value should be rejected. For selected public URLs, the Agent calls `rss-summary/research-article` with `mode:"auto"`; the Tool reads article pages through the browser/HTTP flow, or routes known video URLs through Summarize for captions and audio transcription. Video results use `method: captions|transcription`, retain the original URL, and reject description-only results. The research Tool also extracts at most six key frames and sends each PNG to an image-capable model through Summarize. It defaults to the authenticated Codex CLI; RSS_VIDEO_VISION_CLI selects another CLI, and RSS_VIDEO_VISION_MODEL takes precedence when set. Each frame keeps its timestamp, optional OCR, completed visual observation and model identifier. Only completed visual observations enter the bounded content alongside the transcript. OCR or a file path alone is never considered visual inspection. visuals.status reports analyzed, partial or unavailable, so a failed image pass remains distinguishable from transcript success. This runs inside the research Tool because Rivus scheduled invocations do not grant native read access. Long transcripts are returned as explicitly labelled excerpts distributed across the full text; only the returned evidence may support the final summary. Install Summarize 0.25.1, yt-dlp, ffmpeg, whisper-cpp and a local Whisper model on the actual scheduler host as described in the README. Direct media downloads are capped at 1 GB, transcript and visual stages each at ten minutes, and each image-model call at two minutes. Temporary media is deleted after use; full transcripts, PNGs, OCR and visual observations persist under .state/video-research (RSS_VIDEO_RESEARCH_DIR overrides it), with materials paths returned for inspection. These artifacts are not delivery state and must not enter Git. The Agent passes the bounded body into `render` as research evidence. This research step improves only the selected item's grounded summary; the RSS/GitHub collection, selection, deduplication and delivery path stays the same. Summary wording follows the Daily AI Digest single-event style: subject, action, concrete change/result and impact, with a hard limit of 180 characters; sentence and clause punctuation remains model-owned. `render` accepts the complete selection plus research and `Array<{ref, summary}>`, filters the document to `selected=true`, validates references, numeric claims and the length limit, and returns Markdown. If a draft fails validation, it returns `SUBSCRIPTION_SUMMARY_VALIDATION_FAILED` so the Agent can regenerate the affected summary; it never silently substitutes RSS text. If the selection is empty, the profile returns `RIVUS_AUTOMATION_SUPPRESSED:` with a reason so Rivus records the run without creating a delivery. The frontier/news products do not pass through this subscription editor.
 
 The Tool cannot honestly claim Feishu delivery because delivery happens after Tool execution. Use the Rivus run trace for the exact Tool result and its Feishu delivery ledger for target, attempt, idempotency, and outcome. Direct CLI runs instead write paired `.state/runs/...json` and `.md` artifacts.
 

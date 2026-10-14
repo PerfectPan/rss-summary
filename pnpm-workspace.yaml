@@ -1,7 +1,12 @@
 allowBuilds:
+  "@google/genai": false
   esbuild: true
+  protobufjs: false
 minimumReleaseAgeExclude:
-  - "@rivus/agent@0.1.1"
+  - "@rivus/agent@0.1.1 || 0.18.0"
+  - "@rivus/gateway@0.18.0"
+  - "@rivus/platform@0.18.0"
+  - "@rivus/runtime@0.18.0"
 catalog:
   vite: npm:@voidzero-dev/vite-plus-core@0.2.7
   vitest: 4.1.10

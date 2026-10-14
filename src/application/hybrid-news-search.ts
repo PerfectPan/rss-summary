@@ -25,6 +25,7 @@ export type NewsSearchRequest = {
 };
 
 type Options = {
+  cachedSearch?: (input: DoubaoSearchInput) => Promise<DoubaoSearchPage | undefined>;
   search: (input: DoubaoSearchInput) => Promise<DoubaoSearchPage>;
   glm: Pick<GlmResearchClient, "search" | "read">;
   window: NewsTimeWindow;
@@ -56,11 +57,17 @@ export function createHybridNewsSearch(options: Options) {
     let primary: DoubaoSearchPage | undefined;
     let primaryError: DoubaoSearchError | undefined;
     try {
-      if (quotaExhausted)
-        throw new DoubaoSearchError("10406", "Free quota exhausted in this brief run.");
-      primary = await options.search(request.input);
+      if (quotaExhausted) {
+        primary = await options.cachedSearch?.(request.input);
+        if (!primary)
+          throw new DoubaoSearchError("10406", "Free quota exhausted in this brief run.");
+      } else {
+        primary = await options.search(request.input);
+      }
     } catch (error) {
       if (!(error instanceof DoubaoSearchError)) throw error;
+      // A local spending boundary must not silently spend another provider's quota.
+      if (error.code.startsWith("local_budget_")) throw error;
       primaryError = error;
       if (error.code === "10406") quotaExhausted = true;
     }
@@ -69,7 +76,8 @@ export function createHybridNewsSearch(options: Options) {
       baseline.map((result) => toHit(result, request)),
       options.window,
     ).stories;
-    if (accepted.length > 0 && !options.combine) return { ...primary!, provider: "doubao" };
+    if ((accepted.length > 0 && !options.combine) || primary?.searchUsage?.source === "cache")
+      return { ...primary!, provider: "doubao" };
 
     const fallback = {
       reason: primaryError?.code ?? (accepted.length ? "complement" : "no-eligible-results"),

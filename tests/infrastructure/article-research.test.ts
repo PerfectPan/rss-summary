@@ -57,6 +57,58 @@ describe("article research", () => {
     expect(calls).toBe(0);
   });
 
+  it("rejects a video page whose apparent body is only scripts and page chrome", async () => {
+    const client = new ArticleResearchClient({
+      fetch: async () =>
+        new Response(
+          `<html><head><title>Video</title><script>${"window.playerData = {};".repeat(20)}</script>
+          <style>${".player { display: block; }".repeat(20)}</style></head>
+          <body><nav>${"Sign in Browse Videos ".repeat(20)}</nav><video></video></body></html>`,
+          { headers: { "content-type": "text/html" } },
+        ),
+    });
+
+    await expect(
+      client.research({ ref: "video:1", url: "https://example.com/player" }),
+    ).resolves.toMatchObject({
+      status: "failed",
+      error: "article body was too short after extraction",
+    });
+  });
+
+  it.each([
+    "https://www.youtube.com/watch?is=tracking&v=example&feature=youtu.be",
+    "https://youtu.be/example",
+    "https://m.youtube.com/shorts/example",
+    "https://www.youtube.com/live/example",
+    "https://www.youtube-nocookie.com/embed/example",
+    "https://video.twimg.com/amplify_video/123/vid/avc1/1920x1080/example.mp4?tag=1",
+  ])("requires transcript evidence for a known video URL: %s", async (url) => {
+    const client = new ArticleResearchClient({
+      fetch: async () => {
+        throw new Error("video URL should be rejected before fetching");
+      },
+    });
+
+    await expect(client.research({ ref: "video:1", url })).resolves.toMatchObject({
+      status: "failed",
+      error: "video research requires captions or a transcript",
+    });
+  });
+
+  it("keeps readable fallback text on pages without an article root", () => {
+    const result = extractArticle(
+      `<html><head><title>Note</title><script>window.tracking = true;</script></head>
+      <body><nav>Navigation</nav><div>A useful note about TypeScript.</div><footer>Privacy</footer></body></html>`,
+      "https://example.com/note",
+    );
+
+    expect(result).toEqual({
+      title: "Note",
+      content: "Note A useful note about TypeScript.",
+    });
+  });
+
   it("fetches bounded HTML and records the final URL", async () => {
     const client = new ArticleResearchClient({
       fetch: async (url, init) => {
