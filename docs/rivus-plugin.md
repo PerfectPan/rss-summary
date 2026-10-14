@@ -138,7 +138,9 @@ FEED_STATE_FILE=/path/to/rss-summary/.state/feed-state.json
 # INDUSTRY_SOURCES_FILE=/path/to/rss-summary/industry-feeds.json
 INDUSTRY_STATE_FILE=/path/to/rss-summary/.state/industry-state.json
 FEED_MAX_PAPERS=8
-DOUBAO_SEARCH_API_KEY=replace-with-doubao-search-api-key
+NEWS_SEARCH_MODE=grok
+# For explicit doubao/hybrid/combined mode only:
+# DOUBAO_SEARCH_API_KEY=replace-with-doubao-search-api-key
 NEWS_TOPICS_FILE=/path/to/rss-summary/news-topics.json
 NEWS_SEARCH_STATE_FILE=/path/to/persistent-state/news-search.json
 GH_FEED_TOKEN=replace-with-github-token
@@ -157,7 +159,7 @@ For articles, the subscription research Tool uses browser-first mode by default.
 and optionally tune `RSS_ARTICLE_BROWSER_TIMEOUT_MS`. If the browser cannot render a page, the Tool falls back
 to its bounded HTTP extractor; pass `mode:"browser"` to require browser research or `mode:"http"` to skip it.
 
-The news Tool reads `DOUBAO_SEARCH_API_KEY` from the Node process environment. If the Rivus CLI's environment-file option only configures the Host, also load the file into Node:
+The news Tool reads its mode, budgets and optional provider keys from the Node process environment. It defaults to Grok when `NEWS_SEARCH_MODE` is absent and requires an authenticated Grok CLI under the Host user. If the Rivus CLI's environment-file option only configures the Host, also load the file into Node:
 
 ```bash
 node --env-file=/path/to/rivus-project/.env.local \
@@ -197,8 +199,9 @@ Invoke each enabled template once in the foreground. Confirm the morning subscri
 
 ### Grok X search
 
-Set `NEWS_SEARCH_MODE=grok` in the Rivus Host process environment to use native X search
-for the existing noon/evening news Tool and Daily AI collection. The host's OS user must
+Native X search is the default for the existing noon/evening news Tool and Daily AI collection
+when `NEWS_SEARCH_MODE` is absent. Explicit `doubao`, `hybrid` and `combined` settings remain effective;
+set `NEWS_SEARCH_MODE=grok` to change an existing Host to Grok. The host's OS user must
 already have an authenticated Grok CLI. No Doubao or GLM key is needed in this mode;
 Daily AI's independent official feed collection still runs.
 See [Grok X search](grok-x-search.md) for caps, usage interpretation and a no-send trial.

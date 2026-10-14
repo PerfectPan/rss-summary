@@ -45,7 +45,11 @@ describe("Rivus news brief Tool adapter", () => {
       const result = await Effect.runPromise(
         generateRivusNewsBrief(
           { edition: "noon", occurrence },
-          { env: {}, search, topics: [newsTopic("technology", queryIds)] },
+          {
+            env: { NEWS_SEARCH_MODE: "doubao" },
+            search,
+            topics: [newsTopic("technology", queryIds)],
+          },
         ),
       );
       expect(search).toHaveBeenCalledTimes(4);
@@ -87,7 +91,7 @@ describe("Rivus news brief Tool adapter", () => {
         generateRivusNewsBrief(
           { occurrence, edition: "noon", since: new Date(until - 86_400_000).toISOString() },
           {
-            env: {},
+            env: { NEWS_SEARCH_MODE: "doubao" },
             search,
             topics: [
               {
@@ -167,7 +171,7 @@ describe("Rivus news brief Tool adapter", () => {
       generateRivusNewsBrief(
         { edition: "noon", occurrence: "2026-10-04T12:30:00+08:00" },
         {
-          env: {},
+          env: { NEWS_SEARCH_MODE: "doubao" },
           topics: [newsTopic("technology", ["one"])],
           search: async () => ({ results: [], resultCount: 0, searchUsage }),
         },
@@ -279,7 +283,11 @@ describe("Rivus news brief Tool adapter", () => {
         generateRivusNewsBrief(
           { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
           {
-            env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
+            env: {
+              NEWS_SEARCH_MODE: "doubao",
+              DOUBAO_SEARCH_API_KEY: "test",
+              FEED_TIMEZONE_OFFSET: "+08:00",
+            },
             search,
             topics: [
               {
@@ -354,7 +362,11 @@ describe("Rivus news brief Tool adapter", () => {
       generateRivusNewsBrief(
         { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
         {
-          env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
+          env: {
+            NEWS_SEARCH_MODE: "doubao",
+            DOUBAO_SEARCH_API_KEY: "test",
+            FEED_TIMEZONE_OFFSET: "+08:00",
+          },
           topics,
           search: async ({ query }) => {
             if (query === "broken") throw new Error("temporary search failure");
@@ -378,7 +390,11 @@ describe("Rivus news brief Tool adapter", () => {
         generateRivusNewsBrief(
           { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
           {
-            env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
+            env: {
+              NEWS_SEARCH_MODE: "doubao",
+              DOUBAO_SEARCH_API_KEY: "test",
+              FEED_TIMEZONE_OFFSET: "+08:00",
+            },
             topics,
             search: async () => {
               throw new DoubaoSearchError("10406", "free quota exhausted");
@@ -428,7 +444,11 @@ describe("Rivus news brief Tool adapter", () => {
       generateRivusNewsBrief(
         { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
         {
-          env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
+          env: {
+            NEWS_SEARCH_MODE: "doubao",
+            DOUBAO_SEARCH_API_KEY: "test",
+            FEED_TIMEZONE_OFFSET: "+08:00",
+          },
           search,
           maxQueries: 5,
           topics: [newsTopic("technology", ["one", "two", "three", "four", "five"])],
@@ -462,7 +482,11 @@ describe("Rivus news brief Tool adapter", () => {
         generateRivusNewsBrief(
           { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
           {
-            env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
+            env: {
+              NEWS_SEARCH_MODE: "doubao",
+              DOUBAO_SEARCH_API_KEY: "test",
+              FEED_TIMEZONE_OFFSET: "+08:00",
+            },
             search: async () => {
               throw new Error("invalid query configuration");
             },
@@ -487,7 +511,11 @@ describe("Rivus news brief Tool adapter", () => {
       generateRivusNewsBrief(
         { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
         {
-          env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
+          env: {
+            NEWS_SEARCH_MODE: "doubao",
+            DOUBAO_SEARCH_API_KEY: "test",
+            FEED_TIMEZONE_OFFSET: "+08:00",
+          },
           random: () => 0.5,
           search,
           sleep,
@@ -518,7 +546,11 @@ describe("Rivus news brief Tool adapter", () => {
       generateRivusNewsBrief(
         { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
         {
-          env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
+          env: {
+            NEWS_SEARCH_MODE: "doubao",
+            DOUBAO_SEARCH_API_KEY: "test",
+            FEED_TIMEZONE_OFFSET: "+08:00",
+          },
           random: () => 0,
           search,
           sleep,
@@ -548,7 +580,11 @@ describe("Rivus news brief Tool adapter", () => {
       generateRivusNewsBrief(
         { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
         {
-          env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
+          env: {
+            NEWS_SEARCH_MODE: "doubao",
+            DOUBAO_SEARCH_API_KEY: "test",
+            FEED_TIMEZONE_OFFSET: "+08:00",
+          },
           search,
           sleep,
           topics: [newsTopic("technology", ["invalid", "working"])],
@@ -579,7 +615,11 @@ describe("Rivus news brief Tool adapter", () => {
       generateRivusNewsBrief(
         { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
         {
-          env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
+          env: {
+            NEWS_SEARCH_MODE: "doubao",
+            DOUBAO_SEARCH_API_KEY: "test",
+            FEED_TIMEZONE_OFFSET: "+08:00",
+          },
           random: () => 0,
           search,
           sleep,
@@ -596,7 +636,11 @@ describe("Rivus news brief Tool adapter", () => {
       generateRivusNewsBrief(
         { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
         {
-          env: { DOUBAO_SEARCH_API_KEY: "test", FEED_TIMEZONE_OFFSET: "+08:00" },
+          env: {
+            NEWS_SEARCH_MODE: "doubao",
+            DOUBAO_SEARCH_API_KEY: "test",
+            FEED_TIMEZONE_OFFSET: "+08:00",
+          },
           search: async () => ({
             logId: "ok",
             resultCount: 2,
@@ -826,7 +870,7 @@ it("recovers late-indexed and date-only articles in explicit catch-up without re
         reportedUrls: ["https://example.com/delivered?utm_source=feed"],
       },
       {
-        env: {},
+        env: { NEWS_SEARCH_MODE: "doubao" },
         search: async (input) => {
           calls.push(input);
           return {
@@ -876,7 +920,7 @@ it("rotates source plans between local noon and evening, including even-sized so
       generateRivusNewsBrief(
         { edition, occurrence },
         {
-          env: {},
+          env: { NEWS_SEARCH_MODE: "doubao" },
           search: async (input) => {
             calls.push(input.query);
             return { results: [], resultCount: 0 };
@@ -913,47 +957,50 @@ it("rotates source plans between local noon and evening, including even-sized so
   expect(new Set(calls).size).toBe(4);
 });
 
-it("routes Grok without other provider keys, caps Daily AI overrides and persists native audit/cache", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "news-grok-"));
-  const grok = vi.spyOn(GrokSearchClient.prototype, "search").mockResolvedValue({
-    provider: "grok",
-    results: [],
-    resultCount: 0,
-    grok: { nativeTools: ["x_keyword_search"], rejectedResults: 2, costUsd: 0.01 },
-  });
-  try {
-    const topics = [
-      { ...newsTopic("technology", ["one", "two", "three"]), sourcePolicy: "news" as const },
-    ];
-    const options = {
-      env: { NEWS_SEARCH_MODE: "grok", NEWS_SEARCH_STATE_FILE: join(directory, "budget.json") },
-      maxQueries: 6,
-      topics,
-      now: () => new Date("2026-10-08T04:30:00Z"),
-    };
-    const run = () =>
-      Effect.runPromise(
-        generateRivusNewsBrief({ edition: "noon", occurrence: "2026-10-08T04:30:00Z" }, options),
-      );
-    const result = await run();
-    expect(grok).toHaveBeenCalledTimes(1);
-    expect(result.audit.queries.filter(({ status }) => status === "skipped")).toHaveLength(2);
-    expect(result.audit.queries.find(({ status }) => status === "ok")).toMatchObject({
+it.each([{}, { NEWS_SEARCH_MODE: "grok" }, { DOUBAO_SEARCH_API_KEY: "unused" }])(
+  "uses default or explicit Grok with bounded audit/cache for %j",
+  async (env: NodeJS.ProcessEnv) => {
+    const directory = await mkdtemp(join(tmpdir(), "news-grok-"));
+    const grok = vi.spyOn(GrokSearchClient.prototype, "search").mockResolvedValue({
       provider: "grok",
-      grok: { rejectedResults: 2, costUsd: 0.01 },
-      searchUsage: { dailyUsed: 1, dailyLimit: 4, monthlyLimit: 120 },
+      results: [],
+      resultCount: 0,
+      grok: { nativeTools: ["x_keyword_search"], rejectedResults: 2, costUsd: 0.01 },
     });
-    expect(result.warnings.join(" ")).toContain("未独立核验");
-    const cached = await run();
-    expect(grok).toHaveBeenCalledTimes(1);
-    expect(cached.audit.queries.find(({ status }) => status === "ok")?.searchUsage?.source).toBe(
-      "cache",
-    );
-  } finally {
-    grok.mockRestore();
-    await rm(directory, { recursive: true, force: true });
-  }
-});
+    try {
+      const topics = [
+        { ...newsTopic("technology", ["one", "two", "three"]), sourcePolicy: "news" as const },
+      ];
+      const options = {
+        env: { ...env, NEWS_SEARCH_STATE_FILE: join(directory, "budget.json") },
+        maxQueries: 6,
+        topics,
+        now: () => new Date("2026-10-08T04:30:00Z"),
+      };
+      const run = () =>
+        Effect.runPromise(
+          generateRivusNewsBrief({ edition: "noon", occurrence: "2026-10-08T04:30:00Z" }, options),
+        );
+      const result = await run();
+      expect(grok).toHaveBeenCalledTimes(1);
+      expect(result.audit.queries.filter(({ status }) => status === "skipped")).toHaveLength(2);
+      expect(result.audit.queries.find(({ status }) => status === "ok")).toMatchObject({
+        provider: "grok",
+        grok: { rejectedResults: 2, costUsd: 0.01 },
+        searchUsage: { dailyUsed: 1, dailyLimit: 4, monthlyLimit: 120 },
+      });
+      expect(result.warnings.join(" ")).toContain("未独立核验");
+      const cached = await run();
+      expect(grok).toHaveBeenCalledTimes(1);
+      expect(cached.audit.queries.find(({ status }) => status === "ok")?.searchUsage?.source).toBe(
+        "cache",
+      );
+    } finally {
+      grok.mockRestore();
+      await rm(directory, { recursive: true, force: true });
+    }
+  },
+);
 
 it("uses full topic text for Grok and preserves the model warning on healthy coverage", async () => {
   const query = {
@@ -980,17 +1027,20 @@ it("uses full topic text for Grok and preserves the model warning on healthy cov
   expect(result.warnings.join(" ")).toContain("未独立核验");
 });
 
-it("does not retry Grok failures or invoke a fallback provider", async () => {
-  const search = vi.fn(async () => {
-    throw new NewsSearchError("grok_cli_failed", "CLI failed");
-  });
-  await expect(
-    Effect.runPromise(
-      generateRivusNewsBrief(
-        { edition: "noon", occurrence: "2026-10-08T04:30:00Z" },
-        { env: { NEWS_SEARCH_MODE: "grok" }, search, topics: [newsTopic("technology", ["one"])] },
+it.each([undefined, "grok"])(
+  "does not retry Grok failures or invoke fallback in mode %s",
+  async (mode) => {
+    const search = vi.fn(async () => {
+      throw new NewsSearchError("grok_cli_failed", "CLI failed");
+    });
+    await expect(
+      Effect.runPromise(
+        generateRivusNewsBrief(
+          { edition: "noon", occurrence: "2026-10-08T04:30:00Z" },
+          { env: { NEWS_SEARCH_MODE: mode }, search, topics: [newsTopic("technology", ["one"])] },
+        ),
       ),
-    ),
-  ).rejects.toThrow("All news search queries failed");
-  expect(search).toHaveBeenCalledTimes(1);
-});
+    ).rejects.toThrow("All news search queries failed");
+    expect(search).toHaveBeenCalledTimes(1);
+  },
+);

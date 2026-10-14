@@ -1,6 +1,6 @@
 # 豆包与 GLM 混合搜索
 
-默认 `NEWS_SEARCH_MODE=doubao`。套餐 Key 通过 `GLM_CODING_API_KEY` 注入，程序不读取 ZCode 私有配置，不启动反代、不切换到普通付费 API。使用范围仍需符合[服务方 FAQ](https://docs.bigmodel.cn/cn/coding-plan/faq)。本改动不自动部署。
+新闻搜索默认使用 [Grok](grok-x-search.md)。使用本文的豆包与 GLM 路径时，显式设置 `NEWS_SEARCH_MODE=doubao`、`hybrid` 或 `combined`。套餐 Key 通过 `GLM_CODING_API_KEY` 注入，程序不读取 ZCode 私有配置，不启动反代、不切换到普通付费 API。使用范围仍需符合[服务方 FAQ](https://docs.bigmodel.cn/cn/coding-plan/faq)。本改动不自动部署。
 
 ## 查询与预算
 

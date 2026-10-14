@@ -1,14 +1,16 @@
 # News search budget
 
-Daily AI, noon news and evening news share one persistent Doubao request budget and raw-response
-cache. This lowers scheduled search traffic while preserving the existing push schedules, exact
-publication windows, official-source collection and editorial validation.
+Daily AI, noon news and evening news share one persistent request budget and response cache.
+Grok is the default search provider: one selected query per run, four reserved attempts per day,
+and 120 per month unless explicitly configured. Doubao, hybrid and combined remain explicit modes.
+Changing providers preserves the ledger and existing schedules, exact publication windows,
+official-source collection and editorial validation.
 
-## Request plan and account allowance
+## Doubao request plan and account allowance
 
 The previous daily plan executed seven queries for each of three overlapping Daily AI segments,
 then seven queries for noon and seven for evening: `3 × 7 + 7 + 7 = 35` requests before retries.
-Daily AI now queries its complete rolling 24-hour window once. The default plan is at most six Daily
+Daily AI now queries its complete rolling 24-hour window once. The Doubao plan is at most six Daily
 AI queries plus four noon and four evening queries: `6 + 4 + 4 = 14` before cache hits and retries.
 Query IDs rotate using the existing local-day/edition rotation, so the cap does not permanently
 select only the first configured queries. Deferred queries remain in the audit; reduced coverage is
@@ -37,13 +39,14 @@ ledger conservatively counts every reserved attempt, including failed attempts a
 | --- | --- | --- | --- |
 | `DAILY_AI_NEWS_MAX_QUERIES` | `6` | integer `1..32` | Maximum configured query IDs selected for one complete Daily AI window |
 | `NEWS_SEARCH_MAX_QUERIES` | `4` | integer `1..32` | Maximum configured query IDs selected for each standalone noon/evening run |
-| `NEWS_SEARCH_DAILY_LIMIT` | `14` | integer `0..100000` | Shared new-request attempt cap for the current local calendar day |
-| `NEWS_SEARCH_MONTHLY_LIMIT` | `420` | integer `0..1000000` | Shared new-request attempt cap for the current local calendar month |
+| `NEWS_SEARCH_DAILY_LIMIT` | Grok `4`; other modes `14` | integer `0..100000` | Shared new-request attempt cap for the current local calendar day |
+| `NEWS_SEARCH_MONTHLY_LIMIT` | Grok `120`; other modes `420` | integer `0..1000000` | Shared new-request attempt cap for the current local calendar month |
 | `NEWS_SEARCH_CACHE_TTL_MINUTES` | `360` | integer `0..43200` | Search page cache lifetime; `0` disables reuse |
 | `NEWS_SEARCH_STATE_FILE` | `.state/news-search.json` | nonempty path | Budget ledger and raw response cache; deployment must set a persistent absolute path |
 | `FEED_TIMEZONE_OFFSET` | `+08:00` for news | supported fixed offset | Calendar boundary for request accounting |
 
-Query caps are bounded by the number of enabled configured queries. A zero daily or monthly limit
+Grok further limits both query plans with `NEWS_GROK_MAX_QUERIES=1` (range `1..4`). Query caps are
+bounded by the number of enabled configured queries. A zero daily or monthly limit
 blocks new provider requests; an eligible cache entry may still be read. The caps constrain attempts,
 so a retry can consume another slot without completing another query.
 

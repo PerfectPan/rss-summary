@@ -151,7 +151,7 @@ export function generateRivusNewsBrief(
     if (topics.length === 0) {
       return yield* Effect.fail(new Error("At least one news topic must be enabled."));
     }
-    const mode = env.NEWS_SEARCH_MODE ?? "doubao";
+    const mode = env.NEWS_SEARCH_MODE ?? "grok";
     if (!["doubao", "hybrid", "combined", "grok"].includes(mode)) {
       return yield* Effect.fail(
         new Error("NEWS_SEARCH_MODE must be doubao, hybrid, combined or grok."),
@@ -159,7 +159,7 @@ export function generateRivusNewsBrief(
     }
     const count = boundedInteger(env.NEWS_SEARCH_COUNT_PER_QUERY, 10, 1, 50);
     const managedSearch = yield* Effect.try({
-      try: () => (dependencies.search ? undefined : createSearch(env, dependencies.now)),
+      try: () => (dependencies.search ? undefined : createSearch(env, mode, dependencies.now)),
       catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
     });
     const search = dependencies.search ?? managedSearch!;
@@ -416,9 +416,10 @@ function parseInput(value: unknown): RivusNewsBriefInput {
 
 function createSearch(
   env: NodeJS.ProcessEnv,
+  mode: string,
   now?: () => Date,
 ): ReturnType<typeof createBudgetedNewsSearch> {
-  if (env.NEWS_SEARCH_MODE === "grok") {
+  if (mode === "grok") {
     const model = env.NEWS_GROK_MODEL?.trim() || undefined;
     if (model && !/^[a-zA-Z0-9._-]+$/u.test(model)) throw new Error("Invalid NEWS_GROK_MODEL.");
     const client = new GrokSearchClient({

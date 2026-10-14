@@ -1,8 +1,15 @@
 # Grok 原生 X 搜索
 
-设置 `NEWS_SEARCH_MODE=grok` 后，现有午间、晚间新闻与 Daily AI 的新闻采集使用已登录的
-Grok CLI。默认仍为 Doubao；Grok 模式不会初始化 Doubao/GLM，也不会在失败后切换其他付费
-来源。Daily AI 自身的官方 RSS 采集仍保留。此次接入不创建新定时任务、不修改推送目标。
+未设置 `NEWS_SEARCH_MODE` 时，现有午间、晚间新闻与 Daily AI 的新闻采集默认使用已登录的
+Grok CLI；也可显式设置 `NEWS_SEARCH_MODE=grok`。已配置的 `doubao`、`hybrid` 或 `combined`
+模式优先，不因已有 Grok 登录而被覆盖。Grok 模式不会初始化 Doubao/GLM，也不会在失败后
+切换其他付费来源。Daily AI 自身的官方 RSS 采集仍保留。此次接入不创建新定时任务、不修改推送目标。
+
+## 查询语言
+
+给 Grok 的操作指令使用英文，主题采用 `news-topics.json` 中的 `queries[].text` 原文，内置
+主题多数是中文与产品名混排。不会替换成 `glm.query` 的英文官网查询，也没有 `lang:en`
+限制。具体原生 X 检索词由 Grok 生成，程序不保证其使用英文；最终标题和摘要要求使用中文。
 
 ## 准备与试用
 
