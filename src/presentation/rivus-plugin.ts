@@ -91,7 +91,7 @@ export function createRssSummaryPlugin(
         createExecutor: () => ({ execute: (input) => executeDailyAiDigest(input) }),
         description:
           "Generate a source-grounded Daily AI Digest for the rolling 24 hours before the occurrence",
-        digest: "sha256:rss-summary-generate-daily-ai-digest-v6",
+        digest: "sha256:rss-summary-generate-daily-ai-digest-v7",
         id: RSS_SUMMARY_DAILY_AI_TOOL_ID,
         idempotency: "none",
         inputSchema: {

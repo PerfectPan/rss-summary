@@ -199,10 +199,16 @@ Invoke each enabled template once in the foreground. Confirm the morning subscri
 
 ### Grok X search
 
-Native X search is the default for the existing noon/evening news Tool and Daily AI collection
+Native X search is the default for the existing noon/evening news Tool
 when `NEWS_SEARCH_MODE` is absent. Explicit `doubao`, `hybrid` and `combined` settings remain effective;
 set `NEWS_SEARCH_MODE=grok` to change an existing Host to Grok. The host's OS user must
 already have an authenticated Grok CLI. No Doubao or GLM key is needed in this mode;
-Daily AI's independent official feed collection still runs.
+Daily AI independently combines official RSS/websites with subscribed X accounts, defaulting to
+`DAILY_AI_X_HANDLES=ClaudeDevs` (explicit empty disables X). It never calls the broad news Tool.
+Account collection always uses Grok, shares the CLI settings and request ledger, and is reusable
+with caller-owned windows. `sourceAudit.xAccounts` retains per-account results/failures, request
+usage and possible retrieval saturation; X evidence remains unverified and labelled Grok-relayed.
+Daily AI render reuses collect evidence without another search. The obsolete
+`DAILY_AI_NEWS_MAX_QUERIES` has no effect.
 See [Grok X search](grok-x-search.md) for caps, usage interpretation and a no-send trial.
 Changing these variables does not install the updated plugin or reload an existing host.
