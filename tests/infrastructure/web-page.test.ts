@@ -12,6 +12,53 @@ const source: WebPageSubscription = {
 };
 
 describe("web page sources", () => {
+  it("reads a blog card title without mixing in its author and reading time", () => {
+    const entries = extractWebPageEntries(
+      `<a href="/news/efficiency"><article>
+        <div><time datetime="2026-10-06">Oct 6, 2026</time><span>Research</span></div>
+        <div><p>Improved token efficiency</p></div><span>Research team · 7m</span>
+      </article></a>`,
+      source,
+    );
+    expect(entries).toEqual([
+      {
+        url: "https://example.com/news/efficiency",
+        title: "Improved token efficiency",
+        publishedAt: "2026-10-06T12:00:00.000Z",
+      },
+    ]);
+  });
+
+  it("keeps the body of each changelog entry with its own dated links", () => {
+    const entries = extractWebPageEntries(
+      `<article>
+        <p><a href="/news/remote"><time datetime="2026-10-06">Oct 6</time></a></p>
+        <h2><a href="/news/remote">Remote control</a></h2>
+        <p>Reply to your local agents from the mobile app.</p>
+        <p>Your computer must stay online.</p>
+      </article><article>
+        <a href="/news/next"><time datetime="2026-10-07">Oct 7</time><h2>Next update</h2></a>
+        <p>This text belongs to the next update.</p>
+      </article>`,
+      source,
+    );
+    expect(entries[0]).toMatchObject({
+      title: "Remote control",
+      summary: "Reply to your local agents from the mobile app. Your computer must stay online.",
+    });
+    expect(entries[1]?.summary).toBe("This text belongs to the next update.");
+  });
+
+  it("does not borrow a shared article body across different entry URLs", () => {
+    const entries = extractWebPageEntries(
+      `<article><a href="/news/one"><time datetime="2026-10-06">Oct 6</time><h2>One</h2></a>
+       <a href="/news/two"><time datetime="2026-10-07">Oct 7</time><h2>Two</h2></a>
+       <p>Unattributed shared content.</p></article>`,
+      source,
+    );
+    expect(entries.every(({ summary }) => summary === undefined)).toBe(true);
+  });
+
   it("combines repeated date and title links for one same-origin article", () => {
     const entries = extractWebPageEntries(
       `<a href="/news/agent-release"><time datetime="2026-08-12">Aug 12, 2026</time></a>

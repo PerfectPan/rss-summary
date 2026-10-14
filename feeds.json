@@ -351,5 +351,21 @@
       "Articles",
       "Blog"
     ]
+  },
+  {
+    "name": "Dennis Morello",
+    "url": "https://morello.dev/rss.xml",
+    "tags": [
+      "Articles",
+      "Blog"
+    ]
+  },
+  {
+    "name": "Mario Zechner recommended reading/viewing",
+    "url": "https://mariozechner.at/recommended-reading/rss.xml",
+    "tags": [
+      "Articles",
+      "Videos"
+    ]
   }
 ]

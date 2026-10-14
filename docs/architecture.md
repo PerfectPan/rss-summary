@@ -98,7 +98,9 @@ structured `{category, headline, refs}` records and validates only their schema,
 known evidence references. Each record is validated independently, so a bad record cannot discard
 valid siblings. If all records are invalid while evidence exists, a typed validation error triggers a
 bounded retry against the cached snapshot; there is no title fallback or code-side keyword inference.
-A 12–24 item target is never a fill quota, and only `render` returns deliverable Markdown. Source references are
+The digest has no fixed item count; CLI updates need concrete
+changes and one item per tool. Version-only releases are omitted and an explicit empty editorial
+array is valid. Only `render` returns deliverable Markdown. Source references are
 rendered as clickable inline badges beside each event; repeated labels from the same provider
 collapse to one badge, and the document does not repeat references in a trailing source section.
 The news collection and official-source collection are separate failure domains. If every

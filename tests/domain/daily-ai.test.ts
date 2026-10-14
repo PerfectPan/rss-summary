@@ -77,10 +77,40 @@ describe("Daily AI editorial domain", () => {
     ).toThrow(DailyAiDraftValidationError);
   });
 
-  it("fails an empty editorial draft when evidence exists", () => {
-    expect(() => buildDailyAiDigest([evidence()], { draft: [] })).toThrow(
-      /at least one valid item/u,
+  it("allows the editor to reject every low-information candidate", () => {
+    const result = buildDailyAiDigest(
+      [evidence({ title: "0.163.0-alpha.6", excerpt: "Release 0.163.0-alpha.6" })],
+      { draft: [] },
     );
+    expect(result.items).toEqual([]);
+    expect(result.audit.decisions).toContainEqual({
+      evidenceIds: ["source-1"],
+      status: "filtered",
+      reason: "not-selected-by-editorial-draft",
+    });
+    expect(result.audit.editorialIssues).toEqual([]);
+  });
+
+  it("preserves valid selected events beyond eight without a count quota", () => {
+    const sources = Array.from({ length: 9 }, (_, index) =>
+      evidence({
+        id: `source-${index}`,
+        title: `Event ${index}`,
+        url: `https://example.com/${index}`,
+      }),
+    );
+    const result = buildDailyAiDigest(sources, {
+      draft: sources.map(({ id, title }) => ({
+        category: "开发生态",
+        headline: title,
+        refs: [id],
+      })),
+    });
+    expect(result.items).toHaveLength(9);
+    expect(result.audit.decisions.at(-1)).toMatchObject({
+      evidenceIds: ["source-8"],
+      status: "selected",
+    });
   });
 
   it("does not invent fallback copy before the editorial phase", () => {
