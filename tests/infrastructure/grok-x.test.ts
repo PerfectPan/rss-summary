@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vite-plus/test";
@@ -67,6 +67,55 @@ const input = {
   until: "2026-10-09T01:00:00.000Z",
 };
 describe("shared X transport", () => {
+  it("aborts a third backend search before waiting for the overall timeout and removes its cwd", async () => {
+    const events = [1, 2, 3].map((id) => ({
+      type: "tool_call",
+      toolCallId: String(id),
+      rawInput: { variant: "XSearch", backend: true },
+    }));
+    const { executable, capture } = await fixture(
+      "",
+      `process.stdout.write(${JSON.stringify(events.map((event) => JSON.stringify(event)).join("\n") + "\n")}); setInterval(() => {}, 1000);`,
+    );
+    const start = Date.now();
+    await expect(
+      new GrokXClient({ executable, timeoutMs: 30_000 }).search(input),
+    ).rejects.toMatchObject({
+      code: "grok_call_limit",
+      grok: { nativeCallCount: 3, nativeTools: [], elapsedMs: expect.any(Number) },
+    });
+    expect(Date.now() - start).toBeLessThan(5000);
+    const { cwd } = JSON.parse(await readFile(capture, "utf8"));
+    await expect(stat(cwd)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("allows a keyword search and one thread fetch, counting repeated receipt IDs once", async () => {
+    const events = stream();
+    const call = {
+      type: "tool_call",
+      toolCallId: "thread",
+      rawInput: { variant: "XSearch", backend: true },
+    };
+    events.splice(events.length - 2, 0, call, call, {
+      type: "tool_call_update",
+      toolCallId: "thread",
+      status: "completed",
+      rawOutput: { name: "x_thread_fetch" },
+    });
+    const { executable } = await fixture(events);
+    const page = await new GrokXClient({ executable }).search(input);
+    expect(page.grok).toMatchObject({
+      nativeCallCount: 2,
+      nativeTools: ["x_keyword_search", "x_thread_fetch"],
+    });
+    expect(page.results).toHaveLength(1);
+  });
+
+  it("reports a missing executable without including private process details", async () => {
+    await expect(
+      new GrokXClient({ executable: "/nonexistent-grok" }).search(input),
+    ).rejects.toMatchObject({ code: "grok_not_found" });
+  });
   it("rejects matching-topic posts by other authors and exact end-boundary posts", async () => {
     const endId = ((BigInt(Date.parse(input.until)) - 1288834974657n) << 22n).toString();
     const { executable } = await fixture(

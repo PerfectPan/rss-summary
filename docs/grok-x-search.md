@@ -17,8 +17,11 @@ RSS／“我的订阅”可传入自己的自然日窗口。`src/infrastructure/
 
 账号查询使用 `from:handle`，本地再拒绝其他作者的帖子。采集原创与带作者评论的引用帖，
 保留经验、观点和教程，不预先做新闻筛选；提示模型排除纯转推和回复。先一次关键词搜索，
-仅正文必要信息缺失时再补一次线程读取，不默认逐条读取。该次数要求是提示约束，CLI 两轮
-上限不等于内部 X 工具调用次数上限。抓取不保证完整时间线、完整线程或媒体。
+仅正文必要信息缺失时再补一次线程读取，不默认逐条读取。新闻主题采用相同检索步骤，不反复
+改写关键词凑条数；没有合适证据时允许空结果。CLI 使用 low effort，禁用计划与子 Agent。
+CLI 两轮上限不等于内部 X 工具调用次数上限；收到第三个原生调用事件时立即终止进程并
+记录 `grok_call_limit`。事件到达时后端可能已经开始执行，因此这不是严格的计费次数上限。
+抓取不保证完整时间线、完整线程或媒体。
 
 `X_ACCOUNT_POSTS_PER_FETCH` 默认 30，范围 1..50，是单次抓取响应上限，不是日报筛选条数。
 `sourceAudit.xAccounts` 记录账号、状态、接收数、`limitReached`、错误码、Grok 用量和缓存来源；
@@ -28,7 +31,9 @@ RSS／“我的订阅”可传入自己的自然日窗口。`src/infrastructure/
 账号和新闻共用 `NEWS_GROK_EXECUTABLE`、`NEWS_GROK_MODEL`、`NEWS_GROK_TIMEOUT_MS`，以及
 `NEWS_SEARCH_STATE_FILE` 的预算账本。账号抓取的默认额度同 Grok（4/120）；与其他新闻模式
 混用时显式配置共同额度。精确时间窗口写入账号缓存键，同窗口回放可复用，结束时间推进会
-重新采集。新闻和账号缓存互不替代。Daily AI 的 render 阶段复用 collect 快照，不再次搜索。
+重新采集。新闻同样传递精确的摘要窗口：午报从当日 00:00 开始，晚报从 12:30 开始，到
+occurrence 为止；补采使用请求指定的窗口。窗口参与缓存匹配，旧的整日缓存与其他窗口不
+替代当前采集。新闻和账号缓存互不替代。Daily AI 的 render 阶段复用 collect 快照，不再次搜索。
 
 ## 查询语言
 
@@ -40,7 +45,8 @@ RSS／“我的订阅”可传入自己的自然日窗口。`src/infrastructure/
 
 1. 在运行 rss-summary / Rivus Host 的同一个系统用户下安装并登录 Grok CLI，先确认
    `grok --version` 和 `grok --help`。实现按 CLI 1.0.46 的 streaming-json 接口验证；需要支持
-   `--single`、`--tools x_search`、`--no-subagents`、`--max-turns`、`--permission-mode dontAsk`。
+   `--single`、`--tools x_search`、`--no-subagents`、`--no-plan`、`--reasoning-effort low`、
+   `--max-turns`、`--permission-mode dontAsk`。
 2. 更新安装的 rss-summary 插件，然后在 Host 进程环境中设置：
 
    ```sh
@@ -82,6 +88,10 @@ RSS／“我的订阅”可传入自己的自然日窗口。`src/infrastructure/
   正文均已独立核验**。来源显式标注“X（Grok 整理）”，Daily AI 证据分级为 `unverified`。
   新闻主题仅支持 `sourcePolicy: "news"`，不满足 `official` / `authoritative` 来源策略。
 - `grok.rejectedResults` 统计被链接、日期、重复等校验剔除的条目；正常空结果也会缓存。
+  `nativeCallCount` 记录去重后的原生调用次数，`elapsedMs` 记录本次 CLI 总耗时；进程异常结束也保留
+  已观察到的调用次数与耗时。`grok_timeout`、`grok_call_limit`、`grok_output_limit`、
+  `grok_not_found` 分别标识超时、追加搜索超限、输出超限和程序缺失；其他执行错误为
+  `grok_cli_failed`。新闻全部失败时对外返回具体的中文原因，不把失败伪装为空新闻。
   搜索不是完整账号时间线或无遗漏订阅，本功能不生成 RSS XML，也不保证抓取完整线程或媒体。
 - `grok.costUsd`、`totalTokens`、`inputTokens`、`cachedInputTokens`、`outputTokens`
   来自 CLI 结束事件，缺失时不猜测。这些值不是实际扣款证明，也无法换算订阅剩余额度。

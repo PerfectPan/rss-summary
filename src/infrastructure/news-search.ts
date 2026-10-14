@@ -5,6 +5,7 @@ export type NewsSearchInput = {
   count: number;
   day: string;
   sinceDay?: string;
+  window?: { since: string; until: string };
   sourcePolicy: NewsSourcePolicy;
 };
 
@@ -55,6 +56,8 @@ export type NewsSearchPage = {
 
 type GrokSearchAudit = {
   nativeTools: string[];
+  nativeCallCount?: number;
+  elapsedMs?: number;
   rejectedResults: number;
   costUsd?: number;
   totalTokens?: number;
@@ -66,11 +69,17 @@ type GrokSearchAudit = {
 export class NewsSearchError extends Error {
   readonly code: string;
   readonly retryAfterMs?: number;
+  readonly grok?: GrokSearchAudit;
 
-  constructor(code: string, message: string, options: { retryAfterMs?: number } = {}) {
+  constructor(
+    code: string,
+    message: string,
+    options: { retryAfterMs?: number; grok?: GrokSearchAudit } = {},
+  ) {
     super(message);
     this.name = "NewsSearchError";
     this.code = code;
     this.retryAfterMs = options.retryAfterMs;
+    this.grok = options.grok;
   }
 }

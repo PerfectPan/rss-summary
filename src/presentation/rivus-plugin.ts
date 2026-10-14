@@ -263,7 +263,7 @@ export function createRssSummaryPlugin(
         createExecutor: () => ({ execute: (input) => executeNewsBrief(input) }),
         description:
           "Generate a read-only noon or evening Markdown news brief from bounded, configured news searches",
-        digest: "sha256:rss-summary-generate-news-brief-v2",
+        digest: "sha256:rss-summary-generate-news-brief-v3",
         id: RSS_SUMMARY_NEWS_TOOL_ID,
         idempotency: "none",
         inputSchema: {

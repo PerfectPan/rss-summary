@@ -58,6 +58,43 @@ async function setup(overrides: Partial<Options> = {}) {
 }
 
 describe("persistent news search budget", () => {
+  it("reuses only the same exact window and retains Grok call counts in the cache", async () => {
+    const { search, providerSearch } = await setup({
+      cacheTtlMs: 3_600_000,
+      provider: "grok://cli/v1/default",
+    });
+    providerSearch.mockResolvedValue({
+      ...page,
+      provider: "grok",
+      grok: {
+        nativeTools: ["x_keyword_search"],
+        nativeCallCount: 1,
+        elapsedMs: 1200,
+        rejectedResults: 0,
+      },
+    });
+    const noon = {
+      ...input,
+      window: { since: "2026-09-28T16:00:00Z", until: "2026-09-29T04:30:00Z" },
+    };
+    const evening = {
+      ...input,
+      window: { since: "2026-09-29T04:30:00Z", until: "2026-09-29T11:00:00Z" },
+    };
+    await search(input);
+    expect((await search(noon)).searchUsage.source).toBe("network");
+    expect((await search(evening)).searchUsage.source).toBe("network");
+    const cached = await search(evening);
+    expect(cached.searchUsage.source).toBe("cache");
+    expect(cached.grok).toMatchObject({ nativeCallCount: 1, elapsedMs: 1200 });
+    expect(providerSearch).toHaveBeenCalledTimes(3);
+    await search({ ...evening, window: { ...evening.window, until: "2026-09-29T11:10:00Z" } });
+    expect(providerSearch).toHaveBeenCalledTimes(4);
+    expect(() =>
+      search({ ...evening, window: { ...evening.window, until: evening.window.since } }),
+    ).toThrow("Invalid search time window.");
+    expect(providerSearch).toHaveBeenCalledTimes(4);
+  });
   it("persists every reserved attempt and applies the allowance after recreating an instance", async () => {
     const { options, search, providerSearch } = await setup({ dailyLimit: 2 });
     expect((await search(input)).searchUsage).toEqual({

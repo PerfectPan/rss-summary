@@ -1023,6 +1023,14 @@ it("uses full topic text for Grok and preserves the model warning on healthy cov
     ),
   );
   expect(search).toHaveBeenCalledWith(expect.objectContaining({ query: "OpenAI released" }));
+  expect(search).toHaveBeenCalledWith(
+    expect.objectContaining({
+      window: {
+        since: "2026-10-07T16:00:00.000Z",
+        until: "2026-10-08T04:30:00.000Z",
+      },
+    }),
+  );
   expect(result.sourceStatus?.state).toBe("healthy");
   expect(result.warnings.join(" ")).toContain("未独立核验");
 });
@@ -1040,7 +1048,58 @@ it.each([undefined, "grok"])(
           { env: { NEWS_SEARCH_MODE: mode }, search, topics: [newsTopic("technology", ["one"])] },
         ),
       ),
-    ).rejects.toThrow("All news search queries failed");
+    ).rejects.toThrow("新闻搜索未完成：Grok 调用失败");
     expect(search).toHaveBeenCalledTimes(1);
   },
 );
+
+it("preserves safe Grok timeout diagnostics in the failed evening brief", async () => {
+  const search = vi.fn(async () => {
+    throw new NewsSearchError("grok_timeout", "private stderr", {
+      grok: {
+        nativeTools: ["x_keyword_search"],
+        nativeCallCount: 1,
+        elapsedMs: 120_000,
+        rejectedResults: 0,
+      },
+    });
+  });
+  const result = await Effect.runPromise(
+    Effect.either(
+      generateRivusNewsBrief(
+        { edition: "evening", occurrence: "2026-10-08T11:00:00Z" },
+        { env: { NEWS_SEARCH_MODE: "grok" }, search, topics: [newsTopic("technology", ["one"])] },
+      ),
+    ),
+  );
+  expect(search).toHaveBeenCalledWith(
+    expect.objectContaining({
+      window: {
+        since: "2026-10-08T04:30:00.000Z",
+        until: "2026-10-08T11:00:00.000Z",
+      },
+    }),
+  );
+  expect(result).toMatchObject({
+    _tag: "Left",
+    left: {
+      message: "新闻搜索未完成：Grok 搜索超时。本次未生成新闻简报。",
+      result: {
+        audit: {
+          queries: [
+            expect.objectContaining({
+              errorCode: "grok_timeout",
+              grok: {
+                nativeTools: ["x_keyword_search"],
+                nativeCallCount: 1,
+                elapsedMs: 120_000,
+                rejectedResults: 0,
+              },
+            }),
+          ],
+        },
+      },
+    },
+  });
+  expect(search).toHaveBeenCalledTimes(1);
+});
