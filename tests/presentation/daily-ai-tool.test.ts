@@ -39,7 +39,7 @@ describe("Rivus Daily AI Tool", () => {
       ],
       items: [],
       warnings: [],
-      sourceAudit: { news: [] },
+      sourceAudit: { xAccounts: [] },
       audit: { decisions: [], editorialIssues: [] },
       deliveryReceipt: {
         id: "daily-ai:2026-08-11",
@@ -150,7 +150,7 @@ function collectedFixture() {
     ],
     items: [],
     warnings: [],
-    sourceAudit: { news: [] },
+    sourceAudit: { xAccounts: [] },
     audit: { decisions: [], editorialIssues: [] },
     deliveryReceipt: {
       id: "daily-ai:2026-08-11",

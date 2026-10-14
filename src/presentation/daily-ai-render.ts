@@ -16,7 +16,7 @@ export function renderDailyAiDigest(document: DailyAiDigestDocument): string {
   const lines = [
     `# Daily AI Digest · ${document.day}`,
     "",
-    `${document.items.length} 条可信动态 · ${document.windowLabel} · 来源可追溯 · 质量不足不凑数`,
+    `${document.items.length} 条 AI 动态 · ${document.windowLabel} · 来源可追溯 · 质量不足不凑数`,
     "",
   ];
   const usedRefs: string[] = [];
@@ -29,7 +29,7 @@ export function renderDailyAiDigest(document: DailyAiDigestDocument): string {
         if (!usedRefs.includes(ref)) usedRefs.push(ref);
         const number = usedRefs.indexOf(ref) + 1;
         const source = document.evidence.find((evidence) => evidence.id === ref)!;
-        return `[↗ #${number}](${source.url})`;
+        return `[↗ #${number}${source.id.startsWith("x:") ? " · X（Grok 整理）" : ""}](${source.url})`;
       });
       lines.push(`${items.indexOf(item) + 1}. ${item.headline} ${badges.join(" ")}`);
     }

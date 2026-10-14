@@ -1,25 +1,15 @@
-import { Cause, Effect, Exit } from "effect";
+import { Effect } from "effect";
 
 import { buildIndustryDocument, type IndustryBriefDocument } from "./industry-brief.js";
 import { createDailyAiDeliveryReceipt, type DailyAiDeliveryReceipt } from "./daily-ai-receipt.js";
-import {
-  AllDoubaoQueriesFailedError,
-  generateRivusNewsBrief,
-  type RivusNewsBriefResult,
-} from "./news-brief.js";
-import type { NewsBriefAudit } from "./news-audit.js";
+import { collectXAccountPosts, type XAccountPosts } from "./x-account-posts.js";
 import {
   buildDailyAiDigest,
   type DailyAiDigest,
   type DailyAiEvidence,
 } from "../domain/daily-ai.js";
-import {
-  calendarDayAtOffset,
-  parseOffsetMilliseconds,
-  startOfCalendarDay,
-} from "../domain/time.js";
+import { calendarDayAtOffset, parseOffsetMilliseconds } from "../domain/time.js";
 import { loadConfig } from "../infrastructure/config.js";
-import { boundedInteger } from "../infrastructure/parsing.js";
 
 export type DailyAiDigestResult = DailyAiDigest & {
   day: string;
@@ -27,7 +17,7 @@ export type DailyAiDigestResult = DailyAiDigest & {
   generatedAt: string;
   warnings: string[];
   sourceAudit: {
-    news: Array<{ day: string; edition: "noon" | "evening"; audit: NewsBriefAudit }>;
+    xAccounts: XAccountPosts["audit"];
     industry?: NonNullable<IndustryBriefDocument["audit"]>;
   };
   deliveryReceipt: DailyAiDeliveryReceipt;
@@ -38,11 +28,7 @@ export type DailyAiWindow = { since: string; until: string };
 type DailyAiDigestDependencies = {
   env?: NodeJS.ProcessEnv;
   industry?: (window: DailyAiWindow, env: NodeJS.ProcessEnv) => Promise<IndustryBriefDocument>;
-  news?: (
-    occurrence: string,
-    edition: "noon" | "evening",
-    since: string,
-  ) => Promise<RivusNewsBriefResult>;
+  xAccounts?: typeof collectXAccountPosts;
   now?: () => Date;
   draft?: unknown;
 };
@@ -62,20 +48,23 @@ export async function generateDailyAiDigest(
   };
   const day = calendarDayAtOffset(input.occurrence, timezoneOffset);
   const windowLabel = formatWindowLabel(since, until, timezoneOffset);
-  const news =
-    dependencies.news ??
-    ((occurrence, edition, since) => runNewsBrief({ occurrence, edition, since }, env));
-  const industry = dependencies.industry ?? defaultIndustry;
-  const noonCutoff = startOfCalendarDay(day, timezoneOffset) + (12 * 60 + 30) * 60_000;
-  const edition = until <= noonCutoff ? "noon" : "evening";
-  const newsCollection = await collectNewsEdition(news, input.occurrence, edition, window.since);
-  const official = await industry(window, env);
-  const evidence = newsEvidence(newsCollection.result)
+  const handles = (env.DAILY_AI_X_HANDLES ?? "ClaudeDevs")
+    .split(",")
+    .map((handle) => handle.trim())
+    .filter(Boolean);
+  const xAccounts = await (dependencies.xAccounts ?? collectXAccountPosts)(
+    { ...window, handles },
+    { env, now: dependencies.now },
+  );
+  const official = await (dependencies.industry ?? defaultIndustry)(window, env);
+  const evidence = xEvidence(xAccounts)
     .concat(industryEvidence(official))
     .filter(({ publishedAt }) => isWithinWindow(publishedAt, since, until));
   const digest = buildDailyAiDigest(evidence, { draft: dependencies.draft });
   if (digest.evidence.length === 0) {
-    throw new Error("Daily AI digest has no usable evidence from Doubao or official sources.");
+    throw new Error(
+      "Daily AI digest has no usable evidence from subscribed X accounts or official sources.",
+    );
   }
   return {
     ...digest,
@@ -83,17 +72,13 @@ export async function generateDailyAiDigest(
     windowLabel,
     generatedAt: (dependencies.now ?? (() => new Date()))().toISOString(),
     warnings: [
-      ...newsCollection.result.warnings,
       ...(official.audit?.sources
         .filter(({ status }) => status !== "ok")
         .map(({ name, error }) => `官方来源采集不完整：${name}${error ? `（${error}）` : ""}`) ??
         []),
-      ...(newsCollection.unavailable
-        ? ["新闻搜索暂不可用：所有查询均失败，本期仅使用官方来源"]
-        : []),
     ],
     sourceAudit: {
-      news: [{ day, edition, audit: newsCollection.result.audit }],
+      xAccounts: xAccounts.audit,
       ...(official.audit ? { industry: official.audit } : {}),
     },
     deliveryReceipt: createDailyAiDeliveryReceipt(
@@ -101,36 +86,6 @@ export async function generateDailyAiDigest(
       digest.items.flatMap(({ refs }) => refs),
     ),
   };
-}
-
-type NewsEditionCollection = { result: RivusNewsBriefResult; unavailable: boolean };
-
-async function collectNewsEdition(
-  news: NonNullable<DailyAiDigestDependencies["news"]>,
-  occurrence: string,
-  edition: "noon" | "evening",
-  since: string,
-): Promise<NewsEditionCollection> {
-  try {
-    return { result: await news(occurrence, edition, since), unavailable: false };
-  } catch (error) {
-    if (!(error instanceof AllDoubaoQueriesFailedError)) throw error;
-    return { result: error.result, unavailable: true };
-  }
-}
-
-async function runNewsBrief(
-  input: { occurrence: string; edition: "noon" | "evening"; since: string },
-  env: NodeJS.ProcessEnv,
-): Promise<RivusNewsBriefResult> {
-  const exit = await Effect.runPromiseExit(
-    generateRivusNewsBrief(input, {
-      env,
-      maxQueries: boundedInteger(env.DAILY_AI_NEWS_MAX_QUERIES, 6, 1, 32),
-    }),
-  );
-  if (Exit.isSuccess(exit)) return exit.value;
-  throw Cause.squash(exit.cause);
 }
 
 function isWithinWindow(publishedAt: string, since: number, until: number): boolean {
@@ -149,16 +104,15 @@ function formatInstant(instant: number, timezoneOffset: string): string {
     .replace("T", " ");
 }
 
-function newsEvidence(result: RivusNewsBriefResult): DailyAiEvidence[] {
-  return result.stories.map((story) => ({
-    id: `news:${story.id}`,
-    title: evidenceTitle(story.title),
-    url: story.canonicalUrl,
-    publishedAt: story.publishTime,
-    excerpt: story.summary,
-    tier: story.authInfoLevel === 1 ? "official" : "authoritative",
-    sourceName: story.siteName,
-    topicId: story.selectedTopicId,
+function xEvidence(result: XAccountPosts): DailyAiEvidence[] {
+  return result.posts.map((post) => ({
+    id: `x:${post.id}`,
+    title: evidenceTitle(post.title),
+    url: post.url,
+    publishedAt: post.publishedAt,
+    excerpt: post.summary,
+    tier: "unverified",
+    sourceName: `@${post.author} · X（Grok 整理）`,
   }));
 }
 

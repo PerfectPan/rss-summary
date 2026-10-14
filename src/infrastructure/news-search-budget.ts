@@ -5,11 +5,7 @@ import { setTimeout as delay } from "node:timers/promises";
 import { Schema } from "effect";
 
 import { calendarDayAtOffset, parseOffsetMilliseconds } from "../domain/time.js";
-import {
-  DoubaoSearchError,
-  type DoubaoSearchInput,
-  type DoubaoSearchPage,
-} from "./doubao-search.js";
+import { NewsSearchError, type NewsSearchInput, type NewsSearchPage } from "./news-search.js";
 import { isRecord } from "./parsing.js";
 
 type SearchUsage = {
@@ -21,11 +17,11 @@ type SearchUsage = {
   monthlyLimit: number;
 };
 
-type BudgetedSearchPage = DoubaoSearchPage & { searchUsage: SearchUsage };
+type BudgetedSearchPage = NewsSearchPage & { searchUsage: SearchUsage };
 
 type BudgetedSearch = {
-  (input: DoubaoSearchInput): Promise<BudgetedSearchPage>;
-  cachedSearch: (input: DoubaoSearchInput) => Promise<BudgetedSearchPage | undefined>;
+  (input: NewsSearchInput): Promise<BudgetedSearchPage>;
+  cachedSearch: (input: NewsSearchInput) => Promise<BudgetedSearchPage | undefined>;
 };
 
 type BudgetOptions = {
@@ -35,7 +31,7 @@ type BudgetOptions = {
   timezoneOffset: string;
   cacheTtlMs: number;
   provider: string;
-  search: (input: DoubaoSearchInput) => Promise<DoubaoSearchPage>;
+  search: (input: NewsSearchInput) => Promise<NewsSearchPage>;
   now?: () => Date;
 };
 
@@ -50,7 +46,18 @@ const requestSchema = Schema.Struct({
   sourcePolicy: Schema.Literal("news", "authoritative", "official"),
 });
 const rawPageSchema = Schema.Struct({
-  provider: Schema.optional(Schema.Literal("doubao")),
+  provider: Schema.optional(Schema.Literal("doubao", "grok")),
+  grok: Schema.optional(
+    Schema.Struct({
+      nativeTools: Schema.Array(Schema.String),
+      rejectedResults: countSchema,
+      costUsd: Schema.optional(Schema.NonNegative),
+      totalTokens: Schema.optional(countSchema),
+      inputTokens: Schema.optional(countSchema),
+      cachedInputTokens: Schema.optional(countSchema),
+      outputTokens: Schema.optional(countSchema),
+    }),
+  ),
   logId: Schema.optional(Schema.String),
   resultCount: countSchema,
   timeCostMs: Schema.optional(Schema.Number),
@@ -93,14 +100,14 @@ type CacheEntry = typeof cacheEntrySchema.Type;
 const lockTimeoutMs = 2_000;
 const lockRetryMs = 20;
 
-export function createBudgetedDoubaoSearch(options: BudgetOptions): BudgetedSearch {
+export function createBudgetedNewsSearch(options: BudgetOptions): BudgetedSearch {
   validateOptions(options);
   const stateFile = resolve(options.stateFile);
   const provider = normalizeProvider(options.provider);
   const now = options.now ?? (() => new Date());
   const pending = new Map<string, Promise<BudgetedSearchPage>>();
 
-  const search = (input: DoubaoSearchInput) => {
+  const search = (input: NewsSearchInput) => {
     const request = parseRequest(input);
     const key = cacheKey(request);
     const current = pending.get(key);
@@ -110,13 +117,13 @@ export function createBudgetedDoubaoSearch(options: BudgetOptions): BudgetedSear
     return operation;
   };
   return Object.assign(search, {
-    cachedSearch: async (input: DoubaoSearchInput) => {
+    cachedSearch: async (input: NewsSearchInput) => {
       const result = await inspectBudget(parseRequest(input), false);
       return result.cached;
     },
   });
 
-  function parseRequest(input: DoubaoSearchInput): CacheRequest {
+  function parseRequest(input: NewsSearchInput): CacheRequest {
     const request = Schema.decodeUnknownSync(requestSchema)({
       ...input,
       provider,
@@ -136,6 +143,9 @@ export function createBudgetedDoubaoSearch(options: BudgetOptions): BudgetedSear
         return {
           cached: {
             ...cached.page,
+            grok: cached.page.grok
+              ? { ...cached.page.grok, nativeTools: [...cached.page.grok.nativeTools] }
+              : undefined,
             results: cached.page.results.map((result) => ({ ...result })),
             searchUsage: { ...usage, source: "cache" as const, fetchedAt: cached.fetchedAt },
           },
@@ -143,7 +153,7 @@ export function createBudgetedDoubaoSearch(options: BudgetOptions): BudgetedSear
         };
       }
       if (usage.dailyUsed >= options.dailyLimit || usage.monthlyUsed >= options.monthlyLimit) {
-        throw new DoubaoSearchError(
+        throw new NewsSearchError(
           "local_budget_exhausted",
           `Local search budget exhausted (daily ${usage.dailyUsed}/${options.dailyLimit}, monthly ${usage.monthlyUsed}/${options.monthlyLimit}).`,
         );
@@ -167,7 +177,7 @@ export function createBudgetedDoubaoSearch(options: BudgetOptions): BudgetedSear
   }
 
   async function execute(
-    input: DoubaoSearchInput,
+    input: NewsSearchInput,
     request: CacheRequest,
     key: string,
   ): Promise<BudgetedSearchPage> {
@@ -177,7 +187,7 @@ export function createBudgetedDoubaoSearch(options: BudgetOptions): BudgetedSear
     // The reservation remains consumed when the provider fails; retries re-enter this wrapper.
     const page = await options.search(input);
     const fetchedAt = now().toISOString();
-    if (isRawDoubaoPage(page)) {
+    if (isCacheablePage(page)) {
       const rawPage = Schema.decodeUnknownSync(rawPageSchema)(page);
       await withStateLock(stateFile, async () => {
         const state = await loadState(stateFile, options.timezoneOffset);
@@ -209,15 +219,16 @@ function validateOptions(options: BudgetOptions): void {
     options.cacheTtlMs < 0 ||
     options.stateFile.trim() === ""
   ) {
-    throw new Error("Doubao search budgets, cache TTL and state file must be valid.");
+    throw new Error("News search budgets, cache TTL and state file must be valid.");
   }
   parseOffsetMilliseconds(options.timezoneOffset);
 }
 
 function normalizeProvider(value: string): string {
+  if (/^grok:\/\/cli\/v1\/[a-zA-Z0-9._-]+$/u.test(value)) return value;
   const url = new URL(value);
   if (url.protocol !== "https:" && url.protocol !== "http:") {
-    throw new Error("Doubao search provider must be an HTTP URL.");
+    throw new Error("News search provider must be an HTTP URL or a Grok CLI identity.");
   }
   // Credentials and request parameters never belong in a persistent provider identity.
   return `${url.origin}${url.pathname.replace(/\/+$/u, "")}`;
@@ -289,9 +300,9 @@ function isFresh(entry: CacheEntry, instant: number, ttlMs: number): boolean {
   return age >= 0 && age < ttlMs;
 }
 
-function isRawDoubaoPage(page: DoubaoSearchPage): boolean {
+function isCacheablePage(page: NewsSearchPage): boolean {
   return (
-    (page.provider === undefined || page.provider === "doubao") &&
+    (page.provider === undefined || page.provider === "doubao" || page.provider === "grok") &&
     page.fallback === undefined &&
     page.results.every((result) => result.sourceVerification === undefined)
   );
@@ -325,7 +336,7 @@ async function loadState(path: string, timezoneOffset: string): Promise<BudgetSt
     }
     return state;
   } catch (cause) {
-    if (cause instanceof DoubaoSearchError) throw cause;
+    if (cause instanceof NewsSearchError) throw cause;
     throw stateError("Local search budget state is invalid; preserve it for recovery.");
   }
 }
@@ -394,6 +405,6 @@ function hasCode(cause: unknown, code: string): boolean {
   return (cause instanceof Error || isRecord(cause)) && "code" in cause && cause.code === code;
 }
 
-function stateError(message: string): DoubaoSearchError {
-  return new DoubaoSearchError("local_budget_state", message);
+function stateError(message: string): NewsSearchError {
+  return new NewsSearchError("local_budget_state", message);
 }

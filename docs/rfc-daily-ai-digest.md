@@ -9,9 +9,10 @@ Status: accepted for implementation
 `daily-ai-digest` automation for the rolling 24 hours before each occurrence, so enabling it cannot
 silently remove subscription delivery. Noon and evening news keep their time windows and delivery IDs.
 
-The daily product performs one bounded news collection for its complete rolling window and combines
-it with curated first-party sources from `industry-feeds.json`. Query IDs rotate within the per-run
-cap; shared request budgets and raw response caching follow [News search budget](news-search-budget.md).
+The daily product combines curated first-party sources from `industry-feeds.json` with subscribed
+X accounts (ClaudeDevs by default) for its complete rolling window. Broad news search remains a
+separate product. The reusable account collector accepts caller-owned windows and shares native
+Grok transport, request budgets and caching with news; see [X collection](grok-x-search.md).
 Every publishable item is backed by public
 evidence (`id`, normalized title, canonical URL, published time, cleaned excerpt and
 source tier). The Agent owns semantic selection, translation or summarization, and category choice.
@@ -43,11 +44,10 @@ bounded retry.
 - Model/editor output is data, never directly deliverable prose. Code does not infer categories or
   semantic validity from title keyword lists, and it never substitutes a source title as fallback.
 - Public audit records evidence and decisions but never cookies, tokens or private HTML.
-- The rolling-window news collection and official-source collection are independent
-  failure domains. An all-query Doubao failure is retained as a per-query audit and visible
-  source-status warning while official collection continues; official-source failures also appear
-  in the final source-status warning; the aggregate fails only when no
-  collector yields usable evidence.
+- X account failures remain in per-account source audit while official collection continues;
+  official-source failures retain their source-status warning. The aggregate fails only when no
+  collector yields usable evidence. X posts remain model-relayed, unverified evidence with visible
+  source labels; a current post about an old event is not a new announcement.
 - Each event links its evidence through compact inline source badges. Repeated labels from the same
   provider collapse to one visible badge, and there is no repeated trailing source list.
 
@@ -56,6 +56,6 @@ bounded retry.
 Generation returns an idempotent receipt containing the occurrence and selected evidence
 IDs. A receipt is committed only after successful delivery; repeated commits are no-ops,
 and failed delivery leaves delivery state unchanged. This boundary is independently testable and
-keeps generation retries from changing business delivery state or sending messages. News collection
+keeps generation retries from changing business delivery state or sending messages. X account collection
 can still reserve request attempts and update its operational response cache; a repeated collection
 is subject to the same shared budget.

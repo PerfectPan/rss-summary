@@ -1,26 +1,29 @@
 # News search budget
 
-Daily AI, noon news and evening news share one persistent Doubao request budget and raw-response
-cache. This lowers scheduled search traffic while preserving the existing push schedules, exact
-publication windows, official-source collection and editorial validation.
+Daily AI's X account subscriptions, noon news and evening news share one persistent request budget
+and response cache. Daily AI combines official RSS/websites with selected X accounts and no longer
+calls broad news search. Grok is the default news provider; explicit Doubao, hybrid and combined
+modes remain supported. Account subscriptions always use Grok, independently of the news mode.
+Changing providers preserves the ledger and existing schedules.
 
 ## Request plan and account allowance
 
-The previous daily plan executed seven queries for each of three overlapping Daily AI segments,
-then seven queries for noon and seven for evening: `3 × 7 + 7 + 7 = 35` requests before retries.
-Daily AI now queries its complete rolling 24-hour window once. The default plan is at most six Daily
-AI queries plus four noon and four evening queries: `6 + 4 + 4 = 14` before cache hits and retries.
-Query IDs rotate using the existing local-day/edition rotation, so the cap does not permanently
-select only the first configured queries. Deferred queries remain in the audit; reduced coverage is
-visible rather than reported as a complete search.
+With one subscribed account and default Grok news query caps, the nominal plan is one account
+request plus one noon and one evening request: three CLI attempts per day before cache hits or
+manual runs. Grok/account callers default to four attempts per day and 120 per month. Each extra
+account needs another attempt. These are CLI attempts, not native X tool calls or dollar limits.
+
+In explicit Doubao/hybrid/combined mode, standalone news selects at most four noon and four evening
+queries. Daily AI adds no Doubao queries. Those news callers retain defaults of 14/420; deployments
+mixing these modes with Grok account subscriptions should explicitly set the shared limits so all
+callers enforce the same cap. News query IDs rotate; deferred queries remain visible in the audit.
 
 The existing deployment's 09:10 Daily AI, 12:30 noon and 19:00 evening pushes do not need to move.
 The query plan changes collection cost, not the scheduling or delivery identity.
 
 The [official personal search allowance](https://docs.volcengine.com/docs/ark/agent-plan-personal-search?lang=zh)
 is 500 requests per main account per month, shared by applications and reset on the first day of the
-month. `500 / 30` is about 16.67 requests per day; the default plan uses 14 and the local monthly cap
-is 420. Fourteen requests for 31 days would be 434, so the monthly cap deliberately stops new requests
+month. `500 / 30` is about 16.67 requests per day; the non-Grok news caller defaults remain 14 daily and 420 monthly, independently of the lower scheduled query count. Fourteen requests for 31 days would be 434, so the monthly cap deliberately stops new requests
 before that plan completes. Cache hits can reduce actual requests; failures, retries and extra manual
 runs can use the cap earlier. Other applications can consume the same account allowance, so this
 local cap does not guarantee that the account has free requests remaining.
@@ -35,16 +38,17 @@ ledger conservatively counts every reserved attempt, including failed attempts a
 
 | Variable | Default | Accepted values | Purpose |
 | --- | --- | --- | --- |
-| `DAILY_AI_NEWS_MAX_QUERIES` | `6` | integer `1..32` | Maximum configured query IDs selected for one complete Daily AI window |
 | `NEWS_SEARCH_MAX_QUERIES` | `4` | integer `1..32` | Maximum configured query IDs selected for each standalone noon/evening run |
-| `NEWS_SEARCH_DAILY_LIMIT` | `14` | integer `0..100000` | Shared new-request attempt cap for the current local calendar day |
-| `NEWS_SEARCH_MONTHLY_LIMIT` | `420` | integer `0..1000000` | Shared new-request attempt cap for the current local calendar month |
-| `NEWS_SEARCH_CACHE_TTL_MINUTES` | `360` | integer `0..43200` | Raw Doubao cache lifetime; `0` disables reuse |
+| `NEWS_SEARCH_DAILY_LIMIT` | Grok `4`; other modes `14` | integer `0..100000` | Shared new-request attempt cap for the current local calendar day |
+| `NEWS_SEARCH_MONTHLY_LIMIT` | Grok `120`; other modes `420` | integer `0..1000000` | Shared new-request attempt cap for the current local calendar month |
+| `NEWS_SEARCH_CACHE_TTL_MINUTES` | `360` | integer `0..43200` | Search page cache lifetime; `0` disables reuse |
 | `NEWS_SEARCH_STATE_FILE` | `.state/news-search.json` | nonempty path | Budget ledger and raw response cache; deployment must set a persistent absolute path |
 | `FEED_TIMEZONE_OFFSET` | `+08:00` for news | supported fixed offset | Calendar boundary for request accounting |
 
-Query caps are bounded by the number of enabled configured queries. A zero daily or monthly limit
-blocks new Doubao requests; an eligible cache entry may still be read. The caps constrain attempts,
+Grok further limits standalone news query plans with `NEWS_GROK_MAX_QUERIES=1` (range `1..4`). Query caps are
+bounded by the number of enabled configured queries. `DAILY_AI_NEWS_MAX_QUERIES` is obsolete.
+Account retrieval uses `DAILY_AI_X_HANDLES` and `X_ACCOUNT_POSTS_PER_FETCH`; see [X collection](grok-x-search.md). A zero daily or monthly limit
+blocks new provider requests; an eligible cache entry may still be read. The caps constrain attempts,
 so a retry can consume another slot without completing another query.
 
 Set these values in the Node process environment used by the CLI or Rivus Host, as described in
@@ -55,9 +59,9 @@ included in the package.
 
 ## Reservation and failure behavior
 
-`src/infrastructure/doubao-search-budget.ts` wraps the raw Doubao client. Under a short cross-process
+`src/infrastructure/news-search-budget.ts` wraps the selected Doubao or Grok client. Under a short cross-process
 file lock it loads and validates state, checks the cache, checks both caps, and atomically persists
-one reserved attempt before the HTTP request starts. HTTP runs outside the lock. A reservation is
+one reserved attempt before the provider request starts. The provider runs outside the lock. A reservation is
 not refunded if the request fails, the process exits, or the successful response cannot be cached.
 Retries pass through the same wrapper and reserve again. Concurrent identical requests in one
 process share a pending operation; different processes still reserve independently on a cache miss.
@@ -79,12 +83,14 @@ without reserving another request or contacting Doubao; the circuit cannot bypas
 
 ## Raw cache and coverage
 
-Only raw Doubao responses are cached, including successful responses with zero results. GLM results,
+Raw Doubao responses and validated Grok search pages are cached, including successful responses with zero results. GLM results,
 hybrid compositions and editorial outputs are not stored in this cache. Cache identity includes the
 actual outgoing query text, requested result count, provider endpoint, source policy and calendar
 date range. A fresh entry can satisfy a narrower date range it already covers only when the other
 request fields match. The application still filters publication timestamps against the exact
-requested window and applies the current relevance, authority and deduplication rules.
+requested window and applies the current relevance, authority and deduplication rules. Account cache
+keys additionally encode the exact start/end instants and normalized handle, so an advancing window
+cannot reuse a prior snapshot. Account failures and saturation are retained in `sourceAudit.xAccounts`.
 
 The six-hour default trades freshness for fewer requests. It is not a lossless optimization:
 newly published or newly indexed stories can be absent until the next network fetch. Audit entries
@@ -131,3 +137,20 @@ ledger to zero as a repair. If counts cannot be reconstructed reliably, leave se
 report the missing accounting evidence. A timezone change also requires a deliberate stopped-state
 migration; it must not silently reinterpret or discard earlier counters. Resume only after the
 state, timezone and persistent path have been checked.
+
+
+## Grok mode
+
+`NEWS_SEARCH_MODE=grok` uses the same ledger and locking rules. Its defaults are 4 attempts/day
+and 120/month, with a separate `NEWS_GROK_MAX_QUERIES=1` per-run cap that also bounds Daily AI's
+query override. Explicit common budget variables take precedence. Modes sharing one state file
+share counters; cache identities remain separate (`grok://cli/v1/<model>` versus HTTP endpoint).
+Existing version-1 Doubao state is accepted without resetting its counters. Once Grok cache entries
+have been written, older releases without Grok support cannot read those entries; preserve the
+ledger and remove only Grok cache entries while callers are stopped if a rollback is required.
+
+One reserved Grok attempt is one CLI process, not one underlying X tool call, token or dollar.
+A process can perform multiple X searches within its two-turn limit. There is no automatic retry
+or paid fallback after a Grok failure. Cached `grok.costUsd` and token fields describe the original
+fetch; do not count them as new spending when `searchUsage.source=cache`.
+See [Grok X search](grok-x-search.md) for authentication and evidence limitations.

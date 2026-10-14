@@ -6,7 +6,7 @@ import type {
   NewsTopic,
   NewsTopicQuery,
 } from "../domain/news.js";
-import { DoubaoSearchError, type DoubaoSearchPage } from "../infrastructure/doubao-search.js";
+import { NewsSearchError, type NewsSearchPage } from "../infrastructure/news-search.js";
 
 export type NewsQueryAudit = {
   queryId: string;
@@ -15,9 +15,10 @@ export type NewsQueryAudit = {
   topicId: string;
   topicLabel: string;
   status: "ok" | "failed" | "skipped";
-  provider?: DoubaoSearchPage["provider"];
-  searchUsage?: DoubaoSearchPage["searchUsage"];
-  fallback?: DoubaoSearchPage["fallback"];
+  provider?: NewsSearchPage["provider"];
+  searchUsage?: NewsSearchPage["searchUsage"];
+  fallback?: NewsSearchPage["fallback"];
+  grok?: NewsSearchPage["grok"];
   logId?: string;
   reportedResultCount?: number;
   fetched: number;
@@ -50,7 +51,7 @@ export type NewsAuditRequest = {
 
 export function buildNewsAudit(
   requests: NewsAuditRequest[],
-  settled: PromiseSettledResult<DoubaoSearchPage>[],
+  settled: PromiseSettledResult<NewsSearchPage>[],
   decisions: NewsHitDecision[],
   storyDecisions: NewsStoryDecision[],
   deduplicatedStories: number,
@@ -67,14 +68,14 @@ export function buildNewsAudit(
         topicId: topic.id,
         topicLabel: topic.label,
         status:
-          result.reason instanceof DoubaoSearchError &&
+          result.reason instanceof NewsSearchError &&
           ["query_deferred", "local_budget_exhausted"].includes(result.reason.code)
             ? "skipped"
             : "failed",
         fetched: 0,
         accepted: 0,
         rejected: {},
-        ...(result.reason instanceof DoubaoSearchError ? { errorCode: result.reason.code } : {}),
+        ...(result.reason instanceof NewsSearchError ? { errorCode: result.reason.code } : {}),
         error: errorText(result.reason),
       };
     }
@@ -89,6 +90,7 @@ export function buildNewsAudit(
       ...(result.value.provider ? { provider: result.value.provider } : {}),
       ...(result.value.searchUsage ? { searchUsage: result.value.searchUsage } : {}),
       ...(result.value.fallback ? { fallback: result.value.fallback } : {}),
+      ...(result.value.grok ? { grok: result.value.grok } : {}),
       reportedResultCount: result.value.resultCount,
       fetched: result.value.results.length,
       accepted: queryDecisions.filter(({ status }) => status === "accepted").length,
@@ -145,7 +147,7 @@ export type NewsSourceStatus = {
 
 export function summarizeNewsSources(
   requests: NewsAuditRequest[],
-  settled: PromiseSettledResult<DoubaoSearchPage>[],
+  settled: PromiseSettledResult<NewsSearchPage>[],
 ): { sourceStatus: NewsSourceStatus; warnings: string[] } {
   const completed = settled.filter((result) => result.status === "fulfilled").length;
   const recovered = settled.filter(
@@ -192,13 +194,13 @@ export function summarizeNewsSources(
   const deferred = settled.filter(
     (result) =>
       result.status === "rejected" &&
-      result.reason instanceof DoubaoSearchError &&
+      result.reason instanceof NewsSearchError &&
       result.reason.code === "query_deferred",
   ).length;
   const limited = settled.filter(
     (result) =>
       result.status === "rejected" &&
-      result.reason instanceof DoubaoSearchError &&
+      result.reason instanceof NewsSearchError &&
       result.reason.code === "local_budget_exhausted",
   ).length;
   const cached = settled.flatMap((result) =>
@@ -219,6 +221,12 @@ export function summarizeNewsSources(
     notes.push(
       `本轮按预算轮换检索 ${searchedSources} 组官网查询，另 ${deferredSources} 组留待后续轮次`,
     );
+  const grokNotes = settled.some(
+    (result) => result.status === "fulfilled" && result.value.provider === "grok",
+  )
+    ? ["X 资讯经 Grok 原生搜索和模型整理，未独立核验原文、作者或事实；搜索结果不代表完整时间线"]
+    : [];
+  notes.push(...grokNotes);
   return {
     sourceStatus: {
       state,
@@ -238,6 +246,6 @@ export function summarizeNewsSources(
           ]
         : state === "partial"
           ? [`采集覆盖不完整：${incompleteTopics.join("、")}；详见采集审计`, ...notes]
-          : [],
+          : grokNotes,
   };
 }

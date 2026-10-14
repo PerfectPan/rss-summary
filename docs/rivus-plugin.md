@@ -20,7 +20,7 @@ Each Automation returns two compatible views of the same result: canonical Markd
 | Automation | `rss-summary/noon-news-brief` | current day 00:00 through noon occurrence |
 | Automation | `rss-summary/evening-news-brief` | current day 12:30 through evening occurrence |
 
-All Tools have `observe` risk. Feed Tools force dry-run mode: they read only-new state but do not send a webhook, write seen state, or write local run artifacts. News collection also leaves business seen state and message delivery untouched, but it writes operational request reservations and raw response cache entries. Its result includes the query/rejection/selection audit. Daily AI's `collect` result exposes one complete rolling-window news audit plus the official-source audit; a provider-wide Doubao failure retains each normalized error code while official collection continues. Rivus records the subsequent card delivery in its trace and Feishu delivery ledger.
+All Tools have `observe` risk. Feed Tools force dry-run mode: they read only-new state but do not send a webhook, write seen state, or write local run artifacts. News collection also leaves business seen state and message delivery untouched, but it writes operational request reservations and raw response cache entries. Its result includes the query/rejection/selection audit. Daily AI's `collect` result exposes one complete rolling-window news audit plus the official-source audit; a provider-wide search failure retains each normalized error code while official collection continues. Rivus records the subsequent card delivery in its trace and Feishu delivery ledger.
 
 The official registry includes Anthropic News, Research and Engineering; Cursor Changelog and Blog;
 alongside OpenAI RSS. xAI News remains excluded while its production fetch is blocked by HTTP 403.
@@ -138,7 +138,9 @@ FEED_STATE_FILE=/path/to/rss-summary/.state/feed-state.json
 # INDUSTRY_SOURCES_FILE=/path/to/rss-summary/industry-feeds.json
 INDUSTRY_STATE_FILE=/path/to/rss-summary/.state/industry-state.json
 FEED_MAX_PAPERS=8
-DOUBAO_SEARCH_API_KEY=replace-with-doubao-search-api-key
+NEWS_SEARCH_MODE=grok
+# For explicit doubao/hybrid/combined mode only:
+# DOUBAO_SEARCH_API_KEY=replace-with-doubao-search-api-key
 NEWS_TOPICS_FILE=/path/to/rss-summary/news-topics.json
 NEWS_SEARCH_STATE_FILE=/path/to/persistent-state/news-search.json
 GH_FEED_TOKEN=replace-with-github-token
@@ -157,7 +159,7 @@ For articles, the subscription research Tool uses browser-first mode by default.
 and optionally tune `RSS_ARTICLE_BROWSER_TIMEOUT_MS`. If the browser cannot render a page, the Tool falls back
 to its bounded HTTP extractor; pass `mode:"browser"` to require browser research or `mode:"http"` to skip it.
 
-The news Tool reads `DOUBAO_SEARCH_API_KEY` from the Node process environment. If the Rivus CLI's environment-file option only configures the Host, also load the file into Node:
+The news Tool reads its mode, budgets and optional provider keys from the Node process environment. It defaults to Grok when `NEWS_SEARCH_MODE` is absent and requires an authenticated Grok CLI under the Host user. If the Rivus CLI's environment-file option only configures the Host, also load the file into Node:
 
 ```bash
 node --env-file=/path/to/rivus-project/.env.local \
@@ -193,3 +195,20 @@ npm run check-config
 ```
 
 Invoke each enabled template once in the foreground. Confirm the morning subscriptions trace contains `collect`, `select`, `research-article`, and `render` calls, every evidence item has an AI decision and reason, research results are URL-matched and bounded, repository rows retain deterministic stars/language facts, PR/RSS rows contain grounded summaries only when selected, and an empty selection is recorded as suppressed without a delivery. Confirm the separate Daily AI card covers `[occurrence - 24h, occurrence)`, invalid draft items do not remove valid siblings, the frontier trace lists only official `industry-feeds.json` sources (including `web-page` source health), standalone noon/evening windows do not overlap, the structured card keeps semantic source links inline with each item without right-side button columns or a duplicate source appendix, and the delivery ledger records the card outcome before enabling the service manager.
+
+
+### Grok X search
+
+Native X search is the default for the existing noon/evening news Tool
+when `NEWS_SEARCH_MODE` is absent. Explicit `doubao`, `hybrid` and `combined` settings remain effective;
+set `NEWS_SEARCH_MODE=grok` to change an existing Host to Grok. The host's OS user must
+already have an authenticated Grok CLI. No Doubao or GLM key is needed in this mode;
+Daily AI independently combines official RSS/websites with subscribed X accounts, defaulting to
+`DAILY_AI_X_HANDLES=ClaudeDevs` (explicit empty disables X). It never calls the broad news Tool.
+Account collection always uses Grok, shares the CLI settings and request ledger, and is reusable
+with caller-owned windows. `sourceAudit.xAccounts` retains per-account results/failures, request
+usage and possible retrieval saturation; X evidence remains unverified and labelled Grok-relayed.
+Daily AI render reuses collect evidence without another search. The obsolete
+`DAILY_AI_NEWS_MAX_QUERIES` has no effect.
+See [Grok X search](grok-x-search.md) for caps, usage interpretation and a no-send trial.
+Changing these variables does not install the updated plugin or reload an existing host.

@@ -10,7 +10,7 @@ export const dailyAiCategories = [
 ] as const;
 
 export type DailyAiCategory = (typeof dailyAiCategories)[number];
-export type DailyAiSourceTier = "official" | "authoritative" | "aggregator";
+export type DailyAiSourceTier = "official" | "authoritative" | "aggregator" | "unverified";
 
 export type DailyAiEvidence = {
   id: string;
