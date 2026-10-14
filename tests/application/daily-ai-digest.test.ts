@@ -10,6 +10,39 @@ import * as newsBrief from "../../src/application/news-brief.js";
 import type { IndustryBriefDocument } from "../../src/application/industry-brief.js";
 
 describe("Daily AI digest use case", () => {
+  it("reports failed official sources while keeping usable evidence", async () => {
+    const result = await generateDailyAiDigest(
+      { occurrence: "2026-08-11T01:00:00.000Z" },
+      {
+        env: { FEED_TIMEZONE_OFFSET: "+08:00" },
+        news: async (_occurrence, edition) => newsResult(edition),
+        industry: async () => ({
+          ...officialDocument(),
+          audit: {
+            version: 2,
+            runId: "official-test",
+            product: "frontier",
+            generatedAt: "2026-08-11T01:00:00Z",
+            sources: [
+              {
+                id: "xai",
+                kind: "web-page",
+                name: "xAI News",
+                status: "failed",
+                itemCount: 0,
+                error: "HTTP 403",
+              },
+            ],
+            counts: { fetched: 1, inWindow: 1, ranked: 1, selected: 1, researchPending: 0 },
+            candidates: [],
+          },
+        }),
+      },
+    );
+    expect(result.evidence).toHaveLength(1);
+    expect(result.warnings).toContain("官方来源采集不完整：xAI News（HTTP 403）");
+  });
+
   it("collects news once for the rolling 24 hours before the occurrence", async () => {
     const calls: string[] = [];
     const result = await generateDailyAiDigest(

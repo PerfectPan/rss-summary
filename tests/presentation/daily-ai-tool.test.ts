@@ -3,6 +3,23 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { createRivusDailyAiDigestExecutor } from "../../src/presentation/daily-ai-tool.js";
 
 describe("Rivus Daily AI Tool", () => {
+  it("renders an intentionally empty selection without forcing release noise into delivery", async () => {
+    const collect = vi.fn(async () => collectedFixture());
+    const execute = createRivusDailyAiDigestExecutor({ collect });
+    const occurrence = "2026-08-11T01:00:00Z";
+    await execute({ occurrence, phase: "collect" });
+    const rendered = await execute({ occurrence, phase: "render", draft: [] });
+    expect(rendered).toMatchObject({
+      phase: "render",
+      itemCount: 0,
+      deliveryReceipt: { evidenceIds: [] },
+    });
+    expect("markdown" in rendered && rendered.markdown).toContain(
+      "本日没有足够可信且具备明确事件信息",
+    );
+    expect(collect).toHaveBeenCalledTimes(1);
+  });
+
   it("collects evidence before validating and rendering an editorial draft", async () => {
     const collect = vi.fn(async () => ({
       day: "2026-08-10",
