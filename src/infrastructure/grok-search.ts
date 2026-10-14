@@ -32,8 +32,8 @@ export class GrokSearchClient {
         "Prefer original announcements. Exclude rumors, predictions, tutorials and reposts.",
       ].join("\n"),
       count: input.count,
-      since: new Date(since).toISOString(),
-      until: new Date(until).toISOString(),
+      since: input.window?.since ?? new Date(since).toISOString(),
+      until: input.window?.until ?? new Date(until).toISOString(),
     });
   }
 }

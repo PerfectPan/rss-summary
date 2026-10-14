@@ -83,6 +83,8 @@ describe("native Grok X search", () => {
       provider: "grok",
       grok: {
         nativeTools: ["x_keyword_search"],
+        nativeCallCount: 1,
+        elapsedMs: expect.any(Number),
         rejectedResults: 0,
         costUsd: 0.001,
         totalTokens: 200,
@@ -108,6 +110,9 @@ describe("native Grok X search", () => {
         "--tools",
         "x_search",
         "--no-subagents",
+        "--no-plan",
+        "--reasoning-effort",
+        "low",
         "--max-turns",
         "2",
         "--permission-mode",
@@ -246,18 +251,64 @@ describe("native Grok X search", () => {
   });
 
   it.each([
-    ["process failure", "process.stderr.write('private token'); process.exit(1);", 1000],
-    ["timeout", "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000);", 100],
-    ["output limit", "process.stdout.write('x'.repeat(3 * 1024 * 1024));", 1000],
-  ])("redacts %s", async (_name, script, timeoutMs) => {
-    const { executable } = await fixture("", script);
-    await expect(
-      new GrokSearchClient({ executable, timeoutMs, timezoneOffset: "+08:00" }).search(input),
-    ).rejects.toMatchObject({
-      code: "grok_cli_failed",
-      message: expect.not.stringContaining("private token"),
-    });
+    [
+      "process failure",
+      "process.stderr.write('private token'); process.exit(1);",
+      1000,
+      "grok_cli_failed",
+    ],
+    [
+      "timeout",
+      "process.on('SIGTERM', () => {}); setInterval(() => {}, 1000);",
+      100,
+      "grok_timeout",
+    ],
+    [
+      "output limit",
+      "process.stdout.write('x'.repeat(3 * 1024 * 1024));",
+      1000,
+      "grok_output_limit",
+    ],
+  ] as const)(
+    "redacts %s while preserving the failure category",
+    async (_name, script, timeoutMs, code) => {
+      const { executable } = await fixture("", script);
+      await expect(
+        new GrokSearchClient({ executable, timeoutMs, timezoneOffset: "+08:00" }).search(input),
+      ).rejects.toMatchObject({
+        code,
+        message: expect.not.stringContaining("private token"),
+        grok: { elapsedMs: expect.any(Number), nativeCallCount: 0 },
+      });
+    },
+  );
+});
+
+it("searches and validates the exact evening window instead of the whole calendar day", async () => {
+  const times = [
+    "2026-10-08T04:29:59Z",
+    "2026-10-08T04:30:00Z",
+    "2026-10-08T10:59:59Z",
+    "2026-10-08T11:00:00Z",
+  ];
+  const posts = times.map((time) => ({
+    ...post,
+    publishedAt: time,
+    url: `https://x.com/OpenAI/status/${(BigInt(Date.parse(time)) - 1288834974657n) << 22n}`,
+  }));
+  const { executable, capture } = await fixture(stream(posts));
+  const window = { since: "2026-10-08T04:30:00.000Z", until: "2026-10-08T11:00:00.000Z" };
+  const page = await new GrokSearchClient({ executable, timezoneOffset: "+08:00" }).search({
+    ...input,
+    window,
   });
+  expect(page.results.map(({ publishTime }) => publishTime)).toEqual([
+    "2026-10-08T04:30:00.000Z",
+    "2026-10-08T10:59:59.000Z",
+  ]);
+  const { args } = JSON.parse(await readFile(capture, "utf8"));
+  expect(args[1]).toContain(`${window.since} inclusive and ${window.until} exclusive`);
+  expect(args[1]).toContain("Make exactly one x_keyword_search call");
 });
 
 it.each([

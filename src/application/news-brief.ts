@@ -69,7 +69,22 @@ export class AllNewsQueriesFailedError extends Error {
   readonly result: RivusNewsBriefResult;
 
   constructor(result: RivusNewsBriefResult) {
-    super("All news search queries failed.");
+    const grokFailures = result.audit.queries.filter(({ errorCode }) =>
+      errorCode?.startsWith("grok_"),
+    );
+    const reasons: Record<string, string> = {
+      grok_timeout: "Grok 搜索超时",
+      grok_call_limit: "Grok 持续追加搜索，已终止本次请求",
+      grok_output_limit: "Grok 输出超过限制",
+      grok_not_found: "未找到 Grok CLI",
+      grok_invalid_response: "Grok 未返回完整、可验证的搜索结果",
+      grok_source_policy: "Grok 不支持当前来源要求",
+    };
+    super(
+      grokFailures.length
+        ? `新闻搜索未完成：${[...new Set(grokFailures.map(({ errorCode }) => reasons[errorCode!] ?? "Grok 调用失败"))].join("；")}。本次未生成新闻简报。`
+        : "All news search queries failed.",
+    );
     this.name = "AllNewsQueriesFailedError";
     this.result = result;
   }
@@ -178,6 +193,14 @@ export function generateRivusNewsBrief(
           day: window.day,
           sinceDay: calendarDayAtOffset(new Date(window.since).toISOString(), timezoneOffset),
           sourcePolicy: topic.sourcePolicy,
+          ...(mode === "grok"
+            ? {
+                window: {
+                  since: new Date(window.since).toISOString(),
+                  until: new Date(window.until).toISOString(),
+                },
+              }
+            : {}),
         },
       })),
     );

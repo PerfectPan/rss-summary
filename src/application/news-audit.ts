@@ -76,6 +76,9 @@ export function buildNewsAudit(
         accepted: 0,
         rejected: {},
         ...(result.reason instanceof NewsSearchError ? { errorCode: result.reason.code } : {}),
+        ...(result.reason instanceof NewsSearchError && result.reason.grok
+          ? { grok: result.reason.grok }
+          : {}),
         error: errorText(result.reason),
       };
     }

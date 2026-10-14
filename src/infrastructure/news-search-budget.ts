@@ -37,6 +37,11 @@ type BudgetOptions = {
 
 const daySchema = Schema.String.pipe(Schema.filter(isCalendarDay));
 const countSchema = Schema.NonNegativeInt.pipe(Schema.lessThanOrEqualTo(Number.MAX_SAFE_INTEGER));
+const instantSchema = Schema.String.pipe(
+  Schema.filter(
+    (value) => /(?:Z|[+-]\d{2}:\d{2})$/u.test(value) && Number.isFinite(Date.parse(value)),
+  ),
+);
 const requestSchema = Schema.Struct({
   provider: Schema.String,
   query: Schema.String.pipe(Schema.filter((value) => value.trim() !== "" && value.length <= 100)),
@@ -44,12 +49,15 @@ const requestSchema = Schema.Struct({
   day: daySchema,
   sinceDay: daySchema,
   sourcePolicy: Schema.Literal("news", "authoritative", "official"),
+  window: Schema.optional(Schema.Struct({ since: instantSchema, until: instantSchema })),
 });
 const rawPageSchema = Schema.Struct({
   provider: Schema.optional(Schema.Literal("doubao", "grok")),
   grok: Schema.optional(
     Schema.Struct({
       nativeTools: Schema.Array(Schema.String),
+      nativeCallCount: Schema.optional(countSchema),
+      elapsedMs: Schema.optional(countSchema),
       rejectedResults: countSchema,
       costUsd: Schema.optional(Schema.NonNegative),
       totalTokens: Schema.optional(countSchema),
@@ -130,6 +138,8 @@ export function createBudgetedNewsSearch(options: BudgetOptions): BudgetedSearch
       sinceDay: input.sinceDay ?? input.day,
     });
     if (request.sinceDay > request.day) throw new Error("Invalid search start date.");
+    if (request.window && Date.parse(request.window.since) >= Date.parse(request.window.until))
+      throw new Error("Invalid search time window.");
     return request;
   }
 
@@ -244,6 +254,7 @@ function cacheKey(request: CacheRequest): string {
         request.day,
         request.sinceDay,
         request.sourcePolicy,
+        ...(request.window ? [request.window.since, request.window.until] : []),
       ]),
     )
     .digest("hex");
@@ -289,6 +300,8 @@ function findCache(
         entry.request.query === request.query &&
         entry.request.count === request.count &&
         entry.request.sourcePolicy === request.sourcePolicy &&
+        entry.request.window?.since === request.window?.since &&
+        entry.request.window?.until === request.window?.until &&
         entry.request.sinceDay <= request.sinceDay &&
         entry.request.day >= request.day,
     )

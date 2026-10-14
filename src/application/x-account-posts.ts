@@ -87,7 +87,6 @@ export async function collectXAccountPosts(
           instruction: [
             `Collect posts authored by @${handle}. Use from:${handle} with Latest ordering.`,
             "Include original posts and quotes with the author's own commentary, including experiences, opinions, research and tutorials. Exclude pure reposts and replies; do not restrict to news or announcements.",
-            "Start with one keyword search returning the posts together. Only if essential text is missing, make at most one additional thread fetch. Do not fetch every post separately or search repeatedly to fill a quota.",
             "Summarize only the author's own claims, preserve attribution, and distinguish a new post from the date of any older event it discusses.",
           ].join("\n"),
         }),
@@ -121,7 +120,13 @@ export async function collectXAccountPosts(
       });
     } catch (error) {
       if (!(error instanceof NewsSearchError)) throw error;
-      result.audit.push({ handle, status: "failed", acceptedCount: 0, errorCode: error.code });
+      result.audit.push({
+        handle,
+        status: "failed",
+        acceptedCount: 0,
+        errorCode: error.code,
+        grok: error.grok,
+      });
     }
   }
   return result;
