@@ -213,6 +213,13 @@
     ]
   },
   {
+    "name": "React Blog",
+    "url": "https://react.dev/rss.xml",
+    "tags": [
+      "Articles"
+    ]
+  },
+  {
     "name": "Read the Tea Leaves",
     "url": "https://nolanlawson.com/feed/",
     "tags": [
