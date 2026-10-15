@@ -1,11 +1,81 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
+import type { DailyAiDigestResult } from "../../src/application/daily-ai-digest.js";
 import { createRivusDailyAiDigestExecutor } from "../../src/presentation/daily-ai-tool.js";
 
 describe("Rivus Daily AI Tool", () => {
+  it("keeps every evidence item while storing bulky audits outside model messages", async () => {
+    const fixture: DailyAiDigestResult = collectedFixture();
+    fixture.evidence = Array.from({ length: 12 }, (_, index) => ({
+      ...fixture.evidence[0]!,
+      id: `official:release-${index}`,
+      title: `Tool ${index} release`,
+      url: `https://example.com/releases/${index}`,
+      excerpt: "Concrete release details. ".repeat(1500).trim(),
+    }));
+    fixture.sourceAudit.industry = {
+      version: 2,
+      runId: "test",
+      product: "frontier",
+      generatedAt: fixture.generatedAt,
+      sources: [{ id: "official", kind: "rss", name: "Official", status: "ok", itemCount: 12 }],
+      counts: { fetched: 1012, inWindow: 1012, ranked: 1012, selected: 12, researchPending: 0 },
+      candidates: Array.from({ length: 1000 }, (_, index) => ({
+        key: `filtered-${index}`,
+        label: "Unused candidate",
+        score: 0,
+        depth: "link",
+        status: "filtered",
+        reason: "Not publishable",
+      })),
+    };
+    const saveDiagnostics = vi.fn(async () => {});
+    const execute = createRivusDailyAiDigestExecutor({
+      collect: async () => fixture,
+      saveDiagnostics,
+    });
+    const occurrence = fixture.deliveryReceipt.occurrence;
+    const collected = await execute({ occurrence, phase: "collect" });
+    if (collected.phase !== "collect") throw new Error("Expected collect");
+    expect(collected.evidence).toEqual(fixture.evidence);
+    expect(collected.sourceAudit.industry).toEqual({
+      counts: fixture.sourceAudit.industry.counts,
+      sources: fixture.sourceAudit.industry.sources,
+    });
+    expect(saveDiagnostics).toHaveBeenCalledWith({ occurrence, phase: "collect", result: fixture });
+
+    const rendered = await execute({
+      occurrence,
+      phase: "render",
+      draft: fixture.evidence.map(({ id }, index) => ({
+        category: "开发生态",
+        headline: `工具 ${index} 增加新的调用功能`,
+        refs: [id],
+      })),
+    });
+    if (rendered.phase !== "render") throw new Error("Expected render");
+    expect(rendered.itemCount).toBe(12);
+    expect(rendered.deliveryReceipt.evidenceIds).toEqual(fixture.evidence.map(({ id }) => id));
+    expect(rendered.markdown).toContain("工具 11 增加新的调用功能");
+    expect(rendered).not.toHaveProperty("evidence");
+    expect(rendered).not.toHaveProperty("sourceAudit");
+    expect(rendered).not.toHaveProperty("items");
+    expect(rendered.audit).not.toHaveProperty("decisions");
+    expect(saveDiagnostics).toHaveBeenLastCalledWith({
+      occurrence,
+      phase: "render",
+      result: expect.objectContaining({
+        sourceAudit: fixture.sourceAudit,
+        evidence: fixture.evidence,
+        items: expect.any(Array),
+        deliveryReceipt: rendered.deliveryReceipt,
+      }),
+    });
+  });
+
   it("renders an intentionally empty selection without forcing release noise into delivery", async () => {
     const collect = vi.fn(async () => collectedFixture());
-    const execute = createRivusDailyAiDigestExecutor({ collect });
+    const execute = createRivusDailyAiDigestExecutor({ collect, saveDiagnostics: async () => {} });
     const occurrence = "2026-08-11T01:00:00Z";
     await execute({ occurrence, phase: "collect" });
     const rendered = await execute({ occurrence, phase: "render", draft: [] });
@@ -48,7 +118,7 @@ describe("Rivus Daily AI Tool", () => {
         committed: false as const,
       },
     }));
-    const execute = createRivusDailyAiDigestExecutor({ collect });
+    const execute = createRivusDailyAiDigestExecutor({ collect, saveDiagnostics: async () => {} });
 
     const collected = await execute({
       occurrence: "2026-08-11T01:00:00Z",
@@ -75,7 +145,7 @@ describe("Rivus Daily AI Tool", () => {
 
   it("renders valid items while reporting invalid siblings", async () => {
     const collect = vi.fn(async () => collectedFixture());
-    const execute = createRivusDailyAiDigestExecutor({ collect });
+    const execute = createRivusDailyAiDigestExecutor({ collect, saveDiagnostics: async () => {} });
 
     await execute({ occurrence: "2026-08-11T01:00:00Z", phase: "collect" });
     const rendered = await execute({
@@ -103,7 +173,7 @@ describe("Rivus Daily AI Tool", () => {
 
   it("keeps the collected snapshot when an all-invalid draft is retried", async () => {
     const collect = vi.fn(async () => collectedFixture());
-    const execute = createRivusDailyAiDigestExecutor({ collect });
+    const execute = createRivusDailyAiDigestExecutor({ collect, saveDiagnostics: async () => {} });
     const occurrence = "2026-08-11T01:00:00Z";
 
     await execute({ occurrence, phase: "collect" });

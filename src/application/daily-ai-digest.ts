@@ -158,7 +158,20 @@ async function defaultIndustry(
     "--timezone-offset",
     env.FEED_TIMEZONE_OFFSET ?? "+08:00",
   ]);
-  return Effect.runPromise(buildIndustryDocument(config));
+  return Effect.runPromise(
+    buildIndustryDocument({
+      ...config,
+      // Daily AI cannot publish paper candidates, so exclude their sources before fetching.
+      industrySources: config.industrySources.filter((source) => {
+        const hostname = new URL(source.url).hostname;
+        return (
+          hostname !== "arxiv.org" &&
+          !hostname.endsWith(".arxiv.org") &&
+          !source.tags.some((tag) => ["papers", "academic"].includes(tag.toLowerCase()))
+        );
+      }),
+    }),
+  );
 }
 
 function parseInput(value: unknown): { occurrence: string } {

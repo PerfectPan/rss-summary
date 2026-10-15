@@ -91,7 +91,7 @@ export function createRssSummaryPlugin(
         createExecutor: () => ({ execute: (input) => executeDailyAiDigest(input) }),
         description:
           "Generate a source-grounded Daily AI Digest for the rolling 24 hours before the occurrence",
-        digest: "sha256:rss-summary-generate-daily-ai-digest-v7",
+        digest: "sha256:rss-summary-generate-daily-ai-digest-v8",
         id: RSS_SUMMARY_DAILY_AI_TOOL_ID,
         idempotency: "none",
         inputSchema: {
@@ -104,8 +104,13 @@ export function createRssSummaryPlugin(
                 additionalProperties: false,
                 properties: {
                   category: { enum: [...dailyAiCategories], type: "string" },
-                  headline: { maxLength: 90, type: "string" },
-                  refs: { items: { type: "string" }, minItems: 1, type: "array" },
+                  headline: { description: "At most 90 characters", maxLength: 90, type: "string" },
+                  refs: {
+                    description: "Exact evidence.id values from collect, never URLs",
+                    items: { type: "string" },
+                    minItems: 1,
+                    type: "array",
+                  },
                 },
                 required: ["category", "headline", "refs"],
                 type: "object",
@@ -119,7 +124,7 @@ export function createRssSummaryPlugin(
           type: "object",
         },
         risk: "observe",
-        version: "1.3.0",
+        version: "1.4.0",
       });
       registry.registerTool({
         createExecutor: () => ({ execute: (input) => executeDigest(input) }),
