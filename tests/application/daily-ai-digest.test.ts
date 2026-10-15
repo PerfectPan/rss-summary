@@ -5,6 +5,9 @@ import * as newsBrief from "../../src/application/news-brief.js";
 import type { IndustryBriefDocument } from "../../src/application/industry-brief.js";
 import { type XAccountPosts, collectXAccountPosts } from "../../src/application/x-account-posts.js";
 
+import { RssClient } from "../../src/infrastructure/rss.js";
+import { WebPageClient } from "../../src/infrastructure/web-page.js";
+
 const occurrence = "2026-08-11T01:00:00.000Z";
 const emptyAccounts = async (): Promise<XAccountPosts> => ({ posts: [], audit: [] });
 function post(id: string, publishedAt: string): XAccountPosts["posts"][number] {
@@ -19,6 +22,58 @@ function post(id: string, publishedAt: string): XAccountPosts["posts"][number] {
 }
 
 describe("Daily AI subscriptions", () => {
+  it("excludes paper sources before fetching while retaining official research sources", async () => {
+    const sources = [
+      { name: "arXiv AI", url: "https://rss.arxiv.org/rss/cs.AI", tags: [] },
+      { name: "arXiv CL", url: "https://arxiv.org/rss/cs.CL", tags: [] },
+      { name: "Paper mirror", url: "https://example.com/papers", tags: ["Papers", "Academic"] },
+      {
+        name: "DeepMind Research",
+        url: "https://deepmind.google/blog/rss.xml",
+        tags: ["Research"],
+      },
+      {
+        type: "page",
+        name: "Anthropic Research",
+        url: "https://www.anthropic.com/research",
+        pathPrefixes: ["/research/"],
+        tags: ["Research"],
+      },
+    ];
+    const rss = vi
+      .spyOn(RssClient.prototype, "getFeedEvents")
+      .mockResolvedValue(officialDocument().candidates[0]!.events);
+    const page = vi.spyOn(WebPageClient.prototype, "getEvents").mockResolvedValue([]);
+    try {
+      const result = await generateDailyAiDigest(
+        { occurrence },
+        {
+          xAccounts: emptyAccounts,
+          env: {
+            INDUSTRY_SOURCES: JSON.stringify(sources),
+            RSS_FEEDS: "[]",
+            INDUSTRY_STATE_FILE: "/nonexistent/daily-ai-paper-filter-test.json",
+          },
+        },
+      );
+      expect(rss).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ name: "DeepMind Research" }),
+      );
+      expect(page).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ name: "Anthropic Research" }),
+      );
+      expect(result.sourceAudit.industry?.sources.map(({ name }) => name)).toEqual([
+        "DeepMind Research",
+        "Anthropic Research",
+      ]);
+      expect(sources).toHaveLength(5);
+      expect(result.evidence).toHaveLength(1);
+    } finally {
+      rss.mockRestore();
+      page.mockRestore();
+    }
+  });
+
   it("uses one rolling window for official sources and the default ClaudeDevs account", async () => {
     const xAccounts = vi.fn(emptyAccounts);
     const industry = vi.fn(async () => officialDocument());

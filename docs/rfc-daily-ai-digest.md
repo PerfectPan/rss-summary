@@ -9,7 +9,10 @@ Status: accepted for implementation
 `daily-ai-digest` automation for the rolling 24 hours before each occurrence, so enabling it cannot
 silently remove subscription delivery. Noon and evening news keep their time windows and delivery IDs.
 
-The daily product combines curated first-party sources from `industry-feeds.json` with subscribed
+The daily product excludes arXiv and sources tagged `Papers` or `Academic` before collection,
+because paper candidates are not publishable in this product. Official research announcements
+remain eligible; standalone industry collection and the shared source list are unchanged.
+It combines the remaining curated first-party sources from `industry-feeds.json` with subscribed
 X accounts (ClaudeDevs by default) for its complete rolling window. Broad news search remains a
 separate product. The reusable account collector accepts caller-owned windows and shares native
 Grok transport, request budgets and caching with news; see [X collection](grok-x-search.md).
@@ -25,7 +28,12 @@ from that evidence, then calls `render`. The second phase resolves the original 
 evidence, validates each draft item independently and is the only phase allowed to produce final
 Markdown. One malformed item cannot discard valid siblings. An explicit empty array is a valid editorial decision when no evidence merits delivery. When a
 nonempty or malformed draft contains no valid item, the Tool returns `DAILY_AI_DRAFT_VALIDATION_FAILED` and keeps the evidence snapshot for a
-bounded retry.
+bounded retry. The collect message retains every normalized evidence item and full excerpt, plus
+source health and counts; it omits per-candidate audit details. The render message contains only
+final Markdown, item count, validation issues, warnings, window metadata and delivery receipt.
+Full collect/render evidence and audit snapshots are stored locally for recovery, separately from
+model messages and business delivery state. This reduces repeated input without imposing an item
+quota or discarding source content.
 
 ## Safety and quality invariants
 
@@ -43,7 +51,7 @@ bounded retry.
   infer features from version numbers. The Tool returns these instructions with collect evidence.
 - Model/editor output is data, never directly deliverable prose. Code does not infer categories or
   semantic validity from title keyword lists, and it never substitutes a source title as fallback.
-- Public audit records evidence and decisions but never cookies, tokens or private HTML.
+- Local audit snapshots record public evidence and decisions but never cookies, tokens or private HTML.
 - X account failures remain in per-account source audit while official collection continues;
   official-source failures retain their source-status warning. The aggregate fails only when no
   collector yields usable evidence. X posts remain model-relayed, unverified evidence with visible

@@ -20,7 +20,7 @@ Each Automation returns two compatible views of the same result: canonical Markd
 | Automation | `rss-summary/noon-news-brief` | current day 00:00 through noon occurrence |
 | Automation | `rss-summary/evening-news-brief` | current day 12:30 through evening occurrence |
 
-All Tools have `observe` risk. Feed Tools force dry-run mode: they read only-new state but do not send a webhook, write seen state, or write local run artifacts. News collection also leaves business seen state and message delivery untouched, but it writes operational request reservations and raw response cache entries. Its result includes the query/rejection/selection audit. Daily AI's `collect` result exposes one complete rolling-window news audit plus the official-source audit; a provider-wide search failure retains each normalized error code while official collection continues. Rivus records the subsequent card delivery in its trace and Feishu delivery ledger.
+All Tools have `observe` risk. Feed Tools force dry-run mode: they read only-new state but do not send a webhook, write seen state, or write local run artifacts. News collection also leaves business seen state and message delivery untouched, but it writes operational request reservations and raw response cache entries. Its result includes the query/rejection/selection audit. Daily AI combines official sources and subscribed X accounts without broad news search. Its `collect` result exposes all normalized evidence and compact source health/counts; full evidence and audit snapshots are saved locally for recovery. Its `render` result contains final Markdown, validation issues and the delivery receipt, without repeating evidence or candidate audits. Rivus records the subsequent card delivery in its trace and Feishu delivery ledger.
 
 The official registry includes Anthropic News, Research and Engineering; Cursor Changelog and Blog;
 alongside OpenAI RSS. xAI News remains excluded while its production fetch is blocked by HTTP 403.
@@ -208,6 +208,13 @@ Daily AI independently combines official RSS/websites with subscribed X accounts
 Account collection always uses Grok, shares the CLI settings and request ledger, and is reusable
 with caller-owned windows. `sourceAudit.xAccounts` retains per-account results/failures, request
 usage and possible retrieval saturation; X evidence remains unverified and labelled Grok-relayed.
+Daily AI excludes arXiv and sources tagged `Papers` or `Academic` before fetching; official
+research sources such as Anthropic Research and Google DeepMind remain enabled. This exclusion
+does not change standalone industry collection or the shared feed configuration. Neither collect
+evidence nor the final selection has a fixed item quota, and excerpts are not truncated.
+Full collect/render snapshots are written atomically with private file permissions under
+`$RIVUS_DEPLOYMENT_STATE_DIR/rss-summary/daily-ai` (fallback: `.state/daily-ai`), keyed by occurrence
+and phase. They are operational diagnostics, not delivery state, and must not enter Git.
 Daily AI render reuses collect evidence without another search. The obsolete
 `DAILY_AI_NEWS_MAX_QUERIES` has no effect.
 See [Grok X search](grok-x-search.md) for caps, usage interpretation and a no-send trial.
