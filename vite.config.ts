@@ -104,7 +104,6 @@ export default defineConfig({
       "coverage/**",
       "node_modules/**",
       "docs/**",
-      "tests/fixtures/**",
       "feeds.json",
       "industry-feeds.json",
       "news-topics.json",
