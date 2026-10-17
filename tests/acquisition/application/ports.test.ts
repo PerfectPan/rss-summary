@@ -3,7 +3,10 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   GitHubActivity,
   GitHubCatalog,
+  GrokProcess,
   RssFeed,
+  SearchBudgetRepository,
+  SearchProvider,
   SourceCatalogStore,
   WebPage,
 } from "../../../src/acquisition/application/ports.js";
@@ -15,5 +18,8 @@ describe("acquisition ports", () => {
     expect(GitHubActivity.key).toBe("rss-summary/acquisition/GitHubActivity/v1");
     expect(GitHubCatalog.key).toBe("rss-summary/acquisition/GitHubCatalog/v1");
     expect(SourceCatalogStore.key).toBe("rss-summary/acquisition/SourceCatalogStore/v1");
+    expect(SearchProvider.key).toBe("rss-summary/acquisition/SearchProvider/v1");
+    expect(SearchBudgetRepository.key).toBe("rss-summary/acquisition/SearchBudgetRepository/v1");
+    expect(GrokProcess.key).toBe("rss-summary/acquisition/GrokProcess/v1");
   });
 });

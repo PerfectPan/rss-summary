@@ -11,7 +11,7 @@ import type {
   NewsStory,
   NewsStoryDecision,
 } from "../../src/domain/news.js";
-import { DoubaoSearchError } from "../../src/infrastructure/doubao-search.js";
+import { DoubaoSearchError } from "../../src/acquisition/index.js";
 
 describe("news audit", () => {
   it("explains query failures and every stage of the selection funnel", () => {

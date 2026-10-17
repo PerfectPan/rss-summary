@@ -12,9 +12,11 @@ import {
   GitHubActivity,
   GitHubCatalog,
   RssFeed,
+  SearchBudgetRepository,
   SourceCatalogStore,
   WebPage,
 } from "../application/ports.js";
+import { SearchBudgetRepositoryLive } from "./repository/search-budget-file.js";
 
 export type AcquisitionOptions = {
   token?: string;
@@ -90,7 +92,9 @@ export const SourceCatalogStoreLive: Layer.Layer<SourceCatalogStore> = SourceCat
 
 export function AcquisitionLive(
   options: AcquisitionOptions = {},
-): Layer.Layer<RssFeed | WebPage | GitHubActivity | GitHubCatalog | SourceCatalogStore> {
+): Layer.Layer<
+  RssFeed | WebPage | GitHubActivity | GitHubCatalog | SourceCatalogStore | SearchBudgetRepository
+> {
   const fetch = options.fetch;
   return Layer.mergeAll(
     RssFeedLive({ fetch, ...options.rss }),
@@ -98,6 +102,7 @@ export function AcquisitionLive(
     GitHubActivityLive({ token: options.token, fetch, githubHome: options.githubHome }),
     GitHubCatalogLive({ token: options.token, fetch }),
     SourceCatalogStoreLive,
+    SearchBudgetRepositoryLive,
   );
 }
 

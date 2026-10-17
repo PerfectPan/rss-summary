@@ -8,10 +8,12 @@ import {
 } from "../domain/news.js";
 import { canonicalizeUrl } from "../domain/text.js";
 import {
+  isSearchFailure,
   NewsSearchError,
+  shareSearchBudget,
   type NewsSearchInput,
   type NewsSearchPage,
-} from "../infrastructure/news-search.js";
+} from "../acquisition/index.js";
 import type {
   GlmResearchClient,
   ResearchPage,
@@ -44,14 +46,8 @@ export function createHybridNewsSearch(options: Options) {
   let reads = 0;
   const pages = new Map<string, Promise<ResearchPage>>();
   const rotation = Math.max(0, options.rotation ?? 0);
-  const share = (budget: number, id: string) => {
-    const ids = options.queryIds;
-    if (!ids?.length) return budget;
-    const index = ids.indexOf(id);
-    if (index < 0) return 0;
-    const priority = (index - (rotation % ids.length) + ids.length) % ids.length;
-    return Math.floor(budget / ids.length) + (priority < budget % ids.length ? 1 : 0);
-  };
+  const share = (budget: number, id: string) =>
+    shareSearchBudget(budget, id, options.queryIds, rotation);
 
   return async (request: NewsSearchRequest): Promise<NewsSearchPage> => {
     let primary: NewsSearchPage | undefined;
@@ -64,7 +60,7 @@ export function createHybridNewsSearch(options: Options) {
         primary = await options.search(request.input);
       }
     } catch (error) {
-      if (!(error instanceof NewsSearchError)) throw error;
+      if (!isSearchFailure(error)) throw error;
       // A local spending boundary must not silently spend another provider's quota.
       if (error.code.startsWith("local_budget_")) throw error;
       primaryError = error;

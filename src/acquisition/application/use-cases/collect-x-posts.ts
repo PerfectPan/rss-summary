@@ -1,10 +1,16 @@
 import { Schema } from "effect";
 
-import { calendarDayAtOffset } from "../domain/time.js";
-import { GrokXClient } from "../infrastructure/grok-x.js";
-import { createBudgetedNewsSearch } from "../infrastructure/news-search-budget.js";
-import { NewsSearchError, type NewsSearchPage } from "../infrastructure/news-search.js";
-import { boundedInteger } from "../infrastructure/parsing.js";
+import { calendarDayAtOffset } from "../../../kernel/time.js";
+import type { GrokRequest } from "../../domain/item/adapters/grok.js";
+import { errorAudit, pageAudit, type GrokSearchAudit } from "../../domain/search/adapters/audit.js";
+import {
+  isSearchFailure,
+  type NewsSearchError,
+  type SearchPage,
+  type SearchUsage,
+} from "../../domain/search/search.js";
+import { searchBudgetDefaults } from "../budget-defaults.js";
+import type { BudgetedSearch } from "../services/with-budget.js";
 
 const instantSchema = Schema.String.check(
   Schema.makeFilter(
@@ -32,21 +38,38 @@ export type XAccountPosts = {
     acceptedCount: number;
     limitReached?: boolean;
     errorCode?: string;
-    grok?: NewsSearchPage["grok"];
-    searchUsage?: NewsSearchPage["searchUsage"];
+    grok?: GrokSearchAudit;
+    searchUsage?: SearchUsage;
   }>;
 };
 
-type Dependencies = {
-  env?: NodeJS.ProcessEnv;
+export type XAccountClient = {
+  search: (value: GrokRequest) => Promise<SearchPage>;
+};
+
+export type OpenSearchBudget = (options: {
+  provider: string;
+  stateFile: string;
+  dailyLimit: number;
+  monthlyLimit: number;
+  timezoneOffset: string;
+  cacheTtlMs: number;
   now?: () => Date;
-  client?: Pick<GrokXClient, "search">;
+  search: () => Promise<SearchPage>;
+}) => BudgetedSearch;
+
+export type CollectXAccountOptions = {
+  env: NodeJS.ProcessEnv;
+  now?: () => Date;
+  client?: XAccountClient;
+  openClient?: () => XAccountClient;
+  openBudget: OpenSearchBudget;
 };
 
 /** Account subscriptions use caller-owned windows and do not apply news-topic ranking. */
 export async function collectXAccountPosts(
   value: typeof inputSchema.Type,
-  dependencies: Dependencies = {},
+  options: CollectXAccountOptions,
 ): Promise<XAccountPosts> {
   const input = Schema.decodeUnknownSync(inputSchema)(value);
   const since = new Date(input.since).toISOString();
@@ -57,27 +80,38 @@ export async function collectXAccountPosts(
   ];
   const result: XAccountPosts = { posts: [], audit: [] };
   if (!handles.length) return result;
-  const env = dependencies.env ?? process.env;
+  const env = options.env;
   const timezoneOffset = env.FEED_TIMEZONE_OFFSET ?? "+08:00";
   const model = env.NEWS_GROK_MODEL?.trim() || undefined;
   if (model && !/^[a-zA-Z0-9._-]+$/u.test(model)) throw new Error("Invalid NEWS_GROK_MODEL.");
   const count = boundedInteger(env.X_ACCOUNT_POSTS_PER_FETCH, 30, 1, 50);
-  const client =
-    dependencies.client ??
-    new GrokXClient({
-      executable: env.NEWS_GROK_EXECUTABLE?.trim() || undefined,
-      model,
-      timeoutMs: boundedInteger(env.NEWS_GROK_TIMEOUT_MS, 120_000, 1_000, 180_000),
-    });
+  const client = options.client ?? options.openClient?.();
+  if (!client) throw new Error("X account collection requires a search client.");
   for (const handle of handles) {
-    const search = createBudgetedNewsSearch({
+    const search = options.openBudget({
       provider: `grok://cli/v1/${model ?? "default"}`,
-      stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || ".state/news-search.json",
-      dailyLimit: boundedInteger(env.NEWS_SEARCH_DAILY_LIMIT, 4, 0, 100_000),
-      monthlyLimit: boundedInteger(env.NEWS_SEARCH_MONTHLY_LIMIT, 120, 0, 1_000_000),
+      stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || searchBudgetDefaults.stateFile,
+      dailyLimit: boundedInteger(
+        env.NEWS_SEARCH_DAILY_LIMIT,
+        searchBudgetDefaults.grok.dailyLimit,
+        0,
+        100_000,
+      ),
+      monthlyLimit: boundedInteger(
+        env.NEWS_SEARCH_MONTHLY_LIMIT,
+        searchBudgetDefaults.grok.monthlyLimit,
+        0,
+        1_000_000,
+      ),
       timezoneOffset,
-      cacheTtlMs: boundedInteger(env.NEWS_SEARCH_CACHE_TTL_MINUTES, 360, 0, 43_200) * 60_000,
-      now: dependencies.now,
+      cacheTtlMs:
+        boundedInteger(
+          env.NEWS_SEARCH_CACHE_TTL_MINUTES,
+          searchBudgetDefaults.cacheTtlMinutes,
+          0,
+          43_200,
+        ) * 60_000,
+      now: options.now,
       search: () =>
         client.search({
           handle,
@@ -93,7 +127,6 @@ export async function collectXAccountPosts(
     });
     try {
       const page = await search({
-        // Exact windows must not reuse a snapshot whose end precedes this subscription run.
         query: `x-account:v1:${handle}:${since}:${until}`,
         count,
         sinceDay: calendarDayAtOffset(since, timezoneOffset),
@@ -115,19 +148,32 @@ export async function collectXAccountPosts(
         status: "ok",
         acceptedCount: page.results.length,
         limitReached: page.resultCount >= count,
-        grok: page.grok,
+        grok: pageAudit(page),
         searchUsage: page.searchUsage,
       });
     } catch (error) {
-      if (!(error instanceof NewsSearchError)) throw error;
+      if (!isSearchFailure(error)) throw error;
       result.audit.push({
         handle,
         status: "failed",
         acceptedCount: 0,
         errorCode: error.code,
-        grok: error.grok,
+        grok: errorAudit(error as NewsSearchError),
       });
     }
   }
   return result;
+}
+
+function boundedInteger(
+  value: string | undefined,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  const parsed = value === undefined ? fallback : Number(value);
+  if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
+    throw new Error(`Numeric configuration must be an integer between ${min} and ${max}.`);
+  }
+  return parsed;
 }

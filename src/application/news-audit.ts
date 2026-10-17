@@ -6,7 +6,7 @@ import type {
   NewsTopic,
   NewsTopicQuery,
 } from "../domain/news.js";
-import { NewsSearchError, type NewsSearchPage } from "../infrastructure/news-search.js";
+import { errorAudit, isSearchFailure, type NewsSearchPage } from "../acquisition/index.js";
 
 export type NewsQueryAudit = {
   queryId: string;
@@ -68,16 +68,16 @@ export function buildNewsAudit(
         topicId: topic.id,
         topicLabel: topic.label,
         status:
-          result.reason instanceof NewsSearchError &&
+          isSearchFailure(result.reason) &&
           ["query_deferred", "local_budget_exhausted"].includes(result.reason.code)
             ? "skipped"
             : "failed",
         fetched: 0,
         accepted: 0,
         rejected: {},
-        ...(result.reason instanceof NewsSearchError ? { errorCode: result.reason.code } : {}),
-        ...(result.reason instanceof NewsSearchError && result.reason.grok
-          ? { grok: result.reason.grok }
+        ...(isSearchFailure(result.reason) ? { errorCode: result.reason.code } : {}),
+        ...(isSearchFailure(result.reason) && errorAudit(result.reason)
+          ? { grok: errorAudit(result.reason) }
           : {}),
         error: errorText(result.reason),
       };
@@ -197,13 +197,13 @@ export function summarizeNewsSources(
   const deferred = settled.filter(
     (result) =>
       result.status === "rejected" &&
-      result.reason instanceof NewsSearchError &&
+      isSearchFailure(result.reason) &&
       result.reason.code === "query_deferred",
   ).length;
   const limited = settled.filter(
     (result) =>
       result.status === "rejected" &&
-      result.reason instanceof NewsSearchError &&
+      isSearchFailure(result.reason) &&
       result.reason.code === "local_budget_exhausted",
   ).length;
   const cached = settled.flatMap((result) =>

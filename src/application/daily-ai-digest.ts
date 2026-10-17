@@ -2,7 +2,7 @@ import { Effect } from "effect";
 
 import { buildIndustryDocument, type IndustryBriefDocument } from "./industry-brief.js";
 import { createDailyAiDeliveryReceipt, type DailyAiDeliveryReceipt } from "../delivery/index.js";
-import { collectXAccountPosts, type XAccountPosts } from "./x-account-posts.js";
+import { collectXAccountPosts, type XAccountPosts } from "../acquisition/index.js";
 import {
   buildDailyAiDigest,
   type DailyAiDigest,

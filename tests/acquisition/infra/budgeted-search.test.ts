@@ -5,12 +5,12 @@ import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { createBudgetedNewsSearch } from "../../src/infrastructure/news-search-budget.js";
+import { createBudgetedNewsSearch } from "../../../src/acquisition/infra/budgeted-search.js";
 import {
   NewsSearchError,
   type NewsSearchInput,
   type NewsSearchPage,
-} from "../../src/infrastructure/news-search.js";
+} from "../../../src/acquisition/index.js";
 
 const executeFile = promisify(execFile);
 const directories: string[] = [];
@@ -130,7 +130,7 @@ describe("persistent news search budget", () => {
 
   it("serializes reservations from separate processes sharing the same state file", async () => {
     const { options } = await setup({ dailyLimit: 1 });
-    const moduleUrl = new URL("../../src/infrastructure/news-search-budget.ts", import.meta.url)
+    const moduleUrl = new URL("../../../src/acquisition/infra/budgeted-search.ts", import.meta.url)
       .href;
     const script = `
       import { createBudgetedNewsSearch } from ${JSON.stringify(moduleUrl)};
