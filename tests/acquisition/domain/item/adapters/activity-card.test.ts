@@ -27,17 +27,19 @@ describe("publication items", () => {
     expect(acquired.card).toBe(card);
     expect(acquired.item.kind).toBe("publication");
     expect(acquired.item.subject.key).toBe("publication:https://deno.com/blog/v2.4");
-    expect(acquired.item.signals).toEqual([{ type: "article", label: "rss feed: Deno Blog" }]);
+    expect(acquired.item.signals).toEqual([
+      { type: "published-article", label: "rss feed: Deno Blog" },
+    ]);
     expect(acquired.item.display.facts).toEqual(["releases"]);
   });
 
   it("uses the website and research labels for those publication kinds", () => {
     expect(publicationAcquired({ ...card, type: "paper", source: "web" }).item.signals).toEqual([
-      { type: "paper", label: "research paper: Deno Blog" },
+      { type: "published-paper", label: "research paper: Deno Blog" },
     ]);
     expect(publicationAcquired({ ...card, type: "paper", source: "web" }).item.kind).toBe("paper");
     expect(publicationAcquired({ ...card, type: "release" }).item.signals).toEqual([
-      { type: "release", label: "new release published" },
+      { type: "released", label: "new release published" },
     ]);
     expect(
       publicationAcquired({ ...card, source: "web", sourceName: "Example News" }).item.signals[0]

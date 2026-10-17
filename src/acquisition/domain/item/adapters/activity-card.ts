@@ -60,7 +60,11 @@ export function publicationAcquired(card: ActivityCardDto): Acquired {
   const kind: ItemKind =
     card.type === "paper" ? "paper" : card.type === "release" ? "release" : "publication";
   const signal: SignalType =
-    card.type === "paper" ? "paper" : card.type === "release" ? "release" : "article";
+    card.type === "paper"
+      ? "published-paper"
+      : card.type === "release"
+        ? "released"
+        : "published-article";
   const sourceName = card.sourceName ?? card.actor;
   const label =
     card.type === "paper"

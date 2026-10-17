@@ -112,7 +112,7 @@ describe("web page sources", () => {
     });
     expect(acquired?.item).toMatchObject({
       kind: "publication",
-      signals: [{ type: "article", label: "website source: Example News" }],
+      signals: [{ type: "published-article", label: "website source: Example News" }],
       subject: { key: "publication:https://example.com/news/agent-release" },
     });
   });

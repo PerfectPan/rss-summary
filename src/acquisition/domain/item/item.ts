@@ -5,24 +5,24 @@ export type SubjectKey = string;
 export type ItemKind = "publication" | "paper" | "release" | "change" | "project" | "post";
 
 /**
- * One signal per row of the existing base score table, including pull-request
- * actions that score differently from each other.
+ * One signal per row of the existing base score table. Names describe the
+ * signal, not the source that produced it.
  */
 export type SignalType =
-  | "watch"
-  | "trending"
-  | "recommendation"
-  | "announcement"
-  | "release"
-  | "fork"
-  | "create"
-  | "follow"
-  | "article"
-  | "paper"
-  | "pull-request-merged"
-  | "pull-request-opened"
-  | "pull-request-closed"
-  | "pull-request";
+  | "endorsed"
+  | "recommended-trending"
+  | "recommended-personal"
+  | "announced"
+  | "released"
+  | "forked"
+  | "created"
+  | "relationship"
+  | "published-article"
+  | "published-paper"
+  | "change-merged"
+  | "change-opened"
+  | "change-closed"
+  | "change-other";
 
 export type CredibilityTier = "official" | "authoritative" | "aggregator" | "unrated";
 

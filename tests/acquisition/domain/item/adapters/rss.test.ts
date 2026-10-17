@@ -212,7 +212,7 @@ describe("RSS source", () => {
       id: "rss:https://deno.com/feed:deno-2.4",
       kind: "publication",
       subject: { key: "publication:https://deno.com/blog/v2.4", name: "Deno Blog" },
-      signals: [{ type: "article", label: "rss feed: Deno Blog" }],
+      signals: [{ type: "published-article", label: "rss feed: Deno Blog" }],
       publishedAt: { value: "2026-06-22T08:00:00.000Z", precision: "instant" },
     });
   });

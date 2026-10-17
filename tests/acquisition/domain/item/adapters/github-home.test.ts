@@ -20,7 +20,7 @@ describe("github home adapter", () => {
       action: "trending",
     });
     expect(acquired.item.signals).toEqual([
-      { type: "trending", label: "GitHub Home trending repository" },
+      { type: "recommended-trending", label: "GitHub Home trending repository" },
     ]);
   });
 
@@ -32,7 +32,7 @@ describe("github home adapter", () => {
         text: "onnx/onnx",
         links: [{ text: "onnx/onnx", href: "https://github.com/onnx/onnx" }],
       }).item.signals[0]?.type,
-    ).toBe("recommendation");
+    ).toBe("recommended-personal");
     expect(
       acquireHomeCard({
         id: "a",
@@ -42,7 +42,7 @@ describe("github home adapter", () => {
       }).item,
     ).toMatchObject({
       kind: "post",
-      signals: [{ type: "announcement", label: "GitHub Home announcement" }],
+      signals: [{ type: "announced", label: "GitHub Home announcement" }],
     });
     expect(
       acquireHomeCard({
@@ -51,6 +51,6 @@ describe("github home adapter", () => {
         text: "followed",
         links: [{ text: "ada", href: "https://github.com/ada" }],
       }).item.signals[0],
-    ).toEqual({ type: "follow", label: "follow relationship from GitHub Home" });
+    ).toEqual({ type: "relationship", label: "follow relationship from GitHub Home" });
   });
 });

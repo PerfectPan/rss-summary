@@ -140,7 +140,7 @@ function pullRequestItem(details: PullRequestDetails, fullName: string, number: 
     publishedAt: { value: "", precision: "instant" },
     provenance: { origin: details.htmlUrl || fullName },
     credibility: { tier: "unrated" },
-    signals: [{ type: "pull-request", label: "pull request" }],
+    signals: [{ type: "change-other", label: "pull request" }],
     display: {
       label: `${fullName} #${number}${details.title ? ` · ${details.title}` : ""}`,
       ...(details.htmlUrl ? { reference: details.htmlUrl } : {}),
@@ -159,7 +159,7 @@ function followedAccount(login: string): Item {
     publishedAt: { value: "", precision: "instant" },
     provenance: { origin: url, actor: { name: login, followed: true } },
     credibility: { tier: "unrated" },
-    signals: [{ type: "follow", label: "follow relationship from GitHub Home" }],
+    signals: [{ type: "relationship", label: "follow relationship from GitHub Home" }],
     display: { label: login, reference: url, facts: [] },
   };
 }

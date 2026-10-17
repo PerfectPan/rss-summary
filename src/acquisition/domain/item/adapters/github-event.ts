@@ -139,28 +139,27 @@ export function itemFromGitHubCard(card: ActivityCardDto): Item {
 }
 
 function signalFor(card: ActivityCardDto): { type: SignalType; label: string } | undefined {
-  if (card.type === "watch") return { type: "watch", label: "followee starred this repository" };
+  if (card.type === "watch") return { type: "endorsed", label: "followee starred this repository" };
   if (card.type === "trending")
-    return { type: "trending", label: "GitHub Home trending repository" };
+    return { type: "recommended-trending", label: "GitHub Home trending repository" };
   if (card.type === "recommendation")
-    return { type: "recommendation", label: "GitHub Home recommendation" };
-  if (card.type === "announcement")
-    return { type: "announcement", label: "GitHub Home announcement" };
-  if (card.type === "release") return { type: "release", label: "new release published" };
-  if (card.type === "fork") return { type: "fork", label: "followed actor forked repository" };
-  if (card.type === "create") return { type: "create", label: "new repository created" };
+    return { type: "recommended-personal", label: "GitHub Home recommendation" };
+  if (card.type === "announcement") return { type: "announced", label: "GitHub Home announcement" };
+  if (card.type === "release") return { type: "released", label: "new release published" };
+  if (card.type === "fork") return { type: "forked", label: "followed actor forked repository" };
+  if (card.type === "create") return { type: "created", label: "new repository created" };
   if (card.type === "follow")
-    return { type: "follow", label: "follow relationship from GitHub Home" };
+    return { type: "relationship", label: "follow relationship from GitHub Home" };
   if (card.type === "pull_request" && card.action === "merged") {
-    return { type: "pull-request-merged", label: "pull request merged" };
+    return { type: "change-merged", label: "pull request merged" };
   }
   if (card.type === "pull_request" && card.action === "opened") {
-    return { type: "pull-request-opened", label: "pull request opened" };
+    return { type: "change-opened", label: "pull request opened" };
   }
   if (card.type === "pull_request" && card.action === "closed") {
-    return { type: "pull-request-closed", label: "pull request closed" };
+    return { type: "change-closed", label: "pull request closed" };
   }
-  if (card.type === "pull_request") return { type: "pull-request", label: "pull request" };
+  if (card.type === "pull_request") return { type: "change-other", label: "pull request" };
   return undefined;
 }
 
