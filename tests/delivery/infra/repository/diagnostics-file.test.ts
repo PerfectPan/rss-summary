@@ -6,7 +6,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   saveDailyAiDiagnostics,
   type DailyAiDiagnosticSnapshot,
-} from "../../src/infrastructure/daily-ai-diagnostics.js";
+} from "../../../../src/delivery/index.js";
 
 describe("Daily AI diagnostics", () => {
   it("retains complete private snapshots per occurrence and phase without changing delivery state", async () => {

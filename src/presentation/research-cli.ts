@@ -1,11 +1,10 @@
 import { Effect } from "effect";
 import { readFileSync } from "node:fs";
 
+import { FeedStateFileLive, recordResearch } from "../delivery/index.js";
 import { GlmResearchClient } from "../infrastructure/glm-research.js";
 import { GlmReader, ReadingLive } from "../reading/index.js";
-
 import { errorMessage } from "../infrastructure/parsing.js";
-import { loadFeedState, markResearchedByKey, saveFeedState } from "../infrastructure/state.js";
 
 type Writable = {
   write(chunk: string): unknown;
@@ -49,16 +48,12 @@ export async function runResearchCommand(
         stderr.write("No research suggestions found in input.\n");
         return 1;
       }
-      const state = loadFeedState(args.stateFile);
-      const at = new Date().toISOString();
-      for (const suggestion of suggestions) {
-        markResearchedByKey(state, suggestion.key, {
-          at,
-          decision: suggestion.decision,
-          reason: suggestion.reason,
-        });
-      }
-      saveFeedState(args.stateFile, state);
+      await Effect.runPromise(
+        Effect.provide(
+          recordResearch({ stateFile: args.stateFile, suggestions, at: new Date().toISOString() }),
+          FeedStateFileLive,
+        ),
+      );
       stdout.write(
         `Marked ${suggestions.length} research ${suggestions.length === 1 ? "decision" : "decisions"} in ${args.stateFile}\n`,
       );

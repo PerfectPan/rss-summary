@@ -5,67 +5,26 @@ import {
   type PresentationDepth,
   type PresentationReasonCode,
 } from "./attention.js";
+import type { RunCandidateDecision } from "../delivery/index.js";
 
-export type RunProduct = "subscriptions" | "frontier";
-export type RunSourceResult = {
-  id: string;
-  kind: "github-home" | "github-events" | "rss" | "web-page";
-  name: string;
-  url?: string;
-  status: "ok" | "failed" | "skipped";
-  itemCount: number;
-  error?: string;
-};
+// Storage types moved to the delivery module; re-exported so existing imports
+// keep working during the transition.
+export type {
+  RunAudit,
+  RunCandidateDecision,
+  RunDelivery,
+  RunEditorialSelectionDecision,
+  RunProduct,
+  RunSourceResult,
+  RunPresentationDepth,
+  RunPresentationReasonCode,
+  StoredRunAudit,
+} from "../delivery/index.js";
 
-export type RunCandidateDecision = {
-  key: string;
-  label: string;
-  url?: string;
-  score: number;
-  depth: PresentationDepth;
-  presentationReasonCode?: PresentationReasonCode;
-  presentationEvidence?: string;
-  status: "selected" | "research-pending" | "filtered";
-  reason: string;
-};
-
-export type RunEditorialSelectionDecision = {
-  ref: string;
-  selected: boolean;
-  reason: string;
-};
-
-export type RunAudit = {
-  version: 1 | 2;
-  runId: string;
-  product: RunProduct;
-  generatedAt: string;
-  windowLabel?: string;
-  sources: RunSourceResult[];
-  counts: {
-    fetched: number;
-    inWindow: number;
-    ranked: number;
-    selected: number;
-    researchPending: number;
-  };
-  candidates: RunCandidateDecision[];
-  editorialSelection?: {
-    selectedCount: number;
-    decisions: RunEditorialSelectionDecision[];
-  };
-};
-
-export type RunDelivery = {
-  status: "delivered" | "dry-run" | "failed";
-  completedAt: string;
-  channel: "stdout" | "webhook";
-  stateStatus: "updated" | "skipped" | "failed";
-  error?: string;
-};
-
-export type StoredRunAudit = RunAudit & { delivery: RunDelivery };
-
+/**
+ * Candidate decisions depend on the candidate shape and presentation depth;
+ * they stay here until the editorial module owns them.
+ */
 export function candidateDecision(
   candidate: CandidateProject,
   selectedCandidates: CandidateProject[],
@@ -74,14 +33,15 @@ export function candidateDecision(
 ): RunCandidateDecision {
   const selected = selectedCandidates.includes(candidate);
   const presentation = presentationDecisionForCandidate(candidate, presentationPolicy);
-  const depth = presentation.depth;
+  const depth: PresentationDepth = presentation.depth;
+  const presentationReasonCode: PresentationReasonCode = presentation.reasonCode;
   return {
     key: candidateIdentity(candidate),
     label: candidate.label ?? candidate.repo,
     ...(candidate.url ? { url: candidate.url } : {}),
     score: candidate.score,
     depth,
-    presentationReasonCode: presentation.reasonCode,
+    presentationReasonCode,
     ...(presentation.evidence ? { presentationEvidence: presentation.evidence } : {}),
     status: selected ? (depth === "research" ? "research-pending" : "selected") : "filtered",
     reason: selected

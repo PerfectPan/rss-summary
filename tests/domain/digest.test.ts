@@ -3,9 +3,17 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import {
   buildCandidateProjects,
   candidateIdentity,
+  markCandidateResearched,
   normalizeEvent,
+  researchKeyForCandidate,
   selectResearchCandidates,
+  type CandidateProject,
 } from "../../src/domain/digest.js";
+import {
+  createEmptyFeedState,
+  filterUndelivered,
+  filterUnresearched,
+} from "../../src/delivery/index.js";
 
 describe("github feed domain", () => {
   it("normalizes a merged pull request event into an activity card", () => {
@@ -638,4 +646,94 @@ function scoreEvents(
   );
   if (!candidate) throw new Error("expected a scored candidate");
   return candidate;
+}
+
+describe("research keys", () => {
+  it("uses canonical URLs as research keys for RSS article candidates", () => {
+    expect(
+      researchKeyForCandidate({
+        ...candidate("rss:item-1", ["rss-1"], {
+          source: "rss",
+          category: "article",
+          eventTypes: ["article"],
+          eventType: "article",
+        }),
+        url: "https://example.com/post",
+      }),
+    ).toBe("rss:https://example.com/post");
+  });
+
+  it("keeps web page research identity separate from RSS identity", () => {
+    expect(
+      researchKeyForCandidate({
+        ...candidate("web:item-1", ["web-1"], {
+          source: "web",
+          category: "article",
+          eventTypes: ["article"],
+          eventType: "article",
+        }),
+        url: "https://example.com/news/post",
+      }),
+    ).toBe("web:https://example.com/news/post");
+  });
+
+  it("uses repository identity to dedupe star research across new star events", () => {
+    const state = createEmptyFeedState();
+    const firstStar = candidate("owner/useful-tool", ["star-1"], {
+      category: "discovery",
+      eventTypes: ["watch"],
+      eventType: "watch",
+    });
+    const secondStar = candidate("owner/useful-tool", ["star-2"], {
+      category: "discovery",
+      eventTypes: ["watch"],
+      eventType: "watch",
+      actor: "another-followee",
+    });
+
+    markCandidateResearched(state, firstStar, {
+      at: "2026-06-28T08:00:00Z",
+      decision: "track",
+      reason: "useful agent tooling project",
+    });
+
+    expect(filterUndelivered([secondStar], eventIdsOf, state)).toEqual([secondStar]);
+    expect(filterUnresearched([secondStar], researchKeyForCandidate, state)).toEqual([]);
+    expect(state.researched).toHaveProperty("github:owner/useful-tool");
+  });
+});
+
+function eventIdsOf(candidate: CandidateProject): string[] {
+  return candidate.events.map((event) => event.id);
+}
+
+function candidate(
+  repo: string,
+  eventIds: string[],
+  options: {
+    actor?: string;
+    source?: CandidateProject["source"];
+    category?: CandidateProject["category"];
+    eventTypes?: CandidateProject["eventTypes"];
+    eventType?: CandidateProject["events"][number]["type"];
+  } = {},
+): CandidateProject {
+  const actor = options.actor ?? "actor";
+  const eventType = options.eventType ?? "pull_request";
+  return {
+    repo,
+    source: options.source ?? "github",
+    category: options.category ?? "activity",
+    score: 10,
+    actors: [actor],
+    eventTypes: options.eventTypes ?? ["pull_request"],
+    reasons: ["test"],
+    events: eventIds.map((id) => ({
+      id,
+      type: eventType,
+      actor,
+      repo,
+      createdAt: "2026-06-24T08:00:00Z",
+    })),
+  };
 }

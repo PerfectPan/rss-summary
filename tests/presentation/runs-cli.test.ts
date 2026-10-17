@@ -8,7 +8,7 @@ import { runArtifactLabel, saveRunArtifact } from "../../src/infrastructure/run-
 import { runRunsCommand } from "../../src/presentation/runs-cli.js";
 
 describe("runs CLI", () => {
-  it("lists and filters stored runs", () => {
+  it("lists and filters stored runs", async () => {
     const root = mkdtempSync(join(tmpdir(), "rss-summary-runs-cli-"));
     const output: string[] = [];
     try {
@@ -26,7 +26,7 @@ describe("runs CLI", () => {
       );
 
       expect(
-        runRunsCommand(["failures", "--dir", root], {
+        await runRunsCommand(["failures", "--dir", root], {
           stdout: { write: (chunk) => output.push(chunk) },
         }),
       ).toBe(0);
@@ -36,12 +36,12 @@ describe("runs CLI", () => {
     }
   });
 
-  it("shows an artifact by label and handles an empty store", () => {
+  it("shows an artifact by label and handles an empty store", async () => {
     const root = mkdtempSync(join(tmpdir(), "rss-summary-runs-show-"));
     const output: string[] = [];
     try {
       expect(
-        runRunsCommand(["list", "--dir", root], {
+        await runRunsCommand(["list", "--dir", root], {
           stdout: { write: (chunk) => output.push(chunk) },
         }),
       ).toBe(0);
@@ -59,7 +59,7 @@ describe("runs CLI", () => {
         "# 行业前沿",
       );
       expect(
-        runRunsCommand(["show", runArtifactLabel(saved.jsonPath), "--dir", root], {
+        await runRunsCommand(["show", runArtifactLabel(saved.jsonPath), "--dir", root], {
           stdout: { write: (chunk) => output.push(chunk) },
         }),
       ).toBe(0);
