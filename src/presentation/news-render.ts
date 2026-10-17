@@ -1,6 +1,10 @@
-import type { NewsSourceStatus } from "../application/news-audit.js";
+import type {
+  NewsBriefEdition,
+  NewsSourceStatus,
+  NewsTopic,
+  SelectedNewsStory,
+} from "../editorial/index.js";
 import { displayTime, markdownLinkText } from "./markdown.js";
-import type { NewsBriefEdition, NewsTopic, SelectedNewsStory } from "../domain/news.js";
 
 export type { NewsBriefEdition };
 

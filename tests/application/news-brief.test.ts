@@ -10,7 +10,7 @@ import {
   resolveNewsEditionWindow,
   type RivusNewsBriefResult,
 } from "../../src/application/news-brief.js";
-import type { NewsTopicQuery } from "../../src/domain/news.js";
+import type { NewsTopicQuery } from "../../src/editorial/index.js";
 import {
   DoubaoSearchError,
   GrokSearchClient,

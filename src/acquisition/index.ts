@@ -42,6 +42,10 @@ export {
   pullRequestDetails,
   repositoryMetadata,
 } from "./domain/item/adapters/github-repository.js";
+export {
+  resolveNewsCredibility,
+  type ResolvedNewsCredibility,
+} from "./domain/item/adapters/news-authority.js";
 export { parseFeed, parseFeedXml } from "./domain/item/adapters/rss.js";
 export {
   acquireWebPage,

@@ -1,6 +1,11 @@
-import { isSameTitleEvent } from "../editorial/index.js";
-import { newsPublicationRange } from "./news-time.js";
-import { canonicalizeUrl, compactSummary, parsePublishTime } from "./text.js";
+import type { CredibilityMethod, CredibilityTier } from "../../../acquisition/domain/item/item.js";
+import {
+  canonicalizeUrl,
+  compactSummary,
+  newsPublicationRange,
+  parsePublishTime,
+} from "../../../kernel/index.js";
+import { isSameTitleEvent } from "../identity/identity.js";
 
 export type NewsSourcePolicy = "authoritative" | "official" | "news";
 
@@ -14,12 +19,6 @@ export type NewsQueryIntent =
   | "policy-action"
   | "capital-event";
 
-export type NewsSourceVerification = {
-  method: "configured-domain" | "article-read";
-  domain: string;
-  policy: NewsSourcePolicy;
-};
-
 export type NewsTopicQuery = {
   id: string;
   text: string;
@@ -27,7 +26,6 @@ export type NewsTopicQuery = {
   subjectAny: string[];
   eventAny: string[];
   excludedAny: string[];
-  glm?: { query: string; domains: string[]; sourceQueries?: Record<string, string> };
 };
 
 export type NewsTopic = {
@@ -40,6 +38,13 @@ export type NewsTopic = {
   queries: NewsTopicQuery[];
 };
 
+/** Item credibility plus the numeric certificate the story field still publishes. */
+export type NewsCredibility = {
+  tier: CredibilityTier;
+  method?: CredibilityMethod;
+  rank: number;
+};
+
 export type NewsSearchHit = {
   id: string;
   title: string;
@@ -50,7 +55,8 @@ export type NewsSearchHit = {
   publishTime?: string;
   rankScore?: number;
   authInfoDescription?: string;
-  authInfoLevel?: number;
+  credibility: { tier: CredibilityTier; method?: CredibilityMethod };
+  authorityRank: number;
   topicId: string;
   topicLabel: string;
   sourcePolicy: NewsSourcePolicy;
@@ -60,7 +66,6 @@ export type NewsSearchHit = {
   eventAny: string[];
   excludedAny: string[];
   rankPosition: number;
-  sourceVerification?: NewsSourceVerification;
 };
 
 export type NewsScoreBreakdown = {
@@ -142,6 +147,73 @@ export type NewsStoryBuildResult = {
 
 const maxNewsBriefItems = 8;
 
+export function projectNewsHit(
+  result: {
+    id: string;
+    title: string;
+    siteName?: string;
+    url: string;
+    snippet?: string;
+    summary?: string;
+    publishTime?: string;
+    rankScore?: number;
+    authInfoDescription?: string;
+    rankPosition: number;
+  },
+  binding: {
+    topicId: string;
+    topicLabel: string;
+    sourcePolicy: NewsSourcePolicy;
+    queryId: string;
+    queryText: string;
+    subjectAny: readonly string[];
+    eventAny: readonly string[];
+    excludedAny: readonly string[];
+  },
+  credibility: NewsCredibility,
+): NewsSearchHit {
+  return {
+    id: result.id,
+    title: result.title,
+    ...(result.siteName !== undefined ? { siteName: result.siteName } : {}),
+    url: result.url,
+    ...(result.snippet !== undefined ? { snippet: result.snippet } : {}),
+    ...(result.summary !== undefined ? { summary: result.summary } : {}),
+    ...(result.publishTime !== undefined ? { publishTime: result.publishTime } : {}),
+    ...(result.rankScore !== undefined ? { rankScore: result.rankScore } : {}),
+    ...(result.authInfoDescription !== undefined
+      ? { authInfoDescription: result.authInfoDescription }
+      : {}),
+    credibility: {
+      tier: credibility.tier,
+      ...(credibility.method ? { method: credibility.method } : {}),
+    },
+    authorityRank: credibility.rank,
+    topicId: binding.topicId,
+    topicLabel: binding.topicLabel,
+    sourcePolicy: binding.sourcePolicy,
+    queryId: binding.queryId,
+    queryText: binding.queryText,
+    subjectAny: [...binding.subjectAny],
+    eventAny: [...binding.eventAny],
+    excludedAny: [...binding.excludedAny],
+    rankPosition: result.rankPosition,
+  };
+}
+
+/** Whether a publisher timestamp falls inside the brief window, including date precision. */
+export function publicationFitsWindow(
+  publishedAt: string | undefined,
+  window: NewsTimeWindow,
+): boolean {
+  const publication = newsPublicationRange(publishedAt, window.timezoneOffset);
+  return (
+    publication !== undefined &&
+    publication.since >= window.since &&
+    publication.until <= window.until
+  );
+}
+
 export function buildNewsStories(hits: NewsSearchHit[], window: NewsTimeWindow): NewsStory[] {
   return buildNewsStoriesWithAudit(hits, window).stories;
 }
@@ -180,13 +252,16 @@ export function buildNewsStoriesWithAudit(
   };
 }
 
-export function selectNewsStories(stories: NewsStory[], topics: NewsTopic[]): SelectedNewsStory[] {
+export function selectNewsStories(
+  stories: NewsStory[],
+  topics: readonly NewsTopic[],
+): SelectedNewsStory[] {
   return selectNewsStoriesWithAudit(stories, topics).stories;
 }
 
 export function selectNewsStoriesWithAudit(
   stories: NewsStory[],
-  topics: NewsTopic[],
+  topics: readonly NewsTopic[],
 ): NewsStorySelectionResult {
   const selected: SelectedNewsStory[] = [];
   const selectedUrls = new Set<string>();
@@ -234,13 +309,7 @@ function rejectionReasonForHit(
   const publication = newsPublicationRange(hit.publishTime, window.timezoneOffset);
   if (!publication) return "invalid-publish-time";
   if (publication.since < window.since || publication.until > window.until) return "outside-window";
-  const authLevel = authorityLevel(hit);
-  if (
-    hit.sourcePolicy !== "news" &&
-    (hit.sourcePolicy === "official" ? authLevel !== 1 : authLevel > 2)
-  ) {
-    return "insufficient-authority";
-  }
+  if (rejectsForAuthority(hit)) return "insufficient-authority";
   const content = normalizeSearchText(
     [hit.title, hit.summary, hit.snippet].filter(Boolean).join(" "),
   );
@@ -257,6 +326,13 @@ function rejectionReasonForHit(
   return undefined;
 }
 
+function rejectsForAuthority(hit: NewsSearchHit): boolean {
+  if (hit.sourcePolicy === "news") return false;
+  const tier = hit.credibility.tier;
+  if (hit.sourcePolicy === "official") return tier !== "official";
+  return tier !== "official" && tier !== "authoritative";
+}
+
 function toStory(
   canonicalUrl: string,
   matches: NewsSearchHit[],
@@ -270,7 +346,9 @@ function toStory(
   const queries = [...new Set(matches.map(({ queryText }) => queryText))];
   const topicIds = [...new Set(matches.map(({ topicId }) => topicId))];
   const topicLabels = [...new Set(matches.map(({ topicLabel }) => topicLabel))];
-  const authInfoLevel = Math.min(...matches.map(authorityLevel));
+  const authInfoLevel = Math.min(...matches.map(({ authorityRank }) => authorityRank));
+  const authorityTier = matches.find((hit) => hit.authorityRank === authInfoLevel)!.credibility
+    .tier;
   const rankScore = Math.max(...matches.map(({ rankScore }) => rankScore ?? 0));
   const queryHits = queryIds.length;
   const bestRankPosition = Math.min(...matches.map(({ rankPosition }) => rankPosition));
@@ -282,7 +360,7 @@ function toStory(
   const windowDuration = Math.max(1, window.until - window.since);
   const scoreBreakdown: NewsScoreBreakdown = {
     rank: Math.round(1_000 / (60 + bestRankPosition)),
-    authority: authInfoLevel === 1 ? 12 : authInfoLevel === 2 ? 8 : 0,
+    authority: authorityTier === "official" ? 12 : authorityTier === "authoritative" ? 8 : 0,
     freshness: Math.round(
       Math.max(0, Math.min(1, (newestPublishTime - window.since) / windowDuration)) * 8,
     ),
@@ -341,20 +419,4 @@ function containsSearchTerm(content: string, term: string): boolean {
   content = fold(content);
   const escaped = fold(normalizedTerm).replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
   return new RegExp(`(?:^|[^a-z0-9])${escaped}(?=$|[^a-z0-9])`, "u").test(content);
-}
-
-function authorityLevel(hit: NewsSearchHit): number {
-  if (hit.sourceVerification) {
-    if (hit.sourceVerification.method === "article-read") return 4;
-    let host: string;
-    try {
-      host = new URL(hit.url).hostname;
-    } catch {
-      return 4;
-    }
-    const { domain, policy } = hit.sourceVerification;
-    if (host !== domain && !host.endsWith(`.${domain}`)) return 4;
-    return policy === "official" ? 1 : 2;
-  }
-  return hit.authInfoLevel ?? 4;
 }

@@ -3,12 +3,12 @@ import { canonicalizeUrl } from "../domain/text.js";
 
 import {
   buildNewsStoriesWithAudit,
+  projectNewsHit,
   selectNewsStoriesWithAudit,
   type NewsBriefEdition,
-  type NewsSearchHit,
   type NewsTopic,
   type SelectedNewsStory,
-} from "../domain/news.js";
+} from "../editorial/index.js";
 import {
   calendarDayAtOffset,
   parseOffsetMilliseconds,
@@ -24,21 +24,21 @@ import {
   GrokSearchClient,
   isSearchFailure,
   NewsSearchError,
+  resolveNewsCredibility,
   searchBudgetDefaults,
   searchWithRetry,
   selectQueryIds,
-  settleSearchRequests,
+  settleSearches,
   type NewsSearchInput,
   type NewsSearchPage,
 } from "../acquisition/index.js";
 import { createHybridNewsSearch, type NewsSearchRequest } from "./hybrid-news-search.js";
-import { attempt } from "./effect.js";
 import {
   buildNewsAudit,
   summarizeNewsSources,
-  type NewsSourceStatus,
   type NewsBriefAudit,
-} from "./news-audit.js";
+  type NewsSourceStatus,
+} from "../editorial/index.js";
 
 export type { NewsBriefEdition };
 
@@ -256,28 +256,29 @@ export function generateRivusNewsBrief(
           : (request: NewsSearchRequest) => primarySearch(request.input),
       catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
     });
-    const settled = yield* attempt(
-      settleSearchRequests(
-        requests,
-        (request) => {
-          if (!selectedQueryIds.has(request.query.id)) {
-            return Promise.reject(
-              new NewsSearchError("query_deferred", "Query deferred by the per-run search limit."),
-            );
-          }
-          return execute(request);
-        },
-        mode !== "doubao" ? 1 : newsSearchConcurrency,
-      ),
+    const settled = yield* settleSearches(
+      requests,
+      (request) =>
+        Effect.tryPromise({
+          try: () => {
+            if (!selectedQueryIds.has(request.query.id)) {
+              throw new NewsSearchError(
+                "query_deferred",
+                "Query deferred by the per-run search limit.",
+              );
+            }
+            return execute(request);
+          },
+          catch: (reason) => reason,
+        }),
+      mode !== "doubao" ? 1 : newsSearchConcurrency,
     );
-    const successful = settled.filter(
-      (result): result is PromiseFulfilledResult<NewsSearchPage> => result.status === "fulfilled",
-    );
+    const successful = settled.filter((result) => result._tag === "Fulfilled");
     const { sourceStatus, warnings } = summarizeNewsSources(requests, settled);
     const generatedAt = (dependencies.now ?? (() => new Date()))().toISOString();
     if (successful.length === 0) {
       const failures = settled.flatMap((result) =>
-        result.status === "rejected" ? [result.reason] : [],
+        result._tag === "Rejected" ? [result.reason] : [],
       );
       if (!failures.every((error) => isSearchFailure(error))) {
         return yield* Effect.fail(new AggregateError(failures, "All news search queries failed."));
@@ -305,22 +306,24 @@ export function generateRivusNewsBrief(
       return yield* Effect.fail(new AllNewsQueriesFailedError(unavailable));
     }
 
-    const hits: NewsSearchHit[] = [];
-    settled.forEach((result, index) => {
-      if (result.status !== "fulfilled") return;
+    const hits = settled.flatMap((result, index) => {
+      if (result._tag !== "Fulfilled") return [];
       const request = requests[index]!;
-      hits.push(
-        ...result.value.results.map((searchResult) => ({
-          ...searchResult,
-          topicId: request.topic.id,
-          topicLabel: request.topic.label,
-          sourcePolicy: request.topic.sourcePolicy,
-          queryId: request.query.id,
-          queryText: request.query.text,
-          subjectAny: request.query.subjectAny,
-          eventAny: request.query.eventAny,
-          excludedAny: request.query.excludedAny,
-        })),
+      return result.value.results.map((searchResult) =>
+        projectNewsHit(
+          searchResult,
+          {
+            topicId: request.topic.id,
+            topicLabel: request.topic.label,
+            sourcePolicy: request.topic.sourcePolicy,
+            queryId: request.query.id,
+            queryText: request.query.text,
+            subjectAny: request.query.subjectAny,
+            eventAny: request.query.eventAny,
+            excludedAny: request.query.excludedAny,
+          },
+          resolveNewsCredibility(searchResult),
+        ),
       );
     });
     const built = buildNewsStoriesWithAudit(hits, window);

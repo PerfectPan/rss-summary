@@ -1,19 +1,21 @@
-import { newsPublicationRange } from "../domain/news-time.js";
-import {
-  buildNewsStoriesWithAudit,
-  type NewsSearchHit,
-  type NewsTimeWindow,
-  type NewsTopic,
-  type NewsTopicQuery,
-} from "../domain/news.js";
-import { canonicalizeUrl } from "../domain/text.js";
 import {
   isSearchFailure,
   NewsSearchError,
+  resolveNewsCredibility,
   shareSearchBudget,
   type NewsSearchInput,
   type NewsSearchPage,
 } from "../acquisition/index.js";
+import { canonicalizeUrl } from "../domain/text.js";
+import {
+  buildNewsStoriesWithAudit,
+  projectNewsHit,
+  publicationFitsWindow,
+  type NewsSearchHit,
+  type NewsTimeWindow,
+  type NewsTopic,
+  type NewsTopicQuery,
+} from "../editorial/index.js";
 import type {
   GlmResearchClient,
   ResearchPage,
@@ -198,12 +200,7 @@ export function createHybridNewsSearch(options: Options) {
         fallback.warnings.push("GLM 原文缺少可验证的发布时间、正文或链接，未采用该候选");
         continue;
       }
-      const publication = newsPublicationRange(article.publishedAt, options.window.timezoneOffset);
-      if (
-        !publication ||
-        publication.since < options.window.since ||
-        publication.until > options.window.until
-      ) {
+      if (!publicationFitsWindow(article.publishedAt, options.window)) {
         fallback.warnings.push("GLM 原文不在本期时间窗口或日期精度不足，未采用该候选");
         continue;
       }
@@ -242,15 +239,18 @@ function toHit(
   result: NewsSearchPage["results"][number],
   { query, topic }: NewsSearchRequest,
 ): NewsSearchHit {
-  return {
-    ...result,
-    topicId: topic.id,
-    topicLabel: topic.label,
-    sourcePolicy: topic.sourcePolicy,
-    queryId: query.id,
-    queryText: query.text,
-    subjectAny: query.subjectAny,
-    eventAny: query.eventAny,
-    excludedAny: query.excludedAny,
-  };
+  return projectNewsHit(
+    result,
+    {
+      topicId: topic.id,
+      topicLabel: topic.label,
+      sourcePolicy: topic.sourcePolicy,
+      queryId: query.id,
+      queryText: query.text,
+      subjectAny: query.subjectAny,
+      eventAny: query.eventAny,
+      excludedAny: query.excludedAny,
+    },
+    resolveNewsCredibility(result),
+  );
 }

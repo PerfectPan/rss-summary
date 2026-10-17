@@ -10,6 +10,7 @@ export {
   type EventWindow,
   type EventWindowConfig,
 } from "./time.js";
+export { newsPublicationRange } from "./publication.js";
 export {
   canonicalizeUrl,
   compactSummary,

@@ -1,3 +1,4 @@
+import type { SearchFallback, SearchUsage } from "../../../acquisition/domain/search/search.js";
 import type {
   NewsHitDecision,
   NewsHitRejectionReason,
@@ -5,20 +6,53 @@ import type {
   NewsStoryDecision,
   NewsTopic,
   NewsTopicQuery,
-} from "../domain/news.js";
-import { errorAudit, isSearchFailure, type NewsSearchPage } from "../acquisition/index.js";
+} from "./news.js";
 
-export type NewsQueryAudit = {
+/** Native-search receipt. The public audit key is applied by the module entry. */
+export type NewsNativeReceipt = {
+  nativeTools: string[];
+  nativeCallCount?: number;
+  elapsedMs?: number;
+  rejectedResults: number;
+  costUsd?: number;
+  totalTokens?: number;
+  inputTokens?: number;
+  cachedInputTokens?: number;
+  outputTokens?: number;
+};
+
+export type NewsQueryPage = {
+  provider?: string;
+  searchUsage?: SearchUsage;
+  fallback?: SearchFallback;
+  logId?: string;
+  resultCount: number;
+  results: readonly unknown[];
+  receipt?: NewsNativeReceipt;
+  /** Set by the module entry when the page was compiled by a model search. */
+  modelCompiled?: boolean;
+};
+
+export type NewsQueryFailure = {
+  code?: string;
+  message: string;
+  receipt?: NewsNativeReceipt;
+};
+
+export type NewsQuerySettlement =
+  | { readonly _tag: "Fulfilled"; readonly value: NewsQueryPage }
+  | { readonly _tag: "Rejected"; readonly reason: NewsQueryFailure };
+
+export type NewsQueryAuditDraft = {
   queryId: string;
   query: string;
   intent: NewsQueryIntent;
   topicId: string;
   topicLabel: string;
   status: "ok" | "failed" | "skipped";
-  provider?: NewsSearchPage["provider"];
-  searchUsage?: NewsSearchPage["searchUsage"];
-  fallback?: NewsSearchPage["fallback"];
-  grok?: NewsSearchPage["grok"];
+  provider?: NewsQueryPage["provider"];
+  searchUsage?: NewsQueryPage["searchUsage"];
+  fallback?: NewsQueryPage["fallback"];
   logId?: string;
   reportedResultCount?: number;
   fetched: number;
@@ -26,10 +60,11 @@ export type NewsQueryAudit = {
   rejected: Partial<Record<NewsHitRejectionReason, number>>;
   errorCode?: string;
   error?: string;
+  receipt?: NewsNativeReceipt;
 };
 
-export type NewsBriefAudit = {
-  queries: NewsQueryAudit[];
+export type NewsBriefAuditDraft = {
+  queries: NewsQueryAuditDraft[];
   counts: {
     fetched: number;
     acceptedHits: number;
@@ -51,35 +86,32 @@ export type NewsAuditRequest = {
 
 export function buildNewsAudit(
   requests: NewsAuditRequest[],
-  settled: PromiseSettledResult<NewsSearchPage>[],
+  settled: readonly NewsQuerySettlement[],
   decisions: NewsHitDecision[],
   storyDecisions: NewsStoryDecision[],
   deduplicatedStories: number,
   selectedStories: number,
-): NewsBriefAudit {
-  const queries = requests.map(({ query, topic, input }, index): NewsQueryAudit => {
+): NewsBriefAuditDraft {
+  const queries = requests.map(({ query, topic, input }, index): NewsQueryAuditDraft => {
     const result = settled[index]!;
     const queryDecisions = decisions.filter(({ hit }) => hit.queryId === query.id);
-    if (result.status === "rejected") {
+    if (result._tag === "Rejected") {
+      const deferred = ["query_deferred", "local_budget_exhausted"].includes(
+        result.reason.code ?? "",
+      );
       return {
         queryId: query.id,
         query: input?.query ?? query.text,
         intent: query.intent,
         topicId: topic.id,
         topicLabel: topic.label,
-        status:
-          isSearchFailure(result.reason) &&
-          ["query_deferred", "local_budget_exhausted"].includes(result.reason.code)
-            ? "skipped"
-            : "failed",
+        status: result.reason.code !== undefined && deferred ? "skipped" : "failed",
         fetched: 0,
         accepted: 0,
         rejected: {},
-        ...(isSearchFailure(result.reason) ? { errorCode: result.reason.code } : {}),
-        ...(isSearchFailure(result.reason) && errorAudit(result.reason)
-          ? { grok: errorAudit(result.reason) }
-          : {}),
-        error: errorText(result.reason),
+        ...(result.reason.code !== undefined ? { errorCode: result.reason.code } : {}),
+        ...(result.reason.receipt ? { receipt: result.reason.receipt } : {}),
+        error: result.reason.message,
       };
     }
     return {
@@ -93,7 +125,7 @@ export function buildNewsAudit(
       ...(result.value.provider ? { provider: result.value.provider } : {}),
       ...(result.value.searchUsage ? { searchUsage: result.value.searchUsage } : {}),
       ...(result.value.fallback ? { fallback: result.value.fallback } : {}),
-      ...(result.value.grok ? { grok: result.value.grok } : {}),
+      ...(result.value.receipt ? { receipt: result.value.receipt } : {}),
       reportedResultCount: result.value.resultCount,
       fetched: result.value.results.length,
       accepted: queryDecisions.filter(({ status }) => status === "accepted").length,
@@ -135,10 +167,6 @@ function countStoryReason(
   return decisions.filter((decision) => decision.reason === reason).length;
 }
 
-function errorText(value: unknown): string {
-  return value instanceof Error ? value.message : String(value);
-}
-
 export type NewsSourceStatus = {
   state: "healthy" | "recovered" | "partial" | "unavailable";
   queries: number;
@@ -150,12 +178,13 @@ export type NewsSourceStatus = {
 
 export function summarizeNewsSources(
   requests: NewsAuditRequest[],
-  settled: PromiseSettledResult<NewsSearchPage>[],
+  settled: readonly NewsQuerySettlement[],
+  modelCaution?: string,
 ): { sourceStatus: NewsSourceStatus; warnings: string[] } {
-  const completed = settled.filter((result) => result.status === "fulfilled").length;
+  const completed = settled.filter((result) => result._tag === "Fulfilled").length;
   const recovered = settled.filter(
     (result) =>
-      result.status === "fulfilled" &&
+      result._tag === "Fulfilled" &&
       result.value.fallback?.searched &&
       !result.value.fallback.incomplete &&
       !["no-eligible-results", "complement"].includes(result.value.fallback.reason),
@@ -166,7 +195,7 @@ export function summarizeNewsSources(
         .filter((_, index) => {
           const result = settled[index]!;
           return (
-            result.status === "rejected" ||
+            result._tag === "Rejected" ||
             result.value.fallback?.incomplete ||
             result.value.searchUsage?.source === "cache"
           );
@@ -183,7 +212,7 @@ export function summarizeNewsSources(
           ? "recovered"
           : "healthy";
   const sourcePlans = settled.flatMap((result) =>
-    result.status === "fulfilled" && result.value.fallback ? [result.value.fallback] : [],
+    result._tag === "Fulfilled" && result.value.fallback ? [result.value.fallback] : [],
   );
   const searchedSources = sourcePlans.reduce(
     (total, plan) => total + (plan.sources?.length ?? 0),
@@ -195,19 +224,13 @@ export function summarizeNewsSources(
   );
   const notes = recovered ? [`${recovered} 个查询已由备用来源完成；不代表覆盖全部新闻`] : [];
   const deferred = settled.filter(
-    (result) =>
-      result.status === "rejected" &&
-      isSearchFailure(result.reason) &&
-      result.reason.code === "query_deferred",
+    (result) => result._tag === "Rejected" && result.reason.code === "query_deferred",
   ).length;
   const limited = settled.filter(
-    (result) =>
-      result.status === "rejected" &&
-      isSearchFailure(result.reason) &&
-      result.reason.code === "local_budget_exhausted",
+    (result) => result._tag === "Rejected" && result.reason.code === "local_budget_exhausted",
   ).length;
   const cached = settled.flatMap((result) =>
-    result.status === "fulfilled" && result.value.searchUsage?.source === "cache"
+    result._tag === "Fulfilled" && result.value.searchUsage?.source === "cache"
       ? [result.value.searchUsage.fetchedAt]
       : [],
   );
@@ -224,12 +247,12 @@ export function summarizeNewsSources(
     notes.push(
       `本轮按预算轮换检索 ${searchedSources} 组官网查询，另 ${deferredSources} 组留待后续轮次`,
     );
-  const grokNotes = settled.some(
-    (result) => result.status === "fulfilled" && result.value.provider === "grok",
-  )
-    ? ["X 资讯经 Grok 原生搜索和模型整理，未独立核验原文、作者或事实；搜索结果不代表完整时间线"]
-    : [];
-  notes.push(...grokNotes);
+  const modelNotes =
+    modelCaution &&
+    settled.some((result) => result._tag === "Fulfilled" && result.value.modelCompiled)
+      ? [modelCaution]
+      : [];
+  notes.push(...modelNotes);
   return {
     sourceStatus: {
       state,
@@ -249,6 +272,6 @@ export function summarizeNewsSources(
           ]
         : state === "partial"
           ? [`采集覆盖不完整：${incompleteTopics.join("、")}；详见采集审计`, ...notes]
-          : grokNotes,
+          : modelNotes,
   };
 }

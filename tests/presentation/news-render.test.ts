@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import type { SelectedNewsStory } from "../../src/domain/news.js";
+import type { SelectedNewsStory } from "../../src/editorial/index.js";
 import { renderNewsBrief } from "../../src/presentation/news-render.js";
 
 describe("presentation/news-render", () => {
