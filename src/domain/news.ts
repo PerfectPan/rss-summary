@@ -1,5 +1,3 @@
-import uniq from "lodash-es/uniq.js";
-
 import { newsPublicationRange } from "./news-time.js";
 import { canonicalizeUrl, compactSummary, isSameTitleEvent, parsePublishTime } from "./text.js";
 
@@ -267,10 +265,10 @@ function toStory(
     (left, right) =>
       left.rankPosition - right.rankPosition || (right.rankScore ?? 0) - (left.rankScore ?? 0),
   )[0]!;
-  const queryIds = uniq(matches.map(({ queryId }) => queryId));
-  const queries = uniq(matches.map(({ queryText }) => queryText));
-  const topicIds = uniq(matches.map(({ topicId }) => topicId));
-  const topicLabels = uniq(matches.map(({ topicLabel }) => topicLabel));
+  const queryIds = [...new Set(matches.map(({ queryId }) => queryId))];
+  const queries = [...new Set(matches.map(({ queryText }) => queryText))];
+  const topicIds = [...new Set(matches.map(({ topicId }) => topicId))];
+  const topicLabels = [...new Set(matches.map(({ topicLabel }) => topicLabel))];
   const authInfoLevel = Math.min(...matches.map(authorityLevel));
   const rankScore = Math.max(...matches.map(({ rankScore }) => rankScore ?? 0));
   const queryHits = queryIds.length;

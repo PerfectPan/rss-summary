@@ -3,8 +3,6 @@ import { mkdtemp, open, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { extname, join } from "node:path";
 import { promisify } from "node:util";
-import get from "lodash-es/get.js";
-
 import {
   isVideoResearchUrl,
   validateResearchUrl,
@@ -164,7 +162,8 @@ export class VideoResearchClient {
         { timeout: this.timeoutMs, maxBuffer: 4_000_000, env: this.env },
       );
     } catch (error) {
-      const code: unknown = get(error, "code");
+      // One property read; nullish receivers yield undefined.
+      const code: unknown = error == null ? undefined : (error as { code?: unknown }).code;
       if (code === "ENOENT") throw new Error("Install the Summarize CLI to research videos.");
       throw new Error(
         "Video transcription failed or timed out; check Summarize, media access and the local Whisper model.",

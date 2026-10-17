@@ -27,9 +27,12 @@ describe("infrastructure/parsing", () => {
     expect(requireRecord({ a: 1 }, "x")).toEqual({ a: 1 });
     expect(() => requireRecord([], "x")).toThrow(/must be an object/i);
     expect(text("  hi  ")).toBe("hi");
+    expect(text(Object("  hi  "))).toBe("hi");
     expect(text(3)).toBe("3");
+    expect(text(-0)).toBe("-0");
     expect(text("")).toBeUndefined();
     expect(number(1.5)).toBe(1.5);
     expect(number(Number.NaN)).toBeUndefined();
+    expect(number(Object(1))).toBeUndefined();
   });
 });
