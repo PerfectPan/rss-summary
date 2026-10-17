@@ -1,6 +1,6 @@
 # Plan 0001：按 agent-kit 的 DDD 分层重构 rss-summary
 
-状态：已评审，可以执行；只剩 D12 需要在 P1 中核实
+状态：已评审，执行中
 类型：技术重构，不改变产品行为
 参照：`../agent-kit/docs/architecture/authoring.md`、`../agent-kit/infra/architecture/boundaries.ts`
 基线：`main` @ `3416de6`，`pnpm verify` 通过（69 个测试文件 / 451 个用例，`check-package: ok`）
@@ -373,7 +373,7 @@ app/
 | D9 | Rivus 下的 only-new | **已定**：有意设计，保持现状 | `docs/rivus-plugin.md` 写明 Feed Tools 只读 only-new 状态、不写 seen；重复投递由相邻运行的日历日窗口互不重叠和 Rivus 的投递账本共同防止 |
 | D10 | 与 wiki 的整合 | **推后**：重构完成后再定 | 本次只保证 reading 只依赖 kernel（3.8） |
 | D11 | Effect 的版本和依赖方式 | **已定**：精确固定为 dependency | 版本与 `@rivus/agent` 实际解析到的 4.x 一致，由 `package:check` 确认只安装了一份 |
-| D12 | Node 平台实现 | **待 P1 核实** | 优先使用与 Effect 4 匹配的 `@effect/platform-node`；如果没有，就在 `app/` 中写一个只覆盖用到的方法的 Node Layer |
+| D12 | Node 平台实现 | **已定** | `@effect/platform-node` 和 `@effect/vitest` 都有 4.0.x 版本，peer 为 `effect ^4.0.0`。`effect` 精确固定为 `4.0.0`（与 `@rivus/agent@0.18.0` 实际解析到的版本一致），平台包需要时同样固定为 4.0.0 |
 | D13 | domain 是否使用 Effect | **已定**：不使用 | 3.6 |
 | D14 | 纵向切片 | **已定**：不做 | 按模块顺序推进（第 6 节） |
 
