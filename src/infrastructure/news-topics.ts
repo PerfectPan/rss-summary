@@ -6,7 +6,7 @@ import type {
   NewsSourcePolicy,
   NewsTopic,
   NewsTopicQuery,
-} from "../domain/news.js";
+} from "../editorial/index.js";
 import { optionalBoolean, requiredString, requirePositiveInteger } from "./config-parse.js";
 import { requireRecord } from "./parsing.js";
 

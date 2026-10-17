@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vite-plus/test";
 
+import { DoubaoSearchError } from "../../../../src/acquisition/index.js";
 import {
   buildNewsAudit,
   summarizeNewsSources,
   type NewsAuditRequest,
-} from "../../src/application/news-audit.js";
+} from "../../../../src/editorial/index.js";
 import type {
   NewsHitDecision,
   NewsSearchHit,
   NewsStory,
   NewsStoryDecision,
-} from "../../src/domain/news.js";
-import { DoubaoSearchError } from "../../src/acquisition/index.js";
+} from "../../../../src/editorial/domain/news/news.js";
 
 describe("news audit", () => {
   it("explains query failures and every stage of the selection funnel", () => {
@@ -34,51 +34,54 @@ describe("news audit", () => {
       { story: story("quota"), status: "filtered", reason: "topic-quota" },
       { story: story("cap"), status: "filtered", reason: "brief-cap" },
     ];
-    const settled = [
-      Promise.resolve({
-        logId: "provider-log",
-        resultCount: 8,
-        results: decisions.map(({ hit: value }) => ({
-          id: value.id,
-          title: value.title,
-          url: value.url,
-          rankPosition: value.rankPosition,
-        })),
-      }),
-      Promise.reject(new DoubaoSearchError("10406", "search unavailable")),
-    ];
-
-    return Promise.allSettled(settled).then((results) => {
-      const audit = buildNewsAudit(requests, results, decisions, storyDecisions, 4, 1);
-
-      expect(audit.queries).toEqual([
-        expect.objectContaining({
-          queryId: "working",
-          status: "ok",
+    const results = [
+      {
+        _tag: "Fulfilled" as const,
+        value: {
           logId: "provider-log",
-          reportedResultCount: 8,
-          fetched: 6,
-          accepted: 5,
-          rejected: { "intent-mismatch": 1 },
-        }),
-        expect.objectContaining({
-          queryId: "failed",
-          status: "failed",
-          errorCode: "10406",
-          error: "Doubao search API error 10406: search unavailable",
-        }),
-      ]);
-      expect(audit.counts).toEqual({
+          resultCount: 8,
+          results: decisions.map(({ hit: value }) => ({
+            id: value.id,
+            title: value.title,
+            url: value.url,
+            rankPosition: value.rankPosition,
+          })),
+        },
+      },
+      {
+        _tag: "Rejected" as const,
+        reason: new DoubaoSearchError("10406", "search unavailable"),
+      },
+    ];
+    const audit = buildNewsAudit(requests, results, decisions, storyDecisions, 4, 1);
+
+    expect(audit.queries).toEqual([
+      expect.objectContaining({
+        queryId: "working",
+        status: "ok",
+        logId: "provider-log",
+        reportedResultCount: 8,
         fetched: 6,
-        acceptedHits: 5,
-        rejectedHits: 1,
-        canonicalDuplicates: 1,
-        deduplicatedStories: 4,
-        selectedStories: 1,
-        duplicateTitleStories: 1,
-        topicQuotaFilteredStories: 1,
-        briefCapFilteredStories: 1,
-      });
+        accepted: 5,
+        rejected: { "intent-mismatch": 1 },
+      }),
+      expect.objectContaining({
+        queryId: "failed",
+        status: "failed",
+        errorCode: "10406",
+        error: "Doubao search API error 10406: search unavailable",
+      }),
+    ]);
+    expect(audit.counts).toEqual({
+      fetched: 6,
+      acceptedHits: 5,
+      rejectedHits: 1,
+      canonicalDuplicates: 1,
+      deduplicatedStories: 4,
+      selectedStories: 1,
+      duplicateTitleStories: 1,
+      topicQuotaFilteredStories: 1,
+      briefCapFilteredStories: 1,
     });
   });
 });
@@ -111,7 +114,8 @@ function hit(id: string): NewsSearchHit {
     title: "Product release",
     url: `https://example.com/${id}`,
     publishTime: "2026-08-09T09:00:00+08:00",
-    authInfoLevel: 2,
+    credibility: { tier: "authoritative" },
+    authorityRank: 2,
     topicId: "technology",
     topicLabel: "科技",
     sourcePolicy: "authoritative",
@@ -147,12 +151,12 @@ function story(id: string): NewsStory {
 it("separates empty success, recovery, budget sampling, missing coverage and outage", () => {
   const requests = [request("working")];
   const base = { results: [], resultCount: 0 };
-  const empty = summarizeNewsSources(requests, [{ status: "fulfilled", value: base }]);
+  const empty = summarizeNewsSources(requests, [{ _tag: "Fulfilled", value: base }]);
   expect(empty.sourceStatus.state).toBe("healthy");
   expect(empty.warnings).toEqual([]);
   const recovery = summarizeNewsSources(requests, [
     {
-      status: "fulfilled",
+      _tag: "Fulfilled",
       value: {
         ...base,
         fallback: {
@@ -171,7 +175,7 @@ it("separates empty success, recovery, budget sampling, missing coverage and out
   expect(recovery.sourceStatus.notes.join(" ")).toContain("另 1 组");
   const partial = summarizeNewsSources(requests, [
     {
-      status: "fulfilled",
+      _tag: "Fulfilled",
       value: {
         ...base,
         fallback: { reason: "10406", searched: true, reads: 0, warnings: [], incomplete: true },
@@ -183,7 +187,7 @@ it("separates empty success, recovery, budget sampling, missing coverage and out
   expect(partial.warnings).toHaveLength(1);
   expect(
     summarizeNewsSources(requests, [
-      { status: "rejected", reason: new DoubaoSearchError("10406", "quota") },
+      { _tag: "Rejected", reason: new DoubaoSearchError("10406", "quota") },
     ]).sourceStatus.state,
   ).toBe("unavailable");
 });

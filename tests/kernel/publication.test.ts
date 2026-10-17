@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { newsPublicationRange } from "../../src/domain/news-time.js";
+import { newsPublicationRange } from "../../src/kernel/publication.js";
 
 describe("publication precision", () => {
   it("preserves a whole date rather than inventing a midnight publication", () => {

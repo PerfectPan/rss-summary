@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
+import { resolveNewsCredibility } from "../../../../src/acquisition/index.js";
 import {
   buildNewsStories,
   buildNewsStoriesWithAudit,
@@ -8,8 +9,8 @@ import {
   type NewsSearchHit,
   type NewsTopic,
   type NewsTopicQuery,
-} from "../../src/domain/news.js";
-import { parsePublishTime } from "../../src/domain/text.js";
+} from "../../../../src/editorial/domain/news/news.js";
+import { parsePublishTime } from "../../../../src/kernel/text.js";
 
 const window = {
   since: Date.parse("2026-07-29T00:00:00+08:00"),
@@ -247,8 +248,17 @@ function query(overrides: Partial<NewsTopicQuery> = {}): NewsTopicQuery {
   };
 }
 
-function hit(overrides: Partial<NewsSearchHit>): NewsSearchHit {
-  return {
+function hit(
+  overrides: Partial<NewsSearchHit> & {
+    authInfoLevel?: number;
+    sourceVerification?: {
+      method: "configured-domain" | "article-read";
+      domain: string;
+      policy: "official" | "news";
+    };
+  } = {},
+): NewsSearchHit {
+  const merged = {
     id: "result",
     title: "产品正式发布",
     url: "https://example.com/update",
@@ -257,17 +267,37 @@ function hit(overrides: Partial<NewsSearchHit>): NewsSearchHit {
     publishTime: "2026-07-29T09:30:00+08:00",
     rankScore: 0.8,
     rankPosition: 1,
-    authInfoLevel: 2,
+    authInfoLevel: 2 as number | undefined,
     authInfoDescription: "正常权威",
     topicId: "technology",
     topicLabel: "科技新闻",
-    sourcePolicy: "authoritative",
+    sourcePolicy: "authoritative" as const,
     queryId: "agent-release",
     queryText: "AI Agent 正式发布",
     subjectAny: ["产品"],
     eventAny: ["正式发布"],
     excludedAny: ["评测"],
     ...overrides,
+  };
+  const resolved = resolveNewsCredibility({
+    url: merged.url,
+    authInfoLevel: merged.authInfoLevel,
+    sourceVerification: merged.sourceVerification,
+  });
+  const {
+    authInfoLevel: _authInfoLevel,
+    sourceVerification: _sourceVerification,
+    credibility: _credibility,
+    authorityRank: _authorityRank,
+    ...rest
+  } = merged;
+  return {
+    ...rest,
+    credibility: {
+      tier: resolved.tier,
+      ...(resolved.method ? { method: resolved.method } : {}),
+    },
+    authorityRank: resolved.rank,
   };
 }
 
@@ -300,6 +330,64 @@ it("defers date-only articles until their whole publication day fits the collect
     timezoneOffset: "+08:00",
   };
   expect(buildNewsStoriesWithAudit([base], daily).stories[0].publishTime).toBe("2026-07-29");
+});
+
+it("scores rank, authority, and freshness from the certificate and the window", () => {
+  const [official] = buildNewsStories(
+    [hit({ authInfoLevel: 1, sourcePolicy: "official", rankPosition: 1 })],
+    window,
+  );
+  expect(official?.scoreBreakdown).toEqual({
+    rank: 16,
+    authority: 12,
+    freshness: 6,
+    crossQuery: 0,
+  });
+  expect(buildNewsStories([hit({ authInfoLevel: 2 })], window)[0]?.scoreBreakdown.authority).toBe(
+    8,
+  );
+  const unrated = buildNewsStories([hit({ authInfoLevel: 3, sourcePolicy: "news" })], window)[0];
+  expect(unrated?.scoreBreakdown.authority).toBe(0);
+  expect(unrated?.authInfoLevel).toBe(3);
+});
+
+it("caps the cross-query bonus at 4", () => {
+  const stories = buildNewsStories(
+    [
+      hit({ id: "a", queryId: "q1", url: "https://example.com/same" }),
+      hit({ id: "b", queryId: "q2", url: "https://example.com/same?ref=2" }),
+      hit({ id: "c", queryId: "q3", url: "https://example.com/same?from=3" }),
+    ],
+    window,
+  );
+  expect(stories[0]?.scoreBreakdown.crossQuery).toBe(4);
+});
+
+it("filters the second distinct story when the topic quota is one", () => {
+  const stories = buildNewsStories(
+    [
+      hit({ id: "one", title: "Alpha runtime 正式发布", url: "https://example.com/one" }),
+      hit({ id: "two", title: "Beta editor 正式发布", url: "https://example.com/two" }),
+    ],
+    window,
+  );
+  const selection = selectNewsStoriesWithAudit(stories, [topic({ maxItems: 1 })]);
+  expect(selection.stories).toHaveLength(1);
+  expect(selection.decisions).toContainEqual(
+    expect.objectContaining({
+      story: expect.objectContaining({ id: "two" }),
+      status: "filtered",
+      reason: "topic-quota",
+    }),
+  );
+});
+
+it("rejects a subject that is absent from the title, summary, and site", () => {
+  const result = buildNewsStoriesWithAudit(
+    [hit({ id: "subject", subjectAny: ["不存在的主体"], eventAny: ["正式发布"] })],
+    window,
+  );
+  expect(result.decisions[0]?.reason).toBe("subject-mismatch");
 });
 
 it("allows relevant media without official certification in general news, retaining explicit official-only policy", () => {
