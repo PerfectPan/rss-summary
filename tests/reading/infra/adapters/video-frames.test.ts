@@ -4,7 +4,8 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { captureVideoFrames, videoVisualEvidence } from "../../../../src/reading/infra/adapters/video-frames.js";
+import { videoVisualEvidence } from "../../../../src/reading/domain/document/adapters/video-evidence.js";
+import { captureVideoFrames } from "../../../../src/reading/infra/adapters/video-frames.js";
 
 const png = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aV8sAAAAASUVORK5CYII=",

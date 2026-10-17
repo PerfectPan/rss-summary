@@ -1,24 +1,28 @@
-import { GlmResearchClient } from "../infrastructure/glm-research.js";
-import {
-  ArticleResearchClient,
-  validateResearchUrl,
-  isVideoResearchUrl,
-  type ArticleResearchClientOptions,
-  type ArticleResearchResult,
-} from "../reading/infra/adapters/http-reader.js";
-import { BrowserArticleResearchClient } from "../reading/infra/adapters/browser-reader.js";
-import { VideoResearchClient } from "../reading/infra/adapters/video-reader.js";
+import { Effect } from "effect";
 
-export type RivusArticleResearchResult = ArticleResearchResult & {
+import {
+  ReadingLive,
+  readOriginal,
+  type GlmPage,
+  type ReadOriginalResult,
+  type ReadRequest,
+  type ReadResult,
+} from "../reading/index.js";
+
+export type RivusArticleResearchResult = ReadOriginalResult & {
   tool: "article-research";
+};
+
+type ResearchClient = {
+  research: (request: ReadRequest) => Promise<ReadResult>;
 };
 
 export type ArticleResearchToolDependencies = {
   env?: NodeJS.ProcessEnv;
-  glmClient?: Pick<GlmResearchClient, "read">;
-  browserClient?: Pick<BrowserArticleResearchClient, "research">;
-  client?: Pick<ArticleResearchClient, "research">;
-  videoClient?: Pick<VideoResearchClient, "research">;
+  glmClient?: { read: (url: string) => Promise<GlmPage> };
+  browserClient?: ResearchClient;
+  client?: ResearchClient;
+  videoClient?: ResearchClient;
 };
 
 export type ArticleResearchMode = "auto" | "browser" | "http";
@@ -28,90 +32,34 @@ export function createArticleResearchExecutor(
   dependencies: ArticleResearchToolDependencies = {},
 ): (value: unknown) => Promise<RivusArticleResearchResult> {
   const env = dependencies.env ?? process.env;
-  const client = dependencies.client ?? new ArticleResearchClient();
-  const videoClient = dependencies.videoClient ?? new VideoResearchClient({ env });
-  const browserClient =
-    dependencies.browserClient ??
-    (dependencies.client
-      ? dependencies.client
-      : new BrowserArticleResearchClient({
-          browserChannel: process.env.RSS_ARTICLE_BROWSER_CHANNEL?.trim() || "chrome",
-          headless: process.env.RSS_ARTICLE_BROWSER_HEADLESS !== "false",
-          timeoutMs: readBrowserTimeoutMs(),
-        }));
+  const layer = ReadingLive({
+    apiKey: env.GLM_CODING_API_KEY ?? "",
+    browserChannel: process.env.RSS_ARTICLE_BROWSER_CHANNEL?.trim() || "chrome",
+    browserResearch: dependencies.browserClient?.research ?? dependencies.client?.research,
+    browserTimeoutMs: readBrowserTimeoutMs(),
+    glmRead: dependencies.glmClient?.read,
+    headless: process.env.RSS_ARTICLE_BROWSER_HEADLESS !== "false",
+    httpResearch: dependencies.client?.research,
+    videoEnv: env,
+    videoResearch: dependencies.videoClient?.research,
+  });
   return async (value) => {
     const request = parseInput(value);
-    const researchRequest = { ref: request.ref, url: request.url };
-    try {
-      validateResearchUrl(request.url);
-    } catch (error) {
-      return {
-        ...researchRequest,
-        error: error instanceof Error ? error.message : String(error),
-        retrievedAt: new Date().toISOString(),
-        status: "failed",
-        tool: "article-research",
-      };
-    }
-    if (isVideoResearchUrl(request.url)) {
-      return { ...(await videoClient.research(researchRequest)), tool: "article-research" };
-    }
-    if (request.mode === "http") {
-      return { ...(await client.research(researchRequest)), tool: "article-research" };
-    }
-    if (request.mode === "browser") {
-      return { ...(await browserClient.research(researchRequest)), tool: "article-research" };
-    }
-
-    const browserResult = await browserClient.research(researchRequest);
-    if (browserResult.status === "ok") {
-      return { ...browserResult, tool: "article-research" };
-    }
-    const httpResult = await client.research(researchRequest);
-    if (httpResult.status === "ok") {
-      return { ...httpResult, tool: "article-research" };
-    }
-    if (env.RSS_ARTICLE_GLM_FALLBACK === "true") {
-      try {
-        const glm =
-          dependencies.glmClient ?? new GlmResearchClient({ apiKey: env.GLM_CODING_API_KEY ?? "" });
-        const page = await glm.read(request.url);
-        if (page.content.trim().length < 80) throw new Error("Reader body too short");
-        return {
-          ...researchRequest,
-          content: page.content,
-          fetchedUrl: page.url,
-          retrievedAt: new Date().toISOString(),
-          title: page.title,
-          status: "ok",
-          method: "glm",
-          tool: "article-research",
-        };
-      } catch {
-        return {
-          ...httpResult,
-          error: "Browser, HTTP and GLM Reader unavailable.",
-          tool: "article-research",
-        };
-      }
-    }
-    return {
-      ...httpResult,
-      error: `browser: ${browserResult.error}; http: ${httpResult.error}`,
-      tool: "article-research",
-    };
+    const result = await Effect.runPromise(
+      readOriginal({
+        glmFallback: env.RSS_ARTICLE_GLM_FALLBACK === "true",
+        mode: request.mode,
+        ref: request.ref,
+        url: request.url,
+      }).pipe(Effect.provide(layer)),
+    );
+    return { ...result, tool: "article-research" };
   };
 }
 
 function readBrowserTimeoutMs(): number {
   const value = Number(process.env.RSS_ARTICLE_BROWSER_TIMEOUT_MS);
   return Number.isFinite(value) && value >= 5_000 ? value : 30_000;
-}
-
-export function createArticleResearchClient(
-  options: ArticleResearchClientOptions = {},
-): ArticleResearchClient {
-  return new ArticleResearchClient(options);
 }
 
 function parseInput(value: unknown): { mode: ArticleResearchMode; ref: string; url: string } {
