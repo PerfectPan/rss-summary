@@ -1,12 +1,15 @@
+import { Effect } from "effect";
+
 import type { FeedSubscription } from "../infrastructure/config.js";
 import { type ActivityCard } from "../domain/digest.js";
 import {
+  AcquisitionLive,
+  RssClient,
+  addCatalogFeed,
   addFeedSubscription,
-  loadFeedFile,
-  removeFeedSubscription,
-  saveFeedFile,
-} from "../infrastructure/feed-store.js";
-import { RssClient } from "../infrastructure/rss.js";
+  listCatalogFeeds,
+  removeCatalogFeed,
+} from "../acquisition/index.js";
 import { errorMessage } from "../infrastructure/parsing.js";
 
 type Writable = {
@@ -37,27 +40,33 @@ export async function runFeedsCommand(
   try {
     const args = parseArgs(argv);
     if (args.command === "add") {
-      const feeds = addFeedSubscription(loadFeedFile(args.file), requireFeedInput(args));
-      saveFeedFile(args.file, feeds);
+      const feeds = await Effect.runPromise(
+        Effect.provide(addCatalogFeed(args.file, requireFeedInput(args)), AcquisitionLive()),
+      );
       const added = feeds.at(-1);
       stdout.write(`Added ${added?.name ?? args.url} -> ${added?.url ?? args.url}\n`);
       return 0;
     }
 
     if (args.command === "list") {
-      writeFeedList(stdout, loadFeedFile(args.file), args.file);
+      writeFeedList(
+        stdout,
+        await Effect.runPromise(Effect.provide(listCatalogFeeds(args.file), AcquisitionLive())),
+        args.file,
+      );
       return 0;
     }
 
     if (args.command === "remove" || args.command === "delete") {
-      const feeds = removeFeedSubscription(loadFeedFile(args.file), requireUrl(args));
-      saveFeedFile(args.file, feeds);
+      await Effect.runPromise(
+        Effect.provide(removeCatalogFeed(args.file, requireUrl(args)), AcquisitionLive()),
+      );
       stdout.write(`Removed ${args.url}\n`);
       return 0;
     }
 
     if (args.command === "test") {
-      await testFeeds(stdout, loadFeedsForTest(args), deps.rssClient ?? new RssClient());
+      await testFeeds(stdout, await loadFeedsForTest(args), deps.rssClient ?? new RssClient());
       return 0;
     }
 
@@ -107,11 +116,9 @@ function requireUrl(args: ParsedArgs): string {
   return args.url;
 }
 
-function loadFeedsForTest(args: ParsedArgs): FeedSubscription[] {
-  if (args.url) {
-    return addFeedSubscription([], requireFeedInput(args));
-  }
-  return loadFeedFile(args.file);
+async function loadFeedsForTest(args: ParsedArgs): Promise<FeedSubscription[]> {
+  if (args.url) return addFeedSubscription([], requireFeedInput(args));
+  return Effect.runPromise(Effect.provide(listCatalogFeeds(args.file), AcquisitionLive()));
 }
 
 function writeFeedList(stdout: Writable, feeds: FeedSubscription[], file: string): void {

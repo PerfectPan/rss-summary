@@ -20,15 +20,16 @@ function captureStdout(): void {
   restoreStdout = () => spy.mockRestore();
 }
 
-vi.mock("../../src/infrastructure/github-home.js", () => ({
+vi.mock("../../src/acquisition/infra/adapters/github-home-browser.js", () => ({
   GitHubHomeClient: class {
     getHomeEvents(): Promise<never> {
       return Promise.reject(new Error("home unavailable"));
     }
   },
+  saveGithubHomeStorageState: vi.fn(),
 }));
 
-vi.mock("../../src/infrastructure/rss.js", () => ({
+vi.mock("../../src/acquisition/infra/adapters/rss-http.js", () => ({
   RssClient: class {
     getFeedEvents(): Promise<Array<Record<string, unknown>>> {
       return Promise.resolve([

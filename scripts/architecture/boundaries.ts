@@ -51,7 +51,9 @@ export const layerDependencies: Readonly<Record<LayerName, readonly LayerName[]>
   domain: ["domain", "kernel"],
   adapters: ["domain", "adapters", "kernel"],
   application: ["domain", "adapters", "application", "kernel"],
-  infra: ["domain", "application", "infra", "kernel"],
+  // Infra calls domain adapters to turn a fetched document into the port's
+  // historical value. The plan's dependency table omits this edge.
+  infra: ["domain", "adapters", "application", "infra", "kernel"],
   app: ["app"],
   kernel: ["kernel"],
   entry: ["domain", "adapters", "application", "infra", "kernel", "entry"],

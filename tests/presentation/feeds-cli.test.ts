@@ -1,6 +1,6 @@
-import { mkdtempSync, readFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import { describe, expect, it } from "vite-plus/test";
 
@@ -111,4 +111,48 @@ describe("feeds CLI", () => {
     expect(deleteExitCode).toBe(0);
     expect(JSON.parse(readFileSync(file, "utf8"))).toEqual([]);
   });
+
+  it("prints the Node read error and exits 1 when the feeds path is a directory", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "rss-summary-feeds-"));
+    const stderr: string[] = [];
+    const exitCode = await runFeedsCommand(["list", "--file", directory], {
+      stderr: { write: (chunk) => stderr.push(String(chunk)) },
+    });
+
+    expect(exitCode).toBe(1);
+    expect(stderr.join("")).toBe(`${nodeMessage(() => readFileSync(directory, "utf8"))}\n`);
+  });
+
+  it("prints the Node write error and exits 1 when the feeds file cannot be written", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "rss-summary-feeds-"));
+    const file = join(directory, "feeds.json");
+    chmodSync(directory, 0o555);
+    const stderr: string[] = [];
+    try {
+      const exitCode = await runFeedsCommand(
+        ["add", "--file", file, "--name", "Example", "--url", "https://example.com/feed.xml"],
+        { stderr: { write: (chunk) => stderr.push(String(chunk)) } },
+      );
+      expect(exitCode).toBe(1);
+      expect(stderr.join("")).toBe(`${historicalSaveMessage(file)}\n`);
+    } finally {
+      chmodSync(directory, 0o755);
+    }
+  });
 });
+
+function historicalSaveMessage(path: string): string {
+  return nodeMessage(() => {
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, "unused");
+  });
+}
+
+function nodeMessage(readOrWrite: () => void): string {
+  try {
+    readOrWrite();
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  throw new Error("expected the Node filesystem call to fail");
+}

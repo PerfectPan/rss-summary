@@ -29,6 +29,9 @@ describe("architecture boundaries", () => {
     expect(
       violations.every((violation) => violation.file && violation.rule && violation.message),
     ).toBe(true);
+    expect(violations.filter((violation) => violation.file.startsWith("src/acquisition/"))).toEqual(
+      [],
+    );
   });
 
   it("accepts a legal import graph", () => {
@@ -131,6 +134,11 @@ function legalGraph(): SourceInput[] {
     {
       path: "src/acquisition/infra/adapters/browser.ts",
       source: 'import { chromium } from "playwright";\nexport const browser = chromium;\n',
+    },
+    {
+      path: "src/acquisition/infra/adapters/rss-http.ts",
+      source:
+        'import { parsed } from "../../domain/item/adapters/rss.js";\nexport const events = parsed;\n',
     },
     {
       path: "src/editorial/domain/news/rank.ts",

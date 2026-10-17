@@ -3,7 +3,6 @@ import { Effect } from "effect";
 
 import {
   buildCandidateProjects,
-  normalizeEvent,
   selectResearchCandidates,
   type ActivityCard,
   type CandidateProject,
@@ -13,10 +12,12 @@ import {
 import { isWithinEventWindow, resolveEventWindow } from "../domain/time.js";
 import { candidateDecision, type RunAudit, type RunSourceResult } from "../domain/run-audit.js";
 import { loadConfig, type AppConfig } from "../infrastructure/config.js";
-import { GitHubClient } from "../infrastructure/github.js";
-import { GitHubHomeClient } from "../infrastructure/github-home.js";
-import { RssClient } from "../infrastructure/rss.js";
-import { collectRssFeeds } from "../infrastructure/rss-batch.js";
+import {
+  AcquisitionLive,
+  GitHubActivity,
+  GitHubCatalog,
+  collectRssFeeds,
+} from "../acquisition/index.js";
 import {
   deliver,
   DeliveryLive,
@@ -84,12 +85,9 @@ export function buildDigestDocument(config: AppConfig): Effect.Effect<DigestDocu
 async function collectDigest(
   config: AppConfig,
 ): Promise<{ audit: RunAudit; document: DigestDocument; state: FeedState }> {
-  const client = new GitHubClient({ token: config.token });
-  const rssClient = new RssClient();
-
   const [githubResult, rssResult] = await Promise.allSettled([
-    config.rssOnly ? Promise.resolve([]) : fetchGithubEvents(config, client),
-    collectRssFeeds(rssClient, config.rssFeeds),
+    config.rssOnly ? Promise.resolve([]) : runAcquisition(config, fetchGithubEvents(config)),
+    runAcquisition(config, collectRssFeeds(config.rssFeeds)),
   ]);
   const githubEvents = githubResult.status === "fulfilled" ? githubResult.value : [];
   const rssCollection =
@@ -111,12 +109,12 @@ async function collectDigest(
   );
 
   const followees =
-    config.token && !config.rssOnly ? await fetchFollowees(client) : new Set<string>();
+    config.token && !config.rssOnly ? await fetchFollowees(config) : new Set<string>();
   const repositories = config.rssOnly
     ? new Map<string, RepositoryMetadata>()
-    : await fetchRepositoryMetadata(client, events, config.maxRepos);
+    : await fetchRepositoryMetadata(config, events, config.maxRepos);
   if (!config.rssOnly) {
-    await enrichPullRequests(client, events);
+    await enrichPullRequests(config, events);
   }
 
   const rankedCandidates = buildCandidateProjects(events, {
@@ -183,28 +181,39 @@ function deliveredEventIds(candidate: CandidateProject): string[] {
   return candidate.events.map((event) => event.id);
 }
 
-async function fetchGithubEvents(config: AppConfig, client: GitHubClient): Promise<ActivityCard[]> {
-  if (config.githubFeedSource === "home") {
-    return new GitHubHomeClient({
+function acquisition(config: AppConfig) {
+  return AcquisitionLive({
+    token: config.token,
+    githubHome: {
       storageState: config.githubHomeStorageState,
       fetchMode: config.githubHomeFetch,
       browserChannel: process.env.GITHUB_HOME_BROWSER_CHANNEL,
-    }).getHomeEvents();
-  }
-
-  const rawEvents = await client.getReceivedEvents(config.username, {
-    perPage: config.perPage,
-    pages: config.eventPages,
+    },
   });
-  return rawEvents.map(normalizeEvent);
 }
 
-async function fetchRepositoryMetadata(
-  client: GitHubClient,
+function runAcquisition<A, E, R>(config: AppConfig, effect: Effect.Effect<A, E, R>): Promise<A> {
+  return Effect.runPromise(Effect.provide(effect, acquisition(config)) as Effect.Effect<A, E>);
+}
+
+function fetchGithubEvents(
+  config: AppConfig,
+): Effect.Effect<ActivityCard[], Error, GitHubActivity> {
+  return Effect.gen(function* () {
+    const github = yield* GitHubActivity;
+    if (config.githubFeedSource === "home") return yield* github.getHomeEvents();
+    return yield* github.getReceivedEvents(config.username, {
+      perPage: config.perPage,
+      pages: config.eventPages,
+    });
+  });
+}
+
+function fetchRepositoryMetadata(
+  config: AppConfig,
   events: ActivityCard[],
   maxRepos: number,
 ): Promise<Map<string, RepositoryMetadata>> {
-  const repositories = new Map<string, RepositoryMetadata>();
   const names = [
     ...new Set(
       events
@@ -215,42 +224,63 @@ async function fetchRepositoryMetadata(
     ),
   ].slice(0, maxRepos);
 
-  await Promise.all(
-    names.map(async (name) => {
-      try {
-        repositories.set(name, await client.getRepository(name));
-      } catch {
-        // Keep the digest useful even when a deleted or private repo cannot be enriched.
-      }
+  return runAcquisition(
+    config,
+    Effect.gen(function* () {
+      const catalog = yield* GitHubCatalog;
+      const repositories = new Map<string, RepositoryMetadata>();
+      yield* Effect.forEach(
+        names,
+        (name) =>
+          Effect.gen(function* () {
+            const result = yield* Effect.result(catalog.getRepository(name));
+            if (result._tag === "Success") repositories.set(name, result.success);
+          }),
+        { concurrency: "unbounded" },
+      );
+      return repositories;
     }),
   );
-
-  return repositories;
 }
 
-async function fetchFollowees(client: GitHubClient): Promise<Set<string>> {
+async function fetchFollowees(config: AppConfig): Promise<Set<string>> {
   try {
-    return await client.getFollowing();
+    const followed = await runAcquisition(
+      config,
+      Effect.gen(function* () {
+        const catalog = yield* GitHubCatalog;
+        return yield* catalog.getFollowing();
+      }),
+    );
+    return new Set(followed);
   } catch {
     return new Set<string>();
   }
 }
 
-async function enrichPullRequests(client: GitHubClient, events: ActivityCard[]): Promise<void> {
+async function enrichPullRequests(config: AppConfig, events: ActivityCard[]): Promise<void> {
   const pullRequests = events
     .filter((event) => event.type === "pull_request" && event.prNumber)
     .slice(0, 20);
 
-  await Promise.all(
-    pullRequests.map(async (event) => {
-      try {
-        const pr = await client.getPullRequest(event.repo, event.prNumber ?? 0);
-        event.title = pr.title;
-        event.htmlUrl = pr.htmlUrl;
-        if (pr.body) event.summary = pr.body;
-      } catch {
-        // Missing PR details should not block the whole daily digest.
-      }
+  await runAcquisition(
+    config,
+    Effect.gen(function* () {
+      const catalog = yield* GitHubCatalog;
+      yield* Effect.forEach(
+        pullRequests,
+        (event) =>
+          Effect.gen(function* () {
+            const result = yield* Effect.result(
+              catalog.getPullRequest(event.repo, event.prNumber ?? 0),
+            );
+            if (result._tag === "Failure") return;
+            event.title = result.success.title;
+            event.htmlUrl = result.success.htmlUrl;
+            if (result.success.body) event.summary = result.success.body;
+          }),
+        { concurrency: "unbounded" },
+      );
     }),
   );
 }
