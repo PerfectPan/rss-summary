@@ -35,31 +35,36 @@ type BudgetOptions = {
   now?: () => Date;
 };
 
-const daySchema = Schema.String.pipe(Schema.filter(isCalendarDay));
-const countSchema = Schema.NonNegativeInt.pipe(Schema.lessThanOrEqualTo(Number.MAX_SAFE_INTEGER));
-const instantSchema = Schema.String.pipe(
-  Schema.filter(
-    (value) => /(?:Z|[+-]\d{2}:\d{2})$/u.test(value) && Number.isFinite(Date.parse(value)),
+const daySchema = Schema.String.check(Schema.makeFilter(isCalendarDay));
+const countSchema = Schema.Int.check(
+  Schema.isGreaterThanOrEqualTo(0),
+  Schema.isLessThanOrEqualTo(Number.MAX_SAFE_INTEGER),
+);
+const instantSchema = Schema.String.check(
+  Schema.makeFilter(
+    (value: string) => /(?:Z|[+-]\d{2}:\d{2})$/u.test(value) && Number.isFinite(Date.parse(value)),
   ),
 );
 const requestSchema = Schema.Struct({
   provider: Schema.String,
-  query: Schema.String.pipe(Schema.filter((value) => value.trim() !== "" && value.length <= 100)),
-  count: Schema.Int.pipe(Schema.between(1, 50)),
+  query: Schema.String.check(
+    Schema.makeFilter((value: string) => value.trim() !== "" && value.length <= 100),
+  ),
+  count: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 50 })),
   day: daySchema,
   sinceDay: daySchema,
-  sourcePolicy: Schema.Literal("news", "authoritative", "official"),
+  sourcePolicy: Schema.Literals(["news", "authoritative", "official"]),
   window: Schema.optional(Schema.Struct({ since: instantSchema, until: instantSchema })),
 });
 const rawPageSchema = Schema.Struct({
-  provider: Schema.optional(Schema.Literal("doubao", "grok")),
+  provider: Schema.optional(Schema.Literals(["doubao", "grok"])),
   grok: Schema.optional(
     Schema.Struct({
       nativeTools: Schema.Array(Schema.String),
       nativeCallCount: Schema.optional(countSchema),
       elapsedMs: Schema.optional(countSchema),
       rejectedResults: countSchema,
-      costUsd: Schema.optional(Schema.NonNegative),
+      costUsd: Schema.optional(Schema.Number.check(Schema.isGreaterThanOrEqualTo(0))),
       totalTokens: Schema.optional(countSchema),
       inputTokens: Schema.optional(countSchema),
       cachedInputTokens: Schema.optional(countSchema),
@@ -87,8 +92,8 @@ const rawPageSchema = Schema.Struct({
 });
 const cacheEntrySchema = Schema.Struct({
   request: requestSchema,
-  fetchedAt: Schema.String.pipe(
-    Schema.filter((value) => {
+  fetchedAt: Schema.String.check(
+    Schema.makeFilter((value: string) => {
       const timestamp = Date.parse(value);
       return Number.isFinite(timestamp) && new Date(timestamp).toISOString() === value;
     }),
@@ -98,8 +103,8 @@ const cacheEntrySchema = Schema.Struct({
 const stateSchema = Schema.Struct({
   version: Schema.Literal(1),
   timezoneOffset: Schema.String,
-  daily: Schema.Record({ key: daySchema, value: countSchema }),
-  cache: Schema.Record({ key: Schema.String, value: cacheEntrySchema }),
+  daily: Schema.Record(daySchema, countSchema),
+  cache: Schema.Record(Schema.String, cacheEntrySchema),
 });
 type BudgetState = typeof stateSchema.Type;
 type CacheRequest = typeof requestSchema.Type;

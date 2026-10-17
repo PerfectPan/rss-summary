@@ -1065,7 +1065,7 @@ it("preserves safe Grok timeout diagnostics in the failed evening brief", async 
     });
   });
   const result = await Effect.runPromise(
-    Effect.either(
+    Effect.result(
       generateRivusNewsBrief(
         { edition: "evening", occurrence: "2026-10-08T11:00:00Z" },
         { env: { NEWS_SEARCH_MODE: "grok" }, search, topics: [newsTopic("technology", ["one"])] },
@@ -1081,8 +1081,8 @@ it("preserves safe Grok timeout diagnostics in the failed evening brief", async 
     }),
   );
   expect(result).toMatchObject({
-    _tag: "Left",
-    left: {
+    _tag: "Failure",
+    failure: {
       message: "新闻搜索未完成：Grok 搜索超时。本次未生成新闻简报。",
       result: {
         audit: {

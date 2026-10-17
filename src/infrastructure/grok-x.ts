@@ -11,12 +11,12 @@ import { NewsSearchError, type NewsSearchPage } from "./news-search.js";
 const postSchema = Schema.Struct({
   url: Schema.String,
   author: Schema.String,
-  title: Schema.String.pipe(Schema.minLength(1), Schema.maxLength(300)),
-  summary: Schema.String.pipe(Schema.minLength(1), Schema.maxLength(2000)),
+  title: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(300)),
+  summary: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(2000)),
   publishedAt: Schema.String,
 });
 const responseSchema = Schema.Struct({
-  posts: Schema.Array(Schema.Unknown).pipe(Schema.maxItems(50)),
+  posts: Schema.Array(Schema.Unknown).check(Schema.isMaxLength(50)),
 });
 const nativeToolNames = new Set(["x_keyword_search", "x_semantic_search", "x_thread_fetch"]);
 const maxNativeCalls = 2;
@@ -28,19 +28,19 @@ type GrokOptions = {
 };
 
 const requestSchema = Schema.Struct({
-  instruction: Schema.String.pipe(Schema.minLength(1)),
-  count: Schema.Int.pipe(Schema.between(1, 50)),
-  since: Schema.String.pipe(
-    Schema.filter(
-      (value) => /(?:Z|[+-]\d{2}:\d{2})$/u.test(value) && Number.isFinite(Date.parse(value)),
+  instruction: Schema.String.check(Schema.isMinLength(1)),
+  count: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 50 })),
+  since: Schema.String.check(
+    Schema.makeFilter(
+      (value: string) => /(?:Z|[+-]\d{2}:\d{2})$/u.test(value) && Number.isFinite(Date.parse(value)),
     ),
   ),
-  until: Schema.String.pipe(
-    Schema.filter(
-      (value) => /(?:Z|[+-]\d{2}:\d{2})$/u.test(value) && Number.isFinite(Date.parse(value)),
+  until: Schema.String.check(
+    Schema.makeFilter(
+      (value: string) => /(?:Z|[+-]\d{2}:\d{2})$/u.test(value) && Number.isFinite(Date.parse(value)),
     ),
   ),
-  handle: Schema.optional(Schema.String.pipe(Schema.pattern(/^[a-zA-Z0-9_]{1,15}$/u))),
+  handle: Schema.optional(Schema.String.check(Schema.isPattern(/^[a-zA-Z0-9_]{1,15}$/u))),
 });
 
 /** Shared native X transport; news and account collectors supply their own selection policy. */

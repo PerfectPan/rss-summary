@@ -6,13 +6,13 @@ import { createBudgetedNewsSearch } from "../infrastructure/news-search-budget.j
 import { NewsSearchError, type NewsSearchPage } from "../infrastructure/news-search.js";
 import { boundedInteger } from "../infrastructure/parsing.js";
 
-const instantSchema = Schema.String.pipe(
-  Schema.filter(
-    (value) => /(?:Z|[+-]\d{2}:\d{2})$/u.test(value) && Number.isFinite(Date.parse(value)),
+const instantSchema = Schema.String.check(
+  Schema.makeFilter(
+    (value: string) => /(?:Z|[+-]\d{2}:\d{2})$/u.test(value) && Number.isFinite(Date.parse(value)),
   ),
 );
 const inputSchema = Schema.Struct({
-  handles: Schema.Array(Schema.String.pipe(Schema.pattern(/^@?[a-zA-Z0-9_]{1,15}$/u))),
+  handles: Schema.Array(Schema.String.check(Schema.isPattern(/^@?[a-zA-Z0-9_]{1,15}$/u))),
   since: instantSchema,
   until: instantSchema,
 });
