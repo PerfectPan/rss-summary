@@ -5,6 +5,7 @@ import {
   buildSubscriptionEvidence,
   SubscriptionDraftValidationError,
   validateSubscriptionEditorialDraft,
+  validateSubscriptionResearch,
   validateSubscriptionSelectionDraft,
 } from "../../src/domain/subscription-editorial.js";
 import type { DigestDocument } from "../../src/domain/digest.js";
@@ -144,6 +145,97 @@ describe("subscription editorial contract", () => {
         summary: "先保存检查点；再恢复上传；最后报告结果。",
       },
     ]);
+  });
+
+  it("accepts a summary of exactly 8 and exactly 180 characters", () => {
+    const evidence = buildSubscriptionEvidence(document());
+    const ref = "github-pull-request:example/project:41";
+    expect(validateSubscriptionEditorialDraft([{ ref, summary: "a".repeat(8) }], evidence)).toEqual(
+      [{ ref, summary: "a".repeat(8) }],
+    );
+    expect(
+      validateSubscriptionEditorialDraft([{ ref, summary: "a".repeat(180) }], evidence),
+    ).toEqual([{ ref, summary: "a".repeat(180) }]);
+    expect(() =>
+      validateSubscriptionEditorialDraft([{ ref, summary: "a".repeat(7) }], evidence),
+    ).toThrow(/too short/u);
+  });
+
+  it("accepts a selection reason of 4 characters and keeps 240 characters", () => {
+    const evidence = buildSubscriptionEvidence(document());
+    const ref = "github-repository:example/project";
+    expect(
+      validateSubscriptionSelectionDraft([{ ref, selected: true, reason: "abcd" }], evidence)
+        .decisions[0]?.reason,
+    ).toBe("abcd");
+    expect(() =>
+      validateSubscriptionSelectionDraft([{ ref, selected: false, reason: "abc" }], evidence),
+    ).toThrow(/too short/u);
+    expect(
+      validateSubscriptionSelectionDraft(
+        [{ ref, selected: true, reason: "a".repeat(240) }],
+        evidence,
+      ).decisions[0]?.reason,
+    ).toHaveLength(240);
+    expect(
+      validateSubscriptionSelectionDraft(
+        [{ ref, selected: true, reason: "b".repeat(241) }],
+        evidence,
+      ).decisions[0]?.reason,
+    ).toBe("b".repeat(240));
+  });
+
+  it("accepts research content of exactly 80 characters", () => {
+    const evidence = buildSubscriptionEvidence(document());
+    const ref = "publication:https://deno.com/blog/v2.4";
+    const url = "https://deno.com/blog/v2.4";
+    expect(
+      validateSubscriptionResearch(
+        [{ ref, url, status: "ok", content: "c".repeat(80) }],
+        evidence,
+      )[0]?.content,
+    ).toHaveLength(80);
+    expect(() =>
+      validateSubscriptionResearch([{ ref, url, status: "ok", content: "c".repeat(79) }], evidence),
+    ).toThrow(/too short/u);
+  });
+
+  it("traces numeric claims including grouped digits and unit suffixes", () => {
+    const evidence = [
+      {
+        facts: [] as string[],
+        id: "publication:https://example.com/item",
+        kind: "article" as const,
+        rawText: "count is 12, total is 1,200, groups 3, batch 2, set 4, lot 5, pack 6.",
+        sourceName: "Example",
+        summaryPolicy: "required" as const,
+        title: "Item",
+        url: "https://example.com/item",
+      },
+    ];
+    const ref = evidence[0]!.id;
+    const accept = (summary: string) =>
+      validateSubscriptionEditorialDraft([{ ref, summary }], evidence);
+    const reject = (summary: string) => expect(() => accept(summary)).toThrow(/numeric claim/u);
+
+    expect(accept("count is 12.")).toHaveLength(1);
+    expect(accept("total 1200.")).toHaveLength(1);
+    const rated = [
+      {
+        ...evidence[0]!,
+        rawText: `${evidence[0]!.rawText} rate is 12%.`,
+      },
+    ];
+    expect(
+      validateSubscriptionEditorialDraft([{ ref, summary: "rate is 12%." }], rated),
+    ).toHaveLength(1);
+    reject("up to 12%.");
+    reject("reach 3亿.");
+    reject("reach 2B now");
+    reject("reach 4M now");
+    reject("reach 5K now");
+    reject("reach 6％ now");
+    reject("reach 3万 now");
   });
 
   it("rejects summaries longer than 180 characters", () => {
