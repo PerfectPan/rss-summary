@@ -1,0 +1,275 @@
+{
+  "first": {
+    "audit": {
+      "queries": [
+        {
+          "queryId": "frontier-model-release",
+          "query": "OpenAI 正式发布新模型",
+          "intent": "model-release",
+          "topicId": "ai-model-releases",
+          "topicLabel": "AI 模型与 Agent 发布",
+          "status": "ok",
+          "provider": "grok",
+          "searchUsage": {
+            "dailyUsed": 1,
+            "monthlyUsed": 1,
+            "dailyLimit": 4,
+            "monthlyLimit": 120,
+            "source": "network",
+            "fetchedAt": "2026-08-16T04:00:00.000Z"
+          },
+          "grok": {
+            "nativeTools": [
+              "x_keyword_search"
+            ],
+            "nativeCallCount": 1,
+            "rejectedResults": 0,
+            "costUsd": 0.001,
+            "totalTokens": 200,
+            "inputTokens": 80,
+            "cachedInputTokens": 100,
+            "outputTokens": 20,
+            "elapsedMs": 0
+          },
+          "reportedResultCount": 1,
+          "fetched": 1,
+          "accepted": 1,
+          "rejected": {}
+        }
+      ],
+      "counts": {
+        "fetched": 1,
+        "acceptedHits": 1,
+        "rejectedHits": 0,
+        "canonicalDuplicates": 0,
+        "deduplicatedStories": 1,
+        "selectedStories": 1,
+        "duplicateTitleStories": 0,
+        "topicQuotaFilteredStories": 0,
+        "briefCapFilteredStories": 0
+      }
+    },
+    "day": "2026-08-16",
+    "edition": "noon",
+    "generatedAt": "2026-08-16T04:00:00.000Z",
+    "itemCount": 1,
+    "warnings": [
+      "X 资讯经 Grok 原生搜索和模型整理，未独立核验原文、作者或事实；搜索结果不代表完整时间线"
+    ],
+    "sourceStatus": {
+      "state": "healthy",
+      "queries": 1,
+      "completed": 1,
+      "recovered": 0,
+      "incompleteTopics": [],
+      "notes": [
+        "X 资讯经 Grok 原生搜索和模型整理，未独立核验原文、作者或事实；搜索结果不代表完整时间线"
+      ]
+    },
+    "windowLabel": "00:00–12:00",
+    "stories": [
+      {
+        "id": "2088807957918646272",
+        "title": "OpenAI 正式发布新模型",
+        "canonicalUrl": "https://x.com/openai/status/2088807957918646272",
+        "summary": "并开放 API。",
+        "siteName": "@OpenAI · X（Grok 整理）",
+        "publishTime": "2026-08-16T02:00:00.000Z",
+        "rankScore": 0,
+        "authInfoLevel": 4,
+        "authInfoDescription": "Grok 原生 X 搜索，内容经模型整理；未独立核验作者或原文",
+        "topicIds": [
+          "ai-model-releases"
+        ],
+        "topicLabels": [
+          "AI 模型与 Agent 发布"
+        ],
+        "queryIds": [
+          "frontier-model-release"
+        ],
+        "queries": [
+          "OpenAI 正式发布新模型"
+        ],
+        "queryHits": 1,
+        "scoreBreakdown": {
+          "rank": 16,
+          "authority": 0,
+          "freshness": 7,
+          "crossQuery": 0
+        },
+        "score": 23,
+        "selectedTopicId": "ai-model-releases"
+      }
+    ],
+    "topics": [
+      {
+        "id": "ai-model-releases",
+        "label": "AI 模型与 Agent 发布",
+        "icon": "🤖",
+        "enabled": true,
+        "sourcePolicy": "news",
+        "maxItems": 2,
+        "queries": [
+          {
+            "id": "frontier-model-release",
+            "text": "OpenAI 正式发布新模型",
+            "intent": "model-release",
+            "subjectAny": [
+              "OpenAI"
+            ],
+            "eventAny": [
+              "正式发布"
+            ],
+            "excludedAny": [
+              "传闻"
+            ]
+          }
+        ]
+      }
+    ],
+    "markdown": "# 午间热点 · 2026-08-16\n\n1 条重要动态 · 00:00–12:00\n\n**🤖 AI 模型与 Agent 发布 · 1**\n\n**1. [OpenAI 正式发布新模型](https://x.com/openai/status/2088807957918646272)**\n并开放 API。\n@OpenAI · X（Grok 整理） · 02:00\n\n数据源状态：X 资讯经 Grok 原生搜索和模型整理，未独立核验原文、作者或事实；搜索结果不代表完整时间线\n"
+  },
+  "grokInvocations": 1,
+  "second": {
+    "audit": {
+      "queries": [
+        {
+          "queryId": "frontier-model-release",
+          "query": "OpenAI 正式发布新模型",
+          "intent": "model-release",
+          "topicId": "ai-model-releases",
+          "topicLabel": "AI 模型与 Agent 发布",
+          "status": "ok",
+          "provider": "grok",
+          "searchUsage": {
+            "dailyUsed": 1,
+            "monthlyUsed": 1,
+            "dailyLimit": 4,
+            "monthlyLimit": 120,
+            "source": "cache",
+            "fetchedAt": "2026-08-16T04:00:00.000Z"
+          },
+          "grok": {
+            "nativeTools": [
+              "x_keyword_search"
+            ],
+            "nativeCallCount": 1,
+            "elapsedMs": 0,
+            "rejectedResults": 0,
+            "costUsd": 0.001,
+            "totalTokens": 200,
+            "inputTokens": 80,
+            "cachedInputTokens": 100,
+            "outputTokens": 20
+          },
+          "reportedResultCount": 1,
+          "fetched": 1,
+          "accepted": 1,
+          "rejected": {}
+        }
+      ],
+      "counts": {
+        "fetched": 1,
+        "acceptedHits": 1,
+        "rejectedHits": 0,
+        "canonicalDuplicates": 0,
+        "deduplicatedStories": 1,
+        "selectedStories": 1,
+        "duplicateTitleStories": 0,
+        "topicQuotaFilteredStories": 0,
+        "briefCapFilteredStories": 0
+      }
+    },
+    "day": "2026-08-16",
+    "edition": "noon",
+    "generatedAt": "2026-08-16T04:00:00.000Z",
+    "itemCount": 1,
+    "warnings": [
+      "采集覆盖不完整：AI 模型与 Agent 发布；详见采集审计",
+      "复用 1 组搜索缓存，最早采集于 2026-08-16T04:00:00.000Z；不代表此后没有更新",
+      "X 资讯经 Grok 原生搜索和模型整理，未独立核验原文、作者或事实；搜索结果不代表完整时间线"
+    ],
+    "sourceStatus": {
+      "state": "partial",
+      "queries": 1,
+      "completed": 1,
+      "recovered": 0,
+      "incompleteTopics": [
+        "AI 模型与 Agent 发布"
+      ],
+      "notes": [
+        "复用 1 组搜索缓存，最早采集于 2026-08-16T04:00:00.000Z；不代表此后没有更新",
+        "X 资讯经 Grok 原生搜索和模型整理，未独立核验原文、作者或事实；搜索结果不代表完整时间线"
+      ]
+    },
+    "windowLabel": "00:00–12:00",
+    "stories": [
+      {
+        "id": "2088807957918646272",
+        "title": "OpenAI 正式发布新模型",
+        "canonicalUrl": "https://x.com/openai/status/2088807957918646272",
+        "summary": "并开放 API。",
+        "siteName": "@OpenAI · X（Grok 整理）",
+        "publishTime": "2026-08-16T02:00:00.000Z",
+        "rankScore": 0,
+        "authInfoLevel": 4,
+        "authInfoDescription": "Grok 原生 X 搜索，内容经模型整理；未独立核验作者或原文",
+        "topicIds": [
+          "ai-model-releases"
+        ],
+        "topicLabels": [
+          "AI 模型与 Agent 发布"
+        ],
+        "queryIds": [
+          "frontier-model-release"
+        ],
+        "queries": [
+          "OpenAI 正式发布新模型"
+        ],
+        "queryHits": 1,
+        "scoreBreakdown": {
+          "rank": 16,
+          "authority": 0,
+          "freshness": 7,
+          "crossQuery": 0
+        },
+        "score": 23,
+        "selectedTopicId": "ai-model-releases"
+      }
+    ],
+    "topics": [
+      {
+        "id": "ai-model-releases",
+        "label": "AI 模型与 Agent 发布",
+        "icon": "🤖",
+        "enabled": true,
+        "sourcePolicy": "news",
+        "maxItems": 2,
+        "queries": [
+          {
+            "id": "frontier-model-release",
+            "text": "OpenAI 正式发布新模型",
+            "intent": "model-release",
+            "subjectAny": [
+              "OpenAI"
+            ],
+            "eventAny": [
+              "正式发布"
+            ],
+            "excludedAny": [
+              "传闻"
+            ]
+          }
+        ]
+      }
+    ],
+    "markdown": "# 午间热点 · 2026-08-16\n\n1 条重要动态 · 00:00–12:00\n\n**🤖 AI 模型与 Agent 发布 · 1**\n\n**1. [OpenAI 正式发布新模型](https://x.com/openai/status/2088807957918646272)**\n并开放 API。\n@OpenAI · X（Grok 整理） · 02:00\n\n数据源状态：采集覆盖不完整：AI 模型与 Agent 发布；详见采集审计；复用 1 组搜索缓存，最早采集于 2026-08-16T04:00:00.000Z；不代表此后没有更新；X 资讯经 Grok 原生搜索和模型整理，未独立核验原文、作者或事实；搜索结果不代表完整时间线\n"
+  },
+  "state": {
+    "feeds.json": "[]\n",
+    "grok": "#!<node>\nconst fs = require(\"node:fs\");\nfs.appendFileSync(\"<tmp>/grok.count\", \"1\\n\");\nprocess.stdout.write(\"{\\\"type\\\":\\\"text\\\",\\\"data\\\":\\\"I will search X.\\\"}\\n{\\\"type\\\":\\\"tool_call\\\",\\\"toolCallId\\\":\\\"native\\\",\\\"rawInput\\\":{\\\"variant\\\":\\\"XSearch\\\",\\\"backend\\\":true}}\\n{\\\"type\\\":\\\"tool_call_update\\\",\\\"toolCallId\\\":\\\"native\\\",\\\"status\\\":\\\"completed\\\",\\\"rawOutput\\\":{\\\"name\\\":\\\"x_keyword_search\\\"}}\\n{\\\"type\\\":\\\"text\\\",\\\"data\\\":\\\"{\\\\\\\"posts\\\\\\\":[{\\\\\\\"url\\\\\\\":\\\\\\\"https://x.com/OpenAI/status/2088807957918646272\\\\\\\",\\\\\\\"author\\\\\\\":\\\\\\\"@OpenAI\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"OpenAI 正式发布新模型\\\\\\\",\\\\\\\"summary\\\\\\\":\\\\\\\"OpenAI 正式发布新模型，并开放 API。\\\\\\\",\\\\\\\"publishedAt\\\\\\\":\\\\\\\"2026-08-16T02:00:00.000Z\\\\\\\"}]}\\\"}\\n{\\\"type\\\":\\\"end\\\",\\\"stopReason\\\":\\\"end_turn\\\",\\\"usage\\\":{\\\"total_tokens\\\":200,\\\"input_tokens\\\":80,\\\"cache_read_input_tokens\\\":100,\\\"output_tokens\\\":20},\\\"total_cost_usd\\\":0.001}\\n\");\n",
+    "industry-sources.json": "[\n  {\n    \"name\": \"Industry Feed\",\n    \"url\": \"https://example.com/industry.xml\",\n    \"tags\": [\n      \"typescript\"\n    ]\n  },\n  {\n    \"type\": \"page\",\n    \"name\": \"Anthropic News\",\n    \"url\": \"https://www.anthropic.com/news\",\n    \"pathPrefixes\": [\n      \"/news/\"\n    ],\n    \"tags\": [\n      \"News\"\n    ]\n  }\n]\n",
+    "news-search.json": "{\"version\":1,\"timezoneOffset\":\"+08:00\",\"daily\":{\"2026-08-16\":1},\"cache\":{\"c7237fdd6abcba8c09a83cec438d2b3214059d7a7b70949ef251a6fcd23e2399\":{\"request\":{\"provider\":\"grok://cli/v1/default\",\"query\":\"OpenAI 正式发布新模型\",\"count\":10,\"day\":\"2026-08-16\",\"sinceDay\":\"2026-08-16\",\"sourcePolicy\":\"news\",\"window\":{\"since\":\"2026-08-15T16:00:00.000Z\",\"until\":\"2026-08-16T04:00:00.000Z\"}},\"fetchedAt\":\"2026-08-16T04:00:00.000Z\",\"page\":{\"provider\":\"grok\",\"grok\":{\"nativeTools\":[\"x_keyword_search\"],\"nativeCallCount\":1,\"elapsedMs\":0,\"rejectedResults\":0,\"costUsd\":0.001,\"totalTokens\":200,\"inputTokens\":80,\"cachedInputTokens\":100,\"outputTokens\":20},\"resultCount\":1,\"results\":[{\"id\":\"2088807957918646272\",\"title\":\"OpenAI 正式发布新模型\",\"url\":\"https://x.com/openai/status/2088807957918646272\",\"rankPosition\":1,\"siteName\":\"@OpenAI · X（Grok 整理）\",\"summary\":\"OpenAI 正式发布新模型，并开放 API。\",\"publishTime\":\"2026-08-16T02:00:00.000Z\",\"authInfoDescription\":\"Grok 原生 X 搜索，内容经模型整理；未独立核验作者或原文\",\"authInfoLevel\":4}]}}}}\n",
+    "news-topics.json": "[\n  {\n    \"id\": \"ai-model-releases\",\n    \"label\": \"AI 模型与 Agent 发布\",\n    \"icon\": \"🤖\",\n    \"enabled\": true,\n    \"sourcePolicy\": \"news\",\n    \"maxItems\": 2,\n    \"queries\": [\n      {\n        \"id\": \"frontier-model-release\",\n        \"text\": \"OpenAI 正式发布新模型\",\n        \"intent\": \"model-release\",\n        \"subjectAny\": [\n          \"OpenAI\"\n        ],\n        \"eventAny\": [\n          \"正式发布\"\n        ],\n        \"excludedAny\": [\n          \"传闻\"\n        ]\n      }\n    ]\n  }\n]\n"
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "collected": {
+    "phase": "collect",
+    "day": "2026-08-16",
+    "windowLabel": "2026-08-15 12:00–2026-08-16 12:00 +08:00",
+    "generatedAt": "2026-08-16T04:00:00.000Z",
+    "evidence": [
+      {
+        "id": "x:2088596564997046272",
+        "title": "Claude 更新了 TypeScript 工具链",
+        "url": "https://x.com/claudedevs/status/2088596564997046272",
+        "publishedAt": "2026-08-15T12:00:00.000Z",
+        "excerpt": "Claude 更新了 TypeScript 工具链的具体工作流。",
+        "tier": "unverified",
+        "sourceName": "@claudedevs · X（Grok 整理）"
+      },
+      {
+        "id": "official:rss:https://example.com/industry.xml:https://example.com/industry-note",
+        "title": "TypeScript industry note",
+        "url": "https://example.com/industry-note",
+        "publishedAt": "2026-08-15T06:00:00.000Z",
+        "excerpt": "A documented TypeScript change published on the industry feed.",
+        "tier": "official",
+        "sourceName": "Industry Feed"
+      },
+      {
+        "id": "official:web:https://www.anthropic.com/news:https://www.anthropic.com/news/claude-tools",
+        "title": "Claude tools update",
+        "url": "https://www.anthropic.com/news/claude-tools",
+        "publishedAt": "2026-08-15T06:00:00.000Z",
+        "excerpt": "Anthropic published a TypeScript tooling change for Claude with a documented workflow update.",
+        "tier": "official",
+        "sourceName": "Anthropic News"
+      }
+    ],
+    "warnings": [],
+    "sourceAudit": {
+      "xAccounts": [
+        {
+          "handle": "claudedevs",
+          "status": "ok",
+          "acceptedCount": 1,
+          "limitReached": true,
+          "grok": {
+            "nativeTools": [
+              "x_keyword_search"
+            ],
+            "nativeCallCount": 1,
+            "rejectedResults": 0,
+            "costUsd": 0.001,
+            "totalTokens": 200,
+            "inputTokens": 80,
+            "cachedInputTokens": 100,
+            "outputTokens": 20,
+            "elapsedMs": 0
+          },
+          "searchUsage": {
+            "dailyUsed": 1,
+            "monthlyUsed": 1,
+            "dailyLimit": 4,
+            "monthlyLimit": 120,
+            "source": "network",
+            "fetchedAt": "2026-08-16T04:00:00.000Z"
+          }
+        }
+      ],
+      "industry": {
+        "counts": {
+          "fetched": 2,
+          "inWindow": 2,
+          "ranked": 2,
+          "selected": 2,
+          "researchPending": 0
+        },
+        "sources": [
+          {
+            "id": "https://example.com/industry.xml",
+            "kind": "rss",
+            "name": "Industry Feed",
+            "url": "https://example.com/industry.xml",
+            "status": "ok",
+            "itemCount": 1
+          },
+          {
+            "id": "https://www.anthropic.com/news",
+            "kind": "web-page",
+            "name": "Anthropic News",
+            "url": "https://www.anthropic.com/news",
+            "status": "ok",
+            "itemCount": 1
+          }
+        ]
+      }
+    },
+    "editorialContract": {
+      "categories": [
+        "概览/要闻",
+        "模型发布",
+        "开发生态",
+        "产品应用",
+        "行业动态",
+        "技术与洞察"
+      ],
+      "itemTarget": "No fixed item count; select meaningful changes, never fill a quota",
+      "outputShape": "Array<{category, headline, refs}>",
+      "selectionPolicy": "按用户影响筛选和排序，不设固定条数目标；优先模型能力、产品功能、研究结论、价格与安全变化，不凑数。\nCLI 和开发工具的 alpha、beta、preview、rc、nightly 若只有版本号、构建号或发布日期，直接跳过；正式版若同样没有具体变化也跳过。预发布仅在证据明确支持重要功能、安全修复或破坏性变化时保留，并标明预发布。\n同一工具的多个版本和同一份 release notes 合并成一条，只写最重要的具体变化，不拆成多条占满日报。\nheadline 直接说明主体、具体变化及其适用范围或影响，90 字以内；不能只写发布了某版本，也不能从版本号推测功能。\nrefs 必须逐字使用 evidence.id，不要使用 URL 或自行编造引用。\nX 内容经 Grok 整理，未独立核验；保留作者归属，不将个人说法改写成已确认事实。发布时间不等于事件发生时间；旧事件的新转发不能写成今日新发布。\n若全部候选都没有值得推送的变化，返回空数组 []；不要为避免空结果而选入低信息量条目。"
+    }
+  },
+  "grokInvocations": 1,
+  "rendered": {
+    "day": "2026-08-16",
+    "windowLabel": "2026-08-15 12:00–2026-08-16 12:00 +08:00",
+    "generatedAt": "2026-08-16T04:00:00.000Z",
+    "warnings": [],
+    "deliveryReceipt": {
+      "id": "daily-ai:2026-08-16T04:00:00.000Z",
+      "occurrence": "2026-08-16T04:00:00.000Z",
+      "evidenceIds": [
+        "x:2088596564997046272"
+      ],
+      "committed": false
+    },
+    "audit": {
+      "editorialIssues": []
+    },
+    "phase": "render",
+    "itemCount": 1,
+    "markdown": "# Daily AI Digest · 2026-08-16\n\n1 条 AI 动态 · 2026-08-15 12:00–2026-08-16 12:00 +08:00 · 来源可追溯 · 质量不足不凑数\n\n## 模型发布\n\n1. Claude 更新了 TypeScript 工具链 [↗ #1 · X（Grok 整理）](https://x.com/claudedevs/status/2088596564997046272)"
+  },
+  "state": {
+    "feeds.json": "[]\n",
+    "grok": "#!<node>\nconst fs = require(\"node:fs\");\nfs.appendFileSync(\"<tmp>/grok.count\", \"1\\n\");\nprocess.stdout.write(\"{\\\"type\\\":\\\"text\\\",\\\"data\\\":\\\"I will search X.\\\"}\\n{\\\"type\\\":\\\"tool_call\\\",\\\"toolCallId\\\":\\\"native\\\",\\\"rawInput\\\":{\\\"variant\\\":\\\"XSearch\\\",\\\"backend\\\":true}}\\n{\\\"type\\\":\\\"tool_call_update\\\",\\\"toolCallId\\\":\\\"native\\\",\\\"status\\\":\\\"completed\\\",\\\"rawOutput\\\":{\\\"name\\\":\\\"x_keyword_search\\\"}}\\n{\\\"type\\\":\\\"text\\\",\\\"data\\\":\\\"{\\\\\\\"posts\\\\\\\":[{\\\\\\\"url\\\\\\\":\\\\\\\"https://x.com/ClaudeDevs/status/2088596564997046272\\\\\\\",\\\\\\\"author\\\\\\\":\\\\\\\"@ClaudeDevs\\\\\\\",\\\\\\\"title\\\\\\\":\\\\\\\"Claude 更新了 TypeScript 工具链\\\\\\\",\\\\\\\"summary\\\\\\\":\\\\\\\"Claude 更新了 TypeScript 工具链的具体工作流。\\\\\\\",\\\\\\\"publishedAt\\\\\\\":\\\\\\\"2026-08-15T12:00:00.000Z\\\\\\\"}]}\\\"}\\n{\\\"type\\\":\\\"end\\\",\\\"stopReason\\\":\\\"end_turn\\\",\\\"usage\\\":{\\\"total_tokens\\\":200,\\\"input_tokens\\\":80,\\\"cache_read_input_tokens\\\":100,\\\"output_tokens\\\":20},\\\"total_cost_usd\\\":0.001}\\n\");\n",
+    "industry-sources.json": "[\n  {\n    \"name\": \"Industry Feed\",\n    \"url\": \"https://example.com/industry.xml\",\n    \"tags\": [\n      \"typescript\"\n    ]\n  },\n  {\n    \"type\": \"page\",\n    \"name\": \"Anthropic News\",\n    \"url\": \"https://www.anthropic.com/news\",\n    \"pathPrefixes\": [\n      \"/news/\"\n    ],\n    \"tags\": [\n      \"News\"\n    ]\n  }\n]\n",
+    "news-search.json": "{\"version\":1,\"timezoneOffset\":\"+08:00\",\"daily\":{\"2026-08-16\":1},\"cache\":{\"87287d3f942a201af2ab26ae746f72c78cc62beb6a73b8990ad214ee517fcd95\":{\"request\":{\"provider\":\"grok://cli/v1/default\",\"query\":\"x-account:v1:claudedevs:2026-08-15T04:00:00.000Z:2026-08-16T04:00:00.000Z\",\"count\":1,\"day\":\"2026-08-16\",\"sinceDay\":\"2026-08-15\",\"sourcePolicy\":\"news\"},\"fetchedAt\":\"2026-08-16T04:00:00.000Z\",\"page\":{\"provider\":\"grok\",\"grok\":{\"nativeTools\":[\"x_keyword_search\"],\"nativeCallCount\":1,\"elapsedMs\":0,\"rejectedResults\":0,\"costUsd\":0.001,\"totalTokens\":200,\"inputTokens\":80,\"cachedInputTokens\":100,\"outputTokens\":20},\"resultCount\":1,\"results\":[{\"id\":\"2088596564997046272\",\"title\":\"Claude 更新了 TypeScript 工具链\",\"url\":\"https://x.com/claudedevs/status/2088596564997046272\",\"rankPosition\":1,\"siteName\":\"@ClaudeDevs · X（Grok 整理）\",\"summary\":\"Claude 更新了 TypeScript 工具链的具体工作流。\",\"publishTime\":\"2026-08-15T12:00:00.000Z\",\"authInfoDescription\":\"Grok 原生 X 搜索，内容经模型整理；未独立核验作者或原文\",\"authInfoLevel\":4}]}}}}\n",
+    "news-topics.json": "[\n  {\n    \"id\": \"ai-model-releases\",\n    \"label\": \"AI 模型与 Agent 发布\",\n    \"icon\": \"🤖\",\n    \"enabled\": true,\n    \"sourcePolicy\": \"news\",\n    \"maxItems\": 2,\n    \"queries\": [\n      {\n        \"id\": \"frontier-model-release\",\n        \"text\": \"OpenAI 正式发布新模型\",\n        \"intent\": \"model-release\",\n        \"subjectAny\": [\n          \"OpenAI\"\n        ],\n        \"eventAny\": [\n          \"正式发布\"\n        ],\n        \"excludedAny\": [\n          \"传闻\"\n        ]\n      }\n    ]\n  }\n]\n",
+    "rivus/rss-summary/daily-ai/5007a1e232f26cc0cbe7b86b48802d3f6cd45d60678ad1f40ff76a875abbca1e-collect.json": "{\"occurrence\":\"2026-08-16T04:00:00.000Z\",\"phase\":\"collect\",\"result\":{\"evidence\":[{\"id\":\"x:2088596564997046272\",\"title\":\"Claude 更新了 TypeScript 工具链\",\"url\":\"https://x.com/claudedevs/status/2088596564997046272\",\"publishedAt\":\"2026-08-15T12:00:00.000Z\",\"excerpt\":\"Claude 更新了 TypeScript 工具链的具体工作流。\",\"tier\":\"unverified\",\"sourceName\":\"@claudedevs · X（Grok 整理）\"},{\"id\":\"official:rss:https://example.com/industry.xml:https://example.com/industry-note\",\"title\":\"TypeScript industry note\",\"url\":\"https://example.com/industry-note\",\"publishedAt\":\"2026-08-15T06:00:00.000Z\",\"excerpt\":\"A documented TypeScript change published on the industry feed.\",\"tier\":\"official\",\"sourceName\":\"Industry Feed\"},{\"id\":\"official:web:https://www.anthropic.com/news:https://www.anthropic.com/news/claude-tools\",\"title\":\"Claude tools update\",\"url\":\"https://www.anthropic.com/news/claude-tools\",\"publishedAt\":\"2026-08-15T06:00:00.000Z\",\"excerpt\":\"Anthropic published a TypeScript tooling change for Claude with a documented workflow update.\",\"tier\":\"official\",\"sourceName\":\"Anthropic News\"}],\"items\":[],\"audit\":{\"decisions\":[],\"editorialIssues\":[]},\"day\":\"2026-08-16\",\"windowLabel\":\"2026-08-15 12:00–2026-08-16 12:00 +08:00\",\"generatedAt\":\"2026-08-16T04:00:00.000Z\",\"warnings\":[],\"sourceAudit\":{\"xAccounts\":[{\"handle\":\"claudedevs\",\"status\":\"ok\",\"acceptedCount\":1,\"limitReached\":true,\"grok\":{\"nativeTools\":[\"x_keyword_search\"],\"nativeCallCount\":1,\"rejectedResults\":0,\"costUsd\":0.001,\"totalTokens\":200,\"inputTokens\":80,\"cachedInputTokens\":100,\"outputTokens\":20,\"elapsedMs\":0},\"searchUsage\":{\"dailyUsed\":1,\"monthlyUsed\":1,\"dailyLimit\":4,\"monthlyLimit\":120,\"source\":\"network\",\"fetchedAt\":\"2026-08-16T04:00:00.000Z\"}}],\"industry\":{\"version\":2,\"runId\":\"00000000-0000-4000-8000-000000000003\",\"product\":\"frontier\",\"generatedAt\":\"2026-08-16T04:00:00.000Z\",\"windowLabel\":\"2026-08-15T04:00:00.000Z to 2026-08-16T04:00:00.000Z\",\"sources\":[{\"id\":\"https://example.com/industry.xml\",\"kind\":\"rss\",\"name\":\"Industry Feed\",\"url\":\"https://example.com/industry.xml\",\"status\":\"ok\",\"itemCount\":1},{\"id\":\"https://www.anthropic.com/news\",\"kind\":\"web-page\",\"name\":\"Anthropic News\",\"url\":\"https://www.anthropic.com/news\",\"status\":\"ok\",\"itemCount\":1}],\"counts\":{\"fetched\":2,\"inWindow\":2,\"ranked\":2,\"selected\":2,\"researchPending\":0},\"candidates\":[{\"key\":\"publication:https://example.com/industry-note\",\"label\":\"TypeScript industry note\",\"url\":\"https://example.com/industry-note\",\"score\":50,\"depth\":\"summary\",\"presentationReasonCode\":\"interest-match\",\"presentationEvidence\":\"typescript\",\"status\":\"selected\",\"reason\":\"selected for expanded summary: interest-match (typescript)\"},{\"key\":\"publication:https://www.anthropic.com/news/claude-tools\",\"label\":\"Claude tools update\",\"url\":\"https://www.anthropic.com/news/claude-tools\",\"score\":50,\"depth\":\"summary\",\"presentationReasonCode\":\"interest-match\",\"presentationEvidence\":\"typescript\",\"status\":\"selected\",\"reason\":\"selected for expanded summary: interest-match (typescript)\"}]}},\"deliveryReceipt\":{\"id\":\"daily-ai:2026-08-16T04:00:00.000Z\",\"occurrence\":\"2026-08-16T04:00:00.000Z\",\"evidenceIds\":[],\"committed\":false}}}\n",
+    "rivus/rss-summary/daily-ai/5007a1e232f26cc0cbe7b86b48802d3f6cd45d60678ad1f40ff76a875abbca1e-render.json": "{\"occurrence\":\"2026-08-16T04:00:00.000Z\",\"phase\":\"render\",\"result\":{\"evidence\":[{\"id\":\"x:2088596564997046272\",\"title\":\"Claude 更新了 TypeScript 工具链\",\"url\":\"https://x.com/claudedevs/status/2088596564997046272\",\"publishedAt\":\"2026-08-15T12:00:00.000Z\",\"excerpt\":\"Claude 更新了 TypeScript 工具链的具体工作流。\",\"tier\":\"unverified\",\"sourceName\":\"@claudedevs · X（Grok 整理）\"},{\"id\":\"official:rss:https://example.com/industry.xml:https://example.com/industry-note\",\"title\":\"TypeScript industry note\",\"url\":\"https://example.com/industry-note\",\"publishedAt\":\"2026-08-15T06:00:00.000Z\",\"excerpt\":\"A documented TypeScript change published on the industry feed.\",\"tier\":\"official\",\"sourceName\":\"Industry Feed\"},{\"id\":\"official:web:https://www.anthropic.com/news:https://www.anthropic.com/news/claude-tools\",\"title\":\"Claude tools update\",\"url\":\"https://www.anthropic.com/news/claude-tools\",\"publishedAt\":\"2026-08-15T06:00:00.000Z\",\"excerpt\":\"Anthropic published a TypeScript tooling change for Claude with a documented workflow update.\",\"tier\":\"official\",\"sourceName\":\"Anthropic News\"}],\"items\":[{\"category\":\"模型发布\",\"headline\":\"Claude 更新了 TypeScript 工具链\",\"refs\":[\"x:2088596564997046272\"]}],\"audit\":{\"decisions\":[{\"evidenceIds\":[\"x:2088596564997046272\"],\"status\":\"selected\",\"reason\":\"selected-by-editorial-draft\"},{\"evidenceIds\":[\"official:rss:https://example.com/industry.xml:https://example.com/industry-note\"],\"status\":\"filtered\",\"reason\":\"not-selected-by-editorial-draft\"},{\"evidenceIds\":[\"official:web:https://www.anthropic.com/news:https://www.anthropic.com/news/claude-tools\"],\"status\":\"filtered\",\"reason\":\"not-selected-by-editorial-draft\"}],\"editorialIssues\":[]},\"day\":\"2026-08-16\",\"windowLabel\":\"2026-08-15 12:00–2026-08-16 12:00 +08:00\",\"generatedAt\":\"2026-08-16T04:00:00.000Z\",\"warnings\":[],\"sourceAudit\":{\"xAccounts\":[{\"handle\":\"claudedevs\",\"status\":\"ok\",\"acceptedCount\":1,\"limitReached\":true,\"grok\":{\"nativeTools\":[\"x_keyword_search\"],\"nativeCallCount\":1,\"rejectedResults\":0,\"costUsd\":0.001,\"totalTokens\":200,\"inputTokens\":80,\"cachedInputTokens\":100,\"outputTokens\":20,\"elapsedMs\":0},\"searchUsage\":{\"dailyUsed\":1,\"monthlyUsed\":1,\"dailyLimit\":4,\"monthlyLimit\":120,\"source\":\"network\",\"fetchedAt\":\"2026-08-16T04:00:00.000Z\"}}],\"industry\":{\"version\":2,\"runId\":\"00000000-0000-4000-8000-000000000003\",\"product\":\"frontier\",\"generatedAt\":\"2026-08-16T04:00:00.000Z\",\"windowLabel\":\"2026-08-15T04:00:00.000Z to 2026-08-16T04:00:00.000Z\",\"sources\":[{\"id\":\"https://example.com/industry.xml\",\"kind\":\"rss\",\"name\":\"Industry Feed\",\"url\":\"https://example.com/industry.xml\",\"status\":\"ok\",\"itemCount\":1},{\"id\":\"https://www.anthropic.com/news\",\"kind\":\"web-page\",\"name\":\"Anthropic News\",\"url\":\"https://www.anthropic.com/news\",\"status\":\"ok\",\"itemCount\":1}],\"counts\":{\"fetched\":2,\"inWindow\":2,\"ranked\":2,\"selected\":2,\"researchPending\":0},\"candidates\":[{\"key\":\"publication:https://example.com/industry-note\",\"label\":\"TypeScript industry note\",\"url\":\"https://example.com/industry-note\",\"score\":50,\"depth\":\"summary\",\"presentationReasonCode\":\"interest-match\",\"presentationEvidence\":\"typescript\",\"status\":\"selected\",\"reason\":\"selected for expanded summary: interest-match (typescript)\"},{\"key\":\"publication:https://www.anthropic.com/news/claude-tools\",\"label\":\"Claude tools update\",\"url\":\"https://www.anthropic.com/news/claude-tools\",\"score\":50,\"depth\":\"summary\",\"presentationReasonCode\":\"interest-match\",\"presentationEvidence\":\"typescript\",\"status\":\"selected\",\"reason\":\"selected for expanded summary: interest-match (typescript)\"}]}},\"deliveryReceipt\":{\"id\":\"daily-ai:2026-08-16T04:00:00.000Z\",\"occurrence\":\"2026-08-16T04:00:00.000Z\",\"evidenceIds\":[\"x:2088596564997046272\"],\"committed\":false}}}\n"
+  }
+}
