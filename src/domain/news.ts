@@ -1,5 +1,6 @@
+import { isSameTitleEvent } from "../editorial/index.js";
 import { newsPublicationRange } from "./news-time.js";
-import { canonicalizeUrl, compactSummary, isSameTitleEvent, parsePublishTime } from "./text.js";
+import { canonicalizeUrl, compactSummary, parsePublishTime } from "./text.js";
 
 export type NewsSourcePolicy = "authoritative" | "official" | "news";
 

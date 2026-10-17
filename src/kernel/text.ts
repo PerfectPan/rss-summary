@@ -51,8 +51,6 @@ export function formatCompactCount(value: number): string {
   return String(value);
 }
 
-export { isSameTitleEvent } from "../editorial/domain/identity/identity.js";
-
 function stripLeadingLiteral(value: string, literal: string | undefined): string {
   const prefix = literal?.replace(/\s+/gu, " ").trim();
   if (!prefix || !value.startsWith(prefix)) return value;
