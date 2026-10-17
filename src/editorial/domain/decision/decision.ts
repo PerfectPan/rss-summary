@@ -1,42 +1,36 @@
-import { candidateIdentity, type CandidateProject } from "./digest.js";
 import {
   presentationDecisionForCandidate,
-  type PresentationPolicy,
+  type CandidateProject,
   type PresentationDepth,
+  type PresentationPolicy,
   type PresentationReasonCode,
-} from "./attention.js";
-import type { RunCandidateDecision } from "../delivery/index.js";
+} from "../subscription/subscription.js";
 
-// Storage types moved to the delivery module; re-exported so existing imports
-// keep working during the transition.
-export type {
-  RunAudit,
-  RunCandidateDecision,
-  RunDelivery,
-  RunEditorialSelectionDecision,
-  RunProduct,
-  RunSourceResult,
-  RunPresentationDepth,
-  RunPresentationReasonCode,
-  StoredRunAudit,
-} from "../delivery/index.js";
+export type CandidateDecision = {
+  key: string;
+  label: string;
+  url?: string;
+  score: number;
+  depth: PresentationDepth;
+  presentationReasonCode?: PresentationReasonCode;
+  presentationEvidence?: string;
+  status: "selected" | "research-pending" | "filtered";
+  reason: string;
+};
 
-/**
- * Candidate decisions depend on the candidate shape and presentation depth;
- * they stay here until the editorial module owns them.
- */
-export function candidateDecision(
+export function decideCandidate(
   candidate: CandidateProject,
   selectedCandidates: CandidateProject[],
   reasonWhenFiltered: (candidate: CandidateProject) => string,
+  identify: (candidate: CandidateProject) => string,
   presentationPolicy: PresentationPolicy = {},
-): RunCandidateDecision {
+): CandidateDecision {
   const selected = selectedCandidates.includes(candidate);
   const presentation = presentationDecisionForCandidate(candidate, presentationPolicy);
   const depth: PresentationDepth = presentation.depth;
   const presentationReasonCode: PresentationReasonCode = presentation.reasonCode;
   return {
-    key: candidateIdentity(candidate),
+    key: identify(candidate),
     label: candidate.label ?? candidate.repo,
     ...(candidate.url ? { url: candidate.url } : {}),
     score: candidate.score,

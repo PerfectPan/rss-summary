@@ -7,8 +7,8 @@ import {
   validateSubscriptionEditorialDraft,
   validateSubscriptionResearch,
   validateSubscriptionSelectionDraft,
-} from "../../src/domain/subscription-editorial.js";
-import type { DigestDocument } from "../../src/domain/digest.js";
+} from "../../../../src/editorial/index.js";
+import type { DigestDocument } from "../../../../src/editorial/index.js";
 
 describe("subscription editorial contract", () => {
   it("exposes deterministic repository facts and requests summaries only for PR/RSS evidence", () => {

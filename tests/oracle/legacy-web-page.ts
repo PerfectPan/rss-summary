@@ -1,6 +1,6 @@
 import { load } from "cheerio";
 
-import type { ActivityCard } from "../../src/domain/digest.js";
+import type { ActivityCardDto as ActivityCard } from "../../src/acquisition/index.js";
 import type { WebPageSubscription } from "../../src/infrastructure/config.js";
 
 type WebPageClientOptions = {

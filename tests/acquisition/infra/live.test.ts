@@ -30,7 +30,7 @@ describe("AcquisitionLive", () => {
         AcquisitionLive({ fetch: fetchImpl }),
       ),
     );
-    expect(result.events).toEqual([
+    expect(result.events.map((entry) => entry.card)).toEqual([
       expect.objectContaining({ title: "Note", source: "rss", type: "article" }),
     ]);
     expect(result.feeds).toEqual([]);

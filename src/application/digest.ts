@@ -2,22 +2,26 @@ import { randomUUID } from "node:crypto";
 import { Effect } from "effect";
 
 import {
-  buildCandidateProjects,
-  selectResearchCandidates,
-  type ActivityCard,
-  type CandidateProject,
-  type DigestDocument,
-  type RepositoryMetadata,
-} from "../domain/digest.js";
-import { isWithinEventWindow, resolveEventWindow } from "../domain/time.js";
-import { candidateDecision, type RunAudit, type RunSourceResult } from "../domain/run-audit.js";
-import { loadConfig, type AppConfig } from "../infrastructure/config.js";
-import {
+  applyScoringContext,
   AcquisitionLive,
   GitHubActivity,
   GitHubCatalog,
   collectRssFeeds,
+  refreshRouting,
+  type Acquired,
+  type ActivityCardDto,
+  type RepositoryMetadata,
 } from "../acquisition/index.js";
+import {
+  candidateDecision,
+  scoreAcquired,
+  selectResearchCandidates,
+  type CandidateProject,
+  type DigestDocument,
+} from "../editorial/index.js";
+import { isWithinEventWindow, resolveEventWindow } from "../domain/time.js";
+import type { RunAudit, RunSourceResult } from "../delivery/index.js";
+import { loadConfig, type AppConfig } from "../infrastructure/config.js";
 import {
   deliver,
   DeliveryLive,
@@ -91,8 +95,8 @@ async function collectDigest(
   ]);
   const githubEvents = githubResult.status === "fulfilled" ? githubResult.value : [];
   const rssCollection =
-    rssResult.status === "fulfilled" ? rssResult.value : { events: [], sources: [] };
-  const rssEvents = rssCollection.events;
+    rssResult.status === "fulfilled" ? rssResult.value : { acquired: [], sources: [] };
+  const rssEvents = rssCollection.acquired;
   if (githubResult.status === "rejected") {
     console.error(
       `GitHub feed unavailable; continuing with RSS events: ${errorMessage(githubResult.reason)}`,
@@ -104,9 +108,10 @@ async function collectDigest(
     );
   }
   const eventWindow = resolveEventWindow(config);
-  const events = [...githubEvents, ...rssEvents].filter((event) =>
-    isWithinEventWindow(event, eventWindow),
+  const acquired = [...githubEvents, ...rssEvents].filter((entry) =>
+    isWithinEventWindow(entry.card, eventWindow),
   );
+  const events = acquired.map((entry) => entry.card);
 
   const followees =
     config.token && !config.rssOnly ? await fetchFollowees(config) : new Set<string>();
@@ -117,11 +122,12 @@ async function collectDigest(
     await enrichPullRequests(config, events);
   }
 
-  const rankedCandidates = buildCandidateProjects(events, {
-    followees,
-    interests: config.interests,
-    repositories,
-  });
+  const rankedCandidates = scoreAcquired(
+    acquired.map((entry) =>
+      applyScoringContext(refreshRouting(entry), { followees, repositories }),
+    ),
+    { interests: config.interests, now: Date.now() },
+  );
   const allCandidates = selectResearchCandidates(rankedCandidates, config.maxPapers);
   const state = loadFeedState(config.stateFile);
   const candidates = config.onlyNew
@@ -196,9 +202,7 @@ function runAcquisition<A, E, R>(config: AppConfig, effect: Effect.Effect<A, E, 
   return Effect.runPromise(Effect.provide(effect, acquisition(config)) as Effect.Effect<A, E>);
 }
 
-function fetchGithubEvents(
-  config: AppConfig,
-): Effect.Effect<ActivityCard[], Error, GitHubActivity> {
+function fetchGithubEvents(config: AppConfig): Effect.Effect<Acquired[], Error, GitHubActivity> {
   return Effect.gen(function* () {
     const github = yield* GitHubActivity;
     if (config.githubFeedSource === "home") return yield* github.getHomeEvents();
@@ -211,7 +215,7 @@ function fetchGithubEvents(
 
 function fetchRepositoryMetadata(
   config: AppConfig,
-  events: ActivityCard[],
+  events: ActivityCardDto[],
   maxRepos: number,
 ): Promise<Map<string, RepositoryMetadata>> {
   const names = [
@@ -258,7 +262,7 @@ async function fetchFollowees(config: AppConfig): Promise<Set<string>> {
   }
 }
 
-async function enrichPullRequests(config: AppConfig, events: ActivityCard[]): Promise<void> {
+async function enrichPullRequests(config: AppConfig, events: ActivityCardDto[]): Promise<void> {
   const pullRequests = events
     .filter((event) => event.type === "pull_request" && event.prNumber)
     .slice(0, 20);

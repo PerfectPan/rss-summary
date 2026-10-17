@@ -1,6 +1,7 @@
 import { Effect, Layer } from "effect";
 
-import { normalizeEvent } from "../domain/item/adapters/github-event.js";
+import { acquireGitHubEvent } from "../domain/item/adapters/github-event.js";
+import { acquireActivityCard } from "../domain/item/adapters/scoring-trace.js";
 import type { GithubHomeClientOptions } from "./adapters/github-home-browser.js";
 import { GitHubHomeClient } from "./adapters/github-home-browser.js";
 import { GitHubClient, type PaginationOptions } from "./adapters/github-rest.js";
@@ -30,7 +31,11 @@ export const RssFeedLive = (options: RssClientOptions = {}): Layer.Layer<RssFeed
   const client = new RssClient(options);
   return Layer.succeed(RssFeed, {
     getFeedEvents: (feed) =>
-      Effect.tryPromise({ try: () => client.getFeedEvents(feed), catch: asError }),
+      Effect.tryPromise({
+        try: async () =>
+          (await client.getFeedEvents(feed)).map((card) => acquireActivityCard(card)),
+        catch: asError,
+      }),
   });
 };
 
@@ -38,7 +43,10 @@ export const WebPageLive = (options: WebPageClientOptions = {}): Layer.Layer<Web
   const client = new WebPageClient(options);
   return Layer.succeed(WebPage, {
     getEvents: (source) =>
-      Effect.tryPromise({ try: () => client.getEvents(source), catch: asError }),
+      Effect.tryPromise({
+        try: async () => (await client.getEvents(source)).map((card) => acquireActivityCard(card)),
+        catch: asError,
+      }),
   });
 };
 
@@ -51,21 +59,25 @@ export const GitHubActivityLive = (options: {
   return Layer.succeed(GitHubActivity, {
     getHomeEvents: () =>
       Effect.tryPromise({
-        try: () => {
+        try: async () => {
           if (!options.githubHome) {
-            return Promise.reject(
-              new Error(
-                "GitHub Home storage state not found: . Run 'rss-summary github-home login' first.",
-              ),
+            throw new Error(
+              "GitHub Home storage state not found: . Run 'rss-summary github-home login' first.",
             );
           }
-          return new GitHubHomeClient(options.githubHome).getHomeEvents();
+          return (await new GitHubHomeClient(options.githubHome).getHomeEvents()).map((card) =>
+            acquireActivityCard(card),
+          );
         },
         catch: asError,
       }),
     getReceivedEvents: (username: string, pagination: PaginationOptions) =>
       Effect.tryPromise({
-        try: async () => (await github.getReceivedEvents(username, pagination)).map(normalizeEvent),
+        try: async () =>
+          (await github.getReceivedEvents(username, pagination)).map((event) => {
+            const acquired = acquireGitHubEvent(event);
+            return acquireActivityCard(acquired.card);
+          }),
         catch: asError,
       }),
   });

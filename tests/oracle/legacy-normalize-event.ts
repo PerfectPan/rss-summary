@@ -1,4 +1,4 @@
-import type { ActivityCard } from "../../src/domain/digest.js";
+import type { ActivityCardDto as ActivityCard } from "../../src/acquisition/index.js";
 import { asRecord } from "../../src/domain/record.js";
 
 type RawEvent = {

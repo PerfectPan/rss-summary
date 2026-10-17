@@ -32,6 +32,9 @@ describe("architecture boundaries", () => {
     expect(violations.filter((violation) => violation.file.startsWith("src/acquisition/"))).toEqual(
       [],
     );
+    expect(violations.filter((violation) => violation.file.startsWith("src/editorial/"))).toEqual(
+      [],
+    );
   });
 
   it("accepts a legal import graph", () => {

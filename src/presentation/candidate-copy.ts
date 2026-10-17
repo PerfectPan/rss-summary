@@ -1,5 +1,4 @@
-import type { CandidateProject } from "../domain/digest.js";
-import { repositoryFactsForCandidate } from "../domain/subscription-editorial.js";
+import { repositoryFactsForCandidate, type CandidateProject } from "../editorial/index.js";
 
 export type CandidateCopy = {
   facts: string[];

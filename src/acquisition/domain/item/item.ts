@@ -44,7 +44,7 @@ export type Item = {
       lastActiveAt?: string;
     };
   };
-  content: { title?: string; excerpt?: string; url?: string };
+  content: { title?: string; excerpt?: string; url?: string; keywords?: string[] };
   publishedAt: { value: string; precision: TimePrecision };
   provenance: {
     origin: string;
@@ -55,4 +55,36 @@ export type Item = {
   signals: ReadonlyArray<{ type: SignalType; label: string }>;
   rank?: { position: number; score?: number };
   display: { label?: string; reference?: string; facts: string[] };
+  /**
+   * Opaque grouping and pass-through values written by adapters.
+   * Editorial compares and copies them; it does not parse them.
+   */
+  routing?: ItemRouting;
+};
+
+export type ItemRouting = {
+  groupKey: string;
+  channel: string;
+  channelRank: number;
+  contentResearch: boolean;
+  feedPrefix: string;
+  sitePrefix: string;
+  catalogResearchKey: string;
+  role: "publication" | "change" | "other";
+  titleLabel?: string;
+  prSuffix?: string;
+  strippedRepo: string;
+  directUrl?: string;
+  description?: string;
+  fallbackUrl: string;
+  /** Pass-through repository record. Key order is the adapter's. */
+  record?: {
+    fullName: string;
+    htmlUrl: string;
+    description: string | null;
+    language: string | null;
+    stargazersCount: number;
+    topics: string[];
+    pushedAt: string | null;
+  };
 };

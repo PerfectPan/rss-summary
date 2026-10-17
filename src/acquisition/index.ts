@@ -11,6 +11,14 @@ export type {
 } from "./domain/item/adapters/activity-card.js";
 export { publicationAcquired } from "./domain/item/adapters/activity-card.js";
 export {
+  acquireActivityCard,
+  activityGroupKey,
+  applyScoringContext,
+  projectActivity,
+  refreshRouting,
+  type ScoringContext,
+} from "./domain/item/adapters/scoring-trace.js";
+export {
   acquireGitHubEvent,
   decodeGitHubEvent,
   itemFromGitHubCard,

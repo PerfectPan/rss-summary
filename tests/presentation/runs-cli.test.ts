@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vite-plus/test";
 
-import type { RunAudit } from "../../src/domain/run-audit.js";
+import type { RunAudit } from "../../src/delivery/index.js";
 import { runArtifactLabel, saveRunArtifact } from "../../src/infrastructure/run-store.js";
 import { runRunsCommand } from "../../src/presentation/runs-cli.js";
 

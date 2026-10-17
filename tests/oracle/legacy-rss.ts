@@ -1,7 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
 import he from "he";
 
-import type { ActivityCard } from "../../src/domain/digest.js";
+import type { ActivityCardDto as ActivityCard } from "../../src/acquisition/index.js";
 import type { FeedSubscription } from "../../src/infrastructure/config.js";
 import { asRecord } from "../../src/infrastructure/parsing.js";
 

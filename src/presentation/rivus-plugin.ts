@@ -11,7 +11,7 @@ import {
   type RivusNewsBriefOutput,
   type RivusNewsBriefResult,
 } from "../application/news-brief.js";
-import { dailyAiCategories } from "../domain/daily-ai.js";
+import { dailyAiCategories } from "../editorial/index.js";
 import { generateRivusIndustryBrief, type RivusIndustryBriefResult } from "./rivus-industry.js";
 import type { RivusDigestResult } from "./rivus-digest.js";
 import { renderNewsBrief } from "./news-render.js";

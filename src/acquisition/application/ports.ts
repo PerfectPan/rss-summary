@@ -3,7 +3,7 @@ import { Context, Effect } from "effect";
 import type { BudgetLimits, BudgetState, SearchBudget } from "../domain/budget/search-budget.js";
 import type { GrokRequest } from "../domain/item/adapters/grok.js";
 import type {
-  ActivityCardDto,
+  Acquired,
   PullRequestDetails,
   RepositoryMetadata,
 } from "../domain/item/adapters/activity-card.js";
@@ -18,14 +18,14 @@ export type PaginationOptions = {
 export class RssFeed extends Context.Service<
   RssFeed,
   {
-    readonly getFeedEvents: (feed: FeedSubscription) => Effect.Effect<ActivityCardDto[], Error>;
+    readonly getFeedEvents: (feed: FeedSubscription) => Effect.Effect<Acquired[], Error>;
   }
 >()("rss-summary/acquisition/RssFeed/v1") {}
 
 export class WebPage extends Context.Service<
   WebPage,
   {
-    readonly getEvents: (source: WebPageSubscription) => Effect.Effect<ActivityCardDto[], Error>;
+    readonly getEvents: (source: WebPageSubscription) => Effect.Effect<Acquired[], Error>;
   }
 >()("rss-summary/acquisition/WebPage/v1") {}
 
@@ -33,11 +33,11 @@ export class WebPage extends Context.Service<
 export class GitHubActivity extends Context.Service<
   GitHubActivity,
   {
-    readonly getHomeEvents: () => Effect.Effect<ActivityCardDto[], Error>;
+    readonly getHomeEvents: () => Effect.Effect<Acquired[], Error>;
     readonly getReceivedEvents: (
       username: string,
       pagination: PaginationOptions,
-    ) => Effect.Effect<ActivityCardDto[], Error>;
+    ) => Effect.Effect<Acquired[], Error>;
   }
 >()("rss-summary/acquisition/GitHubActivity/v1") {}
 

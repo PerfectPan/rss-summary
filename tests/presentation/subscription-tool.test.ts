@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import type { DigestDocument } from "../../src/domain/digest.js";
+import type { DigestDocument } from "../../src/editorial/index.js";
 import { createRivusSubscriptionExecutor } from "../../src/presentation/subscription-tool.js";
 
 describe("subscription Tool editorial workflow", () => {

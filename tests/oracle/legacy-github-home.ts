@@ -4,7 +4,7 @@ import { createInterface } from "node:readline/promises";
 
 import { load } from "cheerio";
 
-import type { ActivityCard, ActivityType } from "../../src/domain/digest.js";
+import type { ActivityCardDto as ActivityCard, ActivityType } from "../../src/acquisition/index.js";
 import { asRecordOrNull } from "../../src/infrastructure/parsing.js";
 
 export type HomeFeedLinkSnapshot = {

@@ -25,6 +25,7 @@ const coveredBySibling = new Map([
   ["infrastructure/daily-ai-diagnostics", "delivery/infra/repository/diagnostics-file"],
   // Declaration-only or assembly modules inside delivery.
   ["delivery/index", "delivery use-case and repository tests"],
+  ["editorial/index", "editorial domain tests"],
   ["delivery/application/ports", "delivery use-case tests"],
   ["delivery/infra/models/feed-state", "delivery/infra/repository/feed-state-file"],
 ]);
@@ -40,6 +41,7 @@ const layers = [
   "reading",
   "delivery",
   "acquisition",
+  "editorial",
 ];
 
 function listTs(dir) {

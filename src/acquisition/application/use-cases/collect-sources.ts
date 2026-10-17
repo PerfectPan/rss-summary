@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 
 import { errorMessage } from "../../../kernel/text.js";
-import type { ActivityCardDto } from "../../domain/item/adapters/activity-card.js";
+import type { Acquired } from "../../domain/item/adapters/activity-card.js";
 import {
   isWebPageSource,
   type FeedSubscription,
@@ -21,12 +21,12 @@ export type SourceHealth = {
 };
 
 export type SourceCollection = {
-  events: ActivityCardDto[];
+  acquired: Acquired[];
   sources: SourceHealth[];
 };
 
 type Collected = {
-  events: ActivityCardDto[];
+  acquired: Acquired[];
   source: SourceHealth;
 };
 
@@ -40,8 +40,8 @@ export const collectRssFeeds = (
       (feed) =>
         Effect.result(
           Effect.gen(function* () {
-            const events = yield* rss.getFeedEvents(feed);
-            return collected(feed, "rss", events);
+            const acquired = yield* rss.getFeedEvents(feed);
+            return collected(feed, "rss", acquired);
           }),
         ),
       { concurrency: "unbounded" },
@@ -64,8 +64,8 @@ export const collectIndustrySources = (
           : rss.getFeedEvents(source);
         return Effect.result(
           Effect.gen(function* () {
-            const events = yield* fetched;
-            return collected(source, kind, events);
+            const acquired = yield* fetched;
+            return collected(source, kind, acquired);
           }),
         );
       },
@@ -83,17 +83,17 @@ export const collectIndustrySources = (
 function collected(
   source: { name: string; url: string },
   kind: SourceHealth["kind"],
-  events: ActivityCardDto[],
+  acquired: Acquired[],
 ): Collected {
   return {
-    events,
+    acquired,
     source: {
       id: source.url,
       kind,
       name: source.name,
       url: source.url,
       status: "ok",
-      itemCount: events.length,
+      itemCount: acquired.length,
     },
   };
 }
@@ -105,7 +105,7 @@ function settle(
 ): Collected {
   if (result._tag === "Success") return result.success;
   return {
-    events: [],
+    acquired: [],
     source: {
       id: source.url,
       kind,
@@ -120,7 +120,7 @@ function settle(
 
 function combine(results: Collected[]): SourceCollection {
   return {
-    events: results.flatMap((result) => result.events),
+    acquired: results.flatMap((result) => result.acquired),
     sources: results.map((result) => result.source),
   };
 }

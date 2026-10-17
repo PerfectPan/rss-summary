@@ -2,6 +2,7 @@ import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 
 import { RssFeed, WebPage } from "../../../../src/acquisition/application/ports.js";
+import { acquireActivityCard } from "../../../../src/acquisition/domain/item/adapters/scoring-trace.js";
 import {
   collectIndustrySources,
   collectRssFeeds,
@@ -14,14 +15,14 @@ describe("source collection", () => {
         feed.name === "Broken"
           ? Effect.fail(new Error("timeout"))
           : Effect.succeed([
-              {
+              acquireActivityCard({
                 id: "rss:ok:1",
                 type: "article" as const,
                 source: "rss" as const,
                 actor: feed.name,
                 repo: "rss:https://example.com/post",
                 createdAt: "2026-08-09T00:00:00.000Z",
-              },
+              }),
             ]),
     });
     const collection = await Effect.runPromise(
@@ -34,7 +35,7 @@ describe("source collection", () => {
       ),
     );
 
-    expect(collection.events).toHaveLength(1);
+    expect(collection.acquired).toHaveLength(1);
     expect(collection.sources).toEqual([
       expect.objectContaining({ name: "Good", status: "ok", itemCount: 1 }),
       expect.objectContaining({ name: "Broken", status: "failed", error: "timeout" }),
@@ -63,14 +64,14 @@ describe("source collection", () => {
       Layer.succeed(RssFeed, {
         getFeedEvents: (feed) =>
           Effect.succeed([
-            {
+            acquireActivityCard({
               id: `rss:${feed.url}:1`,
               type: "article" as const,
               source: "rss" as const,
               actor: feed.name,
               repo: `rss:${feed.url}:1`,
               createdAt: "2026-08-12T00:00:00Z",
-            },
+            }),
           ]),
       }),
       Layer.succeed(WebPage, {
@@ -93,7 +94,7 @@ describe("source collection", () => {
       ),
     );
 
-    expect(collection.events).toHaveLength(1);
+    expect(collection.acquired).toHaveLength(1);
     expect(collection.sources).toEqual([
       expect.objectContaining({ name: "Working RSS", kind: "rss", status: "ok" }),
       expect.objectContaining({
