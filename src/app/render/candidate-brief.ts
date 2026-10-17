@@ -2,7 +2,7 @@ import {
   selectCandidatePresentationSections,
   subscriptionEvidenceId,
   type CandidateProject,
-} from "../editorial/index.js";
+} from "../../editorial/index.js";
 import { candidateCopy } from "./candidate-copy.js";
 
 export type CandidateBriefOptions = {

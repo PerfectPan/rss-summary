@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { renderJsonDigest, renderMarkdownDigest } from "../../src/presentation/render.js";
+import { renderJsonDigest, renderMarkdownDigest } from "../../../src/app/render/render.js";
 
 describe("markdown digest renderer", () => {
   it("renders a concise project-focused digest", () => {

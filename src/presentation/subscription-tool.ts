@@ -15,7 +15,7 @@ import {
   type CollectedRivusDigest,
   type RivusDigestResult,
 } from "./rivus-digest.js";
-import { renderMarkdownDigest } from "./render.js";
+import { renderMarkdownDigest } from "../app/render/render.js";
 
 export type RivusSubscriptionToolResult =
   | {

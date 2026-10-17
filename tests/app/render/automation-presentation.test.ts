@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { createRssAutomationPresentation } from "../../src/presentation/automation-presentation.js";
+import { createRssAutomationPresentation } from "../../../src/app/render/automation-presentation.js";
 
 describe("rss Automation presentation", () => {
   it("preserves Daily AI categories and turns inline badges into sources", () => {

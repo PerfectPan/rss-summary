@@ -6,7 +6,7 @@ import type { DigestDocument } from "../editorial/index.js";
 import type { AppConfig } from "../infrastructure/config.js";
 import { loadConfig } from "../infrastructure/config.js";
 import { buildDigestDocument } from "../application/digest.js";
-import { renderMarkdownDigest } from "./render.js";
+import { renderMarkdownDigest } from "../app/render/render.js";
 import { calendarDayAtOffset, shiftCalendarDay } from "../domain/time.js";
 
 export type RivusDigestInput = {

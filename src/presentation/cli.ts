@@ -5,8 +5,11 @@ import { fileURLToPath } from "node:url";
 import { runCliEffect } from "../app/runtime.js";
 import { run as runDigest } from "../application/digest.js";
 import { runIndustry } from "../application/industry-brief.js";
-import { renderJsonDigest, renderMarkdownDigest } from "./render.js";
-import { renderJsonIndustryBrief, renderMarkdownIndustryBrief } from "./industry-render.js";
+import { renderJsonDigest, renderMarkdownDigest } from "../app/render/render.js";
+import {
+  renderJsonIndustryBrief,
+  renderMarkdownIndustryBrief,
+} from "../app/render/industry-render.js";
 import { runFeedsCommand } from "./feeds-cli.js";
 import { runGithubHomeCommand } from "./github-home-cli.js";
 import { runResearchCommand } from "./research-cli.js";

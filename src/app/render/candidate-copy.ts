@@ -1,4 +1,4 @@
-import { repositoryFactsForCandidate, type CandidateProject } from "../editorial/index.js";
+import { repositoryFactsForCandidate, type CandidateProject } from "../../editorial/index.js";
 
 export type CandidateCopy = {
   facts: string[];

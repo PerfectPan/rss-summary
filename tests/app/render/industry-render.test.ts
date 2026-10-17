@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import type { IndustryBriefDocument } from "../../src/application/industry-brief.js";
+import type { IndustryBriefDocument } from "../../../src/application/industry-brief.js";
 import {
   renderJsonIndustryBrief,
   renderMarkdownIndustryBrief,
-} from "../../src/presentation/industry-render.js";
+} from "../../../src/app/render/industry-render.js";
 
 describe("industry brief render", () => {
   it("renders the card header and ranked candidates", () => {

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import type { SelectedNewsStory } from "../../src/editorial/index.js";
-import { renderNewsBrief } from "../../src/presentation/news-render.js";
+import type { SelectedNewsStory } from "../../../src/editorial/index.js";
+import { renderNewsBrief } from "../../../src/app/render/news-render.js";
 
-describe("presentation/news-render", () => {
+describe("app/render/news-render", () => {
   it("renders noon edition headers and omits empty topic sections", () => {
     const stories: SelectedNewsStory[] = [
       {

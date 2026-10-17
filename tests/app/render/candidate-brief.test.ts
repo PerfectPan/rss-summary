@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { renderCandidateBrief } from "../../src/presentation/candidate-brief.js";
+import { renderCandidateBrief } from "../../../src/app/render/candidate-brief.js";
 
 describe("candidate brief", () => {
   it("separates expanded and one-line candidates", () => {

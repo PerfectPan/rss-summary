@@ -1,7 +1,7 @@
 import { generateDailyAiDigest, type DailyAiDigestResult } from "../application/daily-ai-digest.js";
 import { createDailyAiDeliveryReceipt, saveDailyAiDiagnostics } from "../delivery/index.js";
 import { buildDailyAiDigest, dailyAiCategories } from "../editorial/index.js";
-import { renderDailyAiDigest } from "./daily-ai-render.js";
+import { renderDailyAiDigest } from "../app/render/daily-ai-render.js";
 
 export const dailyAiEditorialPolicy = [
   "按用户影响筛选和排序，不设固定条数目标；优先模型能力、产品功能、研究结论、价格与安全变化，不凑数。",

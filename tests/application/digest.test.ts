@@ -83,7 +83,7 @@ describe("digest source isolation", () => {
 
     const { run } = await import("../../src/application/digest.js");
     const { renderMarkdownDigest, renderJsonDigest } =
-      await import("../../src/presentation/render.js");
+      await import("../../src/app/render/render.js");
 
     try {
       await Effect.runPromise(

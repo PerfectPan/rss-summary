@@ -17,7 +17,7 @@ import {
   NewsSearchError,
   type NewsSearchInput,
 } from "../../src/acquisition/index.js";
-import { renderNewsBrief } from "../../src/presentation/news-render.js";
+import { renderNewsBrief } from "../../src/app/render/news-render.js";
 
 function withNewsMarkdown(result: RivusNewsBriefResult) {
   return {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { candidateCopy } from "../../src/presentation/candidate-copy.js";
+import { candidateCopy } from "../../../src/app/render/candidate-copy.js";
 
 describe("candidate copy", () => {
   it("builds a compact sentence and bounded summary from a feed item", () => {

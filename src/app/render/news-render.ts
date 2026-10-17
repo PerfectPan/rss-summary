@@ -3,7 +3,7 @@ import type {
   NewsSourceStatus,
   NewsTopic,
   SelectedNewsStory,
-} from "../editorial/index.js";
+} from "../../editorial/index.js";
 import { displayTime, markdownLinkText } from "./markdown.js";
 
 export type { NewsBriefEdition };

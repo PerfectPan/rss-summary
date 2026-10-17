@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { renderDailyAiDigest } from "../../src/presentation/daily-ai-render.js";
+import { renderDailyAiDigest } from "../../../src/app/render/daily-ai-render.js";
 
 describe("Daily AI digest renderer", () => {
   it("renders source links as inline badges without a repeated source section", () => {

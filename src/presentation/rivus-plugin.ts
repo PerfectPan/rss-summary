@@ -14,7 +14,7 @@ import {
 import { dailyAiCategories } from "../editorial/index.js";
 import { generateRivusIndustryBrief, type RivusIndustryBriefResult } from "./rivus-industry.js";
 import type { RivusDigestResult } from "./rivus-digest.js";
-import { renderNewsBrief } from "./news-render.js";
+import { renderNewsBrief } from "../app/render/news-render.js";
 import { createRivusSubscriptionExecutor } from "./subscription-tool.js";
 import {
   createRivusDailyAiDigestExecutor,
@@ -25,7 +25,7 @@ import { createArticleResearchExecutor, type RivusArticleResearchResult } from "
 import {
   createRssAutomationPresentation,
   type RssAutomationPresentation,
-} from "./automation-presentation.js";
+} from "../app/render/automation-presentation.js";
 
 export const RSS_SUMMARY_TOOL_ID = "rss-summary/generate-digest";
 export const RSS_SUMMARY_NEWS_TOOL_ID = "rss-summary/generate-news-brief";

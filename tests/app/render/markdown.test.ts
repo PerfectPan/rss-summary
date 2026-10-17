@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { displayTime, formatStarCount, markdownLinkText } from "../../src/presentation/markdown.js";
+import {
+  displayTime,
+  formatStarCount,
+  markdownLinkText,
+} from "../../../src/app/render/markdown.js";
 
-describe("presentation/markdown", () => {
+describe("app/render/markdown", () => {
   it("escapes link text and formats stars and clock times", () => {
     expect(markdownLinkText("a[b]\\c")).toBe("a\\[b\\]\\\\c");
     expect(formatStarCount(1_500)).toBe("1.5k");

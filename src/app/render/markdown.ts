@@ -1,4 +1,4 @@
-import { formatCompactCount } from "../domain/text.js";
+import { formatCompactCount } from "../../kernel/index.js";
 
 export function markdownLinkText(value: string): string {
   return value.replace(/([\\[\]])/gu, "\\$1");

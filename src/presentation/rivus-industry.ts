@@ -7,7 +7,7 @@ import { calendarDayAtOffset } from "../domain/time.js";
 import type { RunAudit } from "../delivery/index.js";
 import type { AppConfig } from "../infrastructure/config.js";
 import { loadConfig } from "../infrastructure/config.js";
-import { renderMarkdownIndustryBrief } from "./industry-render.js";
+import { renderMarkdownIndustryBrief } from "../app/render/industry-render.js";
 
 export type RivusIndustryBriefInput = {
   day?: string;
