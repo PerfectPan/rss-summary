@@ -1,6 +1,7 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Effect } from "effect";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { collectXAccountPosts } from "../../../src/acquisition/infra/x-account-posts.js";
@@ -49,9 +50,8 @@ async function fixture() {
 describe("X account subscriptions", () => {
   it("collects original and quote commentary once per normalized account without news filtering", async () => {
     const { search, dependencies } = await fixture();
-    const result = await collectXAccountPosts(
-      { ...input, handles: ["@ClaudeDevs", "claudedevs"] },
-      dependencies,
+    const result = await Effect.runPromise(
+      collectXAccountPosts({ ...input, handles: ["@ClaudeDevs", "claudedevs"] }, dependencies),
     );
     expect(search).toHaveBeenCalledTimes(1);
     expect(search.mock.calls[0]?.[0]).toMatchObject({ handle: "claudedevs", since, until });
@@ -68,11 +68,13 @@ describe("X account subscriptions", () => {
 
   it("reuses the same window without another charged attempt, but refreshes a later window", async () => {
     const { search, dependencies } = await fixture();
-    await collectXAccountPosts(input, dependencies);
-    const replay = await collectXAccountPosts(input, dependencies);
+    await Effect.runPromise(collectXAccountPosts(input, dependencies));
+    const replay = await Effect.runPromise(collectXAccountPosts(input, dependencies));
     expect(search).toHaveBeenCalledTimes(1);
     expect(replay.audit[0]?.searchUsage).toMatchObject({ source: "cache", dailyUsed: 1 });
-    await collectXAccountPosts({ ...input, until: "2026-10-14T01:01:00.000Z" }, dependencies);
+    await Effect.runPromise(
+      collectXAccountPosts({ ...input, until: "2026-10-14T01:01:00.000Z" }, dependencies),
+    );
     expect(search).toHaveBeenCalledTimes(2);
   });
 
@@ -89,8 +91,10 @@ describe("X account subscriptions", () => {
       cacheTtlMs: 60_000,
       now,
     });
-    await news({ query: "AI announcements", count: 10, day: "2026-10-14", sourcePolicy: "news" });
-    const result = await collectXAccountPosts(input, dependencies);
+    await Effect.runPromise(
+      news({ query: "AI announcements", count: 10, day: "2026-10-14", sourcePolicy: "news" }),
+    );
+    const result = await Effect.runPromise(collectXAccountPosts(input, dependencies));
     expect(search).not.toHaveBeenCalled();
     expect(result).toEqual({
       posts: [],
@@ -108,9 +112,8 @@ describe("X account subscriptions", () => {
   it("records failed attempts without retries or refund and continues other accounts", async () => {
     const { env, search, dependencies } = await fixture();
     search.mockRejectedValueOnce(new NewsSearchError("grok_cli_failed", "private output"));
-    const result = await collectXAccountPosts(
-      { ...input, handles: ["ClaudeDevs", "OpenAI"] },
-      dependencies,
+    const result = await Effect.runPromise(
+      collectXAccountPosts({ ...input, handles: ["ClaudeDevs", "OpenAI"] }, dependencies),
     );
     expect(search).toHaveBeenCalledTimes(2);
     expect(result.audit.map(({ status }) => status)).toEqual(["failed", "ok"]);
@@ -123,15 +126,17 @@ describe("X account subscriptions", () => {
   it("reports a saturated retrieval rather than claiming a complete timeline", async () => {
     const { env, dependencies } = await fixture();
     Object.assign(env, { X_ACCOUNT_POSTS_PER_FETCH: "1" });
-    const result = await collectXAccountPosts(input, dependencies);
+    const result = await Effect.runPromise(collectXAccountPosts(input, dependencies));
     expect(result.audit[0]?.limitReached).toBe(true);
   });
 
   it("does not require Grok configuration when disabled", async () => {
     expect(
-      await collectXAccountPosts(
-        { ...input, handles: [] },
-        { env: { NEWS_GROK_MODEL: "invalid/model" } },
+      await Effect.runPromise(
+        collectXAccountPosts(
+          { ...input, handles: [] },
+          { env: { NEWS_GROK_MODEL: "invalid/model" } },
+        ),
       ),
     ).toEqual({ posts: [], audit: [] });
   });
@@ -140,7 +145,9 @@ describe("X account subscriptions", () => {
     "rejects invalid subscription input before consuming budget",
     async (change) => {
       const { env, search, dependencies } = await fixture();
-      await expect(collectXAccountPosts({ ...input, ...change }, dependencies)).rejects.toThrow();
+      await expect(
+        Effect.runPromise(collectXAccountPosts({ ...input, ...change }, dependencies)),
+      ).rejects.toThrow();
       expect(search).not.toHaveBeenCalled();
       await expect(readFile(env.NEWS_SEARCH_STATE_FILE)).rejects.toMatchObject({ code: "ENOENT" });
     },

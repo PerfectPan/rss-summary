@@ -1,5 +1,6 @@
 import { Effect } from "effect";
 
+import { runPluginEffect } from "../app/runtime.js";
 import { buildIndustryDocument, type IndustryBriefDocument } from "./industry-brief.js";
 import { createDailyAiDeliveryReceipt, type DailyAiDeliveryReceipt } from "../delivery/index.js";
 import { collectXAccountPosts, type XAccountPosts } from "../acquisition/index.js";
@@ -31,7 +32,10 @@ export type DailyAiWindow = { since: string; until: string };
 type DailyAiDigestDependencies = {
   env?: NodeJS.ProcessEnv;
   industry?: (window: DailyAiWindow, env: NodeJS.ProcessEnv) => Promise<IndustryBriefDocument>;
-  xAccounts?: typeof collectXAccountPosts;
+  xAccounts?: (
+    value: { since: string; until: string; handles: string[] },
+    options: { env: NodeJS.ProcessEnv; now?: () => Date },
+  ) => Promise<XAccountPosts>;
   now?: () => Date;
   draft?: unknown;
 };
@@ -55,10 +59,13 @@ export async function generateDailyAiDigest(
     .split(",")
     .map((handle) => handle.trim())
     .filter(Boolean);
-  const xAccounts = await (dependencies.xAccounts ?? collectXAccountPosts)(
-    { ...window, handles },
-    { env, now: dependencies.now },
-  );
+  const xAccounts = await (
+    dependencies.xAccounts ??
+    ((
+      value: Parameters<typeof collectXAccountPosts>[0],
+      options: Parameters<typeof collectXAccountPosts>[1],
+    ) => runPluginEffect(collectXAccountPosts(value, options)))
+  )({ ...window, handles }, { env, now: dependencies.now });
   const official = await (dependencies.industry ?? defaultIndustry)(window, env);
   const evidence = xEvidence(xAccounts)
     .concat(industryEvidence(official.candidates))

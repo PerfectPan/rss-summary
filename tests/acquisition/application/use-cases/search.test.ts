@@ -1,10 +1,7 @@
 import { Effect } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 
-import {
-  settleSearchRequests,
-  settleSearches,
-} from "../../../../src/acquisition/application/use-cases/search.js";
+import { settleSearches } from "../../../../src/acquisition/application/use-cases/search.js";
 import type { SearchPage } from "../../../../src/acquisition/domain/search/search.js";
 
 const page = (id: string): SearchPage => ({ resultCount: 0, results: [], logId: id });
@@ -48,22 +45,6 @@ describe("settleSearches", () => {
       { _tag: "Fulfilled", value: page("a") },
       { _tag: "Rejected", reason: error },
       { _tag: "Fulfilled", value: page("c") },
-    ]);
-  });
-
-  it("returns promise settlements in request order", async () => {
-    const error = new Error("no");
-    const settled = await settleSearchRequests(
-      [1, 2],
-      async (id) => {
-        if (id === 2) throw error;
-        return page("1");
-      },
-      1,
-    );
-    expect(settled).toEqual([
-      { status: "fulfilled", value: page("1") },
-      { status: "rejected", reason: error },
     ]);
   });
 });

@@ -1,4 +1,5 @@
 import { Effect } from "effect";
+import { runPluginEffect } from "../app/runtime.js";
 import { canonicalizeUrl } from "../domain/text.js";
 
 import {
@@ -25,14 +26,14 @@ import {
   isSearchFailure,
   NewsSearchError,
   resolveNewsCredibility,
+  retrySearchEffect,
   searchBudgetDefaults,
-  searchWithRetry,
   selectQueryIds,
   settleSearches,
   type NewsSearchInput,
   type NewsSearchPage,
 } from "../acquisition/index.js";
-import { createHybridNewsSearch, type NewsSearchRequest } from "./hybrid-news-search.js";
+import { createHybridNewsSearch } from "./hybrid-news-search.js";
 import {
   buildNewsAudit,
   summarizeNewsSources,
@@ -179,8 +180,6 @@ export function generateRivusNewsBrief(
       try: () => (dependencies.search ? undefined : createSearch(env, mode, dependencies.now)),
       catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
     });
-    const search = dependencies.search ?? managedSearch!;
-
     const requests = topics.flatMap((topic) =>
       topic.queries.map((query) => ({
         query,
@@ -227,8 +226,15 @@ export function generateRivusNewsBrief(
       rotation,
       maxQueries,
     );
+    const searchEffect = (input: NewsSearchInput): Effect.Effect<NewsSearchPage, unknown> =>
+      dependencies.search
+        ? Effect.tryPromise({
+            try: () => dependencies.search!(input),
+            catch: (reason) => reason,
+          })
+        : managedSearch!(input);
     const primarySearch = (input: NewsSearchInput) =>
-      searchWithRetry(input, search, {
+      retrySearchEffect(searchEffect(input), {
         random: dependencies.random ?? Math.random,
         sleep: dependencies.sleep ?? sleep,
       });
@@ -236,8 +242,13 @@ export function generateRivusNewsBrief(
       try: () =>
         mode === "hybrid" || mode === "combined"
           ? createHybridNewsSearch({
-              search: primarySearch,
-              cachedSearch: managedSearch?.cachedSearch,
+              search: (input) => runPluginEffect(primarySearch(input)),
+              ...(managedSearch
+                ? {
+                    cachedSearch: (input: NewsSearchInput) =>
+                      runPluginEffect(managedSearch.cachedSearch(input)),
+                  }
+                : {}),
               glm:
                 dependencies.glm ?? new GlmResearchClient({ apiKey: env.GLM_CODING_API_KEY ?? "" }),
               window,
@@ -253,24 +264,21 @@ export function generateRivusNewsBrief(
                   : "oneWeek",
               maxReads: boundedInteger(env.NEWS_GLM_MAX_READS, 14, 1, 64),
             })
-          : (request: NewsSearchRequest) => primarySearch(request.input),
+          : undefined,
       catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
     });
     const settled = yield* settleSearches(
       requests,
-      (request) =>
-        Effect.tryPromise({
-          try: () => {
-            if (!selectedQueryIds.has(request.query.id)) {
-              throw new NewsSearchError(
-                "query_deferred",
-                "Query deferred by the per-run search limit.",
-              );
-            }
-            return execute(request);
-          },
-          catch: (reason) => reason,
-        }),
+      (request) => {
+        if (!selectedQueryIds.has(request.query.id)) {
+          return Effect.fail(
+            new NewsSearchError("query_deferred", "Query deferred by the per-run search limit."),
+          );
+        }
+        return execute
+          ? Effect.tryPromise({ try: () => execute(request), catch: (reason) => reason })
+          : primarySearch(request.input);
+      },
       mode !== "doubao" ? 1 : newsSearchConcurrency,
     );
     const successful = settled.filter((result) => result._tag === "Fulfilled");

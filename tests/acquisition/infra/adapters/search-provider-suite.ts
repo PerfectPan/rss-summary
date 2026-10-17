@@ -60,12 +60,14 @@ export function describeSearchProvider(options: {
       const handle = await Promise.resolve(options.create(() => "permanent"));
       const delays: number[] = [];
       await expect(
-        searchWithRetry(input, (value) => Effect.runPromise(handle.search(value)), {
-          random: () => 0,
-          sleep: async (milliseconds) => {
-            delays.push(milliseconds);
-          },
-        }),
+        Effect.runPromise(
+          searchWithRetry(input, (value) => Effect.runPromise(handle.search(value)), {
+            random: () => 0,
+            sleep: async (milliseconds) => {
+              delays.push(milliseconds);
+            },
+          }),
+        ),
       ).rejects.toBeTruthy();
       expect(handle.invocations()).toBe(1);
       expect(delays).toEqual([]);
@@ -74,12 +76,14 @@ export function describeSearchProvider(options: {
     it("retries rate limits on the historical 125ms then 250ms backoff", async () => {
       const delays: number[] = [];
       const search = await rateLimitedSearch(options);
-      const page = await searchWithRetry(input, search, {
-        random: () => 0,
-        sleep: async (milliseconds) => {
-          delays.push(milliseconds);
-        },
-      });
+      const page = await Effect.runPromise(
+        searchWithRetry(input, search, {
+          random: () => 0,
+          sleep: async (milliseconds) => {
+            delays.push(milliseconds);
+          },
+        }),
+      );
       expect(delays).toEqual([125, 250]);
       expect(Array.isArray(page.results)).toBe(true);
     });
@@ -90,8 +94,8 @@ export function describeSearchProvider(options: {
         (value) => Effect.runPromise(handle.search(value)),
         memoryDriver(10),
       );
-      const first = await budgeted(input);
-      const second = await budgeted(input);
+      const first = await Effect.runPromise(budgeted(input));
+      const second = await Effect.runPromise(budgeted(input));
       expect(first.searchUsage).toMatchObject({ source: "network", dailyUsed: 1, monthlyUsed: 1 });
       const cacheable =
         first.provider === undefined || first.provider === "doubao" || first.provider === "grok";
@@ -109,12 +113,14 @@ export function describeSearchProvider(options: {
       const delays: number[] = [];
       const search = await rateLimitedSearch(options);
       const budgeted = withBudget(search, memoryDriver(10));
-      const page = await searchWithRetry(input, budgeted, {
-        random: () => 0,
-        sleep: async (milliseconds) => {
-          delays.push(milliseconds);
-        },
-      });
+      const page = await Effect.runPromise(
+        searchWithRetry(input, (value) => Effect.runPromise(budgeted(value)), {
+          random: () => 0,
+          sleep: async (milliseconds) => {
+            delays.push(milliseconds);
+          },
+        }),
+      );
       expect(delays).toEqual([125, 250]);
       expect(page).toMatchObject({
         searchUsage: { source: "network", dailyUsed: 3, monthlyUsed: 3 },

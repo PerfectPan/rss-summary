@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { generateDailyAiDigest } from "../../src/application/daily-ai-digest.js";
 import * as newsBrief from "../../src/application/news-brief.js";
 import type { IndustryBriefDocument } from "../../src/application/industry-brief.js";
-import { type XAccountPosts, collectXAccountPosts } from "../../src/acquisition/index.js";
+import type { XAccountPosts } from "../../src/acquisition/index.js";
 
 import { RssClient } from "../../src/acquisition/infra/adapters/rss-http.js";
 import { WebPageClient } from "../../src/acquisition/infra/adapters/web-page-http.js";
@@ -112,8 +112,8 @@ describe("Daily AI subscriptions", () => {
   });
 
   it("passes configured accounts without imposing a newsworthiness filter", async () => {
-    const xAccounts = vi.fn<typeof collectXAccountPosts>(
-      async (): Promise<XAccountPosts> => ({
+    const xAccounts = vi.fn(
+      async (_value: { handles: string[] }): Promise<XAccountPosts> => ({
         posts: [post("experience", "2026-08-10T03:00:00Z")],
         audit: [],
       }),

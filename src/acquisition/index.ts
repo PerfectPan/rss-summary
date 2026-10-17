@@ -149,8 +149,9 @@ export {
   type GrokProcessRequest,
 } from "./application/ports.js";
 export {
-  searchWithRetry,
   retryDelayMs,
+  retrySearchEffect,
+  searchWithRetry,
   isTransientSearchError,
 } from "./application/services/with-retry.js";
 export {
@@ -158,12 +159,7 @@ export {
   type BudgetedSearch,
   type BudgetedSearchPage,
 } from "./application/services/with-budget.js";
-export {
-  settleSearchRequests,
-  settleSearches,
-  toPromiseSettled,
-  type SearchSettlement,
-} from "./application/use-cases/search.js";
+export { settleSearches, type SearchSettlement } from "./application/use-cases/search.js";
 export { DoubaoSearchClient, DoubaoSearchLive } from "./infra/adapters/doubao-http.js";
 export { DoubaoSearchError } from "./domain/item/adapters/doubao.js";
 export {
