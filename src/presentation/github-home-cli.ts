@@ -1,4 +1,4 @@
-import { saveGithubHomeStorageState } from "../infrastructure/github-home.js";
+import { saveGithubHomeStorageState } from "../acquisition/index.js";
 import { errorMessage } from "../infrastructure/parsing.js";
 
 type Writable = {

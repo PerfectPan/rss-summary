@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 
 import { loadConfig } from "../../src/infrastructure/config.js";
 
-vi.mock("../../src/infrastructure/rss.js", () => ({
+vi.mock("../../src/acquisition/infra/adapters/rss-http.js", () => ({
   RssClient: class {
     getFeedEvents(feed: { name: string; url: string; tags: string[] }) {
       return Promise.resolve([
@@ -30,7 +30,7 @@ vi.mock("../../src/infrastructure/rss.js", () => ({
   },
 }));
 
-vi.mock("../../src/infrastructure/web-page.js", () => ({
+vi.mock("../../src/acquisition/infra/adapters/web-page-http.js", () => ({
   WebPageClient: class {
     getEvents(source: { name: string; url: string; tags: string[] }) {
       return Promise.resolve([

@@ -10,9 +10,7 @@ import {
 import { isWithinEventWindow, resolveEventWindow } from "../domain/time.js";
 import { candidateDecision, type RunAudit } from "../domain/run-audit.js";
 import { type AppConfig, loadConfig } from "../infrastructure/config.js";
-import { collectIndustrySources } from "../infrastructure/industry-source-batch.js";
-import { RssClient } from "../infrastructure/rss.js";
-import { WebPageClient } from "../infrastructure/web-page.js";
+import { AcquisitionLive, collectIndustrySources } from "../acquisition/index.js";
 import {
   deliver,
   DeliveryLive,
@@ -96,9 +94,8 @@ function industryEventIds(candidate: CandidateProject): string[] {
 async function collectIndustryBrief(
   config: AppConfig,
 ): Promise<{ audit: RunAudit; document: IndustryBriefDocument; state: FeedState }> {
-  const sourceCollection = await collectIndustrySources(
-    { rss: new RssClient(), page: new WebPageClient() },
-    config.industrySources,
+  const sourceCollection = await Effect.runPromise(
+    Effect.provide(collectIndustrySources(config.industrySources), AcquisitionLive()),
   );
   const sourceEvents = sourceCollection.events;
   const eventWindow = resolveEventWindow(config);

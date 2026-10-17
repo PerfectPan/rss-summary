@@ -5,8 +5,8 @@ import * as newsBrief from "../../src/application/news-brief.js";
 import type { IndustryBriefDocument } from "../../src/application/industry-brief.js";
 import { type XAccountPosts, collectXAccountPosts } from "../../src/application/x-account-posts.js";
 
-import { RssClient } from "../../src/infrastructure/rss.js";
-import { WebPageClient } from "../../src/infrastructure/web-page.js";
+import { RssClient } from "../../src/acquisition/infra/adapters/rss-http.js";
+import { WebPageClient } from "../../src/acquisition/infra/adapters/web-page-http.js";
 
 const occurrence = "2026-08-11T01:00:00.000Z";
 const emptyAccounts = async (): Promise<XAccountPosts> => ({ posts: [], audit: [] });

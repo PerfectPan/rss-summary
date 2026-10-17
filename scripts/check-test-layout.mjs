@@ -39,6 +39,7 @@ const layers = [
   "app",
   "reading",
   "delivery",
+  "acquisition",
 ];
 
 function listTs(dir) {

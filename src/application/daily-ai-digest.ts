@@ -10,6 +10,7 @@ import {
 } from "../domain/daily-ai.js";
 import { calendarDayAtOffset, parseOffsetMilliseconds } from "../domain/time.js";
 import { loadConfig } from "../infrastructure/config.js";
+import { isDailyAiPaperSource } from "../acquisition/index.js";
 
 export type DailyAiDigestResult = DailyAiDigest & {
   day: string;
@@ -162,14 +163,7 @@ async function defaultIndustry(
     buildIndustryDocument({
       ...config,
       // Daily AI cannot publish paper candidates, so exclude their sources before fetching.
-      industrySources: config.industrySources.filter((source) => {
-        const hostname = new URL(source.url).hostname;
-        return (
-          hostname !== "arxiv.org" &&
-          !hostname.endsWith(".arxiv.org") &&
-          !source.tags.some((tag) => ["papers", "academic"].includes(tag.toLowerCase()))
-        );
-      }),
+      industrySources: config.industrySources.filter((source) => !isDailyAiPaperSource(source)),
     }),
   );
 }

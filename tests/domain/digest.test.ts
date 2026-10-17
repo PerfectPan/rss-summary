@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
+import { normalizeEvent } from "../../src/acquisition/domain/item/adapters/github-event.js";
 import {
   buildCandidateProjects,
   candidateIdentity,
   markCandidateResearched,
-  normalizeEvent,
   researchKeyForCandidate,
   selectResearchCandidates,
   type CandidateProject,
