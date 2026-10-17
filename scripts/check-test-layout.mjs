@@ -15,10 +15,14 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const coveredBySibling = new Map([
   // feed list contract tests sit next to config; still under infrastructure/
   // (no module under src/feed-config.ts)
+  // Pure re-exports. Their behavior is covered by the kernel tests.
+  ["domain/time", "kernel/time"],
+  ["domain/text", "kernel/text"],
+  ["kernel/index", "kernel/result, kernel/time, and kernel/text"],
 ]);
 
 /** Layers that must mirror 1:1 with tests/<layer>/<name>.test.ts */
-const layers = ["domain", "application", "infrastructure", "presentation"];
+const layers = ["domain", "application", "infrastructure", "presentation", "kernel"];
 
 function listTs(dir) {
   const out = [];

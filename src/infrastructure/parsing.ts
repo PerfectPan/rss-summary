@@ -6,6 +6,7 @@ import trim from "lodash-es/trim.js";
 
 import { asRecord, isRecord } from "../domain/record.js";
 
+export { errorMessage } from "../kernel/text.js";
 export { asRecord, isRecord };
 
 export function requireRecord(value: unknown, label: string): Record<string, unknown> {
@@ -51,7 +52,3 @@ export function number(value: unknown): number | undefined {
   return isNumber(value) && isFinite(value) ? value : undefined;
 }
 
-/** CLI / logging: normalize thrown values to a single-line message. */
-export function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
