@@ -1,31 +1,17 @@
-import { Schema } from "effect";
-
-import { createEmptyFeedState, type FeedState } from "../../domain/ledger/index.js";
-
-const researchRecordSchema = Schema.Struct({
-  at: Schema.String,
-  decision: Schema.optional(Schema.String),
-  reason: Schema.optional(Schema.String),
-});
-
-const feedStateSchema = Schema.Struct({
-  seen: Schema.optional(Schema.Record(Schema.String, Schema.String)),
-  researched: Schema.optional(Schema.Record(Schema.String, researchRecordSchema)),
-});
+import type { FeedState } from "../../domain/ledger/index.js";
 
 /**
- * Decode raw parsed JSON into a `FeedState`. Missing `seen` / `researched`
- * sections default to empty objects; structurally invalid states are rejected.
+ * Decode raw parsed JSON into a `FeedState`, byte-compatible with the
+ * historical `loadFeedState`: sections that are undefined or null become
+ * empty objects, every other parsed value passes through untouched, and
+ * unknown top-level fields are dropped. Deliberately no Schema validation —
+ * rejecting files the old loader accepted would change CLI behavior; tighten
+ * this only as an explicit, separately reviewed change.
  */
 export function decodeFeedState(raw: unknown): FeedState {
-  if (!isRecord(raw)) return createEmptyFeedState();
-  const parsed = Schema.decodeUnknownSync(feedStateSchema)(raw);
+  const parsed = raw as Partial<FeedState>;
   return {
     seen: parsed.seen ?? {},
     researched: parsed.researched ?? {},
   };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

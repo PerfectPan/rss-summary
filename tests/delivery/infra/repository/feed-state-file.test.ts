@@ -47,6 +47,37 @@ describe("feed state file repository", () => {
 
     expect(state).toEqual({ seen: { "event-1": "2026-08-16T04:00:00.000Z" }, researched: {} });
   });
+
+  // The three cases below lock the historical lenient load behavior: sections
+  // that are null become empty objects, malformed entries pass through
+  // untouched, and unknown top-level fields are dropped on load.
+  it("treats a null section as empty instead of rejecting the file", async () => {
+    const path = join(newRoot(), "null-section.json");
+    writeFileSync(path, `${JSON.stringify({ seen: null, researched: null })}\n`);
+
+    const state = await run(FeedStateStore.use((store) => store.load(path)));
+
+    expect(state).toEqual({ seen: {}, researched: {} });
+  });
+
+  it("passes malformed research records through untouched", async () => {
+    const path = join(newRoot(), "malformed.json");
+    const researched = { "github:owner/repo": { decision: "track" } };
+    writeFileSync(path, `${JSON.stringify({ seen: {}, researched })}\n`);
+
+    const state = await run(FeedStateStore.use((store) => store.load(path)));
+
+    expect(state).toEqual({ seen: {}, researched });
+  });
+
+  it("drops unknown top-level fields when loading", async () => {
+    const path = join(newRoot(), "extra-field.json");
+    writeFileSync(path, `${JSON.stringify({ seen: {}, researched: {}, extra: 1 })}\n`);
+
+    const state = await run(FeedStateStore.use((store) => store.load(path)));
+
+    expect(state).toEqual({ seen: {}, researched: {} });
+  });
 });
 
 function run<A, E>(effect: Effect.Effect<A, E, FeedStateStore>): Promise<A> {
