@@ -1,5 +1,6 @@
 import { Effect } from "effect";
 
+import { runPluginEffect } from "../app/runtime.js";
 import type { IndustryBriefDocument } from "../application/industry-brief.js";
 import { buildIndustryDocument } from "../application/industry-brief.js";
 import { calendarDayAtOffset } from "../domain/time.js";
@@ -52,7 +53,7 @@ export async function generateRivusIndustryBrief(
   if (day) argv.push("--day", day);
   if (input.onlyNew ?? true) argv.push("--only-new");
 
-  const document = await Effect.runPromise(
+  const document = await runPluginEffect(
     (dependencies.buildIndustryDocument ?? buildIndustryDocument)(loadConfig(env, argv)),
   );
   const paperCandidateCount = document.candidates.filter(

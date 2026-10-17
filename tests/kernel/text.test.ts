@@ -3,10 +3,11 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   canonicalizeUrl,
   compactSummary,
+  errorMessage,
   formatCompactCount,
   isSameTitleEvent,
   parsePublishTime,
-} from "../../src/domain/text.js";
+} from "../../src/kernel/text.js";
 
 describe("domain/text", () => {
   it("canonicalizes URLs by stripping tracking params and trailing slashes", () => {
@@ -36,6 +37,11 @@ describe("domain/text", () => {
       ),
     ).toBe(true);
     expect(isSameTitleEvent({ title: "A" }, { title: "B" })).toBe(false);
+  });
+
+  it("formats thrown values as a single-line message", () => {
+    expect(errorMessage(new Error("boom"))).toBe("boom");
+    expect(errorMessage("plain")).toBe("plain");
   });
 
   it("formats compact counts for stars and metrics", () => {

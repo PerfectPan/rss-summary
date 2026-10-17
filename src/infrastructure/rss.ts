@@ -1,6 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
 import he from "he";
-import castArray from "lodash-es/castArray.js";
 
 import type { ActivityCard } from "../domain/digest.js";
 import type { FeedSubscription } from "./config.js";
@@ -152,10 +151,10 @@ function atomLink(value: unknown): string | undefined {
   return text(alternate?.["@_href"]) ?? text(value);
 }
 
-/** XML nodes: missing → [], single → [node], list → list (lodash castArray + undefined guard). */
+/** XML nodes: missing → [], single → [node], list → list. An existing array is kept; every other value is wrapped. */
 function xmlChildren(value: unknown): unknown[] {
   if (value === undefined) return [];
-  return castArray(value);
+  return Array.isArray(value) ? value : [value];
 }
 
 function normalizeDate(value: string | undefined): string {

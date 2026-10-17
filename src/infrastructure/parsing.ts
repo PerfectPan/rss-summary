@@ -1,11 +1,6 @@
-import isFinite from "lodash-es/isFinite.js";
-import isNumber from "lodash-es/isNumber.js";
-import isString from "lodash-es/isString.js";
-import toString from "lodash-es/toString.js";
-import trim from "lodash-es/trim.js";
-
 import { asRecord, isRecord } from "../domain/record.js";
 
+export { errorMessage } from "../kernel/text.js";
 export { asRecord, isRecord };
 
 export function requireRecord(value: unknown, label: string): Record<string, unknown> {
@@ -39,19 +34,38 @@ export function hostnameOf(value: string): string {
 }
 
 export function text(value: unknown): string | undefined {
-  if (isString(value)) {
-    const normalized = trim(value);
+  if (isStringValue(value)) {
+    const normalized = value.trim();
     return normalized === "" ? undefined : normalized;
   }
-  if (isNumber(value) && isFinite(value)) return toString(value);
+  if (isFiniteNumber(value)) return finiteNumberText(value);
   return undefined;
 }
 
 export function number(value: unknown): number | undefined {
-  return isNumber(value) && isFinite(value) ? value : undefined;
+  return isFiniteNumber(value) ? value : undefined;
 }
 
-/** CLI / logging: normalize thrown values to a single-line message. */
-export function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+function isStringValue(value: unknown): value is string {
+  // Primitive strings and boxed String objects; arrays are not strings.
+  return (
+    typeof value === "string" ||
+    (isObjectLike(value) &&
+      !Array.isArray(value) &&
+      Object.prototype.toString.call(value) === "[object String]")
+  );
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  // Finite primitive numbers only, so a boxed Number fails.
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function finiteNumberText(value: number): string {
+  // Keep the sign of -0; String(-0) is "0".
+  return Object.is(value, -0) ? "-0" : String(value);
+}
+
+function isObjectLike(value: unknown): value is object {
+  return value !== null && typeof value === "object";
 }

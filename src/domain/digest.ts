@@ -1,5 +1,3 @@
-import uniq from "lodash-es/uniq.js";
-
 import { asRecord } from "./record.js";
 import type { RunAudit } from "./run-audit.js";
 
@@ -227,8 +225,8 @@ function scoreRepo(
   events: ActivityCard[],
   context: BuildCandidatesContext,
 ): CandidateProject {
-  const actors = uniq(events.map((event) => event.actor).filter(Boolean));
-  const eventTypes = uniq(events.map((event) => event.type));
+  const actors = [...new Set(events.map((event) => event.actor).filter(Boolean))];
+  const eventTypes = [...new Set(events.map((event) => event.type))];
   const repository = context.repositories.get(repo);
   const reasons = new Set<string>();
   let score = 0;
@@ -281,7 +279,7 @@ function scoreRepo(
         : `matches interest: ${interest}`,
     );
   }
-  const allMatchedInterests = uniq([...matchedInterests, ...eventInterests]);
+  const allMatchedInterests = [...new Set([...matchedInterests, ...eventInterests])];
 
   if (repository) {
     score += Math.min(25, Math.log10(Math.max(1, repository.stargazersCount)) * 6);

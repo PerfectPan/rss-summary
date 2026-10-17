@@ -4,8 +4,8 @@ import {
   type RivusPlugin,
   type RivusPluginRegistry,
 } from "@rivus/agent";
-import { Effect } from "effect";
 
+import { runPluginEffect } from "../app/runtime.js";
 import {
   generateRivusNewsBrief,
   type RivusNewsBriefOutput,
@@ -74,7 +74,7 @@ export function createRssSummaryPlugin(
   const executeNewsBrief =
     dependencies.generateNewsBrief ??
     (async (input: unknown) =>
-      withNewsMarkdown(await Effect.runPromise(generateRivusNewsBrief(input))));
+      withNewsMarkdown(await runPluginEffect(generateRivusNewsBrief(input))));
   const executeIndustryBrief = dependencies.generateIndustryBrief ?? generateRivusIndustryBrief;
   const executeDailyAiDigest =
     dependencies.generateDailyAiDigest ?? createRivusDailyAiDigestExecutor();

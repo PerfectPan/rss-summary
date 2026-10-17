@@ -265,6 +265,13 @@ describe("persistent news search budget", () => {
     }),
     JSON.stringify({ version: 2, timezoneOffset: "+08:00", daily: {}, cache: {} }),
     JSON.stringify({ version: 1, timezoneOffset: "+08:00", daily: {}, cache: { invalid: {} } }),
+    JSON.stringify({
+      version: 1,
+      timezoneOffset: "+08:00",
+      daily: {},
+      cache: {},
+      extra: true,
+    }),
   ])("fails closed for damaged state without overwriting it (%s)", async (contents) => {
     const { options, search, providerSearch } = await setup();
     await search(input);

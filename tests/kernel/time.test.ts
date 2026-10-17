@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { isWithinEventWindow, resolveEventWindow } from "../../src/domain/time.js";
+import { isWithinEventWindow, resolveEventWindow } from "../../src/kernel/time.js";
 
 describe("event window", () => {
   it("uses an Asia/Shanghai calendar day when a day is configured", () => {
