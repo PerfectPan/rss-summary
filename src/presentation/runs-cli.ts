@@ -1,19 +1,24 @@
 import { existsSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 
+import { Effect } from "effect";
+
 import {
-  listRunArtifacts,
-  loadRunArtifact,
-  runArtifactLabel,
-} from "../infrastructure/run-store.js";
+  listFailedRuns,
+  listRuns,
+  readRunArtifact,
+  runArtifactForLabel,
+  RunArchive,
+  RunArchiveFilesLive,
+} from "../delivery/index.js";
 import { errorMessage } from "../infrastructure/parsing.js";
 
 type Writable = { write(chunk: string): unknown };
 
-export function runRunsCommand(
+export async function runRunsCommand(
   argv: string[],
   deps: { stdout?: Writable; stderr?: Writable; env?: NodeJS.ProcessEnv } = {},
-): number {
+): Promise<number> {
   const stdout = deps.stdout ?? process.stdout;
   const stderr = deps.stderr ?? process.stderr;
   const env = deps.env ?? process.env;
@@ -22,15 +27,7 @@ export function runRunsCommand(
 
   try {
     if (command === "list" || command === "failures") {
-      const artifacts = listRunArtifacts(root)
-        .map((path) => ({ path, run: loadRunArtifact(path) }))
-        .filter(
-          ({ run }) =>
-            command !== "failures" ||
-            run.delivery.status === "failed" ||
-            run.delivery.stateStatus === "failed" ||
-            run.sources.some((source) => source.status === "failed"),
-        );
+      const artifacts = await run((command === "failures" ? listFailedRuns : listRuns)(root));
       if (artifacts.length === 0) {
         stdout.write(command === "failures" ? "No failed runs.\n" : "No run artifacts.\n");
         return 0;
@@ -53,9 +50,10 @@ export function runRunsCommand(
         isAbsolute(requested) || existsSync(requested) ? requested : join(root, requested);
       const path = directPath.endsWith(".json")
         ? directPath
-        : listRunArtifacts(root).find((candidate) => runArtifactLabel(candidate) === requested);
+        : await run(runArtifactForLabel(root, requested));
       if (!path) throw new Error(`Run artifact not found: ${requested}`);
-      stdout.write(`${JSON.stringify(loadRunArtifact(path), null, 2)}\n`);
+      const stored = await run(readRunArtifact(path));
+      stdout.write(`${JSON.stringify(stored, null, 2)}\n`);
       return 0;
     }
 
@@ -65,6 +63,10 @@ export function runRunsCommand(
     stderr.write(`${errorMessage(error)}\n`);
     return 1;
   }
+}
+
+function run<A, E>(effect: Effect.Effect<A, E, RunArchive>): Promise<A> {
+  return Effect.runPromise(Effect.provide(effect, RunArchiveFilesLive));
 }
 
 function valueFor(argv: string[], flag: string): string | undefined {

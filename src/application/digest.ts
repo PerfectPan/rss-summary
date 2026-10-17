@@ -6,6 +6,7 @@ import {
   normalizeEvent,
   selectResearchCandidates,
   type ActivityCard,
+  type CandidateProject,
   type DigestDocument,
   type RepositoryMetadata,
 } from "../domain/digest.js";
@@ -47,16 +48,31 @@ export function run(
         ? document.candidates.filter((candidate) => candidate.category !== "paper")
         : document.candidates;
     yield* attempt(
-      deliverAndRecord(config, audit, output, {
-        ...(config.onlyNew && !config.dryRun
-          ? {
-              afterSend: () => {
-                markCandidatesSeen(state, deliveredCandidates, document.generatedAt);
-                saveFeedState(config.stateFile, state);
-              },
-            }
-          : {}),
-      }),
+      Effect.runPromise(
+        Effect.provide(
+          deliver({
+            runLogDir: config.runLogDir,
+            audit,
+            output,
+            dryRun: config.dryRun,
+            ...(config.onlyNew && !config.dryRun
+              ? {
+                  afterSend: FeedStateStore.use((store) =>
+                    store.save(
+                      config.stateFile,
+                      markDelivered(
+                        state,
+                        deliveredCandidates.flatMap(deliveredEventIds),
+                        document.generatedAt,
+                      ),
+                    ),
+                  ),
+                }
+              : {}),
+          }),
+          DeliveryLive({ webhookUrl: config.webhookUrl }),
+        ),
+      ),
     );
   });
 }
@@ -161,6 +177,10 @@ async function collectDigest(
   };
   document.audit = audit;
   return { audit, document, state };
+}
+
+function deliveredEventIds(candidate: CandidateProject): string[] {
+  return candidate.events.map((event) => event.id);
 }
 
 async function fetchGithubEvents(config: AppConfig, client: GitHubClient): Promise<ActivityCard[]> {

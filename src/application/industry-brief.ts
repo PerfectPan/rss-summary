@@ -3,6 +3,7 @@ import { Effect } from "effect";
 
 import {
   buildCandidateProjects,
+  researchKeyForCandidate,
   selectResearchCandidates,
   type CandidateProject,
 } from "../domain/digest.js";
@@ -13,16 +14,16 @@ import { collectIndustrySources } from "../infrastructure/industry-source-batch.
 import { RssClient } from "../infrastructure/rss.js";
 import { WebPageClient } from "../infrastructure/web-page.js";
 import {
-  filterNewCandidates,
-  filterUnresearchedCandidates,
+  deliver,
+  DeliveryLive,
+  FeedStateStore,
+  filterUndelivered,
+  filterUnresearched,
   loadFeedState,
-  markCandidatesSeen,
-  saveFeedState,
-  researchKeyForCandidate,
+  markDelivered,
   type FeedState,
-} from "../infrastructure/state.js";
+} from "../delivery/index.js";
 import { attempt } from "./effect.js";
-import { deliverAndRecord } from "./delivery.js";
 
 export type IndustryBriefDocument = {
   generatedAt: string;
@@ -59,18 +60,37 @@ export function runIndustry(
         ? document.candidates.filter((candidate) => candidate.category !== "paper")
         : document.candidates;
     yield* attempt(
-      deliverAndRecord(config, audit, output, {
-        ...(config.onlyNew && !config.dryRun
-          ? {
-              afterSend: () => {
-                markCandidatesSeen(state, deliveredCandidates, document.generatedAt);
-                saveFeedState(config.industryStateFile, state);
-              },
-            }
-          : {}),
-      }),
+      Effect.runPromise(
+        Effect.provide(
+          deliver({
+            runLogDir: config.runLogDir,
+            audit,
+            output,
+            dryRun: config.dryRun,
+            ...(config.onlyNew && !config.dryRun
+              ? {
+                  afterSend: FeedStateStore.use((store) =>
+                    store.save(
+                      config.industryStateFile,
+                      markDelivered(
+                        state,
+                        deliveredCandidates.flatMap(industryEventIds),
+                        document.generatedAt,
+                      ),
+                    ),
+                  ),
+                }
+              : {}),
+          }),
+          DeliveryLive({ webhookUrl: config.webhookUrl }),
+        ),
+      ),
     );
   });
+}
+
+function industryEventIds(candidate: CandidateProject): string[] {
+  return candidate.events.map((event) => event.id);
 }
 
 async function collectIndustryBrief(
@@ -93,7 +113,11 @@ async function collectIndustryBrief(
 
   const state = loadFeedState(config.industryStateFile);
   const candidates = config.onlyNew
-    ? filterUnresearchedCandidates(filterNewCandidates(allCandidates, state), state)
+    ? filterUnresearched(
+        filterUndelivered(allCandidates, industryEventIds, state),
+        researchKeyForCandidate,
+        state,
+      )
     : allCandidates;
 
   const generatedAt = new Date().toISOString();

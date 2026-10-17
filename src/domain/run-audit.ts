@@ -5,7 +5,7 @@ import {
   type PresentationDepth,
   type PresentationReasonCode,
 } from "./attention.js";
-import type { RunAudit, RunCandidateDecision } from "../delivery/index.js";
+import type { RunCandidateDecision } from "../delivery/index.js";
 
 // Storage types moved to the delivery module; re-exported so existing imports
 // keep working during the transition.

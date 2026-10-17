@@ -6,9 +6,19 @@ import { Effect } from "effect";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { loadConfig } from "../../src/infrastructure/config.js";
-import { listRunArtifacts } from "../../src/infrastructure/run-store.js";
+import { listRunArtifacts } from "../../src/delivery/index.js";
 
+// The notifier writes to stdout; capture it instead of mocking the old module.
+let restoreStdout: (() => void) | undefined;
 const sentOutputs: string[] = [];
+
+function captureStdout(): void {
+  const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
+    sentOutputs.push(String(chunk));
+    return true;
+  });
+  restoreStdout = () => spy.mockRestore();
+}
 
 vi.mock("../../src/infrastructure/github-home.js", () => ({
   GitHubHomeClient: class {
@@ -41,18 +51,11 @@ vi.mock("../../src/infrastructure/rss.js", () => ({
   },
 }));
 
-vi.mock("../../src/infrastructure/notifier.js", () => ({
-  createNotifier: () => ({
-    send: (output: string) => {
-      sentOutputs.push(output);
-      return Promise.resolve();
-    },
-  }),
-}));
-
 describe("digest source isolation", () => {
   afterEach(() => {
     sentOutputs.length = 0;
+    restoreStdout?.();
+    restoreStdout = undefined;
     vi.unstubAllEnvs();
   });
 
@@ -75,6 +78,7 @@ describe("digest source isolation", () => {
       "2026-07-15T00:00:00+08:00",
     ];
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    captureStdout();
 
     const { run } = await import("../../src/application/digest.js");
     const { renderMarkdownDigest, renderJsonDigest } =
@@ -88,8 +92,7 @@ describe("digest source isolation", () => {
       );
 
       expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("GitHub feed unavailable"));
-      expect(sentOutputs).toHaveLength(1);
-      expect(sentOutputs[0]).toContain("RSS survives GitHub outage");
+      expect(sentOutputs.join("")).toContain("RSS survives GitHub outage");
       expect(listRunArtifacts(join(root, "runs"))).toHaveLength(1);
     } finally {
       errorSpy.mockRestore();
