@@ -5,9 +5,11 @@ import { createDailyAiDeliveryReceipt, type DailyAiDeliveryReceipt } from "../de
 import { collectXAccountPosts, type XAccountPosts } from "../acquisition/index.js";
 import {
   buildDailyAiDigest,
+  cleanDailyAiTitle,
+  industryEvidence,
   type DailyAiDigest,
   type DailyAiEvidence,
-} from "../domain/daily-ai.js";
+} from "../editorial/index.js";
 import { calendarDayAtOffset, parseOffsetMilliseconds } from "../domain/time.js";
 import { loadConfig } from "../infrastructure/config.js";
 import { isDailyAiPaperSource } from "../acquisition/index.js";
@@ -59,7 +61,7 @@ export async function generateDailyAiDigest(
   );
   const official = await (dependencies.industry ?? defaultIndustry)(window, env);
   const evidence = xEvidence(xAccounts)
-    .concat(industryEvidence(official))
+    .concat(industryEvidence(official.candidates))
     .filter(({ publishedAt }) => isWithinWindow(publishedAt, since, until));
   const digest = buildDailyAiDigest(evidence, { draft: dependencies.draft });
   if (digest.evidence.length === 0) {
@@ -108,42 +110,13 @@ function formatInstant(instant: number, timezoneOffset: string): string {
 function xEvidence(result: XAccountPosts): DailyAiEvidence[] {
   return result.posts.map((post) => ({
     id: `x:${post.id}`,
-    title: evidenceTitle(post.title),
+    title: cleanDailyAiTitle(post.title),
     url: post.url,
     publishedAt: post.publishedAt,
     excerpt: post.summary,
     tier: "unverified",
     sourceName: `@${post.author} · X（Grok 整理）`,
   }));
-}
-
-function industryEvidence(document: IndustryBriefDocument): DailyAiEvidence[] {
-  return document.candidates.flatMap((candidate) => {
-    if (candidate.category === "paper") return [];
-    const event = candidate.events[0];
-    const title = candidate.label ?? event?.title;
-    const url = candidate.url ?? event?.htmlUrl;
-    if (!event || !title || !url) return [];
-    const sourceName = event.sourceName ?? event.actor;
-    return [
-      {
-        id: `official:${event.id}`,
-        title: evidenceTitle(title),
-        url,
-        publishedAt: event.createdAt,
-        excerpt: candidate.description ?? event.summary ?? title,
-        tier: "official" as const,
-        sourceName,
-      },
-    ];
-  });
-}
-
-function evidenceTitle(title: string): string {
-  return title
-    .replace(/\s+/gu, " ")
-    .trim()
-    .replace(/[。.!！]+$/u, "");
 }
 
 async function defaultIndustry(

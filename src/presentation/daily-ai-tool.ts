@@ -1,6 +1,6 @@
 import { generateDailyAiDigest, type DailyAiDigestResult } from "../application/daily-ai-digest.js";
 import { createDailyAiDeliveryReceipt, saveDailyAiDiagnostics } from "../delivery/index.js";
-import { buildDailyAiDigest, dailyAiCategories } from "../domain/daily-ai.js";
+import { buildDailyAiDigest, dailyAiCategories } from "../editorial/index.js";
 import { renderDailyAiDigest } from "./daily-ai-render.js";
 
 export const dailyAiEditorialPolicy = [

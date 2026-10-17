@@ -2,15 +2,21 @@ import { randomUUID } from "node:crypto";
 import { Effect } from "effect";
 
 import {
-  buildCandidateProjects,
+  applyScoringContext,
+  AcquisitionLive,
+  collectIndustrySources,
+  refreshRouting,
+} from "../acquisition/index.js";
+import {
+  candidateDecision,
   researchKeyForCandidate,
+  scoreAcquired,
   selectResearchCandidates,
   type CandidateProject,
-} from "../domain/digest.js";
+} from "../editorial/index.js";
 import { isWithinEventWindow, resolveEventWindow } from "../domain/time.js";
-import { candidateDecision, type RunAudit } from "../domain/run-audit.js";
+import type { RunAudit } from "../delivery/index.js";
 import { type AppConfig, loadConfig } from "../infrastructure/config.js";
-import { AcquisitionLive, collectIndustrySources } from "../acquisition/index.js";
 import {
   deliver,
   DeliveryLive,
@@ -97,15 +103,19 @@ async function collectIndustryBrief(
   const sourceCollection = await Effect.runPromise(
     Effect.provide(collectIndustrySources(config.industrySources), AcquisitionLive()),
   );
-  const sourceEvents = sourceCollection.events;
+  const sourceEvents = sourceCollection.acquired;
   const eventWindow = resolveEventWindow(config);
-  const events = sourceEvents.filter((event) => isWithinEventWindow(event, eventWindow));
+  const acquired = sourceEvents.filter((entry) => isWithinEventWindow(entry.card, eventWindow));
 
-  const rankedCandidates = buildCandidateProjects(events, {
-    followees: new Set<string>(),
-    interests: config.interests,
-    repositories: new Map(),
-  });
+  const rankedCandidates = scoreAcquired(
+    acquired.map((entry) =>
+      applyScoringContext(refreshRouting(entry), {
+        followees: new Set<string>(),
+        repositories: new Map(),
+      }),
+    ),
+    { interests: config.interests, now: Date.now() },
+  );
   const allCandidates = selectResearchCandidates(rankedCandidates, config.maxPapers);
 
   const state = loadFeedState(config.industryStateFile);
@@ -129,7 +139,7 @@ async function collectIndustryBrief(
     sources: sourceCollection.sources,
     counts: {
       fetched: sourceEvents.length,
-      inWindow: events.length,
+      inWindow: acquired.length,
       ranked: rankedCandidates.length,
       selected: candidates.filter((candidate) => candidate.category !== "paper").length,
       researchPending: candidates.filter((candidate) => candidate.category === "paper").length,

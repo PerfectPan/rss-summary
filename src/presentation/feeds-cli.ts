@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 
 import type { FeedSubscription } from "../infrastructure/config.js";
-import { type ActivityCard } from "../domain/digest.js";
+import { type ActivityCard } from "../editorial/index.js";
 import {
   AcquisitionLive,
   RssClient,

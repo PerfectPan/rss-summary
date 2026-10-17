@@ -1,6 +1,8 @@
-import { selectCandidatePresentationSections } from "../domain/attention.js";
-import type { CandidateProject } from "../domain/digest.js";
-import { subscriptionEvidenceId } from "../domain/subscription-editorial.js";
+import {
+  selectCandidatePresentationSections,
+  subscriptionEvidenceId,
+  type CandidateProject,
+} from "../editorial/index.js";
 import { candidateCopy } from "./candidate-copy.js";
 
 export type CandidateBriefOptions = {

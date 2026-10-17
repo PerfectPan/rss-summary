@@ -5,7 +5,7 @@ import {
   DailyAiDraftValidationError,
   validateEditorialDraft,
   type DailyAiEvidence,
-} from "../../src/domain/daily-ai.js";
+} from "../../../../src/editorial/index.js";
 
 const evidence = (overrides: Partial<DailyAiEvidence> = {}): DailyAiEvidence => ({
   id: "source-1",

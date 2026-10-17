@@ -1,4 +1,4 @@
-import type { RunAudit } from "./run-audit.js";
+import type { RunAudit } from "./legacy-run-audit.js";
 
 export type ActivitySource = "github" | "rss" | "web";
 

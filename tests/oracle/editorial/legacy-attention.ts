@@ -1,4 +1,4 @@
-import type { CandidateProject } from "./digest.js";
+import type { CandidateProject } from "./legacy-digest.js";
 
 export type PresentationDepth = "link" | "summary" | "research";
 

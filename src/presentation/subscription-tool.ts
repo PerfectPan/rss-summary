@@ -1,13 +1,14 @@
+import type { RunAudit } from "../delivery/index.js";
 import {
+  applyEditorialSelectionToAudit,
   applySubscriptionSelection,
   buildSubscriptionEditorial,
   buildSubscriptionEvidence,
   excludeSubscriptionResearchFailures,
-  validateSubscriptionSelectionDraft,
   validateSubscriptionResearch,
+  validateSubscriptionSelectionDraft,
   type SubscriptionEvidence,
-} from "../domain/subscription-editorial.js";
-import type { RunAudit, RunEditorialSelectionDecision } from "../domain/run-audit.js";
+} from "../editorial/index.js";
 import {
   collectRivusDigest,
   generateRivusDigest,
@@ -197,30 +198,4 @@ function cacheKey(request: Record<string, unknown>): string {
 
 function trimCache(cache: Map<string, CollectedRivusDigest>): void {
   while (cache.size > 8) cache.delete(cache.keys().next().value!);
-}
-
-function applyEditorialSelectionToAudit(
-  audit: RunAudit,
-  decisions: ReadonlyArray<RunEditorialSelectionDecision>,
-  selectedCount: number,
-): RunAudit {
-  const decisionByRef = new Map(decisions.map((decision) => [decision.ref, decision]));
-  return {
-    ...audit,
-    counts: { ...audit.counts, selected: selectedCount },
-    candidates: audit.candidates.map((candidate) => {
-      const decision = decisionByRef.get(candidate.key);
-      return decision?.selected
-        ? candidate
-        : {
-            ...candidate,
-            reason: decision?.reason ?? "AI selection omitted this item",
-            status: "filtered" as const,
-          };
-    }),
-    editorialSelection: {
-      decisions: [...decisions],
-      selectedCount,
-    },
-  };
 }

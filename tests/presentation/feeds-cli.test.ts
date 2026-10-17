@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 
 import { describe, expect, it } from "vite-plus/test";
 
-import type { ActivityCard } from "../../src/domain/digest.js";
+import type { ActivityCard } from "../../src/editorial/index.js";
 import { runFeedsCommand } from "../../src/presentation/feeds-cli.js";
 
 describe("feeds CLI", () => {

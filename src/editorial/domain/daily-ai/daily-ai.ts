@@ -1,4 +1,10 @@
-import { canonicalizeUrl } from "./text.js";
+import { canonicalizeUrl } from "../../../kernel/text.js";
+import {
+  invalidEditorialCollectionMessage,
+  invalidEditorialItemMessage,
+} from "../evidence/evidence.js";
+import { isSameEntityEvent, isSameHeadline } from "../identity/identity.js";
+import type { CandidateProject } from "../subscription/subscription.js";
 
 export const dailyAiCategories = [
   "概览/要闻",
@@ -69,6 +75,35 @@ export type DailyAiDigest = {
   audit: { decisions: DailyAiDecision[]; editorialIssues: DailyAiEditorialIssue[] };
 };
 
+export function cleanDailyAiTitle(title: string): string {
+  return title
+    .replace(/\s+/gu, " ")
+    .trim()
+    .replace(/[。.!！]+$/u, "");
+}
+
+/** Industry rows already carry their source name on the card. The caller supplies any badge. */
+export function industryEvidence(candidates: readonly CandidateProject[]): DailyAiEvidence[] {
+  return candidates.flatMap((candidate) => {
+    if (candidate.category === "paper") return [];
+    const event = candidate.events[0];
+    const title = candidate.label ?? event?.title;
+    const url = candidate.url ?? event?.htmlUrl;
+    if (!event || !title || !url) return [];
+    return [
+      {
+        id: `official:${event.id}`,
+        title: cleanDailyAiTitle(title),
+        url,
+        publishedAt: event.createdAt,
+        excerpt: candidate.description ?? event.summary ?? title,
+        tier: "official" as const,
+        sourceName: event.sourceName ?? event.actor,
+      },
+    ];
+  });
+}
+
 export function buildDailyAiDigest(
   inputEvidence: DailyAiEvidence[],
   options: { draft?: unknown } = {},
@@ -123,29 +158,20 @@ export function validateEditorialDraft(
   value: unknown,
   evidence: DailyAiEvidence[],
 ): DailyAiEditorialValidation {
-  if (!Array.isArray(value))
+  const invalidCollection = invalidEditorialCollectionMessage(value);
+  if (invalidCollection) {
     return {
       items: [],
-      issues: [
-        {
-          index: -1,
-          refs: [],
-          reason: "invalid-draft",
-          message: "editorial output must be an array",
-        },
-      ],
+      issues: [{ index: -1, refs: [], reason: "invalid-draft", message: invalidCollection }],
     };
+  }
   const known = new Set(evidence.map(({ id }) => id));
   const items: DailyAiEditorialItem[] = [];
   const issues: DailyAiEditorialIssue[] = [];
-  for (const [index, entry] of value.entries()) {
-    if (!entry || typeof entry !== "object") {
-      issues.push({
-        index,
-        refs: [],
-        reason: "invalid-item",
-        message: "editorial item must be an object",
-      });
+  for (const [index, entry] of (value as unknown[]).entries()) {
+    const invalidItem = invalidEditorialItemMessage(entry);
+    if (invalidItem) {
+      issues.push({ index, refs: [], reason: "invalid-item", message: invalidItem });
       continue;
     }
     const record = entry as Record<string, unknown>;
@@ -190,18 +216,6 @@ function normalizeEvidence(input: DailyAiEvidence[]): DailyAiEvidence[] {
     ids.add(item.id);
     return [{ ...item, title: cleanText(item.title), excerpt: cleanText(item.excerpt), url }];
   });
-}
-
-function isSameEntityEvent(left: DailyAiEvidence, right: DailyAiEvidence): boolean {
-  if (left.url === right.url) return true;
-  return isSameHeadline(left.title, right.title);
-}
-
-function isSameHeadline(left: string, right: string): boolean {
-  return (
-    cleanText(left).normalize("NFKC").toLowerCase() ===
-    cleanText(right).normalize("NFKC").toLowerCase()
-  );
 }
 
 function cleanText(value: string): string {

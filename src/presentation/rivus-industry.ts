@@ -4,7 +4,7 @@ import { runPluginEffect } from "../app/runtime.js";
 import type { IndustryBriefDocument } from "../application/industry-brief.js";
 import { buildIndustryDocument } from "../application/industry-brief.js";
 import { calendarDayAtOffset } from "../domain/time.js";
-import type { RunAudit } from "../domain/run-audit.js";
+import type { RunAudit } from "../delivery/index.js";
 import type { AppConfig } from "../infrastructure/config.js";
 import { loadConfig } from "../infrastructure/config.js";
 import { renderMarkdownIndustryBrief } from "./industry-render.js";

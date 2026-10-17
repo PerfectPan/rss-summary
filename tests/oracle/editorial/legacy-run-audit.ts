@@ -1,11 +1,11 @@
-import { candidateIdentity, type CandidateProject } from "./digest.js";
+import { candidateIdentity, type CandidateProject } from "./legacy-digest.js";
 import {
   presentationDecisionForCandidate,
   type PresentationPolicy,
   type PresentationDepth,
   type PresentationReasonCode,
-} from "./attention.js";
-import type { RunCandidateDecision } from "../delivery/index.js";
+} from "./legacy-attention.js";
+import type { RunCandidateDecision } from "../../../src/delivery/index.js";
 
 // Storage types moved to the delivery module; re-exported so existing imports
 // keep working during the transition.
@@ -19,7 +19,7 @@ export type {
   RunPresentationDepth,
   RunPresentationReasonCode,
   StoredRunAudit,
-} from "../delivery/index.js";
+} from "../../../src/delivery/index.js";
 
 /**
  * Candidate decisions depend on the candidate shape and presentation depth;

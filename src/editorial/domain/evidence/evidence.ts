@@ -1,6 +1,18 @@
-import { selectCandidatePresentationSections } from "./attention.js";
-import { candidateIdentity, type CandidateProject, type DigestDocument } from "./digest.js";
-import { canonicalizeUrl, compactSummary, formatCompactCount } from "./text.js";
+import { canonicalizeUrl, compactSummary } from "../../../kernel/text.js";
+import {
+  repositoryFactsForCandidate,
+  selectCandidatePresentationSections,
+  type CandidateProject,
+} from "../subscription/subscription.js";
+
+export type EvidenceDocument = {
+  candidates: CandidateProject[];
+};
+
+export type EvidenceIdentity = {
+  identify: (candidate: CandidateProject) => string;
+  fallbackUrl: (candidate: CandidateProject) => string;
+};
 
 export type SubscriptionEvidenceKind =
   | "activity"
@@ -68,8 +80,23 @@ export type SubscriptionResearch = {
   url: string;
 };
 
+/** Shared collection check. Callers keep their own throw-or-issue control flow. */
+export function invalidEditorialCollectionMessage(value: unknown): string | undefined {
+  if (!Array.isArray(value)) return "editorial output must be an array";
+  return undefined;
+}
+
+/** Shared per-item check. Callers keep their own throw-or-issue control flow. */
+export function invalidEditorialItemMessage(entry: unknown): string | undefined {
+  if (!entry || typeof entry !== "object") return "editorial item must be an object";
+  return undefined;
+}
+
 /** Build the bounded, source-grounded contract exposed to the automation model. */
-export function buildSubscriptionEvidence(document: DigestDocument): SubscriptionEvidence[] {
+export function assembleSubscriptionEvidence(
+  document: EvidenceDocument,
+  identity: EvidenceIdentity,
+): SubscriptionEvidence[] {
   const sections = selectCandidatePresentationSections(document.candidates, {
     semanticSummaries: true,
     summaryLimit: 20,
@@ -87,7 +114,7 @@ export function buildSubscriptionEvidence(document: DigestDocument): Subscriptio
     return [
       {
         facts: repositoryFactsForCandidate(candidate),
-        id: subscriptionEvidenceId(candidate),
+        id: identity.identify(candidate),
         kind,
         rawText,
         sourceName: candidate.actors.join(", ") || event?.sourceName || "未知来源",
@@ -98,7 +125,7 @@ export function buildSubscriptionEvidence(document: DigestDocument): Subscriptio
           candidate.url ??
           event?.htmlUrl ??
           candidate.repository?.htmlUrl ??
-          `https://github.com/${candidate.repo}`,
+          identity.fallbackUrl(candidate),
       },
     ];
   });
@@ -112,11 +139,13 @@ export function validateSubscriptionEditorialDraft(
   value: unknown,
   evidence: SubscriptionEvidence[],
 ): SubscriptionEditorialItem[] {
-  if (!Array.isArray(value)) throw new Error("editorial output must be an array");
+  const invalidCollection = invalidEditorialCollectionMessage(value);
+  if (invalidCollection) throw new Error(invalidCollection);
   const byId = new Map(evidence.map((item) => [item.id, item]));
   const seen = new Set<string>();
-  return value.map((entry) => {
-    if (!entry || typeof entry !== "object") throw new Error("editorial item must be an object");
+  return (value as unknown[]).map((entry) => {
+    const invalidItem = invalidEditorialItemMessage(entry);
+    if (invalidItem) throw new Error(invalidItem);
     const record = entry as Record<string, unknown>;
     const ref = typeof record.ref === "string" ? record.ref : "";
     const source = byId.get(ref);
@@ -137,12 +166,16 @@ export function validateSubscriptionEditorialDraft(
   });
 }
 
-export function buildSubscriptionEditorial(
-  document: DigestDocument,
+export function assembleSubscriptionEditorial(
+  document: EvidenceDocument,
+  identity: EvidenceIdentity,
   draft?: unknown,
   research?: unknown,
 ): SubscriptionEditorial {
-  const evidence = mergeSubscriptionResearch(buildSubscriptionEvidence(document), research);
+  const evidence = mergeSubscriptionResearch(
+    assembleSubscriptionEvidence(document, identity),
+    research,
+  );
   const items = validateSubscriptionEditorialItemsForRender(draft, evidence);
   const supplied = new Map(items.map(({ ref, summary }) => [ref, summary]));
   const summaries = new Map<string, string>();
@@ -270,19 +303,12 @@ export function validateSubscriptionSelectionDraft(
   };
 }
 
-/** Apply the AI selection before editorial summaries and presentation rendering. */
-export function applySubscriptionSelection(
-  document: DigestDocument,
+export function selectedSubscriptionCandidates(
+  candidates: readonly CandidateProject[],
   selection: SubscriptionSelection,
-): DigestDocument {
-  const candidates = document.candidates.filter((candidate) =>
-    selection.selectedRefs.has(candidateIdentity(candidate)),
-  );
-  return { ...document, candidates };
-}
-
-export function subscriptionEvidenceId(candidate: CandidateProject): string {
-  return candidateIdentity(candidate);
+  identify: (candidate: CandidateProject) => string,
+): CandidateProject[] {
+  return candidates.filter((candidate) => selection.selectedRefs.has(identify(candidate)));
 }
 
 function evidenceKind(candidate: CandidateProject): SubscriptionEvidenceKind {
@@ -300,14 +326,6 @@ function evidenceTitle(candidate: CandidateProject): string {
     candidate.repository?.fullName ??
     candidate.repo
   );
-}
-
-export function repositoryFactsForCandidate(candidate: CandidateProject): string[] {
-  if (!candidate.repository || candidate.category !== "discovery") return [];
-  return [
-    `⭐ ${formatCompactCount(candidate.repository.stargazersCount)}`,
-    candidate.repository.language ?? undefined,
-  ].filter((value): value is string => Boolean(value));
 }
 
 function cleanSummary(value: unknown): string {

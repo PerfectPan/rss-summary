@@ -1,8 +1,8 @@
 import { Effect } from "effect";
 
 import { runPluginEffect } from "../app/runtime.js";
-import type { DigestDocument } from "../domain/digest.js";
-import type { RunAudit } from "../domain/run-audit.js";
+import type { RunAudit } from "../delivery/index.js";
+import type { DigestDocument } from "../editorial/index.js";
 import type { AppConfig } from "../infrastructure/config.js";
 import { loadConfig } from "../infrastructure/config.js";
 import { buildDigestDocument } from "../application/digest.js";

@@ -15,6 +15,5 @@ export {
   compactSummary,
   errorMessage,
   formatCompactCount,
-  isSameTitleEvent,
   parsePublishTime,
 } from "./text.js";

@@ -5,7 +5,6 @@ import {
   compactSummary,
   errorMessage,
   formatCompactCount,
-  isSameTitleEvent,
   parsePublishTime,
 } from "../../src/kernel/text.js";
 
@@ -26,17 +25,10 @@ describe("domain/text", () => {
     );
   });
 
-  it("compacts summaries and detects same-title events", () => {
+  it("compacts summaries to the first two sentences", () => {
     expect(compactSummary("Title. First sentence. Second sentence. Third.", "Title")).toContain(
       "First sentence",
     );
-    expect(
-      isSameTitleEvent(
-        { title: "Claude 3.7 发布重大更新" },
-        { title: "Claude 3.7 重大更新发布详情" },
-      ),
-    ).toBe(true);
-    expect(isSameTitleEvent({ title: "A" }, { title: "B" })).toBe(false);
   });
 
   it("formats thrown values as a single-line message", () => {

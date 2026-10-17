@@ -2,7 +2,7 @@ import {
   dailyAiCategories,
   type DailyAiEditorialItem,
   type DailyAiEvidence,
-} from "../domain/daily-ai.js";
+} from "../editorial/index.js";
 
 export type DailyAiDigestDocument = {
   day: string;
