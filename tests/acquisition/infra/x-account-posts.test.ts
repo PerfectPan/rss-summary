@@ -3,10 +3,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { collectXAccountPosts } from "../../src/application/x-account-posts.js";
-import { GrokXClient } from "../../src/infrastructure/grok-x.js";
-import { createBudgetedNewsSearch } from "../../src/infrastructure/news-search-budget.js";
-import { NewsSearchError, type NewsSearchPage } from "../../src/infrastructure/news-search.js";
+import { collectXAccountPosts } from "../../../src/acquisition/infra/x-account-posts.js";
+import { GrokXClient } from "../../../src/acquisition/infra/adapters/grok-cli.js";
+import { createBudgetedNewsSearch } from "../../../src/acquisition/infra/budgeted-search.js";
+import { NewsSearchError, type NewsSearchPage } from "../../../src/acquisition/index.js";
 
 const directories: string[] = [];
 afterEach(async () => {

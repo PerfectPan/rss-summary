@@ -11,10 +11,12 @@ import {
   type RivusNewsBriefResult,
 } from "../../src/application/news-brief.js";
 import type { NewsTopicQuery } from "../../src/domain/news.js";
-import { GrokSearchClient } from "../../src/infrastructure/grok-search.js";
-import { NewsSearchError } from "../../src/infrastructure/news-search.js";
-import { DoubaoSearchError } from "../../src/infrastructure/doubao-search.js";
-import type { NewsSearchInput } from "../../src/infrastructure/news-search.js";
+import {
+  DoubaoSearchError,
+  GrokSearchClient,
+  NewsSearchError,
+  type NewsSearchInput,
+} from "../../src/acquisition/index.js";
 import { renderNewsBrief } from "../../src/presentation/news-render.js";
 
 function withNewsMarkdown(result: RivusNewsBriefResult) {

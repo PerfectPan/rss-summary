@@ -1,3 +1,6 @@
+import type { GrokSearchAudit as GrokAudit } from "./domain/search/adapters/audit.js";
+import type { SearchPage as SearchPageDocument } from "./domain/search/search.js";
+
 export type {
   ActivityCardDto,
   ActivitySource,
@@ -105,3 +108,58 @@ export {
   WebPageLive,
   type AcquisitionOptions,
 } from "./infra/live.js";
+export {
+  editionRotation,
+  isSearchFailure,
+  NewsSearchError,
+  selectQueryIds,
+  shareSearchBudget,
+  type NewsSearchInput,
+  type NewsSearchResult,
+  type SearchFailure,
+  type SearchInput,
+  type SearchPage,
+  type SearchResult,
+  type SearchUsage,
+} from "./domain/search/search.js";
+export {
+  errorAudit,
+  pageAudit,
+  type AuditedSearchPage,
+  type GrokSearchAudit,
+} from "./domain/search/adapters/audit.js";
+export type NewsSearchPage = SearchPageDocument & { grok?: GrokAudit };
+export { searchBudgetDefaults } from "./application/budget-defaults.js";
+export {
+  GrokProcess,
+  SearchBudgetRepository,
+  SearchProvider,
+  type GrokProcessRequest,
+} from "./application/ports.js";
+export {
+  searchWithRetry,
+  retryDelayMs,
+  isTransientSearchError,
+} from "./application/services/with-retry.js";
+export {
+  withBudget,
+  type BudgetedSearch,
+  type BudgetedSearchPage,
+} from "./application/services/with-budget.js";
+export {
+  settleSearchRequests,
+  settleSearches,
+  toPromiseSettled,
+  type SearchSettlement,
+} from "./application/use-cases/search.js";
+export { DoubaoSearchClient, DoubaoSearchLive } from "./infra/adapters/doubao-http.js";
+export { DoubaoSearchError } from "./domain/item/adapters/doubao.js";
+export {
+  GrokProcessLive,
+  GrokSearchClient,
+  GrokSearchLive,
+  GrokXClient,
+} from "./infra/adapters/grok-cli.js";
+export { GlmSearchClient, GlmSearchLive } from "./infra/adapters/glm-search.js";
+export { createBudgetedNewsSearch, type BudgetOptions } from "./infra/budgeted-search.js";
+export { collectXAccountPosts, type XAccountPosts } from "./infra/x-account-posts.js";

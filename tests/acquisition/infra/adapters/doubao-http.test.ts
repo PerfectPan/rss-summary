@@ -1,6 +1,13 @@
+import { Effect } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { DoubaoSearchClient, DoubaoSearchError } from "../../src/infrastructure/doubao-search.js";
+import { SearchProvider } from "../../../../src/acquisition/application/ports.js";
+import {
+  DoubaoSearchClient,
+  DoubaoSearchError,
+  DoubaoSearchLive,
+} from "../../../../src/acquisition/infra/adapters/doubao-http.js";
+import { describeSearchProvider, type ProviderStep } from "./search-provider-suite.js";
 
 describe("Doubao search source", () => {
   it("requests an exact day without broad query rewriting and with authoritative URL results", async () => {
@@ -164,4 +171,37 @@ describe("Doubao search source", () => {
       message: "Doubao search API error http_503: HTTP 503",
     });
   });
+});
+
+describeSearchProvider({
+  name: "doubao",
+  emitsRateLimit: true,
+  create(next) {
+    let invocations = 0;
+    return {
+      invocations: () => invocations,
+      search: (value) => {
+        invocations += 1;
+        const step: ProviderStep = next();
+        const fetchImpl: typeof fetch = async () => {
+          if (step === "http_429") return new Response("slow", { status: 429 });
+          if (step === "permanent") return new Response("no", { status: 500 });
+          return new Response(
+            JSON.stringify({
+              Result: {
+                ResultCount: 1,
+                WebResults: [
+                  { Id: "suite", Title: "Suite", Url: "https://example.com/suite", SortId: 1 },
+                ],
+              },
+            }),
+          );
+        };
+        return Effect.gen(function* () {
+          const provider = yield* SearchProvider;
+          return yield* provider.search(value);
+        }).pipe(Effect.provide(DoubaoSearchLive({ apiKey: "suite", fetch: fetchImpl })));
+      },
+    };
+  },
 });

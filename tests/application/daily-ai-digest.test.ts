@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { generateDailyAiDigest } from "../../src/application/daily-ai-digest.js";
 import * as newsBrief from "../../src/application/news-brief.js";
 import type { IndustryBriefDocument } from "../../src/application/industry-brief.js";
-import { type XAccountPosts, collectXAccountPosts } from "../../src/application/x-account-posts.js";
+import { type XAccountPosts, collectXAccountPosts } from "../../src/acquisition/index.js";
 
 import { RssClient } from "../../src/acquisition/infra/adapters/rss-http.js";
 import { WebPageClient } from "../../src/acquisition/infra/adapters/web-page-http.js";

@@ -15,16 +15,22 @@ import {
   startOfCalendarDay,
 } from "../domain/time.js";
 import { boundedInteger } from "../infrastructure/parsing.js";
-import { createBudgetedNewsSearch } from "../infrastructure/news-search-budget.js";
 import { loadNewsTopics } from "../infrastructure/news-topics.js";
-import { GrokSearchClient } from "../infrastructure/grok-search.js";
-import { DoubaoSearchClient } from "../infrastructure/doubao-search.js";
+import { GlmResearchClient } from "../infrastructure/glm-research.js";
 import {
+  createBudgetedNewsSearch,
+  DoubaoSearchClient,
+  editionRotation,
+  GrokSearchClient,
+  isSearchFailure,
   NewsSearchError,
+  searchBudgetDefaults,
+  searchWithRetry,
+  selectQueryIds,
+  settleSearchRequests,
   type NewsSearchInput,
   type NewsSearchPage,
-} from "../infrastructure/news-search.js";
-import { GlmResearchClient } from "../infrastructure/glm-research.js";
+} from "../acquisition/index.js";
 import { createHybridNewsSearch, type NewsSearchRequest } from "./hybrid-news-search.js";
 import { attempt } from "./effect.js";
 import {
@@ -103,8 +109,6 @@ type NewsBriefDependencies = {
 
 const noonCutoffMinutes = 12 * 60 + 30;
 const newsSearchConcurrency = 2;
-const newsSearchMaxAttempts = 3;
-const newsSearchRetryBaseMs = 250;
 
 export function resolveNewsEditionWindow(
   occurrence: string,
@@ -157,9 +161,7 @@ export function generateRivusNewsBrief(
       },
       catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
     });
-    const rotation =
-      Math.floor(Date.parse(`${window.day}T00:00:00Z`) / 86_400_000) * 2 +
-      (input.edition === "evening" ? 1 : 0);
+    const rotation = editionRotation(window.day, input.edition);
     const topics = (dependencies.topics ?? loadNewsTopics(env.NEWS_TOPICS_FILE)).filter(
       ({ enabled }) => enabled,
     );
@@ -220,11 +222,10 @@ export function generateRivusNewsBrief(
       mode === "grok"
         ? Math.min(requestedMaxQueries, boundedInteger(env.NEWS_GROK_MAX_QUERIES, 1, 1, 4))
         : requestedMaxQueries;
-    const selectedQueryIds = new Set(
-      Array.from(
-        { length: Math.min(maxQueries, requests.length) },
-        (_, offset) => requests[(rotation + offset) % requests.length]!.query.id,
-      ),
+    const selectedQueryIds = selectQueryIds(
+      requests.map((request) => request.query.id),
+      rotation,
+      maxQueries,
     );
     const primarySearch = (input: NewsSearchInput) =>
       searchWithRetry(input, search, {
@@ -278,7 +279,7 @@ export function generateRivusNewsBrief(
       const failures = settled.flatMap((result) =>
         result.status === "rejected" ? [result.reason] : [],
       );
-      if (!failures.every((error) => error instanceof NewsSearchError)) {
+      if (!failures.every((error) => isSearchFailure(error))) {
         return yield* Effect.fail(new AggregateError(failures, "All news search queries failed."));
       }
       const unavailable: RivusNewsBriefResult = {
@@ -296,7 +297,7 @@ export function generateRivusNewsBrief(
       if (
         failures.every(
           (error) =>
-            error instanceof NewsSearchError &&
+            isSearchFailure(error) &&
             ["local_budget_exhausted", "query_deferred"].includes(error.code),
         )
       )
@@ -346,58 +347,6 @@ export function generateRivusNewsBrief(
       topics,
     };
   });
-}
-
-async function settleSearchRequests(
-  requests: NewsSearchRequest[],
-  execute: (request: NewsSearchRequest) => Promise<NewsSearchPage>,
-  concurrency = newsSearchConcurrency,
-): Promise<PromiseSettledResult<NewsSearchPage>[]> {
-  const settled: PromiseSettledResult<NewsSearchPage>[] = [];
-  settled.length = requests.length;
-  let nextIndex = 0;
-  const worker = async () => {
-    while (nextIndex < requests.length) {
-      const index = nextIndex;
-      nextIndex += 1;
-      try {
-        settled[index] = { status: "fulfilled", value: await execute(requests[index]!) };
-      } catch (reason) {
-        settled[index] = { status: "rejected", reason };
-      }
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(concurrency, requests.length) }, () => worker()));
-  return settled;
-}
-
-async function searchWithRetry(
-  input: NewsSearchInput,
-  search: (input: NewsSearchInput) => Promise<NewsSearchPage>,
-  dependencies: { random: () => number; sleep: (milliseconds: number) => Promise<void> },
-): Promise<NewsSearchPage> {
-  for (let attemptNumber = 1; attemptNumber <= newsSearchMaxAttempts; attemptNumber += 1) {
-    try {
-      return await search(input);
-    } catch (error) {
-      if (attemptNumber === newsSearchMaxAttempts || !isTransientSearchError(error)) throw error;
-      await dependencies.sleep(retryDelayMs(error, attemptNumber, dependencies.random));
-    }
-  }
-  throw new Error("News search retry attempts exhausted.");
-}
-
-function isTransientSearchError(error: unknown): error is NewsSearchError {
-  return (
-    error instanceof NewsSearchError &&
-    (error.code === "rate_limit_exceeded" || error.code === "http_429")
-  );
-}
-
-function retryDelayMs(error: NewsSearchError, attemptNumber: number, random: () => number): number {
-  if (error.retryAfterMs !== undefined) return error.retryAfterMs;
-  const jitter = 0.5 + Math.min(1, Math.max(0, random()));
-  return Math.round(newsSearchRetryBaseMs * 2 ** (attemptNumber - 1) * jitter);
 }
 
 function sleep(milliseconds: number): Promise<void> {
@@ -454,11 +403,27 @@ function createSearch(
     return createBudgetedNewsSearch({
       search: (input) => client.search(input),
       provider: `grok://cli/v1/${model ?? "default"}`,
-      stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || ".state/news-search.json",
-      dailyLimit: boundedInteger(env.NEWS_SEARCH_DAILY_LIMIT, 4, 0, 100_000),
-      monthlyLimit: boundedInteger(env.NEWS_SEARCH_MONTHLY_LIMIT, 120, 0, 1_000_000),
+      stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || searchBudgetDefaults.stateFile,
+      dailyLimit: boundedInteger(
+        env.NEWS_SEARCH_DAILY_LIMIT,
+        searchBudgetDefaults.grok.dailyLimit,
+        0,
+        100_000,
+      ),
+      monthlyLimit: boundedInteger(
+        env.NEWS_SEARCH_MONTHLY_LIMIT,
+        searchBudgetDefaults.grok.monthlyLimit,
+        0,
+        1_000_000,
+      ),
       timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00",
-      cacheTtlMs: boundedInteger(env.NEWS_SEARCH_CACHE_TTL_MINUTES, 360, 0, 43_200) * 60_000,
+      cacheTtlMs:
+        boundedInteger(
+          env.NEWS_SEARCH_CACHE_TTL_MINUTES,
+          searchBudgetDefaults.cacheTtlMinutes,
+          0,
+          43_200,
+        ) * 60_000,
       now,
     });
   }
@@ -471,13 +436,29 @@ function createSearch(
   });
   return createBudgetedNewsSearch({
     search: (input) => client.search(input),
-    stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || ".state/news-search.json",
+    stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || searchBudgetDefaults.stateFile,
     provider:
       env.DOUBAO_SEARCH_BASE_URL?.trim() || "https://open.feedcoopapi.com/search_api/web_search",
-    dailyLimit: boundedInteger(env.NEWS_SEARCH_DAILY_LIMIT, 14, 0, 100_000),
-    monthlyLimit: boundedInteger(env.NEWS_SEARCH_MONTHLY_LIMIT, 420, 0, 1_000_000),
+    dailyLimit: boundedInteger(
+      env.NEWS_SEARCH_DAILY_LIMIT,
+      searchBudgetDefaults.doubao.dailyLimit,
+      0,
+      100_000,
+    ),
+    monthlyLimit: boundedInteger(
+      env.NEWS_SEARCH_MONTHLY_LIMIT,
+      searchBudgetDefaults.doubao.monthlyLimit,
+      0,
+      1_000_000,
+    ),
     timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00",
-    cacheTtlMs: boundedInteger(env.NEWS_SEARCH_CACHE_TTL_MINUTES, 360, 0, 43_200) * 60_000,
+    cacheTtlMs:
+      boundedInteger(
+        env.NEWS_SEARCH_CACHE_TTL_MINUTES,
+        searchBudgetDefaults.cacheTtlMinutes,
+        0,
+        43_200,
+      ) * 60_000,
     now,
   });
 }

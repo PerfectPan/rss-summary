@@ -3,8 +3,7 @@ import {
   createHybridNewsSearch,
   type NewsSearchRequest,
 } from "../../src/application/hybrid-news-search.js";
-import { DoubaoSearchError } from "../../src/infrastructure/doubao-search.js";
-import type { NewsSearchPage } from "../../src/infrastructure/news-search.js";
+import { DoubaoSearchError, type NewsSearchPage } from "../../src/acquisition/index.js";
 import type { ResearchPage } from "../../src/infrastructure/glm-research.js";
 
 const window = {
