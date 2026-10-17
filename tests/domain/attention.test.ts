@@ -113,6 +113,94 @@ describe("candidate presentation depth", () => {
     ).toBe("summary");
   });
 
+  it.each([
+    ["安全漏洞", "security-event"],
+    ["高危漏洞", "security-event"],
+    ["供应链攻击", "security-event"],
+    ["数据泄露", "security-event"],
+    ["critical vulnerability", "security-event"],
+    ["security advisory", "security-event"],
+    ["security update", "security-event"],
+    ["supply-chain attack", "security-event"],
+    ["data breach", "security-event"],
+    ["CVE-2026-12345", "security-event"],
+    ["重大故障", "service-incident"],
+    ["大规模中断", "service-incident"],
+    ["major outage", "service-incident"],
+    ["重大变更", "breaking-change"],
+    ["破坏性变更", "breaking-change"],
+    ["不兼容", "breaking-change"],
+    ["breaking change", "breaking-change"],
+    ["breaking changes", "breaking-change"],
+    ["弃用", "deprecation"],
+    ["停止支持", "deprecation"],
+    ["deprecated", "deprecation"],
+    ["deprecation", "deprecation"],
+    ["end of support", "deprecation"],
+    ["重大版本", "major-release"],
+    ["正式发布", "major-release"],
+    ["正式上线", "major-release"],
+    ["开放公测", "major-release"],
+    ["公开预览", "major-release"],
+    ["全面可用", "major-release"],
+    ["general availability", "major-release"],
+    ["generally available", "major-release"],
+    ["public preview", "major-release"],
+    ["major release", "major-release"],
+  ] as const)("classifies %s as %s", (keyword, reasonCode) => {
+    expect(
+      presentationDecisionForCandidate(
+        candidate({
+          category: "release",
+          eventTypes: ["release"],
+          score: 10,
+          label: keyword,
+          description: "ordinary wording",
+        }),
+      ),
+    ).toEqual({ depth: "summary", reasonCode, evidence: keyword });
+  });
+
+  it("marks articles and pull requests as semantic summaries only when that policy is on", () => {
+    const article = candidate({
+      score: 10,
+      label: "Ordinary note",
+      description: "No impact phrase.",
+    });
+    const pullRequest = candidate({
+      score: 10,
+      source: "github",
+      category: "activity",
+      eventTypes: ["pull_request"],
+      repo: "example/project",
+      label: "Ordinary change",
+      description: "No impact phrase.",
+    });
+    const release = candidate({
+      score: 10,
+      category: "release",
+      eventTypes: ["release"],
+      label: "Ordinary release",
+      description: "No impact phrase.",
+    });
+    expect(presentationDecisionForCandidate(article, { semanticSummaries: true })).toEqual({
+      depth: "summary",
+      reasonCode: "semantic-summary",
+    });
+    expect(presentationDecisionForCandidate(article)).toEqual({
+      depth: "link",
+      reasonCode: "ordinary-update",
+    });
+    expect(presentationDecisionForCandidate(pullRequest, { semanticSummaries: true })).toEqual({
+      depth: "summary",
+      reasonCode: "semantic-summary",
+    });
+    expect(presentationDecisionForCandidate(release, { semanticSummaries: true })).toEqual({
+      depth: "link",
+      reasonCode: "ordinary-update",
+    });
+  });
+
   it("returns typed interest evidence instead of parsing display reasons", () => {
     expect(
       presentationDecisionForCandidate(

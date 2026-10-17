@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import {
   buildCandidateProjects,
@@ -444,4 +444,198 @@ describe("github feed domain", () => {
       /important|signal/iu,
     );
   });
+
+  it.each([
+    { type: "watch" as const, score: 90, reason: "followee starred this repository" },
+    { type: "trending" as const, score: 80, reason: "GitHub Home trending repository" },
+    { type: "recommendation" as const, score: 75, reason: "GitHub Home recommendation" },
+    { type: "announcement" as const, score: 65, reason: "GitHub Home announcement" },
+    { type: "release" as const, score: 85, reason: "new release published" },
+    { type: "fork" as const, score: 45, reason: "followed actor forked repository" },
+    { type: "create" as const, score: 35, reason: "new repository created" },
+    { type: "follow" as const, score: 25, reason: "follow relationship from GitHub Home" },
+    { type: "article" as const, score: 30, reason: "rss feed: someone" },
+    { type: "paper" as const, score: 35, reason: "research paper: someone" },
+  ])("base score for $type is $score", ({ type, score, reason }) => {
+    const candidate = scoreEvents([{ type }]);
+    expect(candidate.score).toBe(score);
+    expect(candidate.reasons).toEqual([reason]);
+  });
+
+  it.each([
+    { action: "merged", score: 55, reason: "pull request merged" },
+    { action: "opened", score: 35, reason: undefined },
+    { action: "closed", score: 20, reason: undefined },
+    { action: "labeled", score: 5, reason: undefined },
+  ])("base score for a $action pull request is $score", ({ action, score, reason }) => {
+    const candidate = scoreEvents([{ type: "pull_request", action, prNumber: 1 }]);
+    expect(candidate.score).toBe(score);
+    expect(candidate.reasons).toEqual(reason ? [reason] : []);
+  });
+
+  it("adds 30 points for each followed actor", () => {
+    const stranger = scoreEvents([{ type: "watch", actor: "dave" }]);
+    const followee = scoreEvents([{ type: "watch", actor: "alice" }], {
+      followees: new Set(["alice"]),
+    });
+    expect(followee.score - stranger.score).toBe(30);
+    expect(followee.reasons).toContain("followed actor: alice");
+    expect(stranger.reasons).not.toContain("followed actor: dave");
+  });
+
+  it("adds 20 points plus 5 points per actor when several actors mention one repository", () => {
+    const solo = scoreEvents([{ type: "watch", actor: "alice" }]);
+    const duo = scoreEvents([
+      { type: "watch", actor: "alice" },
+      { type: "watch", actor: "bob", id: "2" },
+    ]);
+    const trio = scoreEvents([
+      { type: "watch", actor: "alice" },
+      { type: "watch", actor: "bob", id: "2" },
+      { type: "watch", actor: "carol", id: "3" },
+    ]);
+    expect(duo.score - solo.score * 2).toBe(30);
+    expect(trio.score - solo.score * 3).toBe(35);
+    expect(duo.reasons).toContain("multiple followed mentions");
+    expect(solo.reasons).not.toContain("multiple followed mentions");
+  });
+
+  it("adds 15 points for a repository interest and 20 points for an event interest", () => {
+    const plain = scoreEvents([{ type: "watch" }]);
+    const byLanguage = scoreEvents([{ type: "watch" }], {
+      interests: ["rustlang"],
+      repository: { ...emptyRepository, language: "RustLang" },
+    });
+    const byTopics = scoreEvents([{ type: "watch" }], {
+      interests: ["topicword"],
+      repository: { ...emptyRepository, topics: ["topicword"] },
+    });
+    const byDescription = scoreEvents([{ type: "watch" }], {
+      interests: ["descword"],
+      repository: { ...emptyRepository, description: "A descword project" },
+    });
+    const byEvent = scoreEvents(
+      [{ type: "article", title: "Compiler notes", summary: "No other overlap." }],
+      { interests: ["compiler"] },
+    );
+    const plainArticle = scoreEvents([
+      { type: "article", title: "Weekly notes", summary: "No other overlap." },
+    ]);
+    expect(byLanguage.score - plain.score).toBe(15);
+    expect(byTopics.score - plain.score).toBe(15);
+    expect(byDescription.score - plain.score).toBe(15);
+    expect(byEvent.score - plainArticle.score).toBe(20);
+    expect(byLanguage.reasons).toContain("matches interest: rustlang");
+    expect(byTopics.reasons).toContain("matches interest: topicword");
+    expect(byDescription.reasons).toContain("matches interest: descword");
+    expect(byEvent.reasons).toContain("matches interest: compiler");
+  });
+
+  it("matches a paper interest only in the abstract", () => {
+    const abstract = scoreEvents(
+      [{ type: "paper", title: "Unrelated title", summary: "The abstract covers abstractterm." }],
+      { interests: ["abstractterm"] },
+    );
+    const titleOnly = scoreEvents(
+      [{ type: "paper", title: "Notes on abstractterm", summary: "Nothing relevant in the body." }],
+      { interests: ["abstractterm"] },
+    );
+    expect(abstract.score - titleOnly.score).toBe(20);
+    expect(abstract.reasons).toContain("matches paper abstract: abstractterm");
+    expect(titleOnly.reasons.some((reason) => reason.startsWith("matches paper abstract:"))).toBe(
+      false,
+    );
+    expect(selectResearchCandidates([titleOnly, abstract], 8).map((item) => item.score)).toEqual([
+      abstract.score,
+    ]);
+  });
+
+  it("adds a log10 star bonus capped at 25", () => {
+    const at = (stars: number) =>
+      scoreEvents([{ type: "watch" }], {
+        repository: { ...emptyRepository, stargazersCount: stars },
+      }).score;
+    expect(at(1_000) - at(1)).toBe(18);
+    expect(at(100_000_000) - at(1)).toBe(25);
+  });
+
+  it("adds 8 points when the repository was pushed within 14 days", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-08-16T04:00:00.000Z"));
+    try {
+      const recent = scoreEvents([{ type: "watch" }], {
+        repository: { ...emptyRepository, pushedAt: "2026-08-02T04:00:00.000Z" },
+      });
+      const stale = scoreEvents([{ type: "watch" }], {
+        repository: { ...emptyRepository, pushedAt: "2026-08-02T03:59:59.000Z" },
+      });
+      expect(recent.score - stale.score).toBe(8);
+      expect(recent.reasons).toContain("recently active repository");
+      expect(stale.reasons).not.toContain("recently active repository");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
+
+const emptyRepository = {
+  fullName: "example/repo",
+  htmlUrl: "https://github.com/example/repo",
+  description: null as string | null,
+  language: null as string | null,
+  stargazersCount: 1,
+  topics: [] as string[],
+  pushedAt: null as string | null,
+};
+
+function scoreEvents(
+  events: Array<{
+    action?: string;
+    actor?: string;
+    id?: string;
+    prNumber?: number;
+    summary?: string;
+    title?: string;
+    type:
+      | "announcement"
+      | "article"
+      | "create"
+      | "follow"
+      | "fork"
+      | "paper"
+      | "pull_request"
+      | "recommendation"
+      | "release"
+      | "trending"
+      | "watch";
+  }>,
+  options: {
+    followees?: Set<string>;
+    interests?: string[];
+    repository?: typeof emptyRepository;
+  } = {},
+) {
+  const [candidate] = buildCandidateProjects(
+    events.map((event, index) => ({
+      id: event.id ?? String(index + 1),
+      type: event.type,
+      actor: event.actor ?? "someone",
+      repo: "example/repo",
+      createdAt: `2026-08-15T02:00:${String(index).padStart(2, "0")}Z`,
+      ...(event.action ? { action: event.action } : {}),
+      ...(event.prNumber ? { prNumber: event.prNumber } : {}),
+      ...(event.title ? { title: event.title } : {}),
+      ...(event.summary ? { summary: event.summary } : {}),
+      source: event.type === "article" || event.type === "paper" ? ("rss" as const) : undefined,
+      sourceName:
+        event.type === "article" || event.type === "paper" ? (event.actor ?? "someone") : undefined,
+    })),
+    {
+      followees: options.followees ?? new Set<string>(),
+      interests: options.interests ?? [],
+      repositories: new Map(options.repository ? [["example/repo", options.repository]] : []),
+    },
+  );
+  if (!candidate) throw new Error("expected a scored candidate");
+  return candidate;
+}
