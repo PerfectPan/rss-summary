@@ -3,14 +3,10 @@ import { mkdtemp, open, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { extname, join } from "node:path";
 import { promisify } from "node:util";
-import {
-  isVideoResearchUrl,
-  validateResearchUrl,
-  type ArticleResearchRequest,
-  type ArticleResearchResult,
-} from "./article-research.js";
-import { asRecord, text } from "./parsing.js";
-import { captureVideoFrames, videoVisualEvidence } from "./video-frames.js";
+import type { ReadRequest, ReadResult, VideoVisuals } from "../../domain/document/document.js";
+import { isVideoResearchUrl, validateResearchUrl } from "../../domain/document/url-policy.js";
+import { asRecord, text } from "./json-record.js";
+import { captureVideoFrames } from "./video-frames.js";
 
 type RunCommand = (
   command: string,
@@ -18,11 +14,23 @@ type RunCommand = (
   options: { timeout: number; maxBuffer: number; env: NodeJS.ProcessEnv },
 ) => Promise<{ stdout: string }>;
 
+type TranscriptMethod = "captions" | "transcription";
+
+export type VideoTranscriptFormatter = (
+  transcript: string,
+  method: TranscriptMethod,
+  maximum?: number,
+) => string;
+
+export type VideoVisualFormatter = (visuals: VideoVisuals) => string;
+
 type VideoResearchOptions = {
   captureFrames?: typeof captureVideoFrames;
   command?: string;
   env?: NodeJS.ProcessEnv;
   fetch?: typeof fetch;
+  formatTranscript: VideoTranscriptFormatter;
+  formatVisuals: VideoVisualFormatter;
   maxBytes?: number;
   runCommand?: RunCommand;
   timeoutMs?: number;
@@ -37,21 +45,25 @@ export class VideoResearchClient {
   private readonly command: string;
   private readonly env: NodeJS.ProcessEnv;
   private readonly fetchImpl: typeof fetch;
+  private readonly formatTranscript: VideoTranscriptFormatter;
+  private readonly formatVisuals: VideoVisualFormatter;
   private readonly maxBytes: number;
   private readonly runCommand: RunCommand;
   private readonly timeoutMs: number;
 
-  constructor(options: VideoResearchOptions = {}) {
+  constructor(options: VideoResearchOptions) {
     this.captureFrames = options.captureFrames ?? captureVideoFrames;
     this.command = options.command ?? "summarize";
     this.env = options.env ?? process.env;
     this.fetchImpl = options.fetch ?? fetch;
+    this.formatTranscript = options.formatTranscript;
+    this.formatVisuals = options.formatVisuals;
     this.maxBytes = options.maxBytes ?? 1_000_000_000;
     this.runCommand = options.runCommand ?? execute;
     this.timeoutMs = options.timeoutMs ?? 600_000;
   }
 
-  async research(request: ArticleResearchRequest): Promise<ArticleResearchResult> {
+  async research(request: ReadRequest): Promise<ReadResult> {
     const retrievedAt = new Date().toISOString();
     let workspace: string | undefined;
     try {
@@ -110,10 +122,10 @@ export class VideoResearchClient {
             env: this.env,
           }),
       });
-      const visualText = videoVisualEvidence(visualResearch.visuals).slice(0, 3_300);
+      const visualText = this.formatVisuals(visualResearch.visuals).slice(0, 3_300);
       return {
         ...visualResearch,
-        content: `${transcriptEvidence(transcript, method, MAX_CONTENT_CHARS - visualText.length - 2)}\n\n${visualText}`,
+        content: `${this.formatTranscript(transcript, method, MAX_CONTENT_CHARS - visualText.length - 2)}\n\n${visualText}`,
         fetchedUrl: url,
         method,
         ref: request.ref,
@@ -219,22 +231,4 @@ export class VideoResearchClient {
     }
     throw new Error("Video exceeded the redirect limit.");
   }
-}
-
-function transcriptEvidence(
-  transcript: string,
-  method: "captions" | "transcription",
-  maximum = MAX_CONTENT_CHARS,
-): string {
-  const note =
-    method === "captions"
-      ? "视频字幕（可能含自动字幕识别错误）。"
-      : "视频音频转写（自动识别，可能有错字；不包含画面信息）。";
-  if (transcript.length + note.length + 1 <= maximum) return `${note}\n${transcript}`;
-  const excerpts = Array.from({ length: 5 }, (_, index) => {
-    const width = Math.floor((maximum - 200) / 5);
-    const start = Math.floor(((transcript.length - width) * index) / 4);
-    return transcript.slice(start, start + width);
-  });
-  return `${note}\n全文过长，以下为按顺序覆盖开头至结尾的五段节选；仅据节选概括，不声称已核验全部细节。\n${excerpts.join("\n[…]\n")}`;
 }

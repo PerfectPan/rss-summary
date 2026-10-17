@@ -2,7 +2,11 @@ import { access, readFile } from "node:fs/promises";
 
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { VideoResearchClient } from "../../src/infrastructure/video-research.js";
+import {
+  transcriptEvidence,
+  videoVisualEvidence,
+} from "../../../../src/reading/domain/document/adapters/video-evidence.js";
+import { VideoResearchClient } from "../../../../src/reading/infra/adapters/video-reader.js";
 
 const url = "https://www.youtube.com/watch?v=example";
 const mediaUrl = "https://video.twimg.com/example.mp4";
@@ -25,7 +29,9 @@ function output(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function createVideoClient(options: ConstructorParameters<typeof VideoResearchClient>[0] = {}) {
+function createVideoClient(
+  options: Partial<ConstructorParameters<typeof VideoResearchClient>[0]> = {},
+) {
   return new VideoResearchClient({
     captureFrames: async () => ({
       visuals: {
@@ -35,6 +41,8 @@ function createVideoClient(options: ConstructorParameters<typeof VideoResearchCl
       },
     }),
     ...options,
+    formatTranscript: options.formatTranscript ?? transcriptEvidence,
+    formatVisuals: options.formatVisuals ?? videoVisualEvidence,
   });
 }
 

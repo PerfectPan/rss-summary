@@ -1,3 +1,5 @@
+import { readGlmPage } from "../reading/index.js";
+
 type Options = {
   apiKey: string;
   fetch?: typeof fetch;
@@ -97,28 +99,11 @@ export class GlmResearchClient {
   }
 
   async read(input: string): Promise<ResearchPage> {
-    const url = publicUrl(input);
-    const value = asRecord(
-      await this.call("read", "webReader", {
-        url: url.href,
-        return_format: "text",
-        retain_images: false,
-        timeout: Math.max(1, Math.min(20, Math.floor(this.timeoutMs / 1000))),
-      }),
-    );
-    const content = text(value.content);
-    if (!content.trim()) throw new Error("GLM Reader returned no readable content.");
-    const resolved = typeof value.url === "string" ? publicUrl(value.url) : url;
-    // A changed origin requires an explicit read so a redirect cannot silently replace the selected source.
-    if (resolved.origin !== url.origin)
-      throw new Error("GLM Reader returned a different source origin.");
-    return {
-      title: text(value.title).slice(0, 500),
-      url: resolved.href,
-      content: content.slice(0, 16_000),
-      truncated: content.length > 16_000,
-      ...publicationTime(value.metadata),
-    };
+    return readGlmPage(input, {
+      apiKey: this.apiKey,
+      fetch: this.fetchImpl,
+      timeoutMs: this.timeoutMs,
+    });
   }
 
   private async call(
@@ -276,37 +261,4 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function text(value: unknown): string {
   return typeof value === "string" ? value : "";
-}
-
-function publicationTime(metadata: unknown): { publishedAt?: string } {
-  const record = asRecord(metadata);
-  // Keep date-only precision. The consumer decides whether the entire day fits its window.
-  const values = [record["article:published_time"], record.datePublished, record["datepublished"]]
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => value.trim());
-  if (values.length && values.every((value) => /^\d{4}-\d{2}-\d{2}$/u.test(value))) {
-    const day = new Date(`${values[0]}T00:00:00Z`);
-    if (
-      new Set(values).size === 1 &&
-      Number.isFinite(day.getTime()) &&
-      day.toISOString().slice(0, 10) === values[0]
-    )
-      return { publishedAt: values[0] };
-    return {};
-  }
-  const times = values.map((value) => {
-    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/u.test(value))
-      return Number.NaN;
-    const day = new Date(`${value.slice(0, 10)}T00:00:00Z`);
-    if (
-      !Number.isFinite(day.getTime()) ||
-      day.toISOString().slice(0, 10) !== value.slice(0, 10) ||
-      Number(value.slice(11, 13)) > 23
-    )
-      return Number.NaN;
-    return Date.parse(value);
-  });
-  if (!times.length || times.some((time) => !Number.isFinite(time)) || new Set(times).size !== 1)
-    return {};
-  return { publishedAt: new Date(times[0]!).toISOString() };
 }

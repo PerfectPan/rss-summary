@@ -1,5 +1,8 @@
-import { GlmResearchClient } from "../infrastructure/glm-research.js";
+import { Effect } from "effect";
 import { readFileSync } from "node:fs";
+
+import { GlmResearchClient } from "../infrastructure/glm-research.js";
+import { GlmReader, ReadingLive } from "../reading/index.js";
 
 import { errorMessage } from "../infrastructure/parsing.js";
 import { loadFeedState, markResearchedByKey, saveFeedState } from "../infrastructure/state.js";
@@ -163,15 +166,22 @@ async function runGlmResearchCommand(
     if (allowed.some((key) => !options[key]?.trim()))
       throw new Error(`Required options: ${allowed.join(", ")}.`);
     const env = dependencies.env ?? process.env;
-    const client =
-      dependencies.client ?? new GlmResearchClient({ apiKey: env.GLM_CODING_API_KEY ?? "" });
     const data =
       command === "search"
-        ? await client.search(
+        ? await (
+            dependencies.client ?? new GlmResearchClient({ apiKey: env.GLM_CODING_API_KEY ?? "" })
+          ).search(
             options["--query"]!,
             options["--domains"]!.split(",").map((value) => value.trim()),
           )
-        : await client.read(options["--url"]!);
+        : dependencies.client
+          ? await dependencies.client.read(options["--url"]!)
+          : await Effect.runPromise(
+              Effect.gen(function* () {
+                const reader = yield* GlmReader;
+                return yield* reader.read(options["--url"]!);
+              }).pipe(Effect.provide(ReadingLive({ apiKey: env.GLM_CODING_API_KEY ?? "" }))),
+            );
     stdout.write(
       `${JSON.stringify(
         {
