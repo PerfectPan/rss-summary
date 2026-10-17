@@ -17,14 +17,15 @@ import { GitHubHomeClient } from "../infrastructure/github-home.js";
 import { RssClient } from "../infrastructure/rss.js";
 import { collectRssFeeds } from "../infrastructure/rss-batch.js";
 import {
-  filterNewCandidates,
+  deliver,
+  DeliveryLive,
+  FeedStateStore,
+  filterUndelivered,
   loadFeedState,
-  markCandidatesSeen,
-  saveFeedState,
+  markDelivered,
   type FeedState,
-} from "../infrastructure/state.js";
+} from "../delivery/index.js";
 import { attempt } from "./effect.js";
-import { deliverAndRecord } from "./delivery.js";
 import { errorMessage } from "../infrastructure/parsing.js";
 
 export type { DigestDocument };
@@ -109,7 +110,9 @@ async function collectDigest(
   });
   const allCandidates = selectResearchCandidates(rankedCandidates, config.maxPapers);
   const state = loadFeedState(config.stateFile);
-  const candidates = config.onlyNew ? filterNewCandidates(allCandidates, state) : allCandidates;
+  const candidates = config.onlyNew
+    ? filterUndelivered(allCandidates, deliveredEventIds, state)
+    : allCandidates;
 
   const generatedAt = new Date().toISOString();
   const document: DigestDocument = {

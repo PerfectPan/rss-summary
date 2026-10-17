@@ -19,10 +19,27 @@ const coveredBySibling = new Map([
   ["domain/time", "kernel/time"],
   ["domain/text", "kernel/text"],
   ["kernel/index", "kernel/result, kernel/time, and kernel/text"],
+  // Pure re-export shims kept for tests/golden imports; behavior lives in delivery.
+  ["infrastructure/state", "delivery/domain/ledger and delivery/infra/repository/feed-state-file"],
+  ["infrastructure/run-store", "delivery/infra/repository/run-archive-files"],
+  ["infrastructure/daily-ai-diagnostics", "delivery/infra/repository/diagnostics-file"],
+  // Declaration-only or assembly modules inside delivery.
+  ["delivery/index", "delivery use-case and repository tests"],
+  ["delivery/application/ports", "delivery use-case tests"],
+  ["delivery/infra/models/feed-state", "delivery/infra/repository/feed-state-file"],
 ]);
 
 /** Layers that must mirror 1:1 with tests/<layer>/<name>.test.ts */
-const layers = ["domain", "application", "infrastructure", "presentation", "kernel", "app", "reading"];
+const layers = [
+  "domain",
+  "application",
+  "infrastructure",
+  "presentation",
+  "kernel",
+  "app",
+  "reading",
+  "delivery",
+];
 
 function listTs(dir) {
   const out = [];

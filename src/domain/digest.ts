@@ -220,6 +220,30 @@ export function candidateIdentity(candidate: CandidateProject): string {
   return `github-repository:${candidate.repo}`;
 }
 
+/**
+ * Research ledger key for a candidate. Needs the candidate structure, so it
+ * lives here until the editorial module owns research identity.
+ */
+export function researchKeyForCandidate(candidate: CandidateProject): string {
+  if (
+    candidate.source === "rss" ||
+    candidate.source === "web" ||
+    candidate.category === "article" ||
+    candidate.category === "paper"
+  ) {
+    return `${candidate.source === "web" ? "web" : "rss"}:${candidate.url ?? candidate.repo}`;
+  }
+  return `github:${candidate.repo}`;
+}
+
+export function markCandidateResearched(
+  state: { researched: Record<string, { at: string; decision?: string; reason?: string }> },
+  candidate: CandidateProject,
+  record: { at: string; decision?: string; reason?: string },
+): void {
+  state.researched[researchKeyForCandidate(candidate)] = record;
+}
+
 function scoreRepo(
   repo: string,
   events: ActivityCard[],

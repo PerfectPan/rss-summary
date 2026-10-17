@@ -3,12 +3,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
-import type { RunAudit } from "../../src/domain/run-audit.js";
 import {
   listRunArtifacts,
   loadRunArtifact,
   saveRunArtifact,
-} from "../../src/infrastructure/run-store.js";
+  type RunAudit,
+} from "../../../../src/delivery/index.js";
 
 const roots: string[] = [];
 
