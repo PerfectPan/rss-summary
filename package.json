@@ -57,6 +57,7 @@
     "vitest": "catalog:"
   },
   "dependencies": {
+    "@effect/platform-node": "4.0.0",
     "cheerio": "^1.2.0",
     "effect": "4.0.0",
     "fast-xml-parser": "^5.9.3",

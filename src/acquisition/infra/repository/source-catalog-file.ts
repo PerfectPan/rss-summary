@@ -1,12 +1,11 @@
 import { dirname } from "node:path";
 
-import { Effect, FileSystem, Layer } from "effect";
+import { Effect, FileSystem, Layer, PlatformError } from "effect";
 
 import { formatFeedSubscriptions } from "../../domain/source/adapters/catalog.js";
 import type { FeedSubscription } from "../../domain/source/subscription.js";
 import { SourceCatalogStore } from "../../application/ports.js";
 import { decodeFeedsJson } from "../models/feeds.js";
-import { asError } from "../adapters/http.js";
 
 export const SourceCatalogFileLive = Layer.effect(
   SourceCatalogStore,
@@ -17,7 +16,7 @@ export const SourceCatalogFileLive = Layer.effect(
         const exists = yield* fs.exists(path);
         if (!exists) return [];
         return decodeFeedsJson(yield* fs.readFileString(path));
-      }).pipe(Effect.mapError(asError));
+      }).pipe(Effect.mapError(asFileError));
     const saveFeeds = (
       path: string,
       feeds: readonly FeedSubscription[],
@@ -27,7 +26,15 @@ export const SourceCatalogFileLive = Layer.effect(
           yield* fs.makeDirectory(dirname(path), { recursive: true });
           yield* fs.writeFileString(path, formatFeedSubscriptions(feeds));
         }),
-      ).pipe(Effect.mapError(asError));
+      ).pipe(Effect.mapError(asFileError));
     return { loadFeeds, saveFeeds };
   }),
 );
+
+/** The feeds CLI prints `error.message`. Keep Node's own message for that text. */
+function asFileError(error: unknown): Error {
+  if (PlatformError.isPlatformError(error) && error.reason.cause instanceof Error) {
+    return error.reason.cause;
+  }
+  return error instanceof Error ? error : new Error(String(error));
+}

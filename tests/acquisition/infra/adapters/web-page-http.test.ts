@@ -58,4 +58,74 @@ describe("WebPageClient", () => {
     });
     await expect(blocked.getEvents(source)).rejects.toThrow("returned 403");
   });
+
+  it("retries HTTP 500 on the same backoff and then accepts the page", async () => {
+    let attempts = 0;
+    const client = new WebPageClient({
+      fetch: async () => {
+        attempts += 1;
+        if (attempts < 3) return new Response("unavailable", { status: 500 });
+        return new Response(page);
+      },
+    });
+
+    const events = await Effect.runPromise(
+      Effect.provide(
+        Effect.gen(function* () {
+          const fiber = yield* client.read(source).pipe(Effect.forkChild);
+          yield* Effect.yieldNow;
+          expect(attempts).toBe(1);
+          yield* TestClock.adjust("250 millis");
+          expect(attempts).toBe(2);
+          yield* TestClock.adjust("499 millis");
+          expect(attempts).toBe(2);
+          yield* TestClock.adjust("1 millis");
+          return yield* Fiber.join(fiber);
+        }),
+        TestClock.layer(),
+      ),
+    );
+
+    expect(events).toEqual([expect.objectContaining({ title: "Retry succeeded", source: "web" })]);
+    expect(attempts).toBe(3);
+  });
+
+  it("retries HTTP 429 and does not retry 499 or other 4xx statuses", async () => {
+    for (const status of [499, 400, 401, 403, 404, 422]) {
+      let attempts = 0;
+      const client = new WebPageClient({
+        fetch: async () => {
+          attempts += 1;
+          return new Response("no", { status });
+        },
+      });
+      await expect(client.getEvents(source)).rejects.toThrow(`returned ${status}`);
+      expect(attempts).toBe(1);
+    }
+
+    let attempts = 0;
+    const client = new WebPageClient({
+      fetch: async () => {
+        attempts += 1;
+        if (attempts === 1) return new Response("slow down", { status: 429 });
+        return new Response(page);
+      },
+    });
+    const events = await Effect.runPromise(
+      Effect.provide(
+        Effect.gen(function* () {
+          const fiber = yield* client.read(source).pipe(Effect.forkChild);
+          yield* Effect.yieldNow;
+          expect(attempts).toBe(1);
+          yield* TestClock.adjust("249 millis");
+          expect(attempts).toBe(1);
+          yield* TestClock.adjust("1 millis");
+          return yield* Fiber.join(fiber);
+        }),
+        TestClock.layer(),
+      ),
+    );
+    expect(events).toEqual([expect.objectContaining({ title: "Retry succeeded", source: "web" })]);
+    expect(attempts).toBe(2);
+  });
 });

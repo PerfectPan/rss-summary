@@ -1,8 +1,8 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { Effect, FileSystem } from "effect";
+import { Cause, Effect, Exit, FileSystem, PlatformError } from "effect";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
 import { NodeFileSystemLive } from "../../../src/acquisition/infra/node-file-system.js";
@@ -32,4 +32,68 @@ describe("node file system", () => {
     );
     expect(text).toBe("hello\n");
   });
+
+  it("fails a directory read as a typed platform error carrying the Node message", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "acq-fs-"));
+    directories.push(directory);
+    const exit = await readExit(directory);
+    expectTypedNodeCause(
+      exit,
+      nodeMessage(() => readFileSync(directory, "utf8")),
+    );
+  });
+
+  it("fails a directory write as a typed platform error carrying the Node message", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "acq-fs-"));
+    directories.push(directory);
+    const exit = await Effect.runPromise(
+      Effect.provide(
+        Effect.exit(
+          Effect.gen(function* () {
+            const fs = yield* FileSystem.FileSystem;
+            yield* fs.writeFileString(directory, "nope");
+          }),
+        ),
+        NodeFileSystemLive,
+      ),
+    );
+    expectTypedNodeCause(
+      exit,
+      nodeMessage(() => writeFileSync(directory, "nope")),
+    );
+  });
 });
+
+function readExit(path: string) {
+  return Effect.runPromise(
+    Effect.provide(
+      Effect.exit(
+        Effect.gen(function* () {
+          const fs = yield* FileSystem.FileSystem;
+          return yield* fs.readFileString(path);
+        }),
+      ),
+      NodeFileSystemLive,
+    ),
+  );
+}
+
+function expectTypedNodeCause(exit: Exit.Exit<unknown, unknown>, message: string): void {
+  expect(Exit.isFailure(exit)).toBe(true);
+  if (!Exit.isFailure(exit)) return;
+  expect(Cause.hasDies(exit.cause)).toBe(false);
+  const error = Cause.squash(exit.cause);
+  expect(PlatformError.isPlatformError(error)).toBe(true);
+  if (!PlatformError.isPlatformError(error)) return;
+  expect(error.reason.cause).toBeInstanceOf(Error);
+  expect((error.reason.cause as Error).message).toBe(message);
+}
+
+function nodeMessage(readOrWrite: () => void): string {
+  try {
+    readOrWrite();
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  throw new Error("expected the Node filesystem call to fail");
+}

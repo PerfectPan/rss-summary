@@ -1,8 +1,8 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
-import { Effect } from "effect";
+import { Cause, Effect, Exit } from "effect";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
 import { SourceCatalogStore } from "../../../../src/acquisition/application/ports.js";
@@ -35,4 +35,65 @@ describe("source catalog file", () => {
     expect(loaded).toEqual(feeds);
     expect(readFileSync(path, "utf8")).toBe(`${JSON.stringify(feeds, null, 2)}\n`);
   });
+
+  it("keeps the Node message when reading a directory fails", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "acq-catalog-"));
+    directories.push(directory);
+    const exit = await Effect.runPromise(
+      Effect.provide(
+        Effect.exit(
+          Effect.gen(function* () {
+            const store = yield* SourceCatalogStore;
+            return yield* store.loadFeeds(directory);
+          }),
+        ),
+        SourceCatalogStoreLive,
+      ),
+    );
+    expectFileMessage(
+      exit,
+      nodeMessage(() => readFileSync(directory, "utf8")),
+    );
+  });
+
+  it("keeps the Node message when writing the catalog fails", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "acq-catalog-"));
+    directories.push(directory);
+    const exit = await Effect.runPromise(
+      Effect.provide(
+        Effect.exit(
+          Effect.gen(function* () {
+            const store = yield* SourceCatalogStore;
+            yield* store.saveFeeds(directory, []);
+          }),
+        ),
+        SourceCatalogStoreLive,
+      ),
+    );
+    expectFileMessage(
+      exit,
+      nodeMessage(() => {
+        mkdirSync(dirname(directory), { recursive: true });
+        writeFileSync(directory, "unused");
+      }),
+    );
+  });
 });
+
+function expectFileMessage(exit: Exit.Exit<unknown, unknown>, message: string): void {
+  expect(Exit.isFailure(exit)).toBe(true);
+  if (!Exit.isFailure(exit)) return;
+  expect(Cause.hasDies(exit.cause)).toBe(false);
+  const error = Cause.squash(exit.cause);
+  expect(error).toBeInstanceOf(Error);
+  expect((error as Error).message).toBe(message);
+}
+
+function nodeMessage(readOrWrite: () => void): string {
+  try {
+    readOrWrite();
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  throw new Error("expected the Node filesystem call to fail");
+}
