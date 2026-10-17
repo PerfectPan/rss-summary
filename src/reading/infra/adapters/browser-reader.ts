@@ -3,7 +3,7 @@ import {
   validateArticleResearchUrl,
   type ArticleResearchRequest,
   type ArticleResearchResult,
-} from "./article-research.js";
+} from "./http-reader.js";
 
 export type BrowserArticleResearchOptions = {
   browserChannel?: string;

@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 
-import { asRecord, text } from "./parsing.js";
+import { asRecord, text } from "../../../infrastructure/parsing.js";
 
 type VideoFrame = {
   index: number;

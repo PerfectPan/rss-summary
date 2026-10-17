@@ -5,9 +5,9 @@ import {
   isVideoResearchUrl,
   type ArticleResearchClientOptions,
   type ArticleResearchResult,
-} from "../infrastructure/article-research.js";
-import { BrowserArticleResearchClient } from "../infrastructure/browser-article-research.js";
-import { VideoResearchClient } from "../infrastructure/video-research.js";
+} from "../reading/infra/adapters/http-reader.js";
+import { BrowserArticleResearchClient } from "../reading/infra/adapters/browser-reader.js";
+import { VideoResearchClient } from "../reading/infra/adapters/video-reader.js";
 
 export type RivusArticleResearchResult = ArticleResearchResult & {
   tool: "article-research";

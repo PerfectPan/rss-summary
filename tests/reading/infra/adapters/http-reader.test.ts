@@ -3,7 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   ArticleResearchClient,
   extractArticle,
-} from "../../src/infrastructure/article-research.js";
+} from "../../../../src/reading/infra/adapters/http-reader.js";
 
 describe("article research", () => {
   it("extracts the content column instead of navigation chrome", () => {

@@ -2,7 +2,7 @@ import { access, readFile } from "node:fs/promises";
 
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { VideoResearchClient } from "../../src/infrastructure/video-research.js";
+import { VideoResearchClient } from "../../../../src/reading/infra/adapters/video-reader.js";
 
 const url = "https://www.youtube.com/watch?v=example";
 const mediaUrl = "https://video.twimg.com/example.mp4";

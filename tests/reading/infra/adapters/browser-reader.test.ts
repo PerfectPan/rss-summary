@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { BrowserArticleResearchClient } from "../../src/infrastructure/browser-article-research.js";
+import { BrowserArticleResearchClient } from "../../../../src/reading/infra/adapters/browser-reader.js";
 
 describe("browser article research", () => {
   it("extracts rendered article HTML through the injected page fetcher", async () => {

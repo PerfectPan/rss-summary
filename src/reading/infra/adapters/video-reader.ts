@@ -8,8 +8,8 @@ import {
   validateResearchUrl,
   type ArticleResearchRequest,
   type ArticleResearchResult,
-} from "./article-research.js";
-import { asRecord, text } from "./parsing.js";
+} from "./http-reader.js";
+import { asRecord, text } from "../../../infrastructure/parsing.js";
 import { captureVideoFrames, videoVisualEvidence } from "./video-frames.js";
 
 type RunCommand = (
