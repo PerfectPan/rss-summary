@@ -238,6 +238,45 @@ describe("readOriginal", () => {
     expect(readers.calls).toEqual(["browser", "http", "glm"]);
   });
 
+  it("rejects a GLM body of 79 characters after trim", async () => {
+    const content = ` ${"a".repeat(79)} `;
+    const readers = harness({
+      glm: async (url) => ({ title: "Article", url, content, truncated: false }),
+    });
+    const result = await run(
+      { glmFallback: true, mode: "auto", ref: "article:1", url: article },
+      readers.live,
+    );
+    expect(content.trim()).toHaveLength(79);
+    expect(result).toMatchObject({
+      error: "Browser, HTTP and GLM Reader unavailable.",
+      status: "failed",
+    });
+    expect(readers.calls).toEqual(["browser", "http", "glm"]);
+  });
+
+  it("accepts a GLM body of 80 characters after trim", async () => {
+    const content = ` ${"b".repeat(80)} `;
+    const readers = harness({
+      glm: async (url) => ({ title: "Article", url, content, truncated: false }),
+    });
+    const result = await run(
+      { glmFallback: true, mode: "auto", ref: "article:1", url: article },
+      readers.live,
+      1_756_000_000_000,
+    );
+    expect(content.trim()).toHaveLength(80);
+    expect(result).toMatchObject({
+      content,
+      fetchedUrl: article,
+      method: "glm",
+      retrievedAt: new Date(1_756_000_000_000).toISOString(),
+      status: "ok",
+      title: "Article",
+    });
+    expect(readers.calls).toEqual(["browser", "http", "glm"]);
+  });
+
   it("uses the same unavailable error when GLM throws", async () => {
     const readers = harness({
       glm: async () => {
