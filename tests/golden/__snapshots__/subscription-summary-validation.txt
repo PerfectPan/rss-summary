@@ -1,0 +1,18 @@
+{
+  "error": {
+    "name": "SubscriptionDraftValidationError",
+    "message": "SUBSCRIPTION_SUMMARY_VALIDATION_FAILED: publication:https://example.com/deno-2-4: summary is too long. Regenerate the invalid summaries and call render again.",
+    "code": "SUBSCRIPTION_SUMMARY_VALIDATION_FAILED",
+    "issues": [
+      {
+        "message": "summary is too long",
+        "ref": "publication:https://example.com/deno-2-4"
+      }
+    ]
+  },
+  "state": {
+    "feeds.json": "[]\n",
+    "industry-sources.json": "[\n  {\n    \"name\": \"Industry Feed\",\n    \"url\": \"https://example.com/industry.xml\",\n    \"tags\": [\n      \"typescript\"\n    ]\n  },\n  {\n    \"type\": \"page\",\n    \"name\": \"Anthropic News\",\n    \"url\": \"https://www.anthropic.com/news\",\n    \"pathPrefixes\": [\n      \"/news/\"\n    ],\n    \"tags\": [\n      \"News\"\n    ]\n  }\n]\n",
+    "news-topics.json": "[\n  {\n    \"id\": \"ai-model-releases\",\n    \"label\": \"AI 模型与 Agent 发布\",\n    \"icon\": \"🤖\",\n    \"enabled\": true,\n    \"sourcePolicy\": \"news\",\n    \"maxItems\": 2,\n    \"queries\": [\n      {\n        \"id\": \"frontier-model-release\",\n        \"text\": \"OpenAI 正式发布新模型\",\n        \"intent\": \"model-release\",\n        \"subjectAny\": [\n          \"OpenAI\"\n        ],\n        \"eventAny\": [\n          \"正式发布\"\n        ],\n        \"excludedAny\": [\n          \"传闻\"\n        ]\n      }\n    ]\n  }\n]\n"
+  }
+}

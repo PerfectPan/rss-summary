@@ -1,0 +1,11 @@
+{
+  "content": "TypeScript toolchain update\nThe TypeScript toolchain update documents a concrete workflow change for agents and explains how the new compiler flags affect an existing project.",
+  "fetchedUrl": "https://example.com/deno-2-4",
+  "method": "http",
+  "ref": "publication:https://example.com/deno-2-4",
+  "retrievedAt": "2026-08-16T04:00:00.000Z",
+  "status": "ok",
+  "title": "TypeScript toolchain update",
+  "url": "https://example.com/deno-2-4",
+  "tool": "article-research"
+}
