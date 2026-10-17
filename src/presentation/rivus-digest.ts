@@ -1,5 +1,6 @@
 import { Effect } from "effect";
 
+import { runPluginEffect } from "../app/runtime.js";
 import type { DigestDocument } from "../domain/digest.js";
 import type { RunAudit } from "../domain/run-audit.js";
 import type { AppConfig } from "../infrastructure/config.js";
@@ -87,7 +88,7 @@ export async function collectRivusDigest(
   const configEnv = { ...env };
   if (input.onlyNew !== undefined) configEnv.FEED_ONLY_NEW = String(input.onlyNew);
   if (input.rssOnly !== undefined) configEnv.FEED_RSS_ONLY = String(input.rssOnly);
-  const document = await Effect.runPromise(
+  const document = await runPluginEffect(
     (dependencies.buildDigestDocument ?? buildDigestDocument)(loadConfig(configEnv, argv)),
   );
   return {

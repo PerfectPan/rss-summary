@@ -69,4 +69,3 @@ function finiteNumberText(value: number): string {
 function isObjectLike(value: unknown): value is object {
   return value !== null && typeof value === "object";
 }
-

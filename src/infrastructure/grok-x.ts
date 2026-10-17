@@ -32,12 +32,14 @@ const requestSchema = Schema.Struct({
   count: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 50 })),
   since: Schema.String.check(
     Schema.makeFilter(
-      (value: string) => /(?:Z|[+-]\d{2}:\d{2})$/u.test(value) && Number.isFinite(Date.parse(value)),
+      (value: string) =>
+        /(?:Z|[+-]\d{2}:\d{2})$/u.test(value) && Number.isFinite(Date.parse(value)),
     ),
   ),
   until: Schema.String.check(
     Schema.makeFilter(
-      (value: string) => /(?:Z|[+-]\d{2}:\d{2})$/u.test(value) && Number.isFinite(Date.parse(value)),
+      (value: string) =>
+        /(?:Z|[+-]\d{2}:\d{2})$/u.test(value) && Number.isFinite(Date.parse(value)),
     ),
   ),
   handle: Schema.optional(Schema.String.check(Schema.isPattern(/^[a-zA-Z0-9_]{1,15}$/u))),

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { Effect } from "effect";
 
+import { runCliEffect } from "../app/runtime.js";
 import { run as runDigest } from "../application/digest.js";
 import { runIndustry } from "../application/industry-brief.js";
 import { renderJsonDigest, renderMarkdownDigest } from "./render.js";
@@ -11,7 +11,6 @@ import { runFeedsCommand } from "./feeds-cli.js";
 import { runGithubHomeCommand } from "./github-home-cli.js";
 import { runResearchCommand } from "./research-cli.js";
 import { runRunsCommand } from "./runs-cli.js";
-import { errorMessage } from "../infrastructure/parsing.js";
 
 type Writable = {
   write(chunk: string): unknown;
@@ -48,33 +47,23 @@ export async function runCliCommand(
   }
 
   if (command === "industry") {
-    try {
-      await Effect.runPromise(
-        runIndustry((document, format) =>
-          format === "json"
-            ? renderJsonIndustryBrief(document)
-            : renderMarkdownIndustryBrief(document),
-        ),
-      );
-      return 0;
-    } catch (error) {
-      stderr.write(`${errorMessage(error)}\n`);
-      return 1;
-    }
+    return runCliEffect(
+      runIndustry((document, format) =>
+        format === "json"
+          ? renderJsonIndustryBrief(document)
+          : renderMarkdownIndustryBrief(document),
+      ),
+      { stderr },
+    );
   }
 
   if (command === "digest") {
-    try {
-      await Effect.runPromise(
-        runDigest((document, format) =>
-          format === "json" ? renderJsonDigest(document) : renderMarkdownDigest(document),
-        ),
-      );
-      return 0;
-    } catch (error) {
-      stderr.write(`${errorMessage(error)}\n`);
-      return 1;
-    }
+    return runCliEffect(
+      runDigest((document, format) =>
+        format === "json" ? renderJsonDigest(document) : renderMarkdownDigest(document),
+      ),
+      { stderr },
+    );
   }
 
   if (command === "help" || command === "--help" || command === "-h") {

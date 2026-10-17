@@ -22,7 +22,7 @@ const coveredBySibling = new Map([
 ]);
 
 /** Layers that must mirror 1:1 with tests/<layer>/<name>.test.ts */
-const layers = ["domain", "application", "infrastructure", "presentation", "kernel"];
+const layers = ["domain", "application", "infrastructure", "presentation", "kernel", "app"];
 
 function listTs(dir) {
   const out = [];
