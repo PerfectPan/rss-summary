@@ -69,6 +69,45 @@ describe("audited delivery", () => {
     });
   });
 
+  // Invariant I1: the ledger may only be marked as delivered (afterSend) once
+  // the send itself succeeded.
+  it("runs afterSend only after the send succeeded", async () => {
+    const calls: string[] = [];
+    const deliveries: RunDelivery[] = [];
+
+    await runDeliver(
+      { channel: "stdout", send: () => Effect.sync(() => calls.push("send")) },
+      deliveries,
+      { afterSend: Effect.sync(() => calls.push("afterSend")) },
+      "x",
+    );
+
+    expect(calls).toEqual(["send", "afterSend"]);
+  });
+
+  it("never runs afterSend when the send fails", async () => {
+    const calls: string[] = [];
+    const deliveries: RunDelivery[] = [];
+
+    await expect(
+      runDeliver(
+        {
+          channel: "webhook",
+          send: () =>
+            Effect.sync(() => calls.push("send")).pipe(
+              Effect.andThen(Effect.fail(new Error("delivery failed"))),
+            ),
+        },
+        deliveries,
+        { afterSend: Effect.sync(() => calls.push("afterSend")) },
+        "x",
+      ),
+    ).rejects.toThrow("delivery failed");
+
+    expect(calls).toEqual(["send"]);
+    expect(deliveries[0]).toMatchObject({ status: "failed", stateStatus: "skipped" });
+  });
+
   it("marks state as updated after a successful send and afterSend", async () => {
     const deliveries: RunDelivery[] = [];
     const afterSend: string[] = [];
