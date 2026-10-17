@@ -282,8 +282,10 @@ app/
 | `domain/<concept>/` | 同模块的其他 concept、kernel、上游模块的类型 | 任何 `adapters/`、外部包（含 `effect`）、`node:*`、IO、无参的 `Date.now()` / `new Date()`、来源词表（github、rss、doubao、grok、glm、arxiv、x.com） |
 | `domain/<concept>/adapters/` | 同模块的 domain 和 adapters、kernel、`effect/Schema`、解析库（`fast-xml-parser`、`cheerio`、`he`） | `node:*`、IO、`Effect` 类型 |
 | `application/` | 同模块的 domain、adapters、application，以及 kernel、`effect` | 同模块的 infra、`node:*`、`process.env`、`console` |
-| `infra/` | 同模块的 domain、application、infra，以及 kernel、`effect`、`node:*`、外部包白名单（`playwright` 只允许在 `acquisition/infra/adapters/browser.ts` 和 `reading/infra/adapters/browser-reader.ts` 中使用） | 其他模块的内部文件 |
+| `infra/` | 同模块的 domain、adapters、application、infra，以及 kernel、`effect`、`node:*`、外部包白名单（`playwright` 只允许在 `acquisition/infra/adapters/browser.ts` 和 `reading/infra/adapters/browser-reader.ts` 中使用） | 其他模块的内部文件 |
 | `app/` | 各模块的 `index.ts`、kernel、`effect`、`@rivus/agent`、`node:*` | 模块的内部文件 |
+
+infra 可以直接调用同模块的 adapters，把取到的原始数据解码成模型（「取数 → DTO → 模型」在一处完成）。这一条与 agent-kit 不同：agent-kit 的 infra 不能引用 adapters。实施 P2a 时发现，原来的依赖表和文件布局互相矛盾，因此修订（P3 中采用的注入写法也合规，不需要改动）。
 
 清单文件是 `scripts/architecture/boundaries.ts`，测试是 `tests/repo/architecture.test.ts`。测试用已有的 `typescript` 依赖解析每个文件的 import，并区分 `import type`，同时检查 concept 目录中不出现来源词表。正例和反例都要覆盖。
 
