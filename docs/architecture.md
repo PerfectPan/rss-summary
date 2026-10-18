@@ -20,7 +20,7 @@ src/
   delivery/       what was sent and what is remembered: the delivered/researched
                   ledger, Daily AI receipts, notifier, run archive storage
   integrations/   one anti-corruption layer per external service (rss, web-page,
-                  github, doubao, grok, glm, article-http, browser, video) plus
+                  github, doubao, grok, glm, deepseek, article-http, browser, video) plus
                   shared/ for the technical code several services need; each
                   service owns its transport, DTO decoding, mapping, and the
                   Layer implementing the owning module's port
@@ -220,7 +220,7 @@ Its search configuration contains structured event intents rather than umbrella 
 
 News ranking uses within-query position, source authority, and freshness. A URL returned by multiple queries receives only a bounded tie-break bonus; it is not treated as independent corroboration. The Tool result carries a per-query audit with provider log ID, fetched/accepted counts, rejection reasons, canonical duplicate counts, semantic-title duplicate counts, quota filtering, and the eight-item cap.
 
-The only search plugin interface is `SearchProvider`: `NEWS_SEARCH_MODE` switches between doubao, grok, hybrid, and combined, and the `withBudget` / `withRetry` decorators wrap any provider. Other readers and notifiers are plain ports with explicit dispatch in the use cases.
+The only search plugin interface is `SearchProvider`: `NEWS_SEARCH_MODE` switches between doubao, grok, hybrid, and combined, and the `withBudget` / `withRetry` decorators wrap any provider. `NEWS_SEARCH_FALLBACK=deepseek` additionally wraps the noon/evening primary with `withFallback`, which retries a query on the DeepSeek search endpoint only after a primary source outage (timeout, exhausted rate limit, 5xx, network or decoding failure, Grok CLI failure, Doubao quota error) and only for news/authoritative topics; local budget boundaries never trigger it, the Daily AI X collection does not use it, and hybrid/combined still reach the GLM complement only after DeepSeek also fails. DeepSeek results carry a 0–4 authority score that maps to the authoritative tier at 3+ and never to official, and because the endpoint has no time-range parameter, the normal window filter re-checks every result. See [News search budget](news-search-budget.md). Other readers and notifiers are plain ports with explicit dispatch in the use cases.
 
 ## Audit artifacts
 
@@ -275,7 +275,7 @@ Unit tests live next to the source file they exercise: `src/<module>/<path>/<nam
 - Add a frontier RSS/Atom source when it is first-party. A `page` source additionally requires a same-origin path prefix, explicit dates, policy review, fixture coverage, and a live dry-run; edit `industry-feeds.json` intentionally.
 - Adjust importance in `src/editorial/domain/subscription/policies/scoring.ts`; adjust display depth in `policies/presentation.ts` of the same concept.
 - Add a source: a new directory under `src/integrations/` owning the transport, DTO decoding, mapper, and the port implementation (`feed.ts`/`activity.ts`/…), then wire it in `app/layers.ts`.
-- Add a search provider: implement the `SearchProvider` port; `withBudget` and `withRetry` wrap it unchanged.
+- Add a search provider: implement the `SearchProvider` port; `withBudget`, `withRetry` and `withFallback` wrap it unchanged.
 - Add a delivery channel: route the output through the View IR first, then extend the `Notifier` port.
 - Add a host (CLI alternative, webhook service): a new directory under `app/` iterating the same product registry.
 - Add semantic duplicate detection before ranking if canonical URL/title identity becomes insufficient.
