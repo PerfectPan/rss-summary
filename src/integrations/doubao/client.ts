@@ -1,14 +1,6 @@
-import { Effect, Layer } from "effect";
+import type { SearchInput, SearchPage } from "../../acquisition/index.js";
 
-import { SearchProvider } from "../../application/ports.js";
-import {
-  DoubaoSearchError,
-  parseDoubaoResponse,
-  validateDoubaoInput,
-} from "../../domain/item/adapters/doubao.js";
-
-export { DoubaoSearchError };
-import type { SearchInput, SearchPage } from "../../domain/search/index.js";
+import { DoubaoSearchError, parseDoubaoResponse } from "./dto.js";
 
 type DoubaoSearchClientOptions = {
   apiKey: string;
@@ -16,6 +8,32 @@ type DoubaoSearchClientOptions = {
   fetch?: typeof fetch;
   timeoutMs?: number;
 };
+
+type SearchInputContract = {
+  query: string;
+  count: number;
+  day: string;
+  sinceDay?: string;
+  sourcePolicy: string;
+};
+
+export function validateDoubaoInput(input: SearchInputContract): void {
+  if (input.query.trim() === "" || input.query.length > 100) {
+    throw new Error("Doubao search query must contain 1 to 100 characters.");
+  }
+  if (!Number.isInteger(input.count) || input.count < 1 || input.count > 50) {
+    throw new Error("Doubao web search count must be between 1 and 50.");
+  }
+  if (
+    input.sinceDay &&
+    (!/^\d{4}-\d{2}-\d{2}$/u.test(input.sinceDay) || input.sinceDay > input.day)
+  ) {
+    throw new Error("Invalid search start date.");
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/u.test(input.day)) {
+    throw new Error("Doubao search day must use YYYY-MM-DD.");
+  }
+}
 
 export class DoubaoSearchClient {
   private readonly apiKey: string;
@@ -71,19 +89,6 @@ export class DoubaoSearchClient {
     return parseDoubaoResponse(await response.json(), retryAfterMs).page;
   }
 }
-
-export const DoubaoSearchLive = (
-  options: DoubaoSearchClientOptions,
-): Layer.Layer<SearchProvider> => {
-  const client = new DoubaoSearchClient(options);
-  return Layer.succeed(SearchProvider, {
-    search: (input) =>
-      Effect.tryPromise({
-        try: () => client.search(input),
-        catch: (cause) => (cause instanceof Error ? cause : new Error(errorText(cause))),
-      }),
-  });
-};
 
 function errorText(value: unknown): string {
   return value instanceof Error ? value.message : String(value);

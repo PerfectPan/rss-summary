@@ -1,13 +1,7 @@
 import { expect, it } from "vite-plus/test";
 
-import { credibilityForAuthLevel, parseDoubaoResponse, validateDoubaoInput } from "./doubao.js";
-
-const input = {
-  query: "release",
-  count: 5,
-  day: "2026-08-16",
-  sourcePolicy: "news",
-};
+import { credibilityForAuthLevel } from "./mapper.js";
+import { parseDoubaoResponse } from "./dto.js";
 
 it("parses a result into a page and an item whose credibility follows the authority level", () => {
   const acquired = parseDoubaoResponse({
@@ -42,16 +36,4 @@ it("parses a result into a page and an item whose credibility follows the author
   expect(credibilityForAuthLevel(2)).toEqual({ tier: "authoritative" });
   expect(credibilityForAuthLevel(4)).toEqual({ tier: "unrated" });
   expect(credibilityForAuthLevel(undefined)).toEqual({ tier: "unrated" });
-});
-
-it("keeps provider error codes and rejects an empty query", () => {
-  expect(() =>
-    parseDoubaoResponse({ ResponseMetadata: { Error: { Code: "10406", Message: "quota" } } }),
-  ).toThrow("Doubao search API error 10406: quota");
-  expect(() => validateDoubaoInput({ ...input, query: " " })).toThrow(
-    "Doubao search query must contain 1 to 100 characters.",
-  );
-  expect(() => validateDoubaoInput({ ...input, sinceDay: "2026-08-17" })).toThrow(
-    "Invalid search start date.",
-  );
 });

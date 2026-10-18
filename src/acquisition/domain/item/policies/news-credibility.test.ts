@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { resolveNewsCredibility } from "./news-authority.js";
+import { resolveNewsCredibility } from "./news-credibility.js";
 
 const url = "https://news.example.com/story";
 

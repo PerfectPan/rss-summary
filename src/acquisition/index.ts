@@ -45,7 +45,7 @@ export {
 export {
   resolveNewsCredibility,
   type ResolvedNewsCredibility,
-} from "./domain/item/adapters/news-authority.js";
+} from "./domain/item/policies/news-credibility.js";
 export { parseFeed, parseFeedXml } from "./domain/item/adapters/rss.js";
 export {
   acquireWebPage,
@@ -156,8 +156,6 @@ export {
   type BudgetedSearchPage,
 } from "./application/services/with-budget.js";
 export { settleSearches, type SearchSettlement } from "./application/use-cases/search.js";
-export { DoubaoSearchClient, DoubaoSearchLive } from "./infra/adapters/doubao-http.js";
-export { DoubaoSearchError } from "./domain/item/adapters/doubao.js";
 export {
   GrokProcessLive,
   GrokSearchClient,

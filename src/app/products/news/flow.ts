@@ -26,7 +26,6 @@ import { loadNewsTopics } from "./topics.js";
 import { createGlmResearch, type GlmResearch } from "../shared/glm-research.js";
 import {
   createBudgetedNewsSearch,
-  DoubaoSearchClient,
   editionRotation,
   GrokSearchClient,
   isSearchFailure,
@@ -39,6 +38,7 @@ import {
   type NewsSearchInput,
   type NewsSearchPage,
 } from "../../../acquisition/index.js";
+import { DoubaoSearchClient } from "../../../integrations/doubao/index.js";
 import { createHybridNewsSearch } from "./hybrid.js";
 
 export type { NewsBriefEdition };

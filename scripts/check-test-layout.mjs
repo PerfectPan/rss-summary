@@ -71,6 +71,12 @@ const coveredElsewhere = new Map([
   ],
   // Hits are projected inside the news flow and hybrid retrieval paths.
   ["editorial/domain/news/factories/news-hit", "news flow and hybrid tests"],
+  // The Doubao mapper's tier table is asserted by the dto tests alongside the
+  // parsed page it produces.
+  [
+    "integrations/doubao/mapper",
+    "integrations/doubao/dto tests assert the mapped credibility tiers",
+  ],
   // Categories and title cleaning run in the Daily AI flow; the category enum
   // is also locked verbatim by the golden registration snapshot.
   [

@@ -12,11 +12,11 @@ import {
 } from "./flow.js";
 import type { NewsTopicQuery } from "./output.js";
 import {
-  DoubaoSearchError,
   GrokSearchClient,
   NewsSearchError,
   type NewsSearchInput,
 } from "../../../acquisition/index.js";
+import { DoubaoSearchError } from "../../../integrations/doubao/index.js";
 import { newsView } from "../../render/layouts/news.js";
 import { renderViewMarkdown } from "../../render/markdown.js";
 

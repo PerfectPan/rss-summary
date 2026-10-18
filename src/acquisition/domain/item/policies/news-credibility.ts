@@ -1,6 +1,5 @@
 import type { CredibilityMethod, CredibilityTier } from "../index.js";
 import type { SourceVerification } from "../../search/index.js";
-import { credibilityForAuthLevel } from "./doubao.js";
 
 /**
  * Provider certificates resolved before an editorial rule sees a hit.
@@ -34,5 +33,14 @@ export function resolveNewsCredibility(input: {
 }
 
 function certified(rank: number, method?: CredibilityMethod): ResolvedNewsCredibility {
-  return { ...credibilityForAuthLevel(rank), ...(method ? { method } : {}), rank };
+  // The numeric authority-rank table mirrors the news score table: 1 is an
+  // official source, 2 is authoritative, every other rank stays unrated. Each
+  // search integration maps its own authority field onto these ranks.
+  return { ...tierForRank(rank), ...(method ? { method } : {}), rank };
+}
+
+function tierForRank(rank: number): { tier: CredibilityTier } {
+  if (rank === 1) return { tier: "official" };
+  if (rank === 2) return { tier: "authoritative" };
+  return { tier: "unrated" };
 }

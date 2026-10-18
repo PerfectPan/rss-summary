@@ -1,12 +1,14 @@
-import { Effect } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { SearchProvider } from "../../application/ports.js";
-import { DoubaoSearchClient, DoubaoSearchError, DoubaoSearchLive } from "./doubao-http.js";
-import {
-  describeSearchProvider,
-  type ProviderStep,
-} from "../../../../tests/support/search-provider-suite.js";
+import { DoubaoSearchClient, validateDoubaoInput } from "./client.js";
+import { DoubaoSearchError, parseDoubaoResponse } from "./dto.js";
+
+const input = {
+  query: "release",
+  count: 5,
+  day: "2026-08-16",
+  sourcePolicy: "news",
+};
 
 describe("Doubao search source", () => {
   it("requests an exact day without broad query rewriting and with authoritative URL results", async () => {
@@ -170,37 +172,16 @@ describe("Doubao search source", () => {
       message: "Doubao search API error http_503: HTTP 503",
     });
   });
-});
 
-describeSearchProvider({
-  name: "doubao",
-  emitsRateLimit: true,
-  create(next) {
-    let invocations = 0;
-    return {
-      invocations: () => invocations,
-      search: (value) => {
-        invocations += 1;
-        const step: ProviderStep = next();
-        const fetchImpl: typeof fetch = async () => {
-          if (step === "http_429") return new Response("slow", { status: 429 });
-          if (step === "permanent") return new Response("no", { status: 500 });
-          return new Response(
-            JSON.stringify({
-              Result: {
-                ResultCount: 1,
-                WebResults: [
-                  { Id: "suite", Title: "Suite", Url: "https://example.com/suite", SortId: 1 },
-                ],
-              },
-            }),
-          );
-        };
-        return Effect.gen(function* () {
-          const provider = yield* SearchProvider;
-          return yield* provider.search(value);
-        }).pipe(Effect.provide(DoubaoSearchLive({ apiKey: "suite", fetch: fetchImpl })));
-      },
-    };
-  },
+  it("keeps provider error codes and rejects an empty query", () => {
+    expect(() =>
+      parseDoubaoResponse({ ResponseMetadata: { Error: { Code: "10406", Message: "quota" } } }),
+    ).toThrow("Doubao search API error 10406: quota");
+    expect(() => validateDoubaoInput({ ...input, query: " " })).toThrow(
+      "Doubao search query must contain 1 to 100 characters.",
+    );
+    expect(() => validateDoubaoInput({ ...input, sinceDay: "2026-08-17" })).toThrow(
+      "Invalid search start date.",
+    );
+  });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { DoubaoSearchError } from "../../../../acquisition/index.js";
+import { DoubaoSearchError } from "../../../../integrations/doubao/index.js";
 import { buildNewsAudit, summarizeNewsSources } from "./news-audit.js";
 import type { NewsAuditRequest } from "../value-objects/news-audit.js";
 import type {

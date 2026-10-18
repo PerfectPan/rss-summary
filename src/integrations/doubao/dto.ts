@@ -1,5 +1,7 @@
-import { NewsSearchError, type SearchPage, type SearchResult } from "../../search/index.js";
-import type { CredibilityTier, Item } from "../index.js";
+import { NewsSearchError, type SearchPage, type SearchResult } from "../../acquisition/index.js";
+import type { Item } from "../../acquisition/index.js";
+
+import { itemFromDoubao } from "./mapper.js";
 
 export class DoubaoSearchError extends NewsSearchError {
   constructor(code: string, message: string, options: { retryAfterMs?: number } = {}) {
@@ -12,32 +14,6 @@ export type DoubaoAcquired = {
   page: SearchPage;
   items: Item[];
 };
-
-type SearchInput = {
-  query: string;
-  count: number;
-  day: string;
-  sinceDay?: string;
-  sourcePolicy: string;
-};
-
-export function validateDoubaoInput(input: SearchInput): void {
-  if (input.query.trim() === "" || input.query.length > 100) {
-    throw new Error("Doubao search query must contain 1 to 100 characters.");
-  }
-  if (!Number.isInteger(input.count) || input.count < 1 || input.count > 50) {
-    throw new Error("Doubao web search count must be between 1 and 50.");
-  }
-  if (
-    input.sinceDay &&
-    (!/^\d{4}-\d{2}-\d{2}$/u.test(input.sinceDay) || input.sinceDay > input.day)
-  ) {
-    throw new Error("Invalid search start date.");
-  }
-  if (!/^\d{4}-\d{2}-\d{2}$/u.test(input.day)) {
-    throw new Error("Doubao search day must use YYYY-MM-DD.");
-  }
-}
 
 export function parseDoubaoResponse(value: unknown, retryAfterMs?: number): DoubaoAcquired {
   const root = asRecord(value);
@@ -93,53 +69,6 @@ export function parseDoubaoResult(
     authInfoLevel: number(record.AuthInfoLevel),
   };
   return { result, item: itemFromDoubao(result) };
-}
-
-/**
- * Authority levels follow the news score table: 1 is an official source,
- * 2 is authoritative, and every other level stays unrated.
- */
-export function credibilityForAuthLevel(level: number | undefined): { tier: CredibilityTier } {
-  if (level === 1) return { tier: "official" };
-  if (level === 2) return { tier: "authoritative" };
-  return { tier: "unrated" };
-}
-
-function itemFromDoubao(result: SearchResult): Item {
-  const published = result.publishTime;
-  return {
-    id: result.id,
-    kind: "publication",
-    subject: {
-      key: result.url,
-      name: result.siteName ?? result.url,
-      url: result.url,
-    },
-    content: {
-      title: result.title,
-      ...(result.summary || result.snippet ? { excerpt: result.summary ?? result.snippet } : {}),
-      url: result.url,
-    },
-    publishedAt: {
-      value: published ?? "",
-      precision: published && published.includes("T") ? "instant" : "date",
-    },
-    provenance: {
-      origin: result.url,
-      ...(result.authInfoDescription ? { note: result.authInfoDescription } : {}),
-    },
-    credibility: credibilityForAuthLevel(result.authInfoLevel),
-    signals: [],
-    rank: {
-      position: result.rankPosition,
-      ...(result.rankScore !== undefined ? { score: result.rankScore } : {}),
-    },
-    display: {
-      ...(result.siteName ? { label: result.siteName } : {}),
-      reference: result.url,
-      facts: [],
-    },
-  };
 }
 
 const objectCtorString = Function.prototype.toString.call(Object);
