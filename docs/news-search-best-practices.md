@@ -18,9 +18,9 @@
 
 ## 本地核验：我们自己的规则也有问题
 
-本轮主任务用构造样本直接执行现有领域筛选，其他字段保持可通过：`major release` 入选，换成 `breaking changes` 得到 `intent-mismatch`，在发布内容中增加 `Please review migration guide` 则得到 `excluded-content`。这是已复现的词表边界，不能归咎于搜索提供方；发布公告本就可能包含迁移指南。应先积累正负样本，再把排除词从“出现即拒绝”改为判断文章主要意图，保留可解释理由。依据：[本地领域实现](../src/editorial/domain/news/news.ts)、[主题配置](../news-topics.json)。
+本轮主任务用构造样本直接执行现有领域筛选，其他字段保持可通过：`major release` 入选，换成 `breaking changes` 得到 `intent-mismatch`，在发布内容中增加 `Please review migration guide` 则得到 `excluded-content`。这是已复现的词表边界，不能归咎于搜索提供方；发布公告本就可能包含迁移指南。应先积累正负样本，再把排除词从“出现即拒绝”改为判断文章主要意图，保留可解释理由。依据：[本地领域实现](../src/editorial/domain/news/policies/news-funnel.ts)、[主题配置](../news-topics.json)。
 
-时间窗口按发布时间分成 00:00–12:30 与 12:30–运行时刻。若上午发布的消息下午才进入搜索索引，上午没搜到、下午又因发布时间不在窗口而丢弃，可能持续漏报。增加回看与跨运行已报告状态可以补救；这项设计推断对应前述“时间精度与迟到新闻”方案。依据：[本地领域实现](../src/editorial/domain/news/news.ts)。
+时间窗口按发布时间分成 00:00–12:30 与 12:30–运行时刻。若上午发布的消息下午才进入搜索索引，上午没搜到、下午又因发布时间不在窗口而丢弃，可能持续漏报。增加回看与跨运行已报告状态可以补救；这项设计推断对应前述“时间精度与迟到新闻”方案。依据：[本地领域实现](../src/editorial/domain/news/policies/news-funnel.ts)。
 
 ### 告警不能把正常空结果当故障
 

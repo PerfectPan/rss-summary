@@ -29,11 +29,22 @@ Each business module follows the same internal shape (only the directories it us
 
 ```text
 <module>/
-  domain/<concept>/         value objects, policies, errors (pure TS)
+  domain/<concept>/         the concept's pure model, split by building block
+    value-objects/          types and value objects
+    policies/               rules, thresholds, scoring, selection
+    errors/                 typed failure values
+    events/                 domain events emitted by transitions
+    aggregates/             aggregate roots (SearchBudget is the only one)
+    factories/              constructors assembling the model's inputs
+    services/               stateless computation over several value objects
     adapters/               external formats → the concept's model (effect/Schema)
-  application/              ports.ts (Context.Service) + use-cases/ + services/
+    index.ts                the concept facade; concepts reach each other through it
+  application/              ports.ts (Context.Service) + use-cases/ + services/;
+                            the root keeps only ports.ts and errors.ts
   infra/                    adapters/ (port implementations), repository/,
-                            models/ (storage schemas)
+                            models/ (storage schemas), factories/ (layer
+                            compositions), services/ (helpers shared inside infra);
+                            no loose files at the root
   index.ts                  the module's public boundary
 ```
 
@@ -121,7 +132,7 @@ The output depth is separate from ranking:
 - `summary`: RSS articles and pull requests always receive semantic space; other candidates expand for an explicit interest match or content-level importance marker (major/GA/breaking/deprecation/security). Repeated mentions, an announcement label, a score, or a release label alone never expands an item.
 - `research`: papers are withheld from direct Markdown until the research workflow verifies the original source.
 
-`src/editorial/domain/subscription/subscription.ts` owns this decision. Renderers do not reinterpret scores.
+`src/editorial/domain/subscription/policies/presentation.ts` owns this decision. Renderers do not reinterpret scores.
 
 Subscriptions and the frontier share one two-depth layout (`src/app/render/layouts/candidate.ts`); product layouts supply only labels and metadata. `selectCandidatePresentationSections` keeps every selected category instead of applying one global slice and caps each section: compact links at 20, expanded summaries at 20 for subscriptions and 8 (the default) for the frontier. Papers are counted but hidden from direct Markdown.
 
@@ -245,7 +256,7 @@ Unit tests live next to the source file they exercise: `src/<module>/<path>/<nam
 
 - Add a personal source with `rss-summary feeds add`; this changes `feeds.json`.
 - Add a frontier RSS/Atom source when it is first-party. A `page` source additionally requires a same-origin path prefix, explicit dates, policy review, fixture coverage, and a live dry-run; edit `industry-feeds.json` intentionally.
-- Adjust importance in `src/editorial/domain/subscription/subscription.ts`; adjust display depth in the same concept.
+- Adjust importance in `src/editorial/domain/subscription/policies/scoring.ts`; adjust display depth in `policies/presentation.ts` of the same concept.
 - Add a source: a new format adapter under `acquisition/domain/item/adapters/` plus a port implementation under `acquisition/infra/adapters/`.
 - Add a search provider: implement the `SearchProvider` port; `withBudget` and `withRetry` wrap it unchanged.
 - Add a delivery channel: route the output through the View IR first, then extend the `Notifier` port.

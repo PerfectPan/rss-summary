@@ -6,7 +6,7 @@ Domain vocabulary used across the code base. When a word is overloaded, the
 ## Acquisition
 
 **Item** — the source-neutral model of "one piece of information"
-(`src/acquisition/domain/item/item.ts`). An adapter decides `kind`
+(`src/acquisition/domain/item/value-objects/item.ts`). An adapter decides `kind`
 (publication / paper / release / change / project / post), `subject`,
 `content`, `publishedAt`, `provenance`, `credibility`, and `signals`; the
 `display` field carries presentation text that rules never read. Editorial
@@ -30,7 +30,7 @@ neutral record; the `card` is the `ActivityCardDto` projection of the same
 Item, kept because ranking, JSON output, and skills read its fields.
 
 **SearchBudget** — the aggregate over paid search requests
-(`src/acquisition/domain/budget/search-budget.ts`): daily/monthly limits,
+(`src/acquisition/domain/budget/aggregates/search-budget.ts`): daily/monthly limits,
 per-request reservations (a reservation stays consumed even when the provider
 fails), and the raw-response cache with sha256 keys. Persisted in
 `.state/news-search.json`; shared by the news product and Daily AI's X
@@ -58,7 +58,7 @@ merged, or filtered). Decisions are data in the run audit; they are never
 recomputed from a rendered document.
 
 **Edition** — which scheduled slot a news brief fills:
-`NewsBriefEdition = "noon" | "evening"` (`src/editorial/domain/news/news.ts`).
+`NewsBriefEdition = "noon" | "evening"` (`src/editorial/domain/news/value-objects/news.ts`).
 It selects query rotation and rendering labels. It is not a software version
 and not a synonym for the produced document (that is the brief / digest
 document). The moment a run happens is its `occurrence`.
