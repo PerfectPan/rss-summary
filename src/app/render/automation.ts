@@ -51,8 +51,8 @@ export function automationPresentationForText(
  * contract understood by modern Rivus renderers. The plugin owns headings,
  * items, notes, and sources; the Host only decides how those semantics look
  * in each channel. Bounds, section ids, and source labels reproduce the
- * values the legacy Markdown parser produced, locked by the differential
- * tests in tests/oracle/render/.
+ * values the earlier Markdown parser produced, locked by the golden
+ * registration snapshot and automation.test.ts.
  */
 export function renderAutomationPresentation(
   view: ViewDocument,

@@ -163,7 +163,7 @@ rss-summary runs show <run-label>
 
 ## Architecture
 
-分层 DDD 结构 `domain → application → infrastructure → presentation`：domain 是纯规则（无 IO、无 Effect）；application 用 [Effect](https://effect.website) 返回 `Effect<Result, Error>` 编排用例；infrastructure 跑适配器；presentation 是入口与渲染。完整数据流、审计产物和扩展点见 [docs/architecture.md](docs/architecture.md)，技术选型与取舍见 [docs/technology-decisions.md](docs/technology-decisions.md)。
+模块化 DDD 结构：`kernel`（共享工具）+ 四个业务模块 `acquisition`（采集）/ `reading`（读原文）/ `editorial`（编辑规则，纯计算）/ `delivery`（投递与记忆），每个模块内部分 `domain → application → infra`；`app` 组装五个产品并作为唯一运行 [Effect](https://effect.website) 的层。完整数据流、审计产物和扩展点见 [docs/architecture.md](docs/architecture.md)，技术选型与取舍见 [docs/technology-decisions.md](docs/technology-decisions.md)。
 
 ## Development
 

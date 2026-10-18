@@ -35,14 +35,18 @@ describe("CI harness", () => {
     expect(workflow).toContain("pnpm test:layout && pnpm test:coverage");
   });
 
-  it("mirrors src layers under tests/ and keeps Vite+ coverage thresholds", () => {
+  it("keeps sibling tests runnable and excluded from coverage and the build", () => {
     const viteConfig = readFileSync(new URL("../../vite.config.ts", import.meta.url), "utf8");
-    expect(viteConfig).toContain('include: ["tests/**/*.test.ts"]');
+    expect(viteConfig).toContain('include: ["src/**/*.test.ts", "tests/**/*.test.ts"]');
+    expect(viteConfig).toContain('exclude: ["src/**/*.test.ts"]');
     expect(viteConfig).toContain("statements: 85");
     expect(viteConfig).toContain("branches: 75");
     expect(viteConfig).toContain("functions: 90");
     expect(viteConfig).toContain("lines: 85");
     expect(viteConfig).toContain('plugins: ["oxc", "typescript", "unicorn"]');
+
+    const buildConfig = readFileSync(new URL("../../tsconfig.build.json", import.meta.url), "utf8");
+    expect(buildConfig).toContain('"exclude": ["src/**/*.test.ts"]');
     expect(existsSync(new URL("../../scripts/check-test-layout.mjs", import.meta.url))).toBe(true);
     expect(existsSync(new URL("../../eslint.config.js", import.meta.url))).toBe(false);
   });

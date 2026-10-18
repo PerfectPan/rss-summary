@@ -1,59 +1,49 @@
 /**
- * Enforces the test layout mirror:
- *   src/<layer>/<name>.ts  →  tests/<layer>/<name>.test.ts
+ * Enforces the sibling-test layout:
+ *   src/<module>/<path>/<name>.ts  →  src/<module>/<path>/<name>.test.ts
  *
- * Repo-level harness tests live under tests/repo/.
- * A small allowlist covers pure re-export or entrypoint-only modules.
+ * Unit tests live next to the source file they exercise. Package-level and
+ * cross-module tests stay under tests/ (fixtures, golden, repo, support).
+ *
+ * Two source shapes are exempt automatically because a sibling test would
+ * only restate the exports:
+ *   - pure re-export modules (barrel files);
+ *   - type-only modules (no runtime behavior).
+ * Anything else without a sibling test must be listed in `coveredElsewhere`
+ * with the reason.
  */
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 
-/** Modules intentionally covered via sibling tests rather than a 1:1 file. */
-const coveredBySibling = new Map([
-  // feed list contract tests sit next to the env config; no module under
-  // src/app/config/feed-config.ts
-  ["app/config/feed-config", "app/config/env and the acquisition catalog tests"],
-  // The View IR is a type-only module; its projections (markdown, automation,
-  // layouts) and their tests exercise every field.
-  ["app/render/view", "app/render markdown/automation tests and app/render/layouts tests"],
-  // Tool metadata (ids, digests, editorial policy strings) and the automation
-  // prompts/presentations are locked verbatim by the golden registration
-  // snapshot; executors are covered by the product and phase tests.
-  ["app/products/daily-ai/tool", "golden registration snapshot and app/rivus/phases tests"],
+/** Sources whose behavior is covered by tests that are not their sibling. */
+const coveredElsewhere = new Map([
+  // Tool metadata (ids, digests, inputSchema) and the automation prompts are
+  // locked verbatim by the golden registration snapshot; executors run in the
+  // product flow and phase tests.
+  ["app/products/daily-ai/tool", "golden registration snapshot"],
   ["app/products/news/tool", "golden news tool tests and app/products/news/flow tests"],
-  ["app/products/subscriptions/automation", "golden registration snapshot"],
-  ["app/products/news/automation", "golden registration snapshot"],
   ["app/products/daily-ai/automation", "golden registration snapshot"],
   ["app/products/frontier/automation", "golden registration snapshot"],
+  ["app/products/news/automation", "golden registration snapshot"],
+  ["app/products/subscriptions/automation", "golden registration snapshot"],
+  // The product registry is iterated by the Rivus plugin registration and the
+  // CLI dispatch tests.
   ["app/products/index", "app/rivus/plugin tests and app/cli dispatch tests"],
-  ["kernel/index", "kernel/result, kernel/time, and kernel/text"],
-  // Pure re-export shims kept for tests/golden imports; behavior lives in delivery.
-  ["infrastructure/state", "delivery/domain/ledger and delivery/infra/repository/feed-state-file"],
-  ["infrastructure/run-store", "delivery/infra/repository/run-archive-files"],
-  ["infrastructure/daily-ai-diagnostics", "delivery/infra/repository/diagnostics-file"],
-  // Declaration-only or assembly modules inside delivery.
+  // Module entry besides the re-exports: only the DeliveryLive assembly,
+  // exercised wherever the delivery ports are provided.
   ["delivery/index", "delivery use-case and repository tests"],
-  ["editorial/index", "editorial domain tests"],
+  // Port declarations (Context.Service classes) have no behavior of their own;
+  // use cases exercise them through substitute layers.
   ["delivery/application/ports", "delivery use-case tests"],
-  ["delivery/infra/models/feed-state", "delivery/infra/repository/feed-state-file"],
+  // Storage schema round-trips are covered by the repository writing them.
+  ["delivery/infra/models/feed-state", "delivery/infra/repository/feed-state-file tests"],
 ]);
 
-/** Layers that must mirror 1:1 with tests/<layer>/<name>.test.ts */
-const layers = [
-  "domain",
-  "application",
-  "infrastructure",
-  "presentation",
-  "kernel",
-  "app",
-  "reading",
-  "delivery",
-  "acquisition",
-  "editorial",
-];
+/** Directories allowed under tests/. */
+const testTreeAllowlist = ["fixtures", "golden", "repo", "support"];
 
 function listTs(dir) {
   const out = [];
@@ -66,53 +56,67 @@ function listTs(dir) {
   return out;
 }
 
+function stripComments(source) {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//gu, "")
+    .replace(/\/\/.*$/gmu, "");
+}
+
+/** Only `export { … } from "…"` / `export * from "…"` statements, no imports. */
+function isPureReExport(source) {
+  const stripped = stripComments(source);
+  if (/^import /mu.test(stripped)) return false;
+  const exports = stripped.match(/^export .*$/gmu) ?? [];
+  if (exports.length === 0) return false;
+  return exports.every((line) => /^export (type )?(\{|\*)/u.test(line));
+}
+
+/** Only `export type` declarations; there is no runtime import or export. */
+function isTypeOnly(source) {
+  const stripped = stripComments(source);
+  if (/^import (?!type\b)/mu.test(stripped)) return false;
+  if (/^export (?!type\b|interface\b)/mu.test(stripped)) return false;
+  return /^export (type|interface)/mu.test(stripped);
+}
+
+const srcDir = join(root, "src");
 const missing = [];
-const extra = [];
+const unexpected = [];
 
-for (const layer of layers) {
-  const srcDir = join(root, "src", layer);
-  const testDir = join(root, "tests", layer);
-  const srcFiles = listTs(srcDir).map((p) => relative(srcDir, p).replace(/\.ts$/u, ""));
-  const testFiles = new Set(
-    listTs(testDir)
-      .map((p) => relative(testDir, p))
-      .filter((p) => p.endsWith(".test.ts"))
-      .map((p) => p.replace(/\.test\.ts$/u, "")),
-  );
-
-  for (const name of srcFiles) {
-    if (coveredBySibling.has(`${layer}/${name}`)) continue;
-    if (!testFiles.has(name)) missing.push(`src/${layer}/${name}.ts → tests/${layer}/${name}.test.ts`);
+for (const file of listTs(srcDir)) {
+  if (file.endsWith(".test.ts")) continue;
+  const rel = relative(srcDir, file).replace(/\.ts$/u, "");
+  if (coveredElsewhere.has(rel)) continue;
+  const source = readFileSync(file, "utf8");
+  if (isPureReExport(source) || isTypeOnly(source)) continue;
+  if (!existsSync(file.replace(/\.ts$/u, ".test.ts"))) {
+    missing.push(`src/${rel}.ts → src/${rel}.test.ts`);
   }
+}
 
-  for (const name of testFiles) {
-    const srcPath = join(srcDir, `${name}.ts`);
-    try {
-      statSync(srcPath);
-    } catch {
-      // allow tests that only exercise a related config surface
-      if (name === "config/feed-config" && layer === "app") continue;
-      extra.push(`tests/${layer}/${name}.test.ts (no src/${layer}/${name}.ts)`);
-    }
-  }
+// tests/ keeps only package-level and cross-module trees.
+for (const name of readdirSync(join(root, "tests"))) {
+  const full = join(root, "tests", name);
+  if (!statSync(full).isDirectory()) continue;
+  if (!testTreeAllowlist.includes(name)) unexpected.push(`tests/${name}/ (not in allowlist)`);
 }
 
 // Repo harness must exist
 const repoTests = listTs(join(root, "tests", "repo")).filter((p) => p.endsWith(".test.ts"));
 if (repoTests.length === 0) missing.push("tests/repo/*.test.ts (repo harness missing)");
 
-if (missing.length > 0 || extra.length > 0) {
+if (missing.length > 0 || unexpected.length > 0) {
   if (missing.length > 0) {
-    console.error("check-test-layout: missing mirrored tests:");
+    console.error("check-test-layout: missing sibling tests:");
     for (const line of missing) console.error(`  - ${line}`);
   }
-  if (extra.length > 0) {
-    console.error("check-test-layout: unexpected test files:");
-    for (const line of extra) console.error(`  - ${line}`);
+  if (unexpected.length > 0) {
+    console.error("check-test-layout: unexpected directories under tests/:");
+    for (const line of unexpected) console.error(`  - ${line}`);
   }
   process.exit(1);
 }
 
 console.log(
-  `check-test-layout: ok (${layers.join("/")} mirrored; ${repoTests.length} repo harness files)`,
+  `check-test-layout: ok (sibling tests for src; tests/${testTreeAllowlist.join("/")} preserved; ${repoTests.length} repo harness files)`,
 );

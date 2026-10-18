@@ -20,11 +20,6 @@ describe("architecture boundaries", () => {
     }));
     const violations = checkBoundaries(files);
 
-    console.error(`architecture baseline: ${violations.length} violation(s)`);
-    for (const violation of violations) {
-      console.error(`${violation.file}: ${violation.rule}: ${violation.message}`);
-    }
-
     expect(violations).toEqual([]);
   });
 
@@ -47,6 +42,111 @@ describe("architecture boundaries", () => {
     ]);
 
     expect(rulesOf(violations, file)).toEqual(["effect", "node-builtin"]);
+  });
+
+  it("accepts sibling tests using node builtins, Effect, and cross-module index imports", () => {
+    expect(rulesOf(checkBoundaries(testGraph()))).toEqual([]);
+  });
+
+  it("restricts Effect.run* to the app runtime, exempting test files", () => {
+    const violations = checkBoundaries([
+      {
+        path: "src/app/runtime.ts",
+        source: "export const run = Effect.runPromise;\n",
+      },
+      {
+        path: "src/kernel/text.test.ts",
+        source: "export const run = () => Effect.runPromise(Promise.resolve(1));\n",
+      },
+      {
+        path: "src/acquisition/infra/adapters/rss-http.ts",
+        source: "export const run = () => Effect.runPromise(Promise.resolve(1));\n",
+      },
+    ]);
+
+    expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
+      "src/acquisition/infra/adapters/rss-http.ts effect-run",
+    ]);
+  });
+
+  it("detects module, escape, external, and entry vocabulary violations", () => {
+    const violations = checkBoundaries([
+      {
+        path: "src/editorial/domain/news/rank.ts",
+        source:
+          'import { deliver } from "../../../delivery/index.js";\nexport const ranked = deliver;\n',
+      },
+      {
+        path: "src/kernel/text.ts",
+        source: 'import { gone } from "../../outside.js";\nexport const text = gone;\n',
+      },
+      {
+        path: "src/acquisition/domain/item/item.ts",
+        source: 'import { load } from "cheerio";\nexport const item = load;\n',
+      },
+      {
+        path: "src/kernel/text.ts",
+        source: 'import { tool } from "@rivus/agent";\nexport const text = tool;\n',
+      },
+      {
+        path: "src/editorial/index.ts",
+        source: 'export const note = "github";\n',
+      },
+    ]);
+
+    expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
+      "src/acquisition/domain/item/item.ts external",
+      "src/editorial/domain/news/rank.ts module-dependency",
+      "src/editorial/index.ts source-vocabulary",
+      "src/kernel/text.ts external",
+      "src/kernel/text.ts relative-escape",
+    ]);
+  });
+
+  it("allows infra consoles, parser packages, and Rivus imports at the app boundary", () => {
+    expect(
+      rulesOf(
+        checkBoundaries([
+          {
+            path: "src/delivery/infra/adapters/notifier.ts",
+            source: [
+              'import { appendFileSync } from "node:fs";',
+              'import { load } from "cheerio";',
+              "const webhook = process.env.NOTIFY_WEBHOOK_URL;",
+              'console.error("delivery failed");',
+              "export const notifier = [appendFileSync, load, webhook];",
+            ].join("\n"),
+          },
+          {
+            path: "src/app/rivus/plugin.ts",
+            source: 'import { tool } from "@rivus/agent";\nexport const plugin = tool;\n',
+          },
+        ]),
+      ),
+    ).toEqual([]);
+  });
+
+  it("detects sibling tests reaching into another module's internals", () => {
+    const file = "src/kernel/text.test.ts";
+    const violations = checkBoundaries([
+      {
+        path: file,
+        source: [
+          'import { readFileSync } from "node:fs";',
+          'import { Effect } from "effect";',
+          'import { collectRssFeeds } from "../acquisition/index.js";',
+          'import { RssClient } from "../acquisition/infra/adapters/rss-http.js";',
+          'import { suite } from "../../tests/support/suite.js";',
+          'import { gone } from "../../../../outside.js";',
+          "export const value = [readFileSync, Effect, collectRssFeeds, RssClient, suite, gone];",
+        ].join("\n"),
+      },
+    ]);
+
+    expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
+      "src/kernel/text.test.ts deep-import",
+      "src/kernel/text.test.ts relative-escape",
+    ]);
   });
 
   it("detects layer, type-only, deep import, clock, and source-vocabulary violations", () => {
@@ -106,6 +206,31 @@ describe("architecture boundaries", () => {
     ]);
   });
 });
+
+/** Sibling tests may bypass their layer's rules but not module internals. */
+function testGraph(): SourceInput[] {
+  return [
+    {
+      path: "src/kernel/text.test.ts",
+      source: [
+        'import { readFileSync } from "node:fs";',
+        'import { Effect, Layer } from "effect";',
+        'import { err } from "./result.js";',
+        "export const value = [readFileSync, Effect, Layer, err];",
+      ].join("\n"),
+    },
+    {
+      path: "src/acquisition/domain/item/item.test.ts",
+      source: [
+        'import { Effect } from "effect";',
+        'import { readConduit } from "../../infra/adapters/browser.js";',
+        'import { scoreAcquired } from "../../../editorial/index.js";',
+        'import { suite } from "../../../../tests/support/search-provider-suite.js";',
+        "export const value = [Effect, readConduit, scoreAcquired, suite];",
+      ].join("\n"),
+    },
+  ];
+}
 
 function legalGraph(): SourceInput[] {
   return [

@@ -100,15 +100,11 @@ export {
   listCatalogFeeds,
   removeCatalogFeed,
 } from "./application/use-cases/manage-source-catalog.js";
-export { GitHubClient, type GitHubClientOptions } from "./infra/adapters/github-rest.js";
 export {
-  GitHubHomeClient,
   saveGithubHomeStorageState,
   type GithubHomeClientOptions,
   type GithubHomeFetchMode,
 } from "./infra/adapters/github-home-browser.js";
-export { RssClient, type RssClientOptions } from "./infra/adapters/rss-http.js";
-export { WebPageClient, type WebPageClientOptions } from "./infra/adapters/web-page-http.js";
 export { decodeFeedsJson, feedsFileSchema } from "./infra/models/feeds.js";
 export { decodeIndustryJson, industryFeedsFileSchema } from "./infra/models/industry-feeds.js";
 export {

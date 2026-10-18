@@ -1,6 +1,6 @@
 # Plan 0001：按 agent-kit 的 DDD 分层重构 rss-summary
 
-状态：已评审，执行中
+状态：completed（P0–P8 全部合入）
 类型：技术重构，不改变产品行为
 参照：`../agent-kit/docs/architecture/authoring.md`、`../agent-kit/infra/architecture/boundaries.ts`
 基线：`main` @ `3416de6`，`pnpm verify` 通过（69 个测试文件 / 451 个用例，`check-package: ok`）
@@ -378,6 +378,22 @@ infra 可以直接调用同模块的 adapters，把取到的原始数据解码�
 | D12 | Node 平台实现 | **已定** | `@effect/platform-node` 和 `@effect/vitest` 都有 4.0.x 版本，peer 为 `effect ^4.0.0`。`effect` 精确固定为 `4.0.0`（与 `@rivus/agent@0.18.0` 实际解析到的版本一致），平台包需要时同样固定为 4.0.0 |
 | D13 | domain 是否使用 Effect | **已定**：不使用 | 3.6 |
 | D14 | 纵向切片 | **已定**：不做 | 按模块顺序推进（第 6 节） |
+
+### 实施中的偏差
+
+以下差异在 P0–P8 执行中出现并已接受。除特别说明外，对外输出不变，均由黄金快照或对应单元测试锁定。
+
+- **infra 可以 import 同模块的 adapters**（P2a）：原依赖表没有这条边，与「取数 → DTO → 模型」的文件布局矛盾；3.5 已修订，`scripts/architecture/boundaries.ts` 的 `layerDependencies.infra` 包含 `adapters`。
+- **GitHub 仓库元数据解析变严**（P2a）：改为 `effect/Schema` 解码后，非字符串的 description / language / pushedAt 变成 `null`，缺失的 `stargazers_count` 变成 `0`，following 只保留非空字符串。现有 fixture 字段完整，输出不变。
+- **一处黄金快照接受了 Effect 4 的错误名**（P1）：Effect 4 解包 FiberFailure 后，错误对象的名字与 Effect 3 不同。判定用户看不到这个字段，接受了这一处快照，其余快照未改。
+- **`SearchFailure` 仍是 `Error` 子类**（P2c）：没有改成联合类型。现有测试和跨进程脚本依赖 `instanceof Error`、`message` 和 `code`，因此保留为带 `_tag: "SearchFailure"` 的 `NewsSearchError`，`code` 保持开放字符串。
+- **Grok 子进程仍用 `execFile` 回调**（P2c）：没有改成 `Scope` + `Effect.timeout`，以保持 `SIGKILL`、`maxBuffer`、调用上限和临时目录清理的时序。
+- **状态文件仍用 `node:fs`**（P2c、P4）：锁文件、`fsync` 和 `0o600` / `0o700` 文件权限需要精确保留，所以只有来源目录走 `FileSystem`；其余状态文件在 Effect 内调用 `node:fs`，锁用 `acquireUseRelease`，写入放在 `uninterruptible` 中。HTTP 用 `HttpClient.make` 包装注入的 `fetch`，不用 `FetchHttpClient`，以保留 `TimeoutError` 的判断。
+- **搜索并发保留拉取下标的 worker**（P2c）：`Effect.forEach` 遇到失败会短路，可能让拿到最后一份预算的请求被取消。
+- **`withBudget` 的请求共享限定在同一个 fiber 树内**（P6）：每个 key 一个 `Deferred`，同一 fiber 树内相同请求共享一次预约；不同的 `run*` 调用之间不再共享。生产路径（`settleSearches` 的 fiber 树、X 账号的串行采集）不受影响。
+- **研究合并函数留在 `editorial/domain/evidence`**（P5a）：放进 `subscription` 会形成 import 环。
+- **Automation Presentation 从 Markdown 解码**（P7）：Rivus 只把 Agent 回复的文本交给 presentation 钩子，因此 `app/render/view-decode.ts` 先把 Markdown 解码为 View IR，再投影。`--json` 输出不经过 View IR。
+- **测试布局**（P8）：单元测试与源文件同目录。`tests/` 保留 `golden/`、`fixtures/`、`repo/`、`support/` 四个目录：仓库配置文件测试（`feed-config.test.ts`）放在 `tests/repo/`，多个 SearchProvider 共用的测试套件放在 `tests/support/`，`src` 中没有测试辅助文件。测试文件不受所在层的依赖规则约束，跨模块 import 不限方向，但仍只能经过 `index.ts`。
 
 ## 5. 对外接口与兼容性清单（每个阶段都必须保持不变）
 

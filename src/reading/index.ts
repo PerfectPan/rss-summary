@@ -8,12 +8,13 @@ import {
   type GlmPage,
 } from "./application/ports.js";
 import { extractArticle } from "./domain/document/adapters/html-article.js";
+import type { ReadRequest, ReadResult } from "./domain/document/document.js";
 import {
   transcriptEvidence,
   videoVisualEvidence,
 } from "./domain/document/adapters/video-evidence.js";
 import {
-  BrowserArticleResearchClient,
+  browserArticleResearch,
   type BrowserPageFetcher,
 } from "./infra/adapters/browser-reader.js";
 import { readGlmPage } from "./infra/adapters/glm-reader.js";
@@ -70,9 +71,9 @@ export {
   type ArticleResearchResult,
 } from "./infra/adapters/http-reader.js";
 export {
-  BrowserArticleResearchClient,
-  type BrowserArticleResearchOptions,
+  browserArticleResearch,
   type BrowserPageFetcher,
+  type BrowserReaderOptions,
 } from "./infra/adapters/browser-reader.js";
 export { captureVideoFrames } from "./infra/adapters/video-frames.js";
 export {
@@ -84,7 +85,7 @@ export {
 export type ReadingLiveOptions = {
   apiKey?: string;
   browserChannel?: string;
-  browserResearch?: BrowserArticleResearchClient["research"];
+  browserResearch?: (request: ReadRequest) => Effect.Effect<ReadResult>;
   browserTimeoutMs?: number;
   fetch?: typeof fetch;
   fetchPage?: BrowserPageFetcher;
@@ -113,7 +114,7 @@ export function ReadingLive(
     now: options.now,
     timeoutMs: options.timeoutMs,
   });
-  const browserClient = new BrowserArticleResearchClient({
+  const browserResearch = browserArticleResearch({
     browserChannel: options.browserChannel,
     extract: extractArticle,
     fetchPage: options.fetchPage,
@@ -132,10 +133,7 @@ export function ReadingLive(
       Effect.promise(() => (options.httpResearch ?? httpClient.research.bind(httpClient))(request)),
   });
   const browser = Layer.succeed(BrowserReader, {
-    research: (request) =>
-      Effect.promise(() =>
-        (options.browserResearch ?? browserClient.research.bind(browserClient))(request),
-      ),
+    research: options.browserResearch ?? browserResearch,
   });
   const video = Layer.succeed(VideoReader, {
     research: (request) =>

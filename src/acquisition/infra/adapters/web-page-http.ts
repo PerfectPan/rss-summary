@@ -1,4 +1,4 @@
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { HttpClient } from "effect/http";
 
 import type { ActivityCardDto } from "../../domain/item/adapters/activity-card.js";
@@ -6,46 +6,41 @@ import {
   extractWebPageEntries,
   normalizeWebPageEntry,
 } from "../../domain/item/adapters/web-page.js";
+import { acquireActivityCard } from "../../domain/item/adapters/scoring-trace.js";
 import type { WebPageSubscription } from "../../domain/source/subscription.js";
+import { WebPage } from "../../application/ports.js";
 import { asError, provideHttp, timeoutFetch, webHeaders } from "./http.js";
 
-export type WebPageClientOptions = {
+export type WebPageOptions = {
   fetch?: typeof fetch;
   timeoutMs?: number;
   maxAttempts?: number;
 };
 
-export class WebPageClient {
-  private readonly fetchImpl: typeof fetch;
-  private readonly timeoutMs: number;
-  private readonly maxAttempts: number;
-
-  constructor(options: WebPageClientOptions = {}) {
-    this.fetchImpl = options.fetch ?? fetch;
-    this.timeoutMs = options.timeoutMs ?? 12_000;
-    this.maxAttempts = options.maxAttempts ?? 3;
-  }
-
-  async getEvents(source: WebPageSubscription): Promise<ActivityCardDto[]> {
-    return Effect.runPromise(this.read(source));
-  }
-
-  /** Effect form so tests can drive the 250ms/500ms backoff with TestClock. */
-  read(source: WebPageSubscription): Effect.Effect<ActivityCardDto[], Error> {
-    const fetchImpl = timeoutFetch(this.fetchImpl, this.timeoutMs);
-    const maxAttempts = this.maxAttempts;
-    return Effect.gen(function* () {
-      const html = yield* fetchHtml(source.url, maxAttempts);
-      const entries = extractWebPageEntries(html, source);
-      if (entries.length === 0) {
-        return yield* Effect.fail(
-          new Error(`Web page ${source.name} returned no dated links matching its path prefixes`),
-        );
-      }
-      return entries.map((entry) => normalizeWebPageEntry(entry, source));
-    }).pipe((effect) => provideHttp(effect, fetchImpl));
-  }
+/** Fetch one listing page and map its dated links into activity cards. */
+export function readWebPageEvents(
+  source: WebPageSubscription,
+  options: WebPageOptions = {},
+): Effect.Effect<ActivityCardDto[], Error> {
+  const fetchImpl = timeoutFetch(options.fetch ?? fetch, options.timeoutMs ?? 12_000);
+  const maxAttempts = options.maxAttempts ?? 3;
+  return Effect.gen(function* () {
+    const html = yield* fetchHtml(source.url, maxAttempts);
+    const entries = extractWebPageEntries(html, source);
+    if (entries.length === 0) {
+      return yield* Effect.fail(
+        new Error(`Web page ${source.name} returned no dated links matching its path prefixes`),
+      );
+    }
+    return entries.map((entry) => normalizeWebPageEntry(entry, source));
+  }).pipe((effect) => provideHttp(effect, fetchImpl));
 }
+
+export const WebPageLive = (options: WebPageOptions = {}): Layer.Layer<WebPage> =>
+  Layer.succeed(WebPage, {
+    getEvents: (source) =>
+      Effect.map(readWebPageEvents(source, options), (cards) => cards.map(acquireActivityCard)),
+  });
 
 function fetchHtml(
   url: string,

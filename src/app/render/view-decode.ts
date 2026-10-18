@@ -5,8 +5,9 @@ import type { ViewDocument, ViewItem, ViewLink, ViewSection } from "./view.js";
  * compatibility path for Automation replies the plugin did not render itself
  * (an Agent that altered the Tool's Markdown, or synthetic text): the line
  * grammar is exactly the one app/render/markdown.ts emits, and the routing
- * rules mirror the legacy parser preserved in tests/oracle/render/, so a
- * decoded view presents identically to the parser output.
+ * rules reproduce the earlier Markdown parser, so a decoded view presents
+ * identically to it (locked by the golden registration snapshot and
+ * view-decode.test.ts).
  */
 export function decodeViewFromMarkdown(markdown: string): ViewDocument {
   const lines = markdown

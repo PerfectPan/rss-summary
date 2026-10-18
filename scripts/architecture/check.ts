@@ -5,6 +5,7 @@ import ts from "typescript";
 
 import {
   adapterPackages,
+  effectRunFiles,
   infraPackages,
   layerDependencies,
   type LayerName,
@@ -40,6 +41,7 @@ type ImportRef = {
 type Location = {
   layer: LayerName;
   module: ModuleName;
+  test: boolean;
 };
 
 const planned = new Set<string>(modules);
@@ -60,6 +62,7 @@ export function checkBoundaries(files: readonly SourceInput[]): Violation[] {
 }
 
 function checkImports(file: SourceInput, location: Location): Violation[] {
+  if (location.test) return checkTestImports(file, location);
   const violations: Violation[] = [];
   for (const ref of readImports(file)) {
     if (ref.specifier.startsWith(".")) {
@@ -79,6 +82,49 @@ function checkImports(file: SourceInput, location: Location): Violation[] {
     violations.push(...checkPackage(file.path, location, ref));
   }
   return violations;
+}
+
+/**
+ * Sibling tests (`*.test.ts`) are exempt from their layer's dependency rules —
+ * they may use `node:*`, Effect, and substitute layers — but they may not reach
+ * into another module's internals: cross-module imports go through the module's
+ * `index.ts` (any direction, because tests legitimately verify combinations of
+ * modules). Shared suites under `tests/support/` are the only files outside
+ * `src/` they may import.
+ */
+function checkTestImports(file: SourceInput, location: Location): Violation[] {
+  const violations: Violation[] = [];
+  for (const ref of readImports(file)) {
+    if (!ref.specifier.startsWith(".")) continue;
+    const resolved = resolveRelative(file.path, ref.specifier);
+    // `..` segments that walk out of src/ land at the repository root in this
+    // layout; posix.normalize keeps them as a leading "../" run.
+    const targetPath = stripRootEscape(resolved);
+    if (targetPath !== undefined && targetPath.startsWith("tests/support/")) continue;
+    const target = targetPath === undefined ? undefined : locate(targetPath);
+    if (!target) {
+      violations.push(violation(file.path, "relative-escape", `${ref.specifier} leaves src/`));
+      continue;
+    }
+    if (target.module === location.module) continue;
+    if (!isModuleIndex(targetPath!)) {
+      violations.push(
+        violation(
+          file.path,
+          "deep-import",
+          `tests may import ${target.module} only through index.ts`,
+        ),
+      );
+    }
+  }
+  return violations;
+}
+
+/** Drop leading "../" run when it exactly reaches the repository root. */
+function stripRootEscape(path: string): string | undefined {
+  let current = path;
+  while (current.startsWith("../")) current = current.slice(3);
+  return current.startsWith("..") ? undefined : current;
 }
 
 function checkRelative(file: string, location: Location, ref: ImportRef): Violation[] {
@@ -107,9 +153,6 @@ function checkCrossModule(
   targetPath: string,
   ref: ImportRef,
 ): Violation[] {
-  if (source.module === "legacy" || target.module === "legacy") {
-    return [violation(file, "module-dependency", `${source.module} may not import ${target.module}`)];
-  }
   const rule = moduleRules[source.module];
   if (!rule.dependsOn.includes(target.module)) {
     return [
@@ -161,6 +204,19 @@ function checkPackage(file: string, location: Location, ref: ImportRef): Violati
 
 function checkText(file: SourceInput, location: Location): Violation[] {
   const violations: Violation[] = [];
+  if (!location.test && /\bEffect\.run\w*\(/u.test(file.source)) {
+    const allowed = (effectRunFiles as readonly string[]).includes(file.path);
+    if (!allowed) {
+      violations.push(
+        violation(
+          file.path,
+          "effect-run",
+          "Effect.run* may only be called in src/app/runtime.ts (test files excepted)",
+        ),
+      );
+    }
+  }
+  if (location.test) return violations;
   // Concept directories and the editorial entry (the module that must stay
   // source-neutral end to end) may not name any provider.
   const vocabularyChecked =
@@ -261,28 +317,27 @@ function moduleSpecifier(node: ts.ImportDeclaration | ts.ExportDeclaration): str
 function locate(path: string): Location | undefined {
   const normalized = path.replace(/\\/gu, "/").replace(/^\.\//u, "");
   if (!normalized.startsWith("src/")) return undefined;
+  const test = normalized.endsWith(".test.ts");
   const parts = normalized.slice("src/".length).split("/");
   const [head, ...rest] = parts;
   if (!head || rest.length === 0 && !normalized.endsWith(".ts")) return undefined;
-  if (planned.has(head)) return locatePlanned(head as Exclude<ModuleName, "legacy">, rest);
-  if (head === "domain") return { layer: rest[1] === "adapters" ? "adapters" : "domain", module: "legacy" };
-  if (head === "application") return { layer: "application", module: "legacy" };
-  if (head === "infrastructure") return { layer: "infra", module: "legacy" };
-  if (head === "presentation") return { layer: "app", module: "legacy" };
+  if (planned.has(head)) return locatePlanned(head as ModuleName, rest, test);
   return undefined;
 }
 
-function locatePlanned(moduleName: Exclude<ModuleName, "legacy">, parts: string[]): Location | undefined {
-  if (moduleName === "kernel") return { layer: "kernel", module: moduleName };
-  if (moduleName === "app") return { layer: "app", module: moduleName };
-  if (parts.length === 1 && parts[0] === "index.ts") return { layer: "entry", module: moduleName };
+function locatePlanned(moduleName: ModuleName, parts: string[], test: boolean): Location | undefined {
+  if (moduleName === "kernel") return { layer: "kernel", module: moduleName, test };
+  if (moduleName === "app") return { layer: "app", module: moduleName, test };
+  if (parts.length === 1 && parts[0] === "index.ts")
+    return { layer: "entry", module: moduleName, test };
   const [layer, concept, maybeAdapters] = parts;
   if (layer === "domain" && concept && maybeAdapters === "adapters" && parts.length > 3) {
-    return { layer: "adapters", module: moduleName };
+    return { layer: "adapters", module: moduleName, test };
   }
-  if (layer === "domain" && parts.length > 2) return { layer: "domain", module: moduleName };
-  if (layer === "application" && parts.length > 1) return { layer: "application", module: moduleName };
-  if (layer === "infra" && parts.length > 1) return { layer: "infra", module: moduleName };
+  if (layer === "domain" && parts.length > 2) return { layer: "domain", module: moduleName, test };
+  if (layer === "application" && parts.length > 1)
+    return { layer: "application", module: moduleName, test };
+  if (layer === "infra" && parts.length > 1) return { layer: "infra", module: moduleName, test };
   return undefined;
 }
 

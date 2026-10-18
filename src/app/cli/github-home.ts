@@ -1,5 +1,6 @@
 import { saveGithubHomeStorageState } from "../../acquisition/index.js";
 import { errorMessage } from "../../kernel/index.js";
+import { runPluginEffect } from "../runtime.js";
 
 type Writable = {
   write(chunk: string): unknown;
@@ -25,10 +26,12 @@ export async function runGithubHomeCommand(
       process.env.GITHUB_HOME_STORAGE_STATE ??
       ".state/github-home-storage.json";
     try {
-      await saveGithubHomeStorageState({
-        storageState,
-        browserChannel: args.browserChannel ?? process.env.GITHUB_HOME_BROWSER_CHANNEL,
-      });
+      await runPluginEffect(
+        saveGithubHomeStorageState({
+          storageState,
+          browserChannel: args.browserChannel ?? process.env.GITHUB_HOME_BROWSER_CHANNEL,
+        }),
+      );
       stdout.write(`Saved GitHub Home storage state to ${storageState}\n`);
       return 0;
     } catch (error) {
