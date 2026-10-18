@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 
 import { parseIndustrySources } from "../../domain/source/adapters/catalog.js";
-import type { IndustrySource } from "../../domain/source/subscription.js";
+import type { IndustrySource } from "../../domain/source/index.js";
 import { feedRecordSchema } from "./feeds.js";
 
 const pageRecordSchema = Schema.Struct({

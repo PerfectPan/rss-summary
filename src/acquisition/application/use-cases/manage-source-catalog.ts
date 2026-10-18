@@ -4,7 +4,7 @@ import {
   addFeedSubscription,
   removeFeedSubscription,
 } from "../../domain/source/adapters/catalog.js";
-import type { FeedSubscription, FeedSubscriptionInput } from "../../domain/source/subscription.js";
+import type { FeedSubscription, FeedSubscriptionInput } from "../../domain/source/index.js";
 import { SourceCatalogStore } from "../ports.js";
 
 export const listCatalogFeeds = (

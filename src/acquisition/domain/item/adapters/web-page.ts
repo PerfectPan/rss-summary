@@ -2,7 +2,7 @@ import { Schema } from "effect";
 import { load } from "cheerio";
 
 import { listingPublicationType } from "../../source/adapters/publication.js";
-import type { WebPageSubscription } from "../../source/subscription.js";
+import type { WebPageSubscription } from "../../source/index.js";
 import { decodeSchema } from "./decode.js";
 import { publicationAcquired, type Acquired, type ActivityCardDto } from "./activity-card.js";
 

@@ -1,25 +1,25 @@
 import { resolve } from "node:path";
 import { Schema } from "effect";
 
-import { withBudget, type BudgetedSearch } from "../application/services/with-budget.js";
+import { withBudget, type BudgetedSearch } from "../../application/services/with-budget.js";
 import {
   isCacheablePage,
   normalizeProvider,
   presentCachedPage,
-} from "../domain/budget/adapters/provider.js";
+} from "../../domain/budget/adapters/provider.js";
 import {
   validateBudgetOptions,
   type BudgetLimits,
   type CachedPage,
-} from "../domain/budget/search-budget.js";
-import type { SearchInput, SearchPage } from "../domain/search/search.js";
-import { rawPageSchema } from "./models/news-search.js";
+} from "../../domain/budget/index.js";
+import type { SearchInput, SearchPage } from "../../domain/search/index.js";
+import { rawPageSchema } from "../models/news-search.js";
 import {
   loadSearchBudget,
   saveSearchBudget,
   sha256,
   withSearchBudgetLock,
-} from "./repository/search-budget-file.js";
+} from "../repository/search-budget-file.js";
 
 export type BudgetOptions = {
   stateFile: string;

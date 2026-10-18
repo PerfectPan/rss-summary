@@ -1,12 +1,12 @@
 import type { Effect } from "effect";
 
 import { createBudgetedNewsSearch } from "./budgeted-search.js";
-import { GrokXClient } from "./adapters/grok-cli.js";
+import { GrokXClient } from "../adapters/grok-cli.js";
 import {
   collectXAccountPosts as collectAccountPosts,
   type CollectXAccountOptions,
   type XAccountPosts,
-} from "../application/use-cases/collect-x-posts.js";
+} from "../../application/use-cases/collect-x-posts.js";
 
 type Dependencies = {
   env?: NodeJS.ProcessEnv;

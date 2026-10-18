@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 
 import { ok, type Result } from "../../../../kernel/result.js";
-import type { Item, ItemKind, SignalType } from "../item.js";
+import type { Item, ItemKind, SignalType } from "../index.js";
 import type { ActivityCardDto, ActivityType } from "./activity-card.js";
 import { decodeSchema, type DecodeFailure } from "./decode.js";
 

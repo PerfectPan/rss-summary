@@ -6,7 +6,7 @@ import { Cause, Effect, Exit } from "effect";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
 import { SourceCatalogStore } from "../../application/ports.js";
-import { SourceCatalogStoreLive } from "../live.js";
+import { SourceCatalogStoreLive } from "../factories/live.js";
 
 const directories: string[] = [];
 

@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 
 import { parseFeedSubscriptions } from "../../domain/source/adapters/catalog.js";
-import type { FeedSubscription } from "../../domain/source/subscription.js";
+import type { FeedSubscription } from "../../domain/source/index.js";
 
 /** Document shape of feeds.json. Extra properties stay ignored, matching the hand parser. */
 export const feedRecordSchema = Schema.Struct({

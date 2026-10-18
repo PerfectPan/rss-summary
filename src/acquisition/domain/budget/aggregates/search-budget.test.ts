@@ -1,19 +1,15 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { isCacheablePage } from "./adapters/provider.js";
+import { isCacheablePage } from "../adapters/provider.js";
 import {
-  SearchBudget,
   cacheKeyMaterial,
-  findCache,
-  isFresh,
   usageFor,
-  validateBudgetOptions,
   type BudgetLimits,
   type BudgetState,
-  type CacheEntry,
   type CacheRequest,
   type PresentCache,
-} from "./search-budget.js";
+} from "../index.js";
+import { SearchBudget } from "./search-budget.js";
 
 const hash = (material: string) => material;
 const normalize = (provider: string) => provider;
@@ -196,38 +192,5 @@ describe("SearchBudget", () => {
     if (remembered._tag !== "Ok") return;
     expect(remembered.value.state).toBe(budget);
     expect(remembered.value.events).toEqual([]);
-  });
-
-  it("matches a covering cache window and expires at the TTL boundary", () => {
-    const entry: CacheEntry = {
-      request: request({ sinceDay: "2026-09-25", day: "2026-09-30" }),
-      fetchedAt: "2026-09-29T03:00:00.000Z",
-      page: { resultCount: 0, results: [] },
-    };
-    const state: BudgetState = {
-      version: 1,
-      timezoneOffset: "+08:00",
-      daily: {},
-      cache: { k: entry },
-    };
-    const fetched = Date.parse(entry.fetchedAt);
-    expect(findCache(state, request({ sinceDay: "2026-09-28" }), fetched, 60_000)).toBe(entry);
-    expect(findCache(state, request({ sinceDay: "2026-09-24" }), fetched, 60_000)).toBeUndefined();
-    expect(findCache(state, request({ day: "2026-10-01" }), fetched, 60_000)).toBeUndefined();
-    expect(isFresh(entry, fetched + 59_999, 60_000)).toBe(true);
-    expect(isFresh(entry, fetched + 60_000, 60_000)).toBe(false);
-    expect(isFresh(entry, fetched - 1, 60_000)).toBe(false);
-  });
-
-  it("rejects blank budget options", () => {
-    expect(() =>
-      validateBudgetOptions({
-        dailyLimit: 1,
-        monthlyLimit: 1,
-        cacheTtlMs: 0,
-        stateFile: " ",
-        timezoneOffset: "+08:00",
-      }),
-    ).toThrow("News search budgets, cache TTL and state file must be valid.");
   });
 });

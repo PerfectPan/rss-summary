@@ -1,4 +1,4 @@
-import type { SearchFallback, SearchUsage } from "../../../acquisition/domain/search/search.js";
+import type { SearchFallback, SearchUsage } from "../../../acquisition/domain/search/index.js";
 import type {
   NewsHitDecision,
   NewsHitRejectionReason,

@@ -8,7 +8,7 @@ import {
 } from "../../domain/item/adapters/doubao.js";
 
 export { DoubaoSearchError };
-import type { SearchInput, SearchPage } from "../../domain/search/search.js";
+import type { SearchInput, SearchPage } from "../../domain/search/index.js";
 
 type DoubaoSearchClientOptions = {
   apiKey: string;

@@ -1,4 +1,4 @@
-import type { FeedSubscription, FeedSubscriptionInput, IndustrySource } from "../subscription.js";
+import type { FeedSubscription, FeedSubscriptionInput, IndustrySource } from "../index.js";
 
 export function addFeedSubscription(
   feeds: readonly FeedSubscription[],

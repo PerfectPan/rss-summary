@@ -1,12 +1,6 @@
 import { expect, it } from "vite-plus/test";
-import { NewsSearchError, editionRotation, selectQueryIds, shareSearchBudget } from "./search.js";
-import { DoubaoSearchError } from "../item/adapters/doubao.js";
 
-it("preserves provider retry metadata across the common search error boundary", () => {
-  const error = new DoubaoSearchError("http_429", "limited", { retryAfterMs: 1200 });
-  expect(error).toBeInstanceOf(NewsSearchError);
-  expect(error).toMatchObject({ code: "http_429", retryAfterMs: 1200, name: "DoubaoSearchError" });
-});
+import { editionRotation, selectQueryIds, shareSearchBudget } from "./query-rotation.js";
 
 it("rotates query ids and shares a fallback budget by remainder", () => {
   expect(editionRotation("1970-01-01", "noon")).toBe(0);

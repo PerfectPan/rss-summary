@@ -9,8 +9,8 @@ import {
   type BudgetLimits,
   type BudgetState,
   type HashText,
-} from "../../domain/budget/search-budget.js";
-import { NewsSearchError } from "../../domain/search/search.js";
+} from "../../domain/budget/index.js";
+import { NewsSearchError } from "../../domain/search/index.js";
 import { isErr } from "../../../kernel/result.js";
 import { SearchBudgetRepository } from "../../application/ports.js";
 import { newsSearchStateSchema } from "../models/news-search.js";

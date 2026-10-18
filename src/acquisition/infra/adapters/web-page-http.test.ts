@@ -3,7 +3,7 @@ import { TestClock } from "effect/testing";
 import { describe, expect, it } from "vite-plus/test";
 
 import { readWebPageEvents } from "./web-page-http.js";
-import type { WebPageSubscription } from "../../domain/source/subscription.js";
+import type { WebPageSubscription } from "../../domain/source/index.js";
 
 const source: WebPageSubscription = {
   type: "page",

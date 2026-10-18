@@ -7,7 +7,7 @@ import {
   normalizeWebPageEntry,
 } from "../../domain/item/adapters/web-page.js";
 import { acquireActivityCard } from "../../domain/item/adapters/scoring-trace.js";
-import type { WebPageSubscription } from "../../domain/source/subscription.js";
+import type { WebPageSubscription } from "../../domain/source/index.js";
 import { WebPage } from "../../application/ports.js";
 import { asError, provideHttp, timeoutFetch, webHeaders } from "./http.js";
 

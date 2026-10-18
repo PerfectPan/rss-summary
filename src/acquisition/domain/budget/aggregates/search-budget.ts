@@ -1,80 +1,24 @@
-import { err, ok, type Result } from "../../../kernel/result.js";
-import { calendarDayAtOffset, parseOffsetMilliseconds } from "../../../kernel/time.js";
+import { err, ok, type Result } from "../../../../kernel/result.js";
+import { calendarDayAtOffset } from "../../../../kernel/time.js";
+import { NewsSearchError, type SearchPage } from "../../search/index.js";
+import { findCache, isFresh, usageFor } from "../services/budget-state.js";
+import type { BudgetEvent } from "../events/budget-event.js";
 import {
-  NewsSearchError,
-  type SearchPage,
-  type SearchResult,
-  type SearchSourcePolicy,
-} from "../search/search.js";
-
-export type CacheRequest = {
-  provider: string;
-  query: string;
-  count: number;
-  day: string;
-  sinceDay: string;
-  sourcePolicy: SearchSourcePolicy;
-  window?: { since: string; until: string };
-};
-
-export type CachedPage = {
-  provider?: string;
-  logId?: string;
-  resultCount: number;
-  timeCostMs?: number;
-  results: SearchResult[];
-};
-
-export type PresentCache = (entry: CacheEntry, usage: BudgetUsage) => SearchPage;
-
-export type CacheEntry = {
-  request: CacheRequest;
-  fetchedAt: string;
-  page: CachedPage;
-};
-
-export type BudgetState = {
-  version: 1;
-  timezoneOffset: string;
-  daily: Record<string, number>;
-  cache: Record<string, CacheEntry>;
-};
-
-export type BudgetLimits = {
-  dailyLimit: number;
-  monthlyLimit: number;
-  timezoneOffset: string;
-  cacheTtlMs: number;
-};
-
-export type BudgetUsage = {
-  dailyUsed: number;
-  monthlyUsed: number;
-  dailyLimit: number;
-  monthlyLimit: number;
-};
-
-export type BudgetEvent =
-  | {
-      readonly _tag: "Reserved";
-      readonly day: string;
-      readonly dailyUsed: number;
-      readonly monthlyUsed: number;
-    }
-  | { readonly _tag: "CacheHit"; readonly fetchedAt: string }
-  | { readonly _tag: "CacheStored"; readonly key: string; readonly fetchedAt: string };
+  cacheKey,
+  type BudgetLimits,
+  type BudgetState,
+  type BudgetUsage,
+  type CacheRequest,
+  type CachedPage,
+  type HashText,
+  type PresentCache,
+  type Reservation,
+} from "../value-objects/budget.js";
 
 export type BudgetTransition<A> = {
   readonly state: SearchBudget;
   readonly events: readonly BudgetEvent[];
   readonly value: A;
-};
-
-export type HashText = (material: string) => string;
-
-export type Reservation = {
-  usage: BudgetUsage;
-  cached?: SearchPage;
 };
 
 type RestoreOptions = {
@@ -212,89 +156,6 @@ export class SearchBudget {
       value: undefined,
     });
   }
-}
-
-export function validateBudgetOptions(options: {
-  dailyLimit: number;
-  monthlyLimit: number;
-  cacheTtlMs: number;
-  stateFile: string;
-  timezoneOffset: string;
-}): void {
-  if (
-    !Number.isSafeInteger(options.dailyLimit) ||
-    options.dailyLimit < 0 ||
-    !Number.isSafeInteger(options.monthlyLimit) ||
-    options.monthlyLimit < 0 ||
-    !Number.isSafeInteger(options.cacheTtlMs) ||
-    options.cacheTtlMs < 0 ||
-    options.stateFile.trim() === ""
-  ) {
-    throw new Error("News search budgets, cache TTL and state file must be valid.");
-  }
-  parseOffsetMilliseconds(options.timezoneOffset);
-}
-
-export function cacheKeyMaterial(request: CacheRequest): string {
-  return JSON.stringify([
-    request.provider,
-    request.query,
-    request.count,
-    request.day,
-    request.sinceDay,
-    request.sourcePolicy,
-    ...(request.window ? [request.window.since, request.window.until] : []),
-  ]);
-}
-
-export function cacheKey(request: CacheRequest, hash: HashText): string {
-  return hash(cacheKeyMaterial(request));
-}
-
-export function usageFor(state: BudgetState, instant: Date, limits: BudgetLimits): BudgetUsage {
-  const day = calendarDayAtOffset(instant.toISOString(), limits.timezoneOffset);
-  const monthlyUsed = Object.entries(state.daily)
-    .filter(([recordDay]) => recordDay.startsWith(day.slice(0, 7)))
-    .reduce((total, [, used]) => total + used, 0);
-  if (!Number.isSafeInteger(monthlyUsed)) {
-    throw new NewsSearchError(
-      "local_budget_state",
-      "Local search budget contains an invalid monthly total.",
-    );
-  }
-  return {
-    dailyUsed: state.daily[day] ?? 0,
-    monthlyUsed,
-    dailyLimit: limits.dailyLimit,
-    monthlyLimit: limits.monthlyLimit,
-  };
-}
-
-export function findCache(
-  state: BudgetState,
-  request: CacheRequest,
-  instant: number,
-  ttlMs: number,
-): CacheEntry | undefined {
-  return Object.values(state.cache)
-    .filter(
-      (entry) =>
-        isFresh(entry, instant, ttlMs) &&
-        entry.request.provider === request.provider &&
-        entry.request.query === request.query &&
-        entry.request.count === request.count &&
-        entry.request.sourcePolicy === request.sourcePolicy &&
-        entry.request.window?.since === request.window?.since &&
-        entry.request.window?.until === request.window?.until &&
-        entry.request.sinceDay <= request.sinceDay &&
-        entry.request.day >= request.day,
-    )
-    .sort((left, right) => Date.parse(right.fetchedAt) - Date.parse(left.fetchedAt))[0];
-}
-
-export function isFresh(entry: CacheEntry, instant: number, ttlMs: number): boolean {
-  const age = instant - Date.parse(entry.fetchedAt);
-  return age >= 0 && age < ttlMs;
 }
 
 function validatePersisted(

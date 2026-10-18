@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 
-import { GitHubActivity, RssFeed, SourceCatalogStore } from "../application/ports.js";
+import { GitHubActivity, RssFeed, SourceCatalogStore } from "../../application/ports.js";
 import { AcquisitionLive } from "./live.js";
 
 const xml = `<rss><channel><item><title>Note</title><link>https://example.com/note</link><description>Body</description></item></channel></rss>`;

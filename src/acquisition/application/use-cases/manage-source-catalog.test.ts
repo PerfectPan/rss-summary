@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from "vite-plus/test";
 
 import { SourceCatalogStore } from "../ports.js";
 import { addCatalogFeed, listCatalogFeeds, removeCatalogFeed } from "./manage-source-catalog.js";
-import { SourceCatalogStoreLive } from "../../infra/live.js";
+import { SourceCatalogStoreLive } from "../../infra/factories/live.js";
 
 const directories: string[] = [];
 

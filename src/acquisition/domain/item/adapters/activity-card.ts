@@ -1,4 +1,4 @@
-import type { Item, ItemKind, SignalType } from "../item.js";
+import type { Item, ItemKind, SignalType } from "../index.js";
 
 export type ActivitySource = "github" | "rss" | "web";
 

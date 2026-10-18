@@ -1,14 +1,14 @@
 import { Effect, Layer } from "effect";
 
-import { acquireGitHubEvent } from "../domain/item/adapters/github-event.js";
-import { acquireActivityCard } from "../domain/item/adapters/scoring-trace.js";
-import type { GithubHomeClientOptions } from "./adapters/github-home-browser.js";
-import { readHomeEvents } from "./adapters/github-home-browser.js";
-import { GitHubCatalogLive, readReceivedEvents } from "./adapters/github-rest.js";
-import { RssFeedLive } from "./adapters/rss-http.js";
-import { WebPageLive } from "./adapters/web-page-http.js";
-import { NodeFileSystemLive } from "./node-file-system.js";
-import { SourceCatalogFileLive } from "./repository/source-catalog-file.js";
+import { acquireGitHubEvent } from "../../domain/item/adapters/github-event.js";
+import { acquireActivityCard } from "../../domain/item/adapters/scoring-trace.js";
+import type { GithubHomeClientOptions } from "../adapters/github-home-browser.js";
+import { readHomeEvents } from "../adapters/github-home-browser.js";
+import { GitHubCatalogLive, readReceivedEvents } from "../adapters/github-rest.js";
+import { RssFeedLive } from "../adapters/rss-http.js";
+import { WebPageLive } from "../adapters/web-page-http.js";
+import { NodeFileSystemLive } from "../adapters/node-file-system.js";
+import { SourceCatalogFileLive } from "../repository/source-catalog-file.js";
 import {
   GitHubActivity,
   GitHubCatalog,
@@ -16,8 +16,8 @@ import {
   SearchBudgetRepository,
   SourceCatalogStore,
   WebPage,
-} from "../application/ports.js";
-import { SearchBudgetRepositoryLive } from "./repository/search-budget-file.js";
+} from "../../application/ports.js";
+import { SearchBudgetRepositoryLive } from "../repository/search-budget-file.js";
 
 export type AcquisitionOptions = {
   token?: string;

@@ -1,4 +1,4 @@
-import type { CredibilityMethod, CredibilityTier } from "../../../acquisition/domain/item/item.js";
+import type { CredibilityMethod, CredibilityTier } from "../../../acquisition/domain/item/index.js";
 import {
   canonicalizeUrl,
   compactSummary,

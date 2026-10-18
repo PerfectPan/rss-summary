@@ -7,7 +7,7 @@ import { Effect } from "effect";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { createBudgetedNewsSearch } from "./budgeted-search.js";
-import { NewsSearchError, type NewsSearchInput, type NewsSearchPage } from "../index.js";
+import { NewsSearchError, type NewsSearchInput, type NewsSearchPage } from "../../index.js";
 
 const executeFile = promisify(execFile);
 const directories: string[] = [];

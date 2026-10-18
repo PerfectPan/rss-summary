@@ -1,11 +1,11 @@
 import { Effect } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 
-import { searchBudgetDefaults } from "../budget-defaults.js";
+import { searchBudgetDefaults } from "../services/budget-defaults.js";
 import { collectXAccountPosts, type OpenSearchBudget } from "./collect-x-posts.js";
-import { NewsSearchError } from "../../domain/search/search.js";
+import { NewsSearchError } from "../../domain/search/index.js";
 import type { BudgetedSearch } from "../services/with-budget.js";
-import type { NewsSearchPage } from "../../domain/search/search.js";
+import type { NewsSearchPage } from "../../domain/search/index.js";
 
 function budgetOf(run: (value: { query: string }) => Promise<NewsSearchPage>): BudgetedSearch {
   return Object.assign(

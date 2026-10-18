@@ -51,6 +51,12 @@ const coveredElsewhere = new Map([
   ["delivery/application/ports", "delivery use-case tests"],
   // Storage schema round-trips are covered by the repository writing them.
   ["delivery/infra/models/feed-state", "delivery/infra/repository/feed-state-file tests"],
+  // Cache-key derivation is exercised wherever entries are keyed: the budget
+  // aggregate restore tests and the search-budget repository tests.
+  [
+    "acquisition/domain/budget/value-objects/budget",
+    "budget aggregate tests and search-budget-file repository tests",
+  ],
 ]);
 
 /** Directories allowed under tests/. */

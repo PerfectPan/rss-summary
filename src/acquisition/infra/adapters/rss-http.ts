@@ -4,7 +4,7 @@ import { HttpClient } from "effect/http";
 import { parseFeedXml } from "../../domain/item/adapters/rss.js";
 import type { ActivityCardDto } from "../../domain/item/adapters/activity-card.js";
 import { acquireActivityCard } from "../../domain/item/adapters/scoring-trace.js";
-import type { FeedSubscription } from "../../domain/source/subscription.js";
+import type { FeedSubscription } from "../../domain/source/index.js";
 import { RssFeed } from "../../application/ports.js";
 import { asError, provideHttp, rssHeaders, timeoutFetch } from "./http.js";
 

@@ -1,5 +1,5 @@
 import type { GrokSearchAudit as GrokAudit } from "./domain/search/adapters/audit.js";
-import type { SearchPage as SearchPageDocument } from "./domain/search/search.js";
+import type { SearchPage as SearchPageDocument } from "./domain/search/index.js";
 
 export type {
   ActivityCardDto,
@@ -60,7 +60,7 @@ export type {
   ItemKind,
   SignalType,
   TimePrecision,
-} from "./domain/item/item.js";
+} from "./domain/item/index.js";
 export {
   addFeedSubscription,
   formatFeedSubscriptions,
@@ -80,7 +80,7 @@ export {
   type FeedSubscriptionInput,
   type IndustrySource,
   type WebPageSubscription,
-} from "./domain/source/subscription.js";
+} from "./domain/source/index.js";
 export {
   GitHubActivity,
   GitHubCatalog,
@@ -115,7 +115,7 @@ export {
   SourceCatalogStoreLive,
   WebPageLive,
   type AcquisitionOptions,
-} from "./infra/live.js";
+} from "./infra/factories/live.js";
 export {
   editionRotation,
   isSearchFailure,
@@ -129,7 +129,7 @@ export {
   type SearchPage,
   type SearchResult,
   type SearchUsage,
-} from "./domain/search/search.js";
+} from "./domain/search/index.js";
 export {
   errorAudit,
   pageAudit,
@@ -137,7 +137,7 @@ export {
   type GrokSearchAudit,
 } from "./domain/search/adapters/audit.js";
 export type NewsSearchPage = SearchPageDocument & { grok?: GrokAudit };
-export { searchBudgetDefaults } from "./application/budget-defaults.js";
+export { searchBudgetDefaults } from "./application/services/budget-defaults.js";
 export {
   GrokProcess,
   SearchBudgetRepository,
@@ -172,5 +172,5 @@ export {
   researchKeyForCandidate,
   type IdentitySubject,
 } from "./domain/item/adapters/identity.js";
-export { createBudgetedNewsSearch, type BudgetOptions } from "./infra/budgeted-search.js";
-export { collectXAccountPosts, type XAccountPosts } from "./infra/x-account-posts.js";
+export { createBudgetedNewsSearch, type BudgetOptions } from "./infra/factories/budgeted-search.js";
+export { collectXAccountPosts, type XAccountPosts } from "./infra/factories/x-account-posts.js";

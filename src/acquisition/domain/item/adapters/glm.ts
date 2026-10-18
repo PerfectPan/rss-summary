@@ -1,4 +1,4 @@
-import type { Item } from "../item.js";
+import type { Item } from "../index.js";
 
 export type ResearchSearchResult = {
   title: string;

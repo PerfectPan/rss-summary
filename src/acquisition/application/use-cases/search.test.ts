@@ -2,7 +2,7 @@ import { Effect } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 
 import { settleSearches } from "./search.js";
-import type { SearchPage } from "../../domain/search/search.js";
+import type { SearchPage } from "../../domain/search/index.js";
 
 const page = (id: string): SearchPage => ({ resultCount: 0, results: [], logId: id });
 

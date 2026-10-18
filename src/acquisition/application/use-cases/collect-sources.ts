@@ -6,7 +6,7 @@ import {
   isWebPageSource,
   type FeedSubscription,
   type IndustrySource,
-} from "../../domain/source/subscription.js";
+} from "../../domain/source/index.js";
 import { RssFeed, WebPage } from "../ports.js";
 
 /** Same field order as RunSourceResult. `error` is omitted when the fetch succeeds. */

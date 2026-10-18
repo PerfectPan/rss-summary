@@ -14,14 +14,14 @@ import {
   type HashText,
   type PresentCache,
   type SearchBudget,
-} from "../../domain/budget/search-budget.js";
+} from "../../domain/budget/index.js";
 import type { AuditedSearchPage } from "../../domain/search/adapters/audit.js";
 import {
   NewsSearchError,
   type SearchInput,
   type SearchPage,
   type SearchUsage,
-} from "../../domain/search/search.js";
+} from "../../domain/search/index.js";
 
 export type BudgetedSearchPage = AuditedSearchPage & { searchUsage: SearchUsage };
 
