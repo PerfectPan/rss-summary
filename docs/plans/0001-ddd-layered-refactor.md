@@ -395,6 +395,9 @@ infra 可以直接调用同模块的 adapters，把取到的原始数据解码�
 - **Automation Presentation 从 Markdown 解码**（P7）：Rivus 只把 Agent 回复的文本交给 presentation 钩子，因此 `app/render/view-decode.ts` 先把 Markdown 解码为 View IR，再投影。`--json` 输出不经过 View IR。
 - **测试布局**（P8）：单元测试与源文件同目录。`tests/` 保留 `golden/`、`fixtures/`、`repo/`、`support/` 四个目录：仓库配置文件测试（`feed-config.test.ts`）放在 `tests/repo/`，多个 SearchProvider 共用的测试套件放在 `tests/support/`，`src` 中没有测试辅助文件。测试文件不受所在层的依赖规则约束，跨模块 import 不限方向，但仍只能经过 `index.ts`。
 
+- D11 只在 pnpm 开发工作区成立：npm 消费者环境里，Rivus 0.12.7 兼容基线会带入 effect 3.x，0.18.0 配置下 `@effect/platform-node-shared` 会解析到 4.0.5。因此 `check-package` 改为校验「本包实际加载的 effect 是 4.0.0」，其他副本只提示、不判失败（跨插件边界只传 Promise 和纯数据，不受影响）。
+- 产品之间不得互相引用（由边界检查强制）：共用的组合放在 `src/app/products/shared/`。
+
 ## 5. 对外接口与兼容性清单（每个阶段都必须保持不变）
 
 | 类别 | 内容 | 验证方式 |
