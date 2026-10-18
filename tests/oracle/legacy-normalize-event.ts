@@ -1,5 +1,11 @@
 import type { ActivityCardDto as ActivityCard } from "../../src/acquisition/index.js";
-import { asRecord } from "../../src/domain/record.js";
+function asRecord(value: unknown): Record<string, unknown> {
+  return value !== null &&
+    typeof value === "object" &&
+    Object.prototype.toString.call(value) === "[object Object]"
+    ? (value as Record<string, unknown>)
+    : {};
+}
 
 type RawEvent = {
   id?: unknown;

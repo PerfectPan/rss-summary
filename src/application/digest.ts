@@ -32,7 +32,7 @@ import {
   type FeedState,
 } from "../delivery/index.js";
 import { attempt } from "./effect.js";
-import { errorMessage } from "../infrastructure/parsing.js";
+import { errorMessage } from "../kernel/index.js";
 
 export type { DigestDocument };
 

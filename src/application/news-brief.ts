@@ -15,8 +15,8 @@ import {
   parseOffsetMilliseconds,
   startOfCalendarDay,
 } from "../domain/time.js";
-import { boundedInteger } from "../infrastructure/parsing.js";
-import { loadNewsTopics } from "../infrastructure/news-topics.js";
+import { boundedInteger } from "../app/config/parse.js";
+import { loadNewsTopics } from "../app/products/news/topics.js";
 import { GlmResearchClient } from "../infrastructure/glm-research.js";
 import {
   createBudgetedNewsSearch,

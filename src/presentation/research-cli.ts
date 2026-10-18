@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { FeedStateFileLive, recordResearch } from "../delivery/index.js";
 import { GlmResearchClient } from "../infrastructure/glm-research.js";
 import { GlmReader, ReadingLive } from "../reading/index.js";
-import { errorMessage } from "../infrastructure/parsing.js";
+import { errorMessage } from "../kernel/index.js";
 
 type Writable = {
   write(chunk: string): unknown;

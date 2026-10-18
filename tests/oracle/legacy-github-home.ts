@@ -5,7 +5,13 @@ import { createInterface } from "node:readline/promises";
 import { load } from "cheerio";
 
 import type { ActivityCardDto as ActivityCard, ActivityType } from "../../src/acquisition/index.js";
-import { asRecordOrNull } from "../../src/infrastructure/parsing.js";
+function asRecordOrNull(value: unknown): Record<string, unknown> | null {
+  return value !== null &&
+    typeof value === "object" &&
+    Object.prototype.toString.call(value) === "[object Object]"
+    ? (value as Record<string, unknown>)
+    : null;
+}
 
 export type HomeFeedLinkSnapshot = {
   text: string;

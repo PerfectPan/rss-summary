@@ -1,16 +1,18 @@
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 
 import type {
   NewsQueryIntent,
   NewsSourcePolicy,
   NewsTopic,
   NewsTopicQuery,
-} from "../editorial/index.js";
-import { optionalBoolean, requiredString, requirePositiveInteger } from "./config-parse.js";
-import { requireRecord } from "./parsing.js";
-
-const defaultTopicsFile = fileURLToPath(new URL("../../news-topics.json", import.meta.url));
+} from "../../../editorial/index.js";
+import { defaultNewsTopicsFile } from "../../config/assets.js";
+import {
+  optionalBoolean,
+  requiredString,
+  requirePositiveInteger,
+  requireRecord,
+} from "../../config/parse.js";
 const topicIdPattern = /^[a-z][a-z0-9-]*$/u;
 const queryIdPattern = /^[a-z][a-z0-9-]*$/u;
 const maxSearchQueryLength = 100;
@@ -29,7 +31,7 @@ const newsTopicLimits = {
   maxTotalQueries: 32,
 } as const;
 
-export function loadNewsTopics(filePath = defaultTopicsFile): NewsTopic[] {
+export function loadNewsTopics(filePath = defaultNewsTopicsFile()): NewsTopic[] {
   return parseNewsTopics(readFileSync(filePath, "utf8"));
 }
 

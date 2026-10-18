@@ -2,12 +2,12 @@ import { readFileSync } from "node:fs";
 
 import { describe, expect, it } from "vite-plus/test";
 
-import { parseNewsTopics } from "../../src/infrastructure/news-topics.js";
+import { parseNewsTopics } from "../../../../src/app/products/news/topics.js";
 
 describe("news topics", () => {
   it("loads the curated daily brief topics within the eight-item and search budgets", () => {
     const topics = parseNewsTopics(
-      readFileSync(new URL("../../news-topics.json", import.meta.url), "utf8"),
+      readFileSync(new URL("../../../../news-topics.json", import.meta.url), "utf8"),
     );
 
     expect(topics.map(({ id }) => id)).toEqual([

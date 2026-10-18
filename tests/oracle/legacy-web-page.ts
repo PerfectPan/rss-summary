@@ -1,7 +1,7 @@
 import { load } from "cheerio";
 
 import type { ActivityCardDto as ActivityCard } from "../../src/acquisition/index.js";
-import type { WebPageSubscription } from "../../src/infrastructure/config.js";
+import type { WebPageSubscription } from "../../src/acquisition/index.js";
 
 type WebPageClientOptions = {
   fetch?: typeof fetch;

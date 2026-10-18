@@ -1,16 +1,18 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import {
+  boundedInteger,
   optionalBoolean,
   optionalString,
   requireBoundedInteger,
   requireBoundedNumber,
   requirePositiveInteger,
+  requireRecord,
   requireStringList,
   requiredString,
-} from "../../src/infrastructure/config-parse.js";
+} from "../../../src/app/config/parse.js";
 
-describe("infrastructure/config-parse", () => {
+describe("app/config/parse", () => {
   it("validates strings, booleans, and bounded integers for JSON configs", () => {
     expect(requiredString("  x  ", "x")).toBe("x");
     expect(() => requiredString("", "x")).toThrow(/non-empty string/);
@@ -31,5 +33,13 @@ describe("infrastructure/config-parse", () => {
     expect(() => requireBoundedInteger(99, 8, 1, 16, "q")).toThrow(/between 1 and 16/);
     expect(requirePositiveInteger(3, 1, "n")).toBe(3);
     expect(requireStringList(["a", " b "], "list")).toEqual(["a", "b"]);
+    expect(requireRecord({ a: 1 }, "x")).toEqual({ a: 1 });
+    expect(() => requireRecord([], "x")).toThrow(/must be an object/i);
+  });
+
+  it("bounds integer env values", () => {
+    expect(boundedInteger(undefined, 10, 1, 50)).toBe(10);
+    expect(boundedInteger("20", 10, 1, 50)).toBe(20);
+    expect(() => boundedInteger("0", 10, 1, 50)).toThrow(/integer between/i);
   });
 });

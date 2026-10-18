@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 
 import { decodeFeedsJson, decodeIndustryJson } from "../acquisition/index.js";
+import { defaultIndustrySourcesFile } from "../app/config/assets.js";
 
 export type {
   FeedSubscription,
@@ -11,10 +11,6 @@ export type {
 export { parseFeedSubscriptions, parseIndustrySources } from "../acquisition/index.js";
 
 import type { FeedSubscription, IndustrySource } from "../acquisition/index.js";
-
-const defaultIndustrySourcesFile = fileURLToPath(
-  new URL("../../industry-feeds.json", import.meta.url),
-);
 
 export type GithubFeedSource = "home" | "events";
 export type GithubHomeFetch = "conduit" | "browser";
@@ -104,7 +100,7 @@ export function loadConfig(
         args.industryFeedsFile ??
         env.INDUSTRY_SOURCES_FILE ??
         env.INDUSTRY_FEEDS_FILE ??
-        defaultIndustrySourcesFile,
+        defaultIndustrySourcesFile(),
     ),
     industryStateFile:
       args.industryStateFile ?? env.INDUSTRY_STATE_FILE ?? ".state/industry-state.json",

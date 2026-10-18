@@ -1,4 +1,22 @@
-/** Shared JSON config validators for tracked source and topic policies. */
+/** Shared JSON and environment validators with the historical error messages. */
+
+export function boundedInteger(
+  value: string | undefined,
+  fallback: number,
+  min: number,
+  max: number,
+): number {
+  const parsed = value === undefined ? fallback : Number(value);
+  if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
+    throw new Error(`Numeric configuration must be an integer between ${min} and ${max}.`);
+  }
+  return parsed;
+}
+
+export function requireRecord(value: unknown, label: string): Record<string, unknown> {
+  if (!isRecord(value)) throw new Error(`${label} must be an object.`);
+  return value;
+}
 
 export function requiredString(value: unknown, label: string): string {
   const text = stringValue(value);
@@ -68,6 +86,14 @@ export function requireStringList(value: unknown, label: string): string[] {
     }
     return text.trim();
   });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    Object.prototype.toString.call(value) === "[object Object]"
+  );
 }
 
 function stringValue(value: unknown): string | undefined {

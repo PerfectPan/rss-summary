@@ -5,7 +5,7 @@
  * Repo-level harness tests live under tests/repo/.
  * A small allowlist covers pure re-export or entrypoint-only modules.
  */
-import { readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -13,8 +13,12 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 
 /** Modules intentionally covered via sibling tests rather than a 1:1 file. */
 const coveredBySibling = new Map([
-  // feed list contract tests sit next to config; still under infrastructure/
-  // (no module under src/feed-config.ts)
+  // feed list contract tests sit next to the env config; no module under
+  // src/app/config/feed-config.ts
+  ["app/config/feed-config", "app/config/env and the acquisition catalog tests"],
+  // Legacy argv+env loader kept until the product flows move; its behavior is
+  // asserted by the app/config tests that replace it.
+  ["infrastructure/config", "app/config/env and app/config/argv"],
   // Pure re-exports. Their behavior is covered by the kernel tests.
   ["domain/time", "kernel/time"],
   ["domain/text", "kernel/text"],
@@ -46,6 +50,7 @@ const layers = [
 
 function listTs(dir) {
   const out = [];
+  if (!existsSync(dir)) return out;
   for (const name of readdirSync(dir)) {
     const full = join(dir, name);
     if (statSync(full).isDirectory()) out.push(...listTs(full));
@@ -79,7 +84,7 @@ for (const layer of layers) {
       statSync(srcPath);
     } catch {
       // allow tests that only exercise a related config surface
-      if (name === "feed-config" && layer === "infrastructure") continue;
+      if (name === "config/feed-config" && layer === "app") continue;
       extra.push(`tests/${layer}/${name}.test.ts (no src/${layer}/${name}.ts)`);
     }
   }

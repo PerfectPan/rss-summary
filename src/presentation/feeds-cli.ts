@@ -10,7 +10,7 @@ import {
   listCatalogFeeds,
   removeCatalogFeed,
 } from "../acquisition/index.js";
-import { errorMessage } from "../infrastructure/parsing.js";
+import { errorMessage } from "../kernel/index.js";
 
 type Writable = {
   write(chunk: string): unknown;
