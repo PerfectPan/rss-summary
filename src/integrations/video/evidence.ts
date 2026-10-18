@@ -1,4 +1,4 @@
-import type { VideoVisuals } from "../index.js";
+import type { VideoVisuals } from "../../reading/index.js";
 
 const MAX_CONTENT_CHARS = 5_500;
 

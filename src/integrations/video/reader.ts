@@ -9,9 +9,9 @@ import {
   type ReadResult,
   validateResearchUrl,
   type VideoVisuals,
-} from "../../domain/document/index.js";
-import { asRecord, text } from "../services/json-record.js";
-import { captureVideoFrames } from "./video-frames.js";
+} from "../../reading/index.js";
+import { asRecord, text } from "../shared/json-record.js";
+import { captureVideoFrames } from "./frames.js";
 
 type RunCommand = (
   command: string,

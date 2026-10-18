@@ -2,11 +2,8 @@ import { access, readFile } from "node:fs/promises";
 
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import {
-  transcriptEvidence,
-  videoVisualEvidence,
-} from "../../domain/document/adapters/video-evidence.js";
-import { VideoResearchClient } from "./video-reader.js";
+import { transcriptEvidence, videoVisualEvidence } from "./evidence.js";
+import { VideoResearchClient } from "./reader.js";
 
 const url = "https://www.youtube.com/watch?v=example";
 const mediaUrl = "https://video.twimg.com/example.mp4";

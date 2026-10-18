@@ -18,10 +18,6 @@ export {
 } from "./domain/document/index.js";
 export { extractArticle } from "./domain/document/adapters/html-article.js";
 export {
-  transcriptEvidence,
-  videoVisualEvidence,
-} from "./domain/document/adapters/video-evidence.js";
-export {
   BrowserReader,
   GlmReader,
   HttpReader,
@@ -47,9 +43,3 @@ export {
   type BrowserPageFetcher,
   type BrowserReaderOptions,
 } from "./infra/adapters/browser-reader.js";
-export { captureVideoFrames } from "./infra/adapters/video-frames.js";
-export {
-  VideoResearchClient,
-  type VideoTranscriptFormatter,
-  type VideoVisualFormatter,
-} from "./infra/adapters/video-reader.js";

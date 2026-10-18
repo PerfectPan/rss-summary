@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { transcriptEvidence, videoVisualEvidence } from "./video-evidence.js";
+import { transcriptEvidence, videoVisualEvidence } from "./evidence.js";
 
 describe("video evidence", () => {
   it("quotes verified frame text and omits OCR-only frames", () => {

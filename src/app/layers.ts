@@ -27,14 +27,16 @@ import {
   HttpReader,
   type BrowserPageFetcher,
   type GlmPage,
-  transcriptEvidence,
   VideoReader,
+} from "../reading/index.js";
+import { readGlmPage } from "../integrations/glm/index.js";
+import {
+  transcriptEvidence,
   VideoResearchClient,
   videoVisualEvidence,
   type VideoTranscriptFormatter,
   type VideoVisualFormatter,
-} from "../reading/index.js";
-import { readGlmPage } from "../integrations/glm/index.js";
+} from "../integrations/video/index.js";
 import type { ReadRequest, ReadResult } from "../reading/index.js";
 import type { DeliveryOptions } from "../delivery/index.js";
 import { loadEnvConfig, type AppConfig } from "./config/env.js";

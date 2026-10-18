@@ -2,8 +2,8 @@ import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 
-import type { DocumentMaterials, VideoFrame, VideoVisuals } from "../../domain/document/index.js";
-import { asRecord, text } from "../services/json-record.js";
+import type { DocumentMaterials, VideoFrame, VideoVisuals } from "../../reading/index.js";
+import { asRecord, text } from "../shared/json-record.js";
 
 type VideoMaterials = DocumentMaterials;
 
