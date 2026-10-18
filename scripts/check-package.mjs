@@ -35,6 +35,15 @@ const root = await mkdtemp(join(tmpdir(), "rss-summary-package-"));
 try {
   const packed = JSON.parse(run("npm", ["pack", "--json", "--pack-destination", root], repository));
   const archive = join(root, packed[0].filename);
+
+  // Tests live next to their sources under src/; the shipped package must not
+  // contain any of them (or stray test helpers).
+  const packagedTests = packed[0].files
+    .map((entry) => entry.path)
+    .filter((path) => path.includes(".test."));
+  if (packagedTests.length > 0) {
+    throw new Error(`Packed package contains test files: ${packagedTests.join(", ")}`);
+  }
   const consumer = join(root, "consumer");
   await mkdir(consumer);
   await writeFile(join(consumer, "package.json"), '{"private":true,"type":"module"}\n');

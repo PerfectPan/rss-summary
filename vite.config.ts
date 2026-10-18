@@ -6,10 +6,12 @@ import { defineConfig } from "vite-plus";
  */
 export default defineConfig({
   test: {
-    include: ["tests/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "tests/**/*.test.ts"],
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts"],
+      // Tests live next to their sources; coverage measures production files only.
+      exclude: ["src/**/*.test.ts"],
       reporter: ["text", "text-summary", "html", "json-summary"],
       reportsDirectory: "coverage",
       thresholds: {
