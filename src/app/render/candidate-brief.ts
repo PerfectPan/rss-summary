@@ -1,8 +1,8 @@
 import {
   selectCandidatePresentationSections,
-  subscriptionEvidenceId,
   type CandidateProject,
 } from "../../editorial/index.js";
+import { subscriptionEvidenceId } from "../products/subscriptions/output.js";
 import { candidateCopy } from "./candidate-copy.js";
 
 export type CandidateBriefOptions = {

@@ -10,12 +10,12 @@ import {
   WebPage,
 } from "../../../acquisition/index.js";
 import {
-  candidateDecision,
-  researchKeyForCandidate,
   scoreAcquired,
   selectResearchCandidates,
   type CandidateProject,
 } from "../../../editorial/index.js";
+import { researchKeyForCandidate } from "../../../acquisition/index.js";
+import { candidateDecision } from "../subscriptions/output.js";
 import { isWithinEventWindow, resolveEventWindow } from "../../../kernel/index.js";
 import {
   deliver,

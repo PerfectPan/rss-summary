@@ -1,14 +1,16 @@
 import type { RunAudit } from "../../delivery/index.js";
 import {
   applyEditorialSelectionToAudit,
-  applySubscriptionSelection,
-  buildSubscriptionEditorial,
-  buildSubscriptionEvidence,
   excludeSubscriptionResearchFailures,
   validateSubscriptionResearch,
   validateSubscriptionSelectionDraft,
   type SubscriptionEvidence,
 } from "../../editorial/index.js";
+import {
+  applySubscriptionSelection,
+  buildSubscriptionEditorial,
+  buildSubscriptionEvidence,
+} from "../products/subscriptions/output.js";
 import { renderMarkdownDigest } from "../render/render.js";
 import { renderDailyAiDigest } from "../render/daily-ai-render.js";
 import { buildDailyAiDigest, dailyAiCategories } from "../../editorial/index.js";

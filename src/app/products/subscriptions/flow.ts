@@ -14,12 +14,11 @@ import {
   type RepositoryMetadata,
 } from "../../../acquisition/index.js";
 import {
-  candidateDecision,
   scoreAcquired,
   selectResearchCandidates,
   type CandidateProject,
-  type DigestDocument,
 } from "../../../editorial/index.js";
+import { candidateDecision, type DigestDocument } from "./output.js";
 import { errorMessage, isWithinEventWindow, resolveEventWindow } from "../../../kernel/index.js";
 import {
   deliver,

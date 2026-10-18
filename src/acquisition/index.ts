@@ -170,5 +170,11 @@ export {
 } from "./infra/adapters/grok-cli.js";
 export { GlmSearchClient, GlmSearchLive } from "./infra/adapters/glm-search.js";
 export type { ResearchSearchResult } from "./domain/item/adapters/glm.js";
+export {
+  candidateEvidenceUrl,
+  candidateIdentity,
+  researchKeyForCandidate,
+  type IdentitySubject,
+} from "./domain/item/adapters/identity.js";
 export { createBudgetedNewsSearch, type BudgetOptions } from "./infra/budgeted-search.js";
 export { collectXAccountPosts, type XAccountPosts } from "./infra/x-account-posts.js";

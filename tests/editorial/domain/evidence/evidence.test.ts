@@ -1,14 +1,16 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import {
-  buildSubscriptionEditorial,
-  buildSubscriptionEvidence,
   SubscriptionDraftValidationError,
   validateSubscriptionEditorialDraft,
   validateSubscriptionResearch,
   validateSubscriptionSelectionDraft,
 } from "../../../../src/editorial/index.js";
-import type { DigestDocument } from "../../../../src/editorial/index.js";
+import {
+  buildSubscriptionEditorial,
+  buildSubscriptionEvidence,
+  type DigestDocument,
+} from "../../../../src/app/products/subscriptions/output.js";
 
 describe("subscription editorial contract", () => {
   it("exposes deterministic repository facts and requests summaries only for PR/RSS evidence", () => {

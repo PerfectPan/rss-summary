@@ -7,9 +7,15 @@ import {
   projectNewsHit,
   selectNewsStoriesWithAudit,
   type NewsBriefEdition,
-  type NewsTopic,
   type SelectedNewsStory,
 } from "../../../editorial/index.js";
+import {
+  buildNewsAudit,
+  summarizeNewsSources,
+  type NewsBriefAudit,
+  type NewsSourceStatus,
+  type NewsTopic,
+} from "./output.js";
 import {
   calendarDayAtOffset,
   parseOffsetMilliseconds,
@@ -34,12 +40,6 @@ import {
   type NewsSearchPage,
 } from "../../../acquisition/index.js";
 import { createHybridNewsSearch } from "./hybrid.js";
-import {
-  buildNewsAudit,
-  summarizeNewsSources,
-  type NewsBriefAudit,
-  type NewsSourceStatus,
-} from "../../../editorial/index.js";
 
 export type { NewsBriefEdition };
 

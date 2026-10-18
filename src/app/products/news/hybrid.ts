@@ -15,9 +15,8 @@ import {
   publicationFitsWindow,
   type NewsSearchHit,
   type NewsTimeWindow,
-  type NewsTopic,
-  type NewsTopicQuery,
 } from "../../../editorial/index.js";
+import type { NewsTopic, NewsTopicQuery } from "./output.js";
 import { readGlmPage, type GlmPage } from "../../../reading/index.js";
 
 export type ResearchPage = GlmPage;

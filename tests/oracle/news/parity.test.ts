@@ -9,13 +9,15 @@ import {
 } from "../../../src/acquisition/index.js";
 import { projectNewsHit, publicationFitsWindow } from "../../../src/editorial/domain/news/news.js";
 import {
-  buildNewsAudit,
   buildNewsStoriesWithAudit,
   selectNewsStoriesWithAudit,
-  summarizeNewsSources,
   type NewsSearchHit,
-  type NewsTopic,
 } from "../../../src/editorial/index.js";
+import {
+  buildNewsAudit,
+  summarizeNewsSources,
+  type NewsTopic,
+} from "../../../src/app/products/news/output.js";
 import { newsPublicationRange } from "../../../src/kernel/publication.js";
 import { resolveNewsEditionWindow } from "../../../src/app/products/news/flow.js";
 import { doubaoPayload, NEWS_TOPICS } from "../../golden/fixtures.js";

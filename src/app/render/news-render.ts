@@ -1,9 +1,9 @@
 import type {
   NewsBriefEdition,
   NewsSourceStatus,
-  NewsTopic,
   SelectedNewsStory,
 } from "../../editorial/index.js";
+import type { NewsTopic } from "../products/news/output.js";
 import { displayTime, markdownLinkText } from "./markdown.js";
 
 export type { NewsBriefEdition };

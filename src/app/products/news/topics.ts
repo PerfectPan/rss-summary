@@ -1,11 +1,7 @@
 import { readFileSync } from "node:fs";
 
-import type {
-  NewsQueryIntent,
-  NewsSourcePolicy,
-  NewsTopic,
-  NewsTopicQuery,
-} from "../../../editorial/index.js";
+import type { NewsQueryIntent, NewsSourcePolicy } from "../../../editorial/index.js";
+import type { NewsTopic, NewsTopicQuery } from "./output.js";
 import { defaultNewsTopicsFile } from "../../config/assets.js";
 import {
   optionalBoolean,

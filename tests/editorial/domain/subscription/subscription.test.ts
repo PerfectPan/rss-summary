@@ -7,15 +7,17 @@ import {
 } from "../../../../src/acquisition/index.js";
 import { normalizeEvent } from "../../../../src/acquisition/domain/item/adapters/github-event.js";
 import {
-  candidateIdentity,
-  markCandidateResearched,
   presentationDecisionForCandidate,
   presentationDepthForCandidate,
-  researchKeyForCandidate,
   scoreAcquired,
   selectResearchCandidates,
   type CandidateProject,
 } from "../../../../src/editorial/index.js";
+import {
+  candidateIdentity,
+  markCandidateResearched,
+  researchKeyForCandidate,
+} from "../../../../src/app/products/subscriptions/output.js";
 import {
   createEmptyFeedState,
   filterUndelivered,

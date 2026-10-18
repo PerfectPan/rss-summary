@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 
 import type { RunAudit } from "../../../delivery/index.js";
-import type { DigestDocument } from "../../../editorial/index.js";
+import type { DigestDocument } from "./output.js";
 import { calendarDayAtOffset, shiftCalendarDay } from "../../../kernel/index.js";
 import { runPluginEffect } from "../../runtime.js";
 import { loadEnvConfig, type AppConfig } from "../../config/env.js";

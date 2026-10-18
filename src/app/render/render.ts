@@ -1,4 +1,4 @@
-import type { DigestDocument } from "../../editorial/index.js";
+import type { DigestDocument } from "../products/subscriptions/output.js";
 import { renderCandidateBrief } from "./candidate-brief.js";
 
 export type { DigestDocument };

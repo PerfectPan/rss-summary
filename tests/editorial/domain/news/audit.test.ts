@@ -5,7 +5,7 @@ import {
   buildNewsAudit,
   summarizeNewsSources,
   type NewsAuditRequest,
-} from "../../../../src/editorial/index.js";
+} from "../../../../src/app/products/news/output.js";
 import type {
   NewsHitDecision,
   NewsSearchHit,
