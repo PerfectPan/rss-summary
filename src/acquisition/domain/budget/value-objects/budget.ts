@@ -1,4 +1,5 @@
 import type { SearchPage, SearchSourcePolicy, SearchResult } from "../../search/index.js";
+import type { CacheEntry } from "../entities/cache-entry.js";
 
 /** The persisted allowance counters. Prior days stay so a rollback cannot reopen a spent allowance. */
 export type BudgetState = {
@@ -38,12 +39,6 @@ export type CacheRequest = {
   sinceDay: string;
   sourcePolicy: SearchSourcePolicy;
   window?: { since: string; until: string };
-};
-
-export type CacheEntry = {
-  request: CacheRequest;
-  fetchedAt: string;
-  page: CachedPage;
 };
 
 export type PresentCache = (entry: CacheEntry, usage: BudgetUsage) => SearchPage;

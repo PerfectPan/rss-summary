@@ -1,4 +1,5 @@
-import type { CacheEntry, BudgetUsage } from "../index.js";
+import type { CacheEntry } from "../entities/cache-entry.js";
+import type { BudgetUsage } from "../index.js";
 import { clonePageAudit, pageAudit, type AuditedSearchPage } from "../../search/adapters/audit.js";
 import type { SearchPage } from "../../search/index.js";
 

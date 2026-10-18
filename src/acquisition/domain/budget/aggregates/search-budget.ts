@@ -1,8 +1,9 @@
 import { err, ok, type Result } from "../../../../kernel/result.js";
 import { calendarDayAtOffset } from "../../../../kernel/time.js";
 import { NewsSearchError, type SearchPage } from "../../search/index.js";
-import { findCache, isFresh, usageFor } from "../services/budget-state.js";
+import { isFresh, matchesRequest, type CacheEntry } from "../entities/cache-entry.js";
 import type { BudgetEvent } from "../events/budget-event.js";
+import { usageFor } from "../services/budget-state.js";
 import {
   cacheKey,
   type BudgetLimits,
@@ -61,6 +62,20 @@ export class SearchBudget {
   }
 
   /**
+   * The freshest entry whose stored request answers the asked one, or none.
+   * Cache entries are read only through this method; the freshness and request
+   * rules of a single entry live on the entity.
+   */
+  findCache(request: CacheRequest, instant: number): CacheEntry | undefined {
+    return Object.values(this.persisted.cache)
+      .filter(
+        (entry) =>
+          isFresh(entry, instant, this.limits.cacheTtlMs) && matchesRequest(entry, request),
+      )
+      .sort((left, right) => Date.parse(right.fetchedAt) - Date.parse(left.fetchedAt))[0];
+  }
+
+  /**
    * Cache hit returns the same state. With `commit`, a free slot returns a new
    * state whose day counter is one higher. Without `commit` the counter stays
    * put so a cache probe does not spend an attempt. An exhausted allowance
@@ -73,7 +88,7 @@ export class SearchBudget {
     present: PresentCache,
   ): Result<BudgetTransition<Reservation>, NewsSearchError> {
     const usage = this.usage(instant);
-    const cached = findCache(this.persisted, request, instant.getTime(), this.limits.cacheTtlMs);
+    const cached = this.findCache(request, instant.getTime());
     if (cached) {
       return ok({
         state: this,
