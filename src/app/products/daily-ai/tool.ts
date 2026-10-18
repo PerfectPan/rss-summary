@@ -1,3 +1,8 @@
+import type { RivusToolDescriptor } from "@rivus/agent";
+
+import { dailyAiCategories } from "../../../editorial/index.js";
+import { createRivusDailyAiDigestExecutor } from "../../rivus/phases.js";
+
 export const RSS_SUMMARY_DAILY_AI_TOOL_ID = "rss-summary/generate-daily-ai-digest";
 export const dailyAiEditorialPolicy = [
   "按用户影响筛选和排序，不设固定条数目标；优先模型能力、产品功能、研究结论、价格与安全变化，不凑数。",
@@ -8,3 +13,50 @@ export const dailyAiEditorialPolicy = [
   "X 内容经 Grok 整理，未独立核验；保留作者归属，不将个人说法改写成已确认事实。发布时间不等于事件发生时间；旧事件的新转发不能写成今日新发布。",
   "若全部候选都没有值得推送的变化，返回空数组 []；不要为避免空结果而选入低信息量条目。",
 ].join("\n");
+
+export const dailyAiToolDescriptor: Pick<
+  RivusToolDescriptor,
+  "description" | "digest" | "idempotency" | "inputSchema" | "risk" | "version"
+> = {
+  description:
+    "Generate a source-grounded Daily AI Digest for the rolling 24 hours before the occurrence",
+  digest: "sha256:rss-summary-generate-daily-ai-digest-v8",
+
+  idempotency: "none",
+  inputSchema: {
+    additionalProperties: false,
+    properties: {
+      draft: {
+        description:
+          "Editorial Array<{category, headline, refs}> produced only from collect evidence; required for render; [] when no meaningful updates",
+        items: {
+          additionalProperties: false,
+          properties: {
+            category: { enum: [...dailyAiCategories], type: "string" },
+            headline: { description: "At most 90 characters", maxLength: 90, type: "string" },
+            refs: {
+              description: "Exact evidence.id values from collect, never URLs",
+              items: { type: "string" },
+              minItems: 1,
+              type: "array",
+            },
+          },
+          required: ["category", "headline", "refs"],
+          type: "object",
+        },
+        type: "array",
+      },
+      occurrence: { format: "date-time", type: "string" },
+      phase: { enum: ["collect", "render"], type: "string" },
+    },
+    required: ["occurrence", "phase"],
+    type: "object",
+  },
+  risk: "observe",
+  version: "1.4.0",
+};
+
+/** Default executor: the two-phase protocol with diagnostics snapshots. */
+export function createDailyAiToolExecutor() {
+  return createRivusDailyAiDigestExecutor();
+}

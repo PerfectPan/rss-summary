@@ -3,9 +3,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vite-plus/test";
 
-import type { RunAudit } from "../../src/delivery/index.js";
-import { runArtifactLabel, saveRunArtifact } from "../../src/infrastructure/run-store.js";
-import { runRunsCommand } from "../../src/presentation/runs-cli.js";
+import type { RunAudit } from "../../../src/delivery/index.js";
+import { runArtifactLabel, saveRunArtifact } from "../../../src/delivery/index.js";
+import { runRunsCommand } from "../../../src/app/cli/runs.js";
 
 describe("runs CLI", () => {
   it("lists and filters stored runs", async () => {

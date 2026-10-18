@@ -1,6 +1,6 @@
 import { describe, it, vi } from "vite-plus/test";
 
-import { RSS_SUMMARY_TOOL_ID } from "../../src/presentation/rivus-plugin.js";
+import { RSS_SUMMARY_TOOL_ID } from "../../src/app/rivus/plugin.js";
 import { PERSONAL_FEED_URL, PERSONAL_RSS } from "./fixtures.js";
 import {
   errorRecord,

@@ -1,5 +1,5 @@
-import { saveGithubHomeStorageState } from "../acquisition/index.js";
-import { errorMessage } from "../kernel/index.js";
+import { saveGithubHomeStorageState } from "../../acquisition/index.js";
+import { errorMessage } from "../../kernel/index.js";
 
 type Writable = {
   write(chunk: string): unknown;

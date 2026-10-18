@@ -2,12 +2,9 @@
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { runDigestCommand } from "../app/products/subscriptions/cli.js";
-import { runIndustryCommand } from "../app/products/frontier/cli.js";
-import { runFeedsCommand } from "./feeds-cli.js";
-import { runGithubHomeCommand } from "./github-home-cli.js";
-import { runResearchCommand } from "../app/products/research/cli.js";
-import { runRunsCommand } from "./runs-cli.js";
+import { products } from "../products/index.js";
+import { runGithubHomeCommand } from "./github-home.js";
+import { runRunsCommand } from "./runs.js";
 
 type Writable = {
   write(chunk: string): unknown;
@@ -27,28 +24,17 @@ export async function runCliCommand(
   const command = argv[0] ?? "help";
   const rest = argv.slice(1);
 
-  if (command === "feeds") {
-    return runFeedsCommand(rest, deps);
+  for (const product of products) {
+    const matched = product.commands.find((entry) => entry.name === command);
+    if (matched) return matched.run(rest, { stdout, stderr });
   }
 
   if (command === "github-home") {
     return runGithubHomeCommand(rest, deps);
   }
 
-  if (command === "research") {
-    return runResearchCommand(rest, { stdout, stderr });
-  }
-
   if (command === "runs") {
     return runRunsCommand(rest, { stdout, stderr });
-  }
-
-  if (command === "industry") {
-    return runIndustryCommand(rest, { stderr });
-  }
-
-  if (command === "digest") {
-    return runDigestCommand(rest, { stderr });
   }
 
   if (command === "help" || command === "--help" || command === "-h") {

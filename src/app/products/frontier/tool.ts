@@ -1,4 +1,5 @@
 import { Effect } from "effect";
+import type { RivusToolDescriptor } from "@rivus/agent";
 
 import type { RunAudit } from "../../../delivery/index.js";
 import { calendarDayAtOffset } from "../../../kernel/index.js";
@@ -104,3 +105,33 @@ function optionalBoolean(value: unknown, name: string): boolean | undefined {
   if (typeof value !== "boolean") throw new Error(`${name} must be a boolean.`);
   return value;
 }
+
+export const frontierToolDescriptor: Pick<
+  RivusToolDescriptor,
+  "description" | "digest" | "idempotency" | "inputSchema" | "risk" | "version"
+> = {
+  description:
+    "Generate a read-only frontier brief from curated official feeds, listing pages, releases, and research sources",
+  digest: "sha256:rss-summary-generate-industry-brief-v2",
+
+  idempotency: "none",
+  inputSchema: {
+    additionalProperties: false,
+    properties: {
+      day: {
+        description: "Explicit local calendar day in YYYY-MM-DD format",
+        pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+        type: "string",
+      },
+      occurrence: {
+        description: "Scheduled occurrence as an ISO date-time",
+        format: "date-time",
+        type: "string",
+      },
+      onlyNew: { default: true, type: "boolean" },
+    },
+    type: "object",
+  },
+  risk: "observe",
+  version: "1.1.0",
+};

@@ -1,15 +1,12 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import {
-  runGithubHomeCommand,
-  writeGithubHomeHelp,
-} from "../../src/presentation/github-home-cli.js";
+import { runGithubHomeCommand, writeGithubHomeHelp } from "../../../src/app/cli/github-home.js";
 
-vi.mock("../../src/acquisition/infra/adapters/github-home-browser.js", () => ({
+vi.mock("../../../src/acquisition/infra/adapters/github-home-browser.js", () => ({
   saveGithubHomeStorageState: vi.fn(),
 }));
 
-import { saveGithubHomeStorageState } from "../../src/acquisition/infra/adapters/github-home-browser.js";
+import { saveGithubHomeStorageState } from "../../../src/acquisition/infra/adapters/github-home-browser.js";
 
 describe("github-home CLI command", () => {
   it("prints help for the help subcommand", async () => {

@@ -6,6 +6,9 @@ import { calendarDayAtOffset, shiftCalendarDay } from "../../../kernel/index.js"
 import { runPluginEffect } from "../../runtime.js";
 import { loadEnvConfig, type AppConfig } from "../../config/env.js";
 import { buildDigestDocument } from "./flow.js";
+import type { RivusToolDescriptor } from "@rivus/agent";
+
+import { createRivusSubscriptionExecutor } from "../../rivus/phases.js";
 import { renderMarkdownDigest } from "../../render/render.js";
 
 export const RSS_SUMMARY_TOOL_ID = "rss-summary/generate-digest";
@@ -140,4 +143,134 @@ function optionalWindow(value: unknown): "previous-calendar-day" | undefined {
   if (value === undefined) return undefined;
   if (value !== "previous-calendar-day") throw new Error("window must be previous-calendar-day.");
   return value;
+}
+
+export const subscriptionsToolDescriptor: Pick<
+  RivusToolDescriptor,
+  "description" | "digest" | "idempotency" | "inputSchema" | "risk" | "version"
+> = {
+  description:
+    "Generate a read-only subscription brief from the user's GitHub Home and personal RSS sources",
+  digest: "sha256:rss-summary-generate-digest-v2",
+
+  idempotency: "none",
+  inputSchema: {
+    additionalProperties: false,
+    properties: {
+      draft: {
+        description:
+          "Grounded Array<{ref, summary}> produced only from selected evidence; required for render",
+        items: {
+          additionalProperties: false,
+          properties: {
+            ref: { minLength: 1, type: "string" },
+            summary: { maxLength: 180, minLength: 8, type: "string" },
+          },
+          required: ["ref", "summary"],
+          type: "object",
+        },
+        type: "array",
+      },
+      research: {
+        description: "Article research results returned by rss-summary/research-article",
+        items: {
+          additionalProperties: false,
+          properties: {
+            content: { maxLength: 16_000, type: "string" },
+            error: { type: "string" },
+            fetchedUrl: { format: "uri", type: "string" },
+            method: {
+              enum: ["browser", "http", "glm", "captions", "transcription"],
+              type: "string",
+            },
+            materials: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                transcriptPath: { type: "string" },
+                manifestPath: { type: "string" },
+              },
+              required: ["transcriptPath", "manifestPath"],
+            },
+            visuals: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                status: { enum: ["analyzed", "partial", "unavailable"], type: "string" },
+                reason: { type: "string" },
+                frames: {
+                  type: "array",
+                  maxItems: 6,
+                  items: {
+                    type: "object",
+                    additionalProperties: false,
+                    properties: {
+                      index: { type: "integer", minimum: 1, maximum: 6 },
+                      timestampSeconds: { type: "number", minimum: 0 },
+                      imagePath: { type: "string" },
+                      ocrText: { type: "string", maxLength: 1000 },
+                      visualText: { type: "string", maxLength: 500 },
+                      visionModel: { type: "string", maxLength: 120 },
+                    },
+                    required: ["index", "timestampSeconds", "imagePath"],
+                  },
+                },
+              },
+              required: ["status", "frames"],
+            },
+            ref: { minLength: 1, type: "string" },
+            retrievedAt: { format: "date-time", type: "string" },
+            status: { enum: ["failed", "ok"], type: "string" },
+            title: { type: "string" },
+            tool: { const: "article-research", type: "string" },
+            url: { format: "uri", type: "string" },
+          },
+          required: ["ref", "status", "url"],
+          type: "object",
+        },
+        type: "array",
+      },
+      day: {
+        description: "Local calendar day in YYYY-MM-DD format",
+        pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+        type: "string",
+      },
+      occurrence: {
+        description: "Scheduled occurrence as an ISO date-time",
+        format: "date-time",
+        type: "string",
+      },
+      onlyNew: { default: true, type: "boolean" },
+      phase: { enum: ["collect", "select", "render"], type: "string" },
+      rssOnly: { default: false, type: "boolean" },
+      selection: {
+        description:
+          "AI second-pass Array<{ref, selected, reason}> produced only from collect evidence; required for render",
+        items: {
+          additionalProperties: false,
+          properties: {
+            reason: { maxLength: 240, minLength: 4, type: "string" },
+            ref: { minLength: 1, type: "string" },
+            selected: { type: "boolean" },
+          },
+          required: ["ref", "selected", "reason"],
+          type: "object",
+        },
+        type: "array",
+      },
+      window: { enum: ["previous-calendar-day"], type: "string" },
+    },
+    type: "object",
+  },
+  risk: "observe",
+  version: "1.1.0",
+};
+
+/** Default executor: the three-phase protocol over collect/generate. */
+export function createSubscriptionsToolExecutor(
+  dependencies: { generateDigest?: (input: unknown) => Promise<RivusDigestResult> } = {},
+) {
+  return createRivusSubscriptionExecutor(
+    dependencies.generateDigest ? { generate: dependencies.generateDigest } : {},
+  );
 }

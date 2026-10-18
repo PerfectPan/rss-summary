@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 
 import { describe, expect, it } from "vite-plus/test";
 
-import { isCliEntrypoint, runCliCommand } from "../../src/presentation/cli.js";
+import { isCliEntrypoint, runCliCommand } from "../../../src/app/cli/main.js";
 
 describe("top-level CLI", () => {
   it("routes feeds subcommands through the bin entrypoint", async () => {

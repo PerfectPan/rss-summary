@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 
-import { Effect } from "effect";
+import type { Effect } from "effect";
 
 import {
   listFailedRuns,
@@ -10,8 +10,9 @@ import {
   runArtifactForLabel,
   RunArchive,
   RunArchiveFilesLive,
-} from "../delivery/index.js";
-import { errorMessage } from "../kernel/index.js";
+} from "../../delivery/index.js";
+import { errorMessage } from "../../kernel/index.js";
+import { runPluginEffect } from "../runtime.js";
 
 type Writable = { write(chunk: string): unknown };
 
@@ -66,7 +67,7 @@ export async function runRunsCommand(
 }
 
 function run<A, E>(effect: Effect.Effect<A, E, RunArchive>): Promise<A> {
-  return Effect.runPromise(Effect.provide(effect, RunArchiveFilesLive));
+  return runPluginEffect<A, E, RunArchive>(effect, { layer: RunArchiveFilesLive });
 }
 
 function valueFor(argv: string[], flag: string): string | undefined {

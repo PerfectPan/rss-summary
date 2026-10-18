@@ -1,3 +1,5 @@
+import type { RivusToolDescriptor } from "@rivus/agent";
+
 import {
   readOriginal,
   ReadingLive,
@@ -76,3 +78,26 @@ function parseInput(value: unknown): { mode: ArticleResearchMode; ref: string; u
   }
   return { mode, ref, url };
 }
+
+export const researchToolDescriptor: Pick<
+  RivusToolDescriptor,
+  "description" | "digest" | "idempotency" | "inputSchema" | "risk" | "version"
+> = {
+  description:
+    "Read a selected article or video: extract text, captions or audio transcription, inspect key frames with a vision model, and retain source materials",
+  digest: "sha256:rss-summary-research-article-v3",
+
+  idempotency: "none",
+  inputSchema: {
+    additionalProperties: false,
+    properties: {
+      mode: { default: "auto", enum: ["auto", "browser", "http"], type: "string" },
+      ref: { minLength: 1, type: "string" },
+      url: { format: "uri", type: "string" },
+    },
+    required: ["ref", "url"],
+    type: "object",
+  },
+  risk: "observe",
+  version: "1.2.0",
+};
