@@ -34,8 +34,15 @@ import {
   searchBudgetDefaults,
   selectQueryIds,
   settleSearches,
+  shouldFallbackOnSourceOutage,
+  withFallback,
+  type FallbackSearchProvider,
   type NewsSearchInput,
 } from "../../../acquisition/index.js";
+import {
+  DeepSeekSearchClient,
+  deepSeekSourcePolicies,
+} from "../../../integrations/deepseek/index.js";
 import { DoubaoSearchClient } from "../../../integrations/doubao/index.js";
 import { GrokSearchClient, normalizeProvider } from "../../../integrations/grok/index.js";
 import type { AuditedSearchPage as NewsSearchPage } from "../../../integrations/grok/index.js";
@@ -175,9 +182,26 @@ export function generateRivusNewsBrief(
         new Error("NEWS_SEARCH_MODE must be doubao, hybrid, combined or grok."),
       );
     }
+    const fallbackName = env.NEWS_SEARCH_FALLBACK?.trim() || undefined;
+    if (fallbackName && fallbackName !== "deepseek") {
+      return yield* Effect.fail(new Error("NEWS_SEARCH_FALLBACK must be deepseek."));
+    }
     const count = boundedInteger(env.NEWS_SEARCH_COUNT_PER_QUERY, 10, 1, 50);
     const managedSearch = yield* Effect.try({
       try: () => (dependencies.search ? undefined : createSearch(env, mode, dependencies.now)),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+    });
+    // Only news briefs fall back to DeepSeek; X account collection cannot use
+    // it because the endpoint cannot search posts by author.
+    const fallbackSearch = yield* Effect.try({
+      try: () =>
+        dependencies.search || !fallbackName
+          ? undefined
+          : createDeepSeekFallback(env, {
+              now: dependencies.now,
+              random: dependencies.random ?? Math.random,
+              sleep: dependencies.sleep ?? sleep,
+            }),
       catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
     });
     const requests = topics.flatMap((topic) =>
@@ -238,11 +262,16 @@ export function generateRivusNewsBrief(
         random: dependencies.random ?? Math.random,
         sleep: dependencies.sleep ?? sleep,
       });
+    // Source outages hand the query to DeepSeek; local budget boundaries and
+    // unsupported source policies keep the primary failure.
+    const newsSearch = fallbackSearch
+      ? withFallback(primarySearch, fallbackSearch, shouldFallbackOnSourceOutage)
+      : primarySearch;
     const execute = yield* Effect.try({
       try: () =>
         mode === "hybrid" || mode === "combined"
           ? createHybridNewsSearch({
-              search: (input) => runPluginEffect(primarySearch(input)),
+              search: (input) => runPluginEffect(newsSearch(input)),
               ...(managedSearch
                 ? {
                     cachedSearch: (input: NewsSearchInput) =>
@@ -276,7 +305,7 @@ export function generateRivusNewsBrief(
         }
         return execute
           ? Effect.tryPromise({ try: () => execute(request), catch: (reason) => reason })
-          : primarySearch(request.input);
+          : newsSearch(request.input);
       },
       mode !== "doubao" ? 1 : newsSearchConcurrency,
     );
@@ -477,4 +506,56 @@ function createSearch(
 function timeAtOffset(instant: number, timezoneOffset: string): string {
   const shifted = new Date(instant + parseOffsetMilliseconds(timezoneOffset));
   return shifted.toISOString().slice(11, 16);
+}
+
+/**
+ * The DeepSeek fallback provider: budgeted with its own limits and provider
+ * identity (the endpoint URL), then retried like the primary. It shares the
+ * primary's state file, so the ledger counts attempts from both callers while
+ * each caller enforces its own cap.
+ */
+function createDeepSeekFallback(
+  env: NodeJS.ProcessEnv,
+  retry: { now?: () => Date; random: () => number; sleep: (milliseconds: number) => Promise<void> },
+): FallbackSearchProvider {
+  const apiKey = env.DEEPSEEK_API_KEY?.trim();
+  if (!apiKey) throw new Error("DEEPSEEK_API_KEY is required for news briefs.");
+  const baseUrl =
+    env.DEEPSEEK_SEARCH_BASE_URL?.trim() || "https://api.deepseek.com/v1/tools/search";
+  const client = new DeepSeekSearchClient({
+    apiKey,
+    baseUrl,
+    timeoutMs: boundedInteger(env.DEEPSEEK_SEARCH_TIMEOUT_MS, 15_000, 1_000, 60_000),
+  });
+  const budgeted = createBudgetedNewsSearch({
+    search: (input) => client.search(input),
+    stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || searchBudgetDefaults.stateFile,
+    provider: baseUrl,
+    dailyLimit: boundedInteger(
+      env.DEEPSEEK_SEARCH_DAILY_LIMIT,
+      searchBudgetDefaults.deepseek.dailyLimit,
+      0,
+      100_000,
+    ),
+    monthlyLimit: boundedInteger(
+      env.DEEPSEEK_SEARCH_MONTHLY_LIMIT,
+      searchBudgetDefaults.deepseek.monthlyLimit,
+      0,
+      1_000_000,
+    ),
+    timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00",
+    cacheTtlMs:
+      boundedInteger(
+        env.NEWS_SEARCH_CACHE_TTL_MINUTES,
+        searchBudgetDefaults.cacheTtlMinutes,
+        0,
+        43_200,
+      ) * 60_000,
+    now: retry.now,
+  });
+  return {
+    sourcePolicies: deepSeekSourcePolicies,
+    search: (input) =>
+      retrySearchEffect(budgeted(input), { random: retry.random, sleep: retry.sleep }),
+  };
 }

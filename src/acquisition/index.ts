@@ -68,6 +68,7 @@ export {
   shareSearchBudget,
   type NewsSearchInput,
   type NewsSearchResult,
+  type ProviderFallback,
   type SearchFailure,
   type SearchInput,
   type SearchPage,
@@ -93,6 +94,13 @@ export {
   type BudgetedSearch,
   type BudgetedSearchPage,
 } from "./application/services/with-budget.js";
+export {
+  fallbackTriggerCodes,
+  shouldFallbackOnSourceOutage,
+  withFallback,
+  type FallbackSearchProvider,
+  type ProviderSearch,
+} from "./application/services/with-fallback.js";
 export { settleSearches, type SearchSettlement } from "./application/use-cases/search.js";
 export { createBudgetedNewsSearch, type BudgetOptions } from "./infra/factories/budgeted-search.js";
 export {

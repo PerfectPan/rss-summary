@@ -1,4 +1,8 @@
-import type { SearchFallback, SearchUsage } from "../../../../acquisition/domain/search/index.js";
+import type {
+  ProviderFallback,
+  SearchFallback,
+  SearchUsage,
+} from "../../../../acquisition/domain/search/index.js";
 import type { NewsHitRejectionReason, NewsQueryIntent, NewsTopic, NewsTopicQuery } from "./news.js";
 
 /** Native-search receipt. The public audit key is applied by the module entry. */
@@ -18,6 +22,8 @@ export type NewsQueryPage = {
   provider?: string;
   searchUsage?: SearchUsage;
   fallback?: SearchFallback;
+  /** Present when a fallback provider answered because the primary failed. */
+  providerFallback?: ProviderFallback;
   logId?: string;
   resultCount: number;
   results: readonly unknown[];
@@ -46,6 +52,7 @@ export type NewsQueryAuditDraft = {
   provider?: NewsQueryPage["provider"];
   searchUsage?: NewsQueryPage["searchUsage"];
   fallback?: NewsQueryPage["fallback"];
+  providerFallback?: NewsQueryPage["providerFallback"];
   logId?: string;
   reportedResultCount?: number;
   fetched: number;

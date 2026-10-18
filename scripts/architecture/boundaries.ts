@@ -114,8 +114,9 @@ export const sourceVocabularyExceptions: Readonly<Record<string, readonly string
   // budget identity are locked by the tool's JSON output and the cache keys
   // persisted in news-search.json.
   "src/acquisition/application/use-cases/collect-x-posts.ts": ["grok"],
-  // Per-provider budget defaults are keyed by the provider env namespaces.
-  "src/acquisition/application/services/budget-defaults.ts": ["doubao", "grok"],
+  // Per-provider budget defaults are keyed by the provider env namespaces;
+  // deepseek joins for the fallback's DEEPSEEK_SEARCH_* caps.
+  "src/acquisition/application/services/budget-defaults.ts": ["doubao", "grok", "deepseek"],
   // The persisted cache schema names the providers whose pages it can store;
   // the deepseek literal is locked by the cached pages the news fallback
   // writes into news-search.json.
