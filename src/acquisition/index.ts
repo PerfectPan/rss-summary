@@ -149,8 +149,9 @@ export {
   type GrokProcessRequest,
 } from "./application/ports.js";
 export {
-  searchWithRetry,
   retryDelayMs,
+  retrySearchEffect,
+  searchWithRetry,
   isTransientSearchError,
 } from "./application/services/with-retry.js";
 export {
@@ -158,12 +159,7 @@ export {
   type BudgetedSearch,
   type BudgetedSearchPage,
 } from "./application/services/with-budget.js";
-export {
-  settleSearchRequests,
-  settleSearches,
-  toPromiseSettled,
-  type SearchSettlement,
-} from "./application/use-cases/search.js";
+export { settleSearches, type SearchSettlement } from "./application/use-cases/search.js";
 export { DoubaoSearchClient, DoubaoSearchLive } from "./infra/adapters/doubao-http.js";
 export { DoubaoSearchError } from "./domain/item/adapters/doubao.js";
 export {
@@ -173,5 +169,12 @@ export {
   GrokXClient,
 } from "./infra/adapters/grok-cli.js";
 export { GlmSearchClient, GlmSearchLive } from "./infra/adapters/glm-search.js";
+export type { ResearchSearchResult } from "./domain/item/adapters/glm.js";
+export {
+  candidateEvidenceUrl,
+  candidateIdentity,
+  researchKeyForCandidate,
+  type IdentitySubject,
+} from "./domain/item/adapters/identity.js";
 export { createBudgetedNewsSearch, type BudgetOptions } from "./infra/budgeted-search.js";
 export { collectXAccountPosts, type XAccountPosts } from "./infra/x-account-posts.js";

@@ -161,12 +161,16 @@ function checkPackage(file: string, location: Location, ref: ImportRef): Violati
 
 function checkText(file: SourceInput, location: Location): Violation[] {
   const violations: Violation[] = [];
-  if (location.layer === "domain") {
+  // Concept directories and the editorial entry (the module that must stay
+  // source-neutral end to end) may not name any provider.
+  const vocabularyChecked =
+    location.layer === "domain" || (location.layer === "entry" && location.module === "editorial");
+  if (vocabularyChecked) {
     const words = [...new Set((file.source.match(sourceWord) ?? []).map((word) => word.toLowerCase()))].sort();
     if (words.length > 0) {
       violations.push(violation(file.path, "source-vocabulary", `concept directory contains ${words.join(", ")}`));
     }
-    if (hasBareClock(file)) {
+    if (location.layer === "domain" && hasBareClock(file)) {
       violations.push(violation(file.path, "clock", "concept directory calls Date.now() or new Date() without arguments"));
     }
   }

@@ -4,13 +4,13 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { saveDailyAiDiagnostics } from "../../src/infrastructure/daily-ai-diagnostics.js";
-import { saveRunArtifact, loadRunArtifact } from "../../src/infrastructure/run-store.js";
-import { loadFeedState, saveFeedState } from "../../src/infrastructure/state.js";
+import { saveDailyAiDiagnostics } from "../../src/delivery/index.js";
+import { saveRunArtifact, loadRunArtifact } from "../../src/delivery/index.js";
+import { loadFeedState, saveFeedState } from "../../src/delivery/index.js";
 import {
   RSS_SUMMARY_DAILY_AI_TOOL_ID,
   RSS_SUMMARY_NEWS_TOOL_ID,
-} from "../../src/presentation/rivus-plugin.js";
+} from "../../src/app/rivus/plugin.js";
 import {
   DOUBAO_URL,
   doubaoPayload,

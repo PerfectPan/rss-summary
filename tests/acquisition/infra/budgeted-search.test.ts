@@ -3,6 +3,7 @@ import { access, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
+import { Effect } from "effect";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { createBudgetedNewsSearch } from "../../../src/acquisition/infra/budgeted-search.js";
@@ -81,14 +82,16 @@ describe("persistent news search budget", () => {
       ...input,
       window: { since: "2026-09-29T04:30:00Z", until: "2026-09-29T11:00:00Z" },
     };
-    await search(input);
-    expect((await search(noon)).searchUsage.source).toBe("network");
-    expect((await search(evening)).searchUsage.source).toBe("network");
-    const cached = await search(evening);
+    await Effect.runPromise(search(input));
+    expect((await Effect.runPromise(search(noon))).searchUsage.source).toBe("network");
+    expect((await Effect.runPromise(search(evening))).searchUsage.source).toBe("network");
+    const cached = await Effect.runPromise(search(evening));
     expect(cached.searchUsage.source).toBe("cache");
     expect(cached.grok).toMatchObject({ nativeCallCount: 1, elapsedMs: 1200 });
     expect(providerSearch).toHaveBeenCalledTimes(3);
-    await search({ ...evening, window: { ...evening.window, until: "2026-09-29T11:10:00Z" } });
+    await Effect.runPromise(
+      search({ ...evening, window: { ...evening.window, until: "2026-09-29T11:10:00Z" } }),
+    );
     expect(providerSearch).toHaveBeenCalledTimes(4);
     expect(() =>
       search({ ...evening, window: { ...evening.window, until: evening.window.since } }),
@@ -97,7 +100,7 @@ describe("persistent news search budget", () => {
   });
   it("persists every reserved attempt and applies the allowance after recreating an instance", async () => {
     const { options, search, providerSearch } = await setup({ dailyLimit: 2 });
-    expect((await search(input)).searchUsage).toEqual({
+    expect((await Effect.runPromise(search(input))).searchUsage).toEqual({
       source: "network",
       fetchedAt: "2026-09-29T03:00:00.000Z",
       dailyUsed: 1,
@@ -106,8 +109,10 @@ describe("persistent news search budget", () => {
       monthlyLimit: 20,
     });
     const rebuilt = createBudgetedNewsSearch(options);
-    expect((await rebuilt(input)).searchUsage.dailyUsed).toBe(2);
-    await expect(rebuilt(input)).rejects.toMatchObject({ code: "local_budget_exhausted" });
+    expect((await Effect.runPromise(rebuilt(input))).searchUsage.dailyUsed).toBe(2);
+    await expect(Effect.runPromise(rebuilt(input))).rejects.toMatchObject({
+      code: "local_budget_exhausted",
+    });
     expect(providerSearch).toHaveBeenCalledTimes(2);
     expect(JSON.parse(await readFile(options.stateFile, "utf8")).daily).toEqual({
       "2026-09-29": 2,
@@ -117,10 +122,19 @@ describe("persistent news search budget", () => {
   it("allows only one of two independent instances to reserve the final slot", async () => {
     const { options, search, providerSearch } = await setup({ dailyLimit: 1 });
     const other = createBudgetedNewsSearch(options);
-    const settled = await Promise.allSettled([
-      search(input),
-      other({ ...input, query: "Other release" }),
-    ]);
+    const exits = await Effect.runPromise(
+      Effect.all(
+        [Effect.result(search(input)), Effect.result(other({ ...input, query: "Other release" }))],
+        {
+          concurrency: "unbounded",
+        },
+      ),
+    );
+    const settled = exits.map((exit) =>
+      exit._tag === "Success"
+        ? { status: "fulfilled" as const, value: exit.success }
+        : { status: "rejected" as const, reason: exit.failure },
+    );
     expect(settled.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     expect(settled.filter((result) => result.status === "rejected")).toMatchObject([
       { reason: { code: "local_budget_exhausted" } },
@@ -133,6 +147,7 @@ describe("persistent news search budget", () => {
     const moduleUrl = new URL("../../../src/acquisition/infra/budgeted-search.ts", import.meta.url)
       .href;
     const script = `
+      import { Effect } from "effect";
       import { createBudgetedNewsSearch } from ${JSON.stringify(moduleUrl)};
       const options = ${JSON.stringify({ ...options, now: undefined, search: undefined })};
       const search = createBudgetedNewsSearch({
@@ -141,7 +156,7 @@ describe("persistent news search budget", () => {
         search: async () => ({ resultCount: 0, results: [] }),
       });
       try {
-        await search(${JSON.stringify(input)});
+        await Effect.runPromise(search(${JSON.stringify(input)}));
         process.stdout.write("network");
       } catch (error) {
         process.stdout.write(error.code);
@@ -170,10 +185,12 @@ describe("persistent news search budget", () => {
       return page;
     });
     const search = createBudgetedNewsSearch({ ...options, search: providerSearch });
-    await expect(search(input)).rejects.toMatchObject({ code: "http_429" });
-    await expect(search(input)).rejects.toMatchObject({ code: "http_429" });
-    expect((await search(input)).searchUsage.dailyUsed).toBe(3);
-    await expect(search(input)).rejects.toMatchObject({ code: "local_budget_exhausted" });
+    await expect(Effect.runPromise(search(input))).rejects.toMatchObject({ code: "http_429" });
+    await expect(Effect.runPromise(search(input))).rejects.toMatchObject({ code: "http_429" });
+    expect((await Effect.runPromise(search(input))).searchUsage.dailyUsed).toBe(3);
+    await expect(Effect.runPromise(search(input))).rejects.toMatchObject({
+      code: "local_budget_exhausted",
+    });
     expect(providerSearch).toHaveBeenCalledTimes(3);
   });
 
@@ -189,11 +206,14 @@ describe("persistent news search budget", () => {
         return new Promise<NewsSearchPage>((resolve) => (complete = resolve));
       },
     });
-    const first = search(input);
+    const first = Effect.runPromise(search(input));
     await providerStarted;
     await expect(access(`${options.stateFile}.lock`)).rejects.toMatchObject({ code: "ENOENT" });
     const independent = createBudgetedNewsSearch(options);
-    expect((await independent({ ...input, query: "Second query" })).searchUsage.dailyUsed).toBe(2);
+    expect(
+      (await Effect.runPromise(independent({ ...input, query: "Second query" }))).searchUsage
+        .dailyUsed,
+    ).toBe(2);
     complete(page);
     await first;
   });
@@ -201,16 +221,23 @@ describe("persistent news search budget", () => {
   it("uses the real clock with the configured timezone and retains consumed days across rollbacks", async () => {
     const { search, setNow, options } = await setup({ dailyLimit: 1, monthlyLimit: 2 });
     setNow("2026-09-29T15:59:00.000Z");
-    await search({ ...input, day: "2001-01-01" });
+    await Effect.runPromise(search({ ...input, day: "2001-01-01" }));
     setNow("2026-09-29T16:00:00.000Z");
-    expect((await search({ ...input, day: "2027-01-01" })).searchUsage).toMatchObject({
+    expect(
+      (await Effect.runPromise(search({ ...input, day: "2027-01-01" }))).searchUsage,
+    ).toMatchObject({
       dailyUsed: 1,
       monthlyUsed: 2,
     });
     setNow("2026-09-30T16:00:00.000Z");
-    expect((await search(input)).searchUsage).toMatchObject({ dailyUsed: 1, monthlyUsed: 1 });
+    expect((await Effect.runPromise(search(input))).searchUsage).toMatchObject({
+      dailyUsed: 1,
+      monthlyUsed: 1,
+    });
     setNow("2026-09-29T03:00:00.000Z");
-    await expect(search(input)).rejects.toMatchObject({ code: "local_budget_exhausted" });
+    await expect(Effect.runPromise(search(input))).rejects.toMatchObject({
+      code: "local_budget_exhausted",
+    });
     expect(JSON.parse(await readFile(options.stateFile, "utf8")).daily).toEqual({
       "2026-09-29": 1,
       "2026-09-30": 1,
@@ -220,11 +247,13 @@ describe("persistent news search budget", () => {
 
   it("enforces the monthly allowance on a fresh day and resets only in a new month", async () => {
     const { search, setNow } = await setup({ monthlyLimit: 1 });
-    await search(input);
+    await Effect.runPromise(search(input));
     setNow("2026-09-30T03:00:00.000Z");
-    await expect(search(input)).rejects.toMatchObject({ code: "local_budget_exhausted" });
+    await expect(Effect.runPromise(search(input))).rejects.toMatchObject({
+      code: "local_budget_exhausted",
+    });
     setNow("2026-10-01T03:00:00.000Z");
-    expect((await search(input)).searchUsage.monthlyUsed).toBe(1);
+    expect((await Effect.runPromise(search(input))).searchUsage.monthlyUsed).toBe(1);
   });
 
   it("writes state and newly created directories with private permissions and no credential", async () => {
@@ -239,7 +268,7 @@ describe("persistent news search budget", () => {
         return page;
       },
     });
-    await search(input);
+    await Effect.runPromise(search(input));
     const contents = await readFile(options.stateFile, "utf8");
     expect(contents).not.toContain("secret-key");
     expect(contents).not.toContain(credential);
@@ -274,26 +303,32 @@ describe("persistent news search budget", () => {
     }),
   ])("fails closed for damaged state without overwriting it (%s)", async (contents) => {
     const { options, search, providerSearch } = await setup();
-    await search(input);
+    await Effect.runPromise(search(input));
     await writeFile(options.stateFile, contents);
-    await expect(search(input)).rejects.toMatchObject({ code: "local_budget_state" });
+    await expect(Effect.runPromise(search(input))).rejects.toMatchObject({
+      code: "local_budget_state",
+    });
     expect(providerSearch).toHaveBeenCalledTimes(1);
     expect(await readFile(options.stateFile, "utf8")).toBe(contents);
   });
 
   it("fails closed when the configured timezone differs from persisted counters", async () => {
     const { options, search, providerSearch } = await setup();
-    await search(input);
+    await Effect.runPromise(search(input));
     const changed = createBudgetedNewsSearch({ ...options, timezoneOffset: "-08:00" });
-    await expect(changed(input)).rejects.toMatchObject({ code: "local_budget_state" });
+    await expect(Effect.runPromise(changed(input))).rejects.toMatchObject({
+      code: "local_budget_state",
+    });
     expect(providerSearch).toHaveBeenCalledTimes(1);
   });
 
   it("fails closed when the lock cannot be acquired and preserves the existing lock", async () => {
     const { options, search, providerSearch } = await setup();
-    await search(input);
+    await Effect.runPromise(search(input));
     await writeFile(`${options.stateFile}.lock`, "owned by another process");
-    await expect(search(input)).rejects.toMatchObject({ code: "local_budget_state" });
+    await expect(Effect.runPromise(search(input))).rejects.toMatchObject({
+      code: "local_budget_state",
+    });
     expect(await readFile(`${options.stateFile}.lock`, "utf8")).toBe("owned by another process");
     expect(providerSearch).toHaveBeenCalledTimes(1);
   });
@@ -302,13 +337,13 @@ describe("persistent news search budget", () => {
 describe("cached search budget probe", () => {
   it("returns undefined with available budget without reserving an attempt or calling the provider", async () => {
     const { search, providerSearch, options } = await setup({ dailyLimit: 2 });
-    expect(await search.cachedSearch(input)).toBeUndefined();
-    expect(await search.cachedSearch(input)).toBeUndefined();
+    expect(await Effect.runPromise(search.cachedSearch(input))).toBeUndefined();
+    expect(await Effect.runPromise(search.cachedSearch(input))).toBeUndefined();
     expect(providerSearch).not.toHaveBeenCalled();
     await expect(access(options.stateFile)).rejects.toMatchObject({ code: "ENOENT" });
-    await search(input);
+    await Effect.runPromise(search(input));
     const before = await readFile(options.stateFile, "utf8");
-    expect(await search.cachedSearch(input)).toBeUndefined();
+    expect(await Effect.runPromise(search.cachedSearch(input))).toBeUndefined();
     expect(await readFile(options.stateFile, "utf8")).toBe(before);
     expect(providerSearch).toHaveBeenCalledTimes(1);
   });
@@ -321,8 +356,8 @@ describe("cached search budget probe", () => {
         throw new NewsSearchError("10406", "provider quota exhausted");
       });
       const search = createBudgetedNewsSearch({ ...options, search: providerSearch });
-      await expect(search(input)).rejects.toMatchObject({ code: "10406" });
-      await expect(search.cachedSearch(input)).rejects.toMatchObject({
+      await expect(Effect.runPromise(search(input))).rejects.toMatchObject({ code: "10406" });
+      await expect(Effect.runPromise(search.cachedSearch(input))).rejects.toMatchObject({
         code: "local_budget_exhausted",
       });
       expect(providerSearch).toHaveBeenCalledTimes(1);
@@ -335,23 +370,23 @@ describe("cached search budget probe", () => {
       monthlyLimit: 1,
       cacheTtlMs: 60_000,
     });
-    await search(input);
+    await Effect.runPromise(search(input));
     const before = await readFile(options.stateFile, "utf8");
     const rebuilt = createBudgetedNewsSearch(options);
-    expect((await rebuilt.cachedSearch(input))?.searchUsage).toMatchObject({
+    expect((await Effect.runPromise(rebuilt.cachedSearch(input)))?.searchUsage).toMatchObject({
       source: "cache",
       fetchedAt: "2026-09-29T03:00:00.000Z",
       dailyUsed: 1,
       monthlyUsed: 1,
     });
     expect(await readFile(options.stateFile, "utf8")).toBe(before);
-    await expect(rebuilt.cachedSearch({ ...input, query: "Uncached query" })).rejects.toMatchObject(
-      {
-        code: "local_budget_exhausted",
-      },
-    );
+    await expect(
+      Effect.runPromise(rebuilt.cachedSearch({ ...input, query: "Uncached query" })),
+    ).rejects.toMatchObject({
+      code: "local_budget_exhausted",
+    });
     setNow("2026-09-29T03:01:00.000Z");
-    await expect(rebuilt.cachedSearch(input)).rejects.toMatchObject({
+    await expect(Effect.runPromise(rebuilt.cachedSearch(input))).rejects.toMatchObject({
       code: "local_budget_exhausted",
     });
     expect(providerSearch).toHaveBeenCalledTimes(1);
@@ -359,9 +394,11 @@ describe("cached search budget probe", () => {
 
   it("fails closed for corrupted state without resetting counters or contacting the provider", async () => {
     const { options, search, providerSearch } = await setup({ cacheTtlMs: 60_000 });
-    await search(input);
+    await Effect.runPromise(search(input));
     await writeFile(options.stateFile, "corrupted-state");
-    await expect(search.cachedSearch(input)).rejects.toMatchObject({ code: "local_budget_state" });
+    await expect(Effect.runPromise(search.cachedSearch(input))).rejects.toMatchObject({
+      code: "local_budget_state",
+    });
     expect(await readFile(options.stateFile, "utf8")).toBe("corrupted-state");
     expect(providerSearch).toHaveBeenCalledTimes(1);
   });
@@ -373,11 +410,11 @@ describe("raw Doubao response cache", () => {
       cacheTtlMs: 60_000,
       dailyLimit: 1,
     });
-    const result = await search(input);
+    const result = await Effect.runPromise(search(input));
     result.results[0]!.title = "Mutated by consumer";
     setNow("2026-09-29T03:00:30.000Z");
     const rebuilt = createBudgetedNewsSearch(options);
-    const cached = await rebuilt({ ...input, sinceDay: input.day });
+    const cached = await Effect.runPromise(rebuilt({ ...input, sinceDay: input.day }));
     expect(cached.results).toEqual(page.results);
     expect(cached.searchUsage).toMatchObject({
       source: "cache",
@@ -390,35 +427,41 @@ describe("raw Doubao response cache", () => {
 
   it("reuses a cache covering the requested dates and rejects incomplete date coverage", async () => {
     const { search, providerSearch } = await setup({ cacheTtlMs: 60_000 });
-    await search({ ...input, sinceDay: "2026-09-25", day: "2026-09-30" });
-    expect((await search({ ...input, sinceDay: "2026-09-28" })).searchUsage.source).toBe("cache");
-    expect((await search({ ...input, sinceDay: "2026-09-24" })).searchUsage.source).toBe("network");
-    expect((await search({ ...input, day: "2026-10-01" })).searchUsage.source).toBe("network");
+    await Effect.runPromise(search({ ...input, sinceDay: "2026-09-25", day: "2026-09-30" }));
+    expect(
+      (await Effect.runPromise(search({ ...input, sinceDay: "2026-09-28" }))).searchUsage.source,
+    ).toBe("cache");
+    expect(
+      (await Effect.runPromise(search({ ...input, sinceDay: "2026-09-24" }))).searchUsage.source,
+    ).toBe("network");
+    expect(
+      (await Effect.runPromise(search({ ...input, day: "2026-10-01" }))).searchUsage.source,
+    ).toBe("network");
     expect(providerSearch).toHaveBeenCalledTimes(3);
   });
 
   it("keeps provider, query, count and source policy in separate cache identities", async () => {
     const { options, search, providerSearch } = await setup({ cacheTtlMs: 60_000 });
-    await search(input);
+    await Effect.runPromise(search(input));
     const otherProvider = createBudgetedNewsSearch({
       ...options,
       provider: "https://other.example.com/web_search",
     });
-    await otherProvider(input);
-    await search({ ...input, query: "Other release" });
-    await search({ ...input, count: 10 });
-    await search({ ...input, sourcePolicy: "authoritative" });
+    await Effect.runPromise(otherProvider(input));
+    await Effect.runPromise(search({ ...input, query: "Other release" }));
+    await Effect.runPromise(search({ ...input, count: 10 }));
+    await Effect.runPromise(search({ ...input, sourcePolicy: "authoritative" }));
     expect(providerSearch).toHaveBeenCalledTimes(5);
-    expect((await search(input)).searchUsage.source).toBe("cache");
+    expect((await Effect.runPromise(search(input))).searchUsage.source).toBe("cache");
   });
 
   it("expires at the TTL boundary and does not accept a fetch time in the future", async () => {
     const { search, setNow, providerSearch } = await setup({ cacheTtlMs: 60_000 });
-    await search(input);
+    await Effect.runPromise(search(input));
     setNow("2026-09-29T03:01:00.000Z");
-    expect((await search(input)).searchUsage.source).toBe("network");
+    expect((await Effect.runPromise(search(input))).searchUsage.source).toBe("network");
     setNow("2026-09-29T03:00:59.000Z");
-    expect((await search(input)).searchUsage.source).toBe("network");
+    expect((await Effect.runPromise(search(input))).searchUsage.source).toBe("network");
     expect(providerSearch).toHaveBeenCalledTimes(3);
   });
 
@@ -426,7 +469,9 @@ describe("raw Doubao response cache", () => {
     const { options } = await setup({ dailyLimit: 1 });
     const providerSearch = vi.fn(async () => page);
     const search = createBudgetedNewsSearch({ ...options, search: providerSearch });
-    const [first, second] = await Promise.all([search(input), search(input)]);
+    const [first, second] = await Effect.runPromise(
+      Effect.all([search(input), search(input)], { concurrency: "unbounded" }),
+    );
     expect(first).toBe(second);
     expect(first.searchUsage.dailyUsed).toBe(1);
     expect(providerSearch).toHaveBeenCalledTimes(1);
@@ -436,8 +481,8 @@ describe("raw Doubao response cache", () => {
     const { options } = await setup({ cacheTtlMs: 60_000 });
     const providerSearch = vi.fn(async (): Promise<NewsSearchPage> => ({ ...page, provider }));
     const search = createBudgetedNewsSearch({ ...options, search: providerSearch });
-    await search(input);
-    await search(input);
+    await Effect.runPromise(search(input));
+    await Effect.runPromise(search(input));
     expect(providerSearch).toHaveBeenCalledTimes(2);
     expect(JSON.parse(await readFile(options.stateFile, "utf8")).cache).toEqual({});
   });
@@ -450,19 +495,24 @@ it("isolates Grok cache by model/provider while sharing attempt counters with Do
     grok: { nativeTools: ["x_keyword_search"], rejectedResults: 1, costUsd: 0.01 },
   };
   const { options, search: doubao } = await setup({ cacheTtlMs: 60_000 });
-  await doubao(input);
+  await Effect.runPromise(doubao(input));
   const provider = vi.fn(async () => grokPage);
   const grok = createBudgetedNewsSearch({
     ...options,
     provider: "grok://cli/v1/default",
     search: provider,
   });
-  expect((await grok(input)).searchUsage).toMatchObject({ source: "network", dailyUsed: 2 });
-  const reused = await createBudgetedNewsSearch({
-    ...options,
-    provider: "grok://cli/v1/default",
-    search: provider,
-  })(input);
+  expect((await Effect.runPromise(grok(input))).searchUsage).toMatchObject({
+    source: "network",
+    dailyUsed: 2,
+  });
+  const reused = await Effect.runPromise(
+    createBudgetedNewsSearch({
+      ...options,
+      provider: "grok://cli/v1/default",
+      search: provider,
+    })(input),
+  );
   expect(reused.searchUsage).toMatchObject({ source: "cache", dailyUsed: 2 });
   expect(reused.grok).toEqual(grokPage.grok);
   expect(provider).toHaveBeenCalledTimes(1);
@@ -471,7 +521,7 @@ it("isolates Grok cache by model/provider while sharing attempt counters with Do
     provider: "grok://cli/v1/custom-model",
     search: provider,
   });
-  expect((await anotherModel(input)).searchUsage).toMatchObject({
+  expect((await Effect.runPromise(anotherModel(input))).searchUsage).toMatchObject({
     source: "network",
     dailyUsed: 3,
   });

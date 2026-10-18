@@ -2,7 +2,7 @@ import { join } from "node:path";
 
 import { describe, it, vi } from "vite-plus/test";
 
-import { RSS_SUMMARY_NEWS_TOOL_ID } from "../../src/presentation/rivus-plugin.js";
+import { RSS_SUMMARY_NEWS_TOOL_ID } from "../../src/app/rivus/plugin.js";
 import { DOUBAO_URL, doubaoPayload, grokStream } from "./fixtures.js";
 import {
   errorRecord,

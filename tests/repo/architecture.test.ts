@@ -13,7 +13,7 @@ import {
 const root = fileURLToPath(new URL("../..", import.meta.url));
 
 describe("architecture boundaries", () => {
-  it("reports current src violations without failing the baseline", () => {
+  it("keeps the whole src tree free of boundary violations", () => {
     const files = walk(join(root, "src")).map((path) => ({
       path: relative(root, path).split("\\").join("/"),
       source: readFileSync(path, "utf8"),
@@ -25,17 +25,7 @@ describe("architecture boundaries", () => {
       console.error(`${violation.file}: ${violation.rule}: ${violation.message}`);
     }
 
-    expect(Array.isArray(violations)).toBe(true);
-    expect(
-      violations.every((violation) => violation.file && violation.rule && violation.message),
-    ).toBe(true);
-    expect(violations.filter((violation) => violation.file.startsWith("src/acquisition/"))).toEqual(
-      [],
-    );
-    expect(violations.filter((violation) => violation.file.startsWith("src/editorial/"))).toEqual(
-      [],
-    );
-    expect(violations.filter((violation) => violation.file.startsWith("src/kernel/"))).toEqual([]);
+    expect(violations).toEqual([]);
   });
 
   it("accepts a legal import graph", () => {

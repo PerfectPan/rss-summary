@@ -2,8 +2,14 @@ import { XMLParser } from "fast-xml-parser";
 import he from "he";
 
 import type { ActivityCardDto as ActivityCard } from "../../src/acquisition/index.js";
-import type { FeedSubscription } from "../../src/infrastructure/config.js";
-import { asRecord } from "../../src/infrastructure/parsing.js";
+import type { FeedSubscription } from "../../src/acquisition/index.js";
+function asRecord(value: unknown): Record<string, unknown> {
+  return value !== null &&
+    typeof value === "object" &&
+    Object.prototype.toString.call(value) === "[object Object]"
+    ? (value as Record<string, unknown>)
+    : {};
+}
 
 type RssClientOptions = {
   fetch?: typeof fetch;

@@ -13,11 +13,7 @@ import {
 } from "../../../src/acquisition/index.js";
 import {
   buildDailyAiDigest,
-  buildSubscriptionEvidence,
-  candidateDecision,
-  candidateIdentity,
   presentationDecisionForCandidate,
-  researchKeyForCandidate,
   scoreAcquired,
   selectResearchCandidates,
   validateEditorialDraft,
@@ -25,8 +21,14 @@ import {
   validateSubscriptionResearch,
   validateSubscriptionSelectionDraft,
   type CandidateProject,
-  type DigestDocument,
 } from "../../../src/editorial/index.js";
+import {
+  buildSubscriptionEvidence,
+  candidateDecision,
+  candidateIdentity,
+  researchKeyForCandidate,
+  type DigestDocument,
+} from "../../../src/app/products/subscriptions/output.js";
 import {
   FROZEN_NOW,
   GITHUB_REPOSITORY,

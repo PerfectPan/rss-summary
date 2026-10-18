@@ -41,31 +41,3 @@ export function settleSearches<T>(
     return settled;
   });
 }
-
-export function toPromiseSettled(
-  settlements: readonly SearchSettlement[],
-): PromiseSettledResult<SearchPage>[] {
-  return settlements.map((settlement) =>
-    settlement._tag === "Fulfilled"
-      ? { status: "fulfilled" as const, value: settlement.value }
-      : { status: "rejected" as const, reason: settlement.reason },
-  );
-}
-
-export function settleSearchRequests<T>(
-  requests: readonly T[],
-  execute: (request: T) => Promise<SearchPage>,
-  concurrency = 2,
-): Promise<PromiseSettledResult<SearchPage>[]> {
-  return Effect.runPromise(
-    settleSearches(
-      requests,
-      (request) =>
-        Effect.tryPromise({
-          try: () => execute(request),
-          catch: (reason) => reason,
-        }),
-      concurrency,
-    ).pipe(Effect.map(toPromiseSettled)),
-  );
-}

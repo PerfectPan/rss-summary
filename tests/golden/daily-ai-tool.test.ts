@@ -2,7 +2,7 @@ import { join } from "node:path";
 
 import { describe, it, vi } from "vite-plus/test";
 
-import { RSS_SUMMARY_DAILY_AI_TOOL_ID } from "../../src/presentation/rivus-plugin.js";
+import { RSS_SUMMARY_DAILY_AI_TOOL_ID } from "../../src/app/rivus/plugin.js";
 import {
   grokStream,
   INDUSTRY_ATOM,

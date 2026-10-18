@@ -21,20 +21,20 @@
     "README.md"
   ],
   "bin": {
-    "rss-summary": "./dist/presentation/cli.js"
+    "rss-summary": "./dist/app/cli/main.js"
   },
   "exports": {
     "./rivus-plugin": {
-      "import": "./dist/presentation/rivus-plugin.js",
-      "types": "./dist/presentation/rivus-plugin.d.ts",
-      "default": "./dist/presentation/rivus-plugin.js"
+      "import": "./dist/app/rivus/plugin.js",
+      "types": "./dist/app/rivus/plugin.d.ts",
+      "default": "./dist/app/rivus/plugin.js"
     }
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "check": "vp check",
-    "digest": "tsx src/presentation/cli.ts digest",
-    "feeds": "tsx src/presentation/cli.ts feeds",
+    "digest": "tsx src/app/cli/main.ts digest",
+    "feeds": "tsx src/app/cli/main.ts feeds",
     "fmt": "vp fmt",
     "lint": "vp lint",
     "package:check": "node scripts/check-package.mjs",

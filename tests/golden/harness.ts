@@ -12,8 +12,8 @@ import type {
 } from "@rivus/agent";
 import { afterEach, beforeEach, expect, vi } from "vite-plus/test";
 
-import { runCliCommand } from "../../src/presentation/cli.js";
-import { createRssSummaryPlugin } from "../../src/presentation/rivus-plugin.js";
+import { runCliCommand } from "../../src/app/cli/main.js";
+import { createRssSummaryPlugin } from "../../src/app/rivus/plugin.js";
 import { FROZEN_NOW, INDUSTRY_SOURCES, NEWS_TOPICS, PERSONAL_FEEDS } from "./fixtures.js";
 import { resetUuid } from "./uuid-sequence.js";
 

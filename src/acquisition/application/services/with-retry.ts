@@ -93,11 +93,20 @@ export function searchWithRetry(
   input: SearchInput,
   search: (input: SearchInput) => Promise<SearchPage>,
   dependencies: RetryDependencies = {},
-): Promise<SearchPage> {
-  return Effect.runPromise(
-    provideRetryClock(
-      retryEffect(() => search(input)),
-      dependencies,
-    ),
-  ) as Promise<SearchPage>;
+): Effect.Effect<SearchPage, unknown> {
+  return provideRetryClock(
+    retryEffect(() => search(input)),
+    dependencies,
+  );
+}
+
+/** Retry an Effect-based search with the historical schedule and injected clock. */
+export function retrySearchEffect<A>(
+  effect: Effect.Effect<A, unknown>,
+  dependencies: RetryDependencies = {},
+): Effect.Effect<A, unknown> {
+  return provideRetryClock(
+    effect.pipe(Effect.retry({ while: isTransientSearchError, schedule: retrySchedule() })),
+    dependencies,
+  );
 }

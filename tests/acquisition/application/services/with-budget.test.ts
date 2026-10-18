@@ -1,5 +1,5 @@
 import { Effect } from "effect";
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import {
   withBudget,
@@ -81,11 +81,12 @@ describe("withBudget", () => {
         resolve = settle;
       });
     }, driver(1));
-    const first = search(input);
-    const second = search(input);
-    expect(calls).toBe(1);
+    const pending = Effect.runPromise(
+      Effect.all([search(input), search(input)], { concurrency: "unbounded" }),
+    );
+    await vi.waitFor(() => expect(calls).toBe(1));
     resolve(page);
-    const [left, right] = await Promise.all([first, second]);
+    const [left, right] = await pending;
     expect(left).toBe(right);
     expect(left.searchUsage.dailyUsed).toBe(1);
   });
@@ -98,14 +99,14 @@ describe("withBudget", () => {
       if (calls === 1) throw new NewsSearchError("http_429", "rate limit");
       return page;
     }, options);
-    await expect(search(input)).rejects.toMatchObject({ code: "http_429" });
-    const stored = await search(input);
+    await expect(Effect.runPromise(search(input))).rejects.toMatchObject({ code: "http_429" });
+    const stored = await Effect.runPromise(search(input));
     expect(stored.searchUsage).toMatchObject({
       source: "network",
       fetchedAt: "2026-09-29T03:00:00.000Z",
       dailyUsed: 2,
     });
-    const cached = await search(input);
+    const cached = await Effect.runPromise(search(input));
     expect(cached.searchUsage.source).toBe("cache");
     expect(cached.results[0]?.title).toBe("Release");
     expect(calls).toBe(2);
@@ -119,11 +120,11 @@ describe("withBudget", () => {
       calls += 1;
       return page;
     }, options);
-    expect(await search.cachedSearch(input)).toBeUndefined();
+    expect(await Effect.runPromise(search.cachedSearch(input))).toBeUndefined();
     expect(calls).toBe(0);
     expect(options.budget().persisted.daily).toEqual({});
-    await search(input);
-    expect((await search.cachedSearch(input))?.searchUsage.source).toBe("cache");
+    await Effect.runPromise(search(input));
+    expect((await Effect.runPromise(search.cachedSearch(input)))?.searchUsage.source).toBe("cache");
     expect(calls).toBe(1);
   });
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { candidateDecision } from "../../../../src/editorial/index.js";
+import { candidateDecision } from "../../../../src/app/products/subscriptions/output.js";
 import type { CandidateProject } from "../../../../src/editorial/index.js";
 
 describe("run audit candidate decisions", () => {

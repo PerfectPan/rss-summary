@@ -1,3 +1,5 @@
+import type { Effect } from "effect";
+
 import { createBudgetedNewsSearch } from "./budgeted-search.js";
 import { GrokXClient } from "./adapters/grok-cli.js";
 import {
@@ -18,7 +20,7 @@ export type { XAccountPosts };
 export function collectXAccountPosts(
   value: Parameters<typeof collectAccountPosts>[0],
   dependencies: Dependencies = {},
-): Promise<XAccountPosts> {
+): Effect.Effect<XAccountPosts, unknown> {
   const env = dependencies.env ?? process.env;
   return collectAccountPosts(value, {
     env,

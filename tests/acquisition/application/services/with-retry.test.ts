@@ -85,34 +85,40 @@ describe("search retry delay", () => {
   it("uses the injected clock for the same delays and does not retry other errors", async () => {
     const delays: number[] = [];
     let attempts = 0;
-    await searchWithRetry(
-      input,
-      async () => {
-        attempts += 1;
-        if (attempts < 3) throw new NewsSearchError("rate_limit_exceeded", "limited");
-        return page;
-      },
-      {
-        random: () => 0,
-        sleep: async (milliseconds) => {
-          delays.push(milliseconds);
+    await Effect.runPromise(
+      searchWithRetry(
+        input,
+        async () => {
+          attempts += 1;
+          if (attempts < 3) throw new NewsSearchError("rate_limit_exceeded", "limited");
+          return page;
         },
-      },
+        {
+          random: () => 0,
+          sleep: async (milliseconds) => {
+            delays.push(milliseconds);
+          },
+        },
+      ),
     );
     expect(delays).toEqual([125, 250]);
 
     const permanent = new Error("invalid query configuration");
     await expect(
-      searchWithRetry(input, async () => {
-        throw permanent;
-      }),
+      Effect.runPromise(
+        searchWithRetry(input, async () => {
+          throw permanent;
+        }),
+      ),
     ).rejects.toBe(permanent);
 
     const quota = new NewsSearchError("10406", "quota");
     await expect(
-      searchWithRetry(input, async () => {
-        throw quota;
-      }),
+      Effect.runPromise(
+        searchWithRetry(input, async () => {
+          throw quota;
+        }),
+      ),
     ).rejects.toBe(quota);
   });
 });
