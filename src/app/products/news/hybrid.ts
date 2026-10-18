@@ -1,12 +1,14 @@
 import {
+  GlmSearchClient,
   isSearchFailure,
   NewsSearchError,
   resolveNewsCredibility,
   shareSearchBudget,
   type NewsSearchInput,
   type NewsSearchPage,
-} from "../acquisition/index.js";
-import { canonicalizeUrl } from "../domain/text.js";
+  type ResearchSearchResult,
+} from "../../../acquisition/index.js";
+import { canonicalizeUrl } from "../../../kernel/index.js";
 import {
   buildNewsStoriesWithAudit,
   projectNewsHit,
@@ -15,12 +17,47 @@ import {
   type NewsTimeWindow,
   type NewsTopic,
   type NewsTopicQuery,
-} from "../editorial/index.js";
-import type {
-  GlmResearchClient,
-  ResearchPage,
-  ResearchSearchResult,
-} from "../infrastructure/glm-research.js";
+} from "../../../editorial/index.js";
+import { readGlmPage, type GlmPage } from "../../../reading/index.js";
+
+export type ResearchPage = GlmPage;
+
+/** GLM search plus page reading, as used by the hybrid fallback. */
+export type GlmResearch = {
+  search: (
+    query: string,
+    domains: string[],
+    recency?: "noLimit" | "oneDay" | "oneWeek",
+    observe?: (counts: { rawResults: number; domainRejected: number }) => void,
+    location?: "cn" | "us",
+  ) => Promise<ResearchSearchResult[]>;
+  read: (url: string) => Promise<ResearchPage>;
+};
+
+/** Compose the GLM research surface from acquisition search and reading. */
+export function createGlmResearch(options: {
+  apiKey: string;
+  fetch?: typeof fetch;
+  timeoutMs?: number;
+}): GlmResearch {
+  if (!options.apiKey.trim()) throw new Error("GLM_CODING_API_KEY is required.");
+  const apiKey = options.apiKey.trim();
+  const client = new GlmSearchClient({
+    apiKey,
+    ...(options.fetch ? { fetch: options.fetch } : {}),
+    ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
+  });
+  return {
+    search: (query, domains, recency, observe, location) =>
+      client.search(query, domains, recency, observe, location),
+    read: (url) =>
+      readGlmPage(url, {
+        apiKey,
+        ...(options.fetch ? { fetch: options.fetch } : {}),
+        ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
+      }),
+  };
+}
 
 export type NewsSearchRequest = {
   input: NewsSearchInput;
@@ -31,7 +68,7 @@ export type NewsSearchRequest = {
 type Options = {
   cachedSearch?: (input: NewsSearchInput) => Promise<NewsSearchPage | undefined>;
   search: (input: NewsSearchInput) => Promise<NewsSearchPage>;
-  glm: Pick<GlmResearchClient, "search" | "read">;
+  glm: GlmResearch;
   window: NewsTimeWindow;
   maxSearches: number;
   maxReads: number;

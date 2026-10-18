@@ -1,6 +1,6 @@
 import { Effect } from "effect";
-import { runPluginEffect } from "../app/runtime.js";
-import { canonicalizeUrl } from "../domain/text.js";
+import { runPluginEffect } from "../../runtime.js";
+import { canonicalizeUrl } from "../../../kernel/index.js";
 
 import {
   buildNewsStoriesWithAudit,
@@ -9,15 +9,15 @@ import {
   type NewsBriefEdition,
   type NewsTopic,
   type SelectedNewsStory,
-} from "../editorial/index.js";
+} from "../../../editorial/index.js";
 import {
   calendarDayAtOffset,
   parseOffsetMilliseconds,
   startOfCalendarDay,
-} from "../domain/time.js";
-import { boundedInteger } from "../app/config/parse.js";
-import { loadNewsTopics } from "../app/products/news/topics.js";
-import { GlmResearchClient } from "../infrastructure/glm-research.js";
+} from "../../../kernel/index.js";
+import { boundedInteger } from "../../config/parse.js";
+import { loadNewsTopics } from "./topics.js";
+import { createGlmResearch, type GlmResearch } from "./hybrid.js";
 import {
   createBudgetedNewsSearch,
   DoubaoSearchClient,
@@ -32,14 +32,14 @@ import {
   settleSearches,
   type NewsSearchInput,
   type NewsSearchPage,
-} from "../acquisition/index.js";
-import { createHybridNewsSearch } from "./hybrid-news-search.js";
+} from "../../../acquisition/index.js";
+import { createHybridNewsSearch } from "./hybrid.js";
 import {
   buildNewsAudit,
   summarizeNewsSources,
   type NewsBriefAudit,
   type NewsSourceStatus,
-} from "../editorial/index.js";
+} from "../../../editorial/index.js";
 
 export type { NewsBriefEdition };
 
@@ -99,7 +99,7 @@ export class AllNewsQueriesFailedError extends Error {
 
 type NewsBriefDependencies = {
   maxQueries?: number;
-  glm?: Pick<GlmResearchClient, "search" | "read">;
+  glm?: GlmResearch;
   env?: NodeJS.ProcessEnv;
   now?: () => Date;
   random?: () => number;
@@ -249,8 +249,7 @@ export function generateRivusNewsBrief(
                       runPluginEffect(managedSearch.cachedSearch(input)),
                   }
                 : {}),
-              glm:
-                dependencies.glm ?? new GlmResearchClient({ apiKey: env.GLM_CODING_API_KEY ?? "" }),
+              glm: dependencies.glm ?? createGlmResearch({ apiKey: env.GLM_CODING_API_KEY ?? "" }),
               window,
               maxSearches: boundedInteger(env.NEWS_GLM_MAX_SEARCHES, 14, 1, 64),
               queryIds: requests

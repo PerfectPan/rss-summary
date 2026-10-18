@@ -17,7 +17,7 @@ import {
   type NewsTopic,
 } from "../../../src/editorial/index.js";
 import { newsPublicationRange } from "../../../src/kernel/publication.js";
-import { resolveNewsEditionWindow } from "../../../src/application/news-brief.js";
+import { resolveNewsEditionWindow } from "../../../src/app/products/news/flow.js";
 import { doubaoPayload, NEWS_TOPICS } from "../../golden/fixtures.js";
 import {
   buildNewsAudit as legacyAudit,

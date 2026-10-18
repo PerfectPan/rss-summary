@@ -1,10 +1,12 @@
-import { Effect } from "effect";
 import { readFileSync } from "node:fs";
 
-import { FeedStateFileLive, recordResearch } from "../delivery/index.js";
-import { GlmResearchClient } from "../infrastructure/glm-research.js";
-import { GlmReader, ReadingLive } from "../reading/index.js";
-import { errorMessage } from "../kernel/index.js";
+import { Effect } from "effect";
+
+import { recordResearch, FeedStateFileLive } from "../../../delivery/index.js";
+import { errorMessage } from "../../../kernel/index.js";
+import { GlmReader, ReadingLive } from "../../../reading/index.js";
+import { runPluginEffect } from "../../runtime.js";
+import { createGlmResearch, type GlmResearch } from "../news/hybrid.js";
 
 type Writable = {
   write(chunk: string): unknown;
@@ -12,7 +14,7 @@ type Writable = {
 
 type ResearchCommandDeps = {
   env?: NodeJS.ProcessEnv;
-  glmClient?: Pick<GlmResearchClient, "search" | "read">;
+  glmClient?: GlmResearch;
   stdout?: Writable;
   stderr?: Writable;
   stdin?: AsyncIterable<Uint8Array | string>;
@@ -48,11 +50,9 @@ export async function runResearchCommand(
         stderr.write("No research suggestions found in input.\n");
         return 1;
       }
-      await Effect.runPromise(
-        Effect.provide(
-          recordResearch({ stateFile: args.stateFile, suggestions, at: new Date().toISOString() }),
-          FeedStateFileLive,
-        ),
+      await runPluginEffect(
+        recordResearch({ stateFile: args.stateFile, suggestions, at: new Date().toISOString() }),
+        { layer: FeedStateFileLive },
       );
       stdout.write(
         `Marked ${suggestions.length} research ${suggestions.length === 1 ? "decision" : "decisions"} in ${args.stateFile}\n`,
@@ -128,15 +128,11 @@ function camelCase(value: string): string {
   return value.replace(/-([a-z])/gu, (_, char: string) => char.toUpperCase());
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  process.exitCode = await runResearchCommand();
-}
-
 type GlmResearchDependencies = {
   env?: NodeJS.ProcessEnv;
   stdout?: { write(chunk: string): unknown };
   stderr?: { write(chunk: string): unknown };
-  client?: Pick<GlmResearchClient, "search" | "read">;
+  client?: GlmResearch;
 };
 
 async function runGlmResearchCommand(
@@ -161,21 +157,22 @@ async function runGlmResearchCommand(
     if (allowed.some((key) => !options[key]?.trim()))
       throw new Error(`Required options: ${allowed.join(", ")}.`);
     const env = dependencies.env ?? process.env;
+    const apiKey = env.GLM_CODING_API_KEY ?? "";
+    const client = dependencies.client ?? createGlmResearch({ apiKey });
     const data =
       command === "search"
-        ? await (
-            dependencies.client ?? new GlmResearchClient({ apiKey: env.GLM_CODING_API_KEY ?? "" })
-          ).search(
+        ? await client.search(
             options["--query"]!,
             options["--domains"]!.split(",").map((value) => value.trim()),
           )
         : dependencies.client
           ? await dependencies.client.read(options["--url"]!)
-          : await Effect.runPromise(
+          : await runPluginEffect(
               Effect.gen(function* () {
                 const reader = yield* GlmReader;
                 return yield* reader.read(options["--url"]!);
-              }).pipe(Effect.provide(ReadingLive({ apiKey: env.GLM_CODING_API_KEY ?? "" }))),
+              }),
+              { layer: ReadingLive({ apiKey }) },
             );
     stdout.write(
       `${JSON.stringify(

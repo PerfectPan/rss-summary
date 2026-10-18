@@ -9,7 +9,7 @@ import {
   generateRivusNewsBrief,
   type RivusNewsBriefOutput,
   type RivusNewsBriefResult,
-} from "../application/news-brief.js";
+} from "../app/products/news/flow.js";
 import { dailyAiCategories } from "../editorial/index.js";
 import {
   generateRivusIndustryBrief,
@@ -21,10 +21,13 @@ import { createRivusSubscriptionExecutor } from "../app/rivus/phases.js";
 import type { RivusDigestResult } from "../app/products/subscriptions/tool.js";
 import {
   createRivusDailyAiDigestExecutor,
-  dailyAiEditorialPolicy,
   type RivusDailyAiToolResult,
-} from "./daily-ai-tool.js";
-import { createArticleResearchExecutor, type RivusArticleResearchResult } from "./research-tool.js";
+} from "../app/rivus/phases.js";
+import { dailyAiEditorialPolicy } from "../app/products/daily-ai/tool.js";
+import {
+  createArticleResearchExecutor,
+  type RivusArticleResearchResult,
+} from "../app/products/research/tool.js";
 import {
   createRssAutomationPresentation,
   type RssAutomationPresentation,

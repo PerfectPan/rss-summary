@@ -1,20 +1,20 @@
-import { runPluginEffect } from "../app/runtime.js";
+import { runPluginEffect } from "../../runtime.js";
+import { buildIndustryDocument, type IndustryBriefDocument } from "../frontier/flow.js";
 import {
-  buildIndustryDocument,
-  type IndustryBriefDocument,
-} from "../app/products/frontier/flow.js";
-import { createDailyAiDeliveryReceipt, type DailyAiDeliveryReceipt } from "../delivery/index.js";
-import { collectXAccountPosts, type XAccountPosts } from "../acquisition/index.js";
+  createDailyAiDeliveryReceipt,
+  type DailyAiDeliveryReceipt,
+} from "../../../delivery/index.js";
+import { collectXAccountPosts, type XAccountPosts } from "../../../acquisition/index.js";
 import {
   buildDailyAiDigest,
   cleanDailyAiTitle,
   industryEvidence,
   type DailyAiDigest,
   type DailyAiEvidence,
-} from "../editorial/index.js";
-import { calendarDayAtOffset, parseOffsetMilliseconds } from "../domain/time.js";
-import { loadEnvConfig } from "../app/config/env.js";
-import { isDailyAiPaperSource } from "../acquisition/index.js";
+} from "../../../editorial/index.js";
+import { calendarDayAtOffset, parseOffsetMilliseconds } from "../../../kernel/index.js";
+import { loadEnvConfig } from "../../config/env.js";
+import { isDailyAiPaperSource } from "../../../acquisition/index.js";
 
 export type DailyAiDigestResult = DailyAiDigest & {
   day: string;

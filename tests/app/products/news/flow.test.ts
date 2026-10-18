@@ -9,15 +9,15 @@ import {
   generateRivusNewsBrief,
   resolveNewsEditionWindow,
   type RivusNewsBriefResult,
-} from "../../src/application/news-brief.js";
-import type { NewsTopicQuery } from "../../src/editorial/index.js";
+} from "../../../../src/app/products/news/flow.js";
+import type { NewsTopicQuery } from "../../../../src/editorial/index.js";
 import {
   DoubaoSearchError,
   GrokSearchClient,
   NewsSearchError,
   type NewsSearchInput,
-} from "../../src/acquisition/index.js";
-import { renderNewsBrief } from "../../src/app/render/news-render.js";
+} from "../../../../src/acquisition/index.js";
+import { renderNewsBrief } from "../../../../src/app/render/news-render.js";
 
 function withNewsMarkdown(result: RivusNewsBriefResult) {
   return {

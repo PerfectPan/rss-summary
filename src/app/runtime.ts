@@ -17,11 +17,11 @@ export function createPluginRuntime(): ManagedRuntime.ManagedRuntime<AppServices
 }
 
 /** Run one plugin effect with a runtime assembled from the current environment. */
-export async function runPluginEffect<A, E>(
-  effect: Effect.Effect<A, E, AppServices>,
-  options: { layer?: Layer.Layer<AppServices> } = {},
+export async function runPluginEffect<A, E, R = AppServices>(
+  effect: Effect.Effect<A, E, R>,
+  options: { layer?: Layer.Layer<R> } = {},
 ): Promise<A> {
-  const runtime = ManagedRuntime.make(options.layer ?? AppLiveFromEnv);
+  const runtime = ManagedRuntime.make(options.layer ?? (AppLiveFromEnv as Layer.Layer<R>));
   try {
     return await runtime.runPromise(effect);
   } finally {

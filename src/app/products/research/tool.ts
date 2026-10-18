@@ -1,13 +1,15 @@
-import { Effect } from "effect";
-
 import {
-  ReadingLive,
   readOriginal,
+  ReadingLive,
   type GlmPage,
   type ReadOriginalResult,
   type ReadRequest,
   type ReadResult,
-} from "../reading/index.js";
+} from "../../../reading/index.js";
+import { loadEnvConfig } from "../../config/env.js";
+import { runPluginEffect } from "../../runtime.js";
+
+export const RSS_SUMMARY_RESEARCH_TOOL_ID = "rss-summary/research-article";
 
 export type RivusArticleResearchResult = ReadOriginalResult & {
   tool: "article-research";
@@ -31,35 +33,32 @@ export type ArticleResearchMode = "auto" | "browser" | "http";
 export function createArticleResearchExecutor(
   dependencies: ArticleResearchToolDependencies = {},
 ): (value: unknown) => Promise<RivusArticleResearchResult> {
-  const env = dependencies.env ?? process.env;
-  const layer = ReadingLive({
-    apiKey: env.GLM_CODING_API_KEY ?? "",
-    browserChannel: process.env.RSS_ARTICLE_BROWSER_CHANNEL?.trim() || "chrome",
-    browserResearch: dependencies.browserClient?.research ?? dependencies.client?.research,
-    browserTimeoutMs: readBrowserTimeoutMs(),
-    glmRead: dependencies.glmClient?.read,
-    headless: process.env.RSS_ARTICLE_BROWSER_HEADLESS !== "false",
-    httpResearch: dependencies.client?.research,
-    videoEnv: env,
-    videoResearch: dependencies.videoClient?.research,
-  });
   return async (value) => {
     const request = parseInput(value);
-    const result = await Effect.runPromise(
+    const env = dependencies.env ?? process.env;
+    const base = await runPluginEffect(loadEnvConfig(env));
+    const layer = ReadingLive({
+      apiKey: base.glmCodingApiKey,
+      browserChannel: base.articleResearch.browserChannel,
+      browserResearch: dependencies.browserClient?.research ?? dependencies.client?.research,
+      browserTimeoutMs: base.articleResearch.browserTimeoutMs,
+      glmRead: dependencies.glmClient?.read,
+      headless: base.articleResearch.browserHeadless,
+      httpResearch: dependencies.client?.research,
+      videoEnv: env,
+      videoResearch: dependencies.videoClient?.research,
+    });
+    const result = await runPluginEffect(
       readOriginal({
-        glmFallback: env.RSS_ARTICLE_GLM_FALLBACK === "true",
+        glmFallback: base.articleResearch.glmFallback,
         mode: request.mode,
         ref: request.ref,
         url: request.url,
-      }).pipe(Effect.provide(layer)),
+      }),
+      { layer },
     );
     return { ...result, tool: "article-research" };
   };
-}
-
-function readBrowserTimeoutMs(): number {
-  const value = Number(process.env.RSS_ARTICLE_BROWSER_TIMEOUT_MS);
-  return Number.isFinite(value) && value >= 5_000 ? value : 30_000;
 }
 
 function parseInput(value: unknown): { mode: ArticleResearchMode; ref: string; url: string } {

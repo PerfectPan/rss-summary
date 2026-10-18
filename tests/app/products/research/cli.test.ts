@@ -7,7 +7,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   parseResearchSuggestions,
   runResearchCommand,
-} from "../../src/presentation/research-cli.js";
+} from "../../../../src/app/products/research/cli.js";
 
 describe("research CLI", () => {
   it("parses the suggestion block emitted by the feed-research prompt", () => {

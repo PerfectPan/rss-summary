@@ -16,6 +16,9 @@ const coveredBySibling = new Map([
   // feed list contract tests sit next to the env config; no module under
   // src/app/config/feed-config.ts
   ["app/config/feed-config", "app/config/env and the acquisition catalog tests"],
+  // Tool metadata (ids, digests, editorial policy strings) is locked verbatim by
+  // the golden registration snapshot and the phase executor tests.
+  ["app/products/daily-ai/tool", "golden registration snapshot and app/rivus/phases tests"],
   // Legacy argv+env loader kept until the product flows move; its behavior is
   // asserted by the app/config tests that replace it.
   ["infrastructure/config", "app/config/env and app/config/argv"],

@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { generateDailyAiDigest } from "../../src/application/daily-ai-digest.js";
-import * as newsBrief from "../../src/application/news-brief.js";
-import type { IndustryBriefDocument } from "../../src/app/products/frontier/flow.js";
-import type { XAccountPosts } from "../../src/acquisition/index.js";
+import { generateDailyAiDigest } from "../../../../src/app/products/daily-ai/flow.js";
+import * as newsBrief from "../../../../src/app/products/news/flow.js";
+import type { IndustryBriefDocument } from "../../../../src/app/products/frontier/flow.js";
+import type { XAccountPosts } from "../../../../src/acquisition/index.js";
 
-import { RssClient } from "../../src/acquisition/infra/adapters/rss-http.js";
-import { WebPageClient } from "../../src/acquisition/infra/adapters/web-page-http.js";
+import { RssClient } from "../../../../src/acquisition/infra/adapters/rss-http.js";
+import { WebPageClient } from "../../../../src/acquisition/infra/adapters/web-page-http.js";
 
 const occurrence = "2026-08-11T01:00:00.000Z";
 const emptyAccounts = async (): Promise<XAccountPosts> => ({ posts: [], audit: [] });

@@ -10,6 +10,11 @@ import {
   type SubscriptionEvidence,
 } from "../../editorial/index.js";
 import { renderMarkdownDigest } from "../render/render.js";
+import { renderDailyAiDigest } from "../render/daily-ai-render.js";
+import { buildDailyAiDigest, dailyAiCategories } from "../../editorial/index.js";
+import { dailyAiEditorialPolicy } from "../products/daily-ai/tool.js";
+import { createDailyAiDeliveryReceipt, saveDailyAiDiagnostics } from "../../delivery/index.js";
+import { generateDailyAiDigest, type DailyAiDigestResult } from "../products/daily-ai/flow.js";
 import {
   collectRivusDigest,
   generateRivusDigest,
@@ -198,5 +203,137 @@ function cacheKey(request: Record<string, unknown>): string {
 }
 
 function trimCache(cache: Map<string, CollectedRivusDigest>): void {
+  while (cache.size > 8) cache.delete(cache.keys().next().value!);
+}
+
+export type RivusDailyAiToolResult =
+  | {
+      phase: "collect";
+      day: string;
+      windowLabel: string;
+      generatedAt: string;
+      evidence: DailyAiDigestResult["evidence"];
+      warnings: string[];
+      sourceAudit: {
+        xAccounts: DailyAiDigestResult["sourceAudit"]["xAccounts"];
+        industry?: Pick<
+          NonNullable<DailyAiDigestResult["sourceAudit"]["industry"]>,
+          "counts" | "sources"
+        >;
+      };
+      editorialContract: {
+        categories: readonly string[];
+        itemTarget: string;
+        outputShape: string;
+        selectionPolicy: string;
+      };
+    }
+  | (Pick<
+      DailyAiDigestResult,
+      "day" | "windowLabel" | "generatedAt" | "warnings" | "deliveryReceipt"
+    > & {
+      phase: "render";
+      itemCount: number;
+      markdown: string;
+      audit: Pick<DailyAiDigestResult["audit"], "editorialIssues">;
+    });
+
+type DailyAiExecutorDependencies = {
+  collect?: (value: unknown) => Promise<DailyAiDigestResult>;
+  saveDiagnostics?: (snapshot: Parameters<typeof saveDailyAiDiagnostics>[0]) => Promise<void>;
+};
+
+export function createRivusDailyAiDigestExecutor(
+  dependencies: DailyAiExecutorDependencies = {},
+): (value: unknown) => Promise<RivusDailyAiToolResult> {
+  const collect = dependencies.collect ?? generateDailyAiDigest;
+  const saveDiagnostics = dependencies.saveDiagnostics ?? saveDailyAiDiagnostics;
+  const cache = new Map<string, DailyAiDigestResult>();
+
+  return async (value) => {
+    const input = parseToolInput(value);
+    let collected = cache.get(input.occurrence);
+    if (input.phase === "collect" || !collected) {
+      collected = await collect({ occurrence: input.occurrence });
+      cache.set(input.occurrence, collected);
+      trimDailyAiCache(cache);
+      await saveDiagnostics({ occurrence: input.occurrence, phase: "collect", result: collected });
+    }
+    if (input.phase === "collect") {
+      return {
+        phase: "collect",
+        day: collected.day,
+        windowLabel: collected.windowLabel,
+        generatedAt: collected.generatedAt,
+        evidence: collected.evidence,
+        warnings: collected.warnings,
+        sourceAudit: {
+          xAccounts: collected.sourceAudit.xAccounts,
+          ...(collected.sourceAudit.industry
+            ? {
+                industry: {
+                  counts: collected.sourceAudit.industry.counts,
+                  sources: collected.sourceAudit.industry.sources,
+                },
+              }
+            : {}),
+        },
+        editorialContract: {
+          categories: dailyAiCategories,
+          itemTarget: "No fixed item count; select meaningful changes, never fill a quota",
+          outputShape: "Array<{category, headline, refs}>",
+          selectionPolicy: dailyAiEditorialPolicy,
+        },
+      };
+    }
+
+    const digest = buildDailyAiDigest(collected.evidence, { draft: input.draft });
+    const result = {
+      ...collected,
+      ...digest,
+      deliveryReceipt: createDailyAiDeliveryReceipt(
+        input.occurrence,
+        digest.items.flatMap(({ refs }) => refs),
+      ),
+    };
+    await saveDiagnostics({ occurrence: input.occurrence, phase: "render", result });
+    cache.delete(input.occurrence);
+    return {
+      day: result.day,
+      windowLabel: result.windowLabel,
+      generatedAt: result.generatedAt,
+      warnings: result.warnings,
+      deliveryReceipt: result.deliveryReceipt,
+      audit: { editorialIssues: result.audit.editorialIssues },
+      phase: "render",
+      itemCount: result.items.length,
+      markdown: renderDailyAiDigest({
+        day: result.day,
+        windowLabel: result.windowLabel,
+        items: result.items,
+        evidence: result.evidence,
+        warnings: result.warnings,
+      }),
+    };
+  };
+}
+
+function parseToolInput(value: unknown): {
+  occurrence: string;
+  phase: "collect" | "render";
+  draft?: unknown;
+} {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new Error("Daily AI Tool input must be an object.");
+  const record = value as Record<string, unknown>;
+  const occurrence = record.occurrence;
+  if (typeof occurrence !== "string" || !Number.isFinite(Date.parse(occurrence)))
+    throw new Error("occurrence must be a valid date-time.");
+  if (record.phase !== "collect" && record.phase !== "render")
+    throw new Error("phase must be collect or render.");
+  return { occurrence, phase: record.phase, draft: record.draft };
+}
+
+function trimDailyAiCache(cache: Map<string, DailyAiDigestResult>): void {
   while (cache.size > 8) cache.delete(cache.keys().next().value!);
 }

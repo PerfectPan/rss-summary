@@ -6,7 +6,7 @@ import { runDigestCommand } from "../app/products/subscriptions/cli.js";
 import { runIndustryCommand } from "../app/products/frontier/cli.js";
 import { runFeedsCommand } from "./feeds-cli.js";
 import { runGithubHomeCommand } from "./github-home-cli.js";
-import { runResearchCommand } from "./research-cli.js";
+import { runResearchCommand } from "../app/products/research/cli.js";
 import { runRunsCommand } from "./runs-cli.js";
 
 type Writable = {

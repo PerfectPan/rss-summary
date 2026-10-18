@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { createArticleResearchExecutor } from "../../src/presentation/research-tool.js";
+import { createArticleResearchExecutor } from "../../../../src/app/products/research/tool.js";
 
 describe("article research Tool", () => {
   it("preserves visual provenance and material links in the scheduled research result", async () => {
