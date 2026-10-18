@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { commitDailyAiDeliveryReceipt, createDailyAiDeliveryReceipt } from "../../index.js";
+import { commitDailyAiDeliveryReceipt, createDailyAiDeliveryReceipt } from "../index.js";
 
 describe("Daily AI delivery receipt", () => {
   it("writes seen state once only after successful delivery", async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { isFailedRun, type RunSourceResult, type StoredRunAudit } from "../../index.js";
+import { isFailedRun, type RunSourceResult, type StoredRunAudit } from "../index.js";
 
 describe("failed run detection", () => {
   it("marks a run failed when delivery failed, state failed, or a source failed", () => {
