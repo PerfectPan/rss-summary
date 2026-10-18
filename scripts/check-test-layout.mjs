@@ -71,6 +71,66 @@ const coveredElsewhere = new Map([
   ],
   // Hits are projected inside the news flow and hybrid retrieval paths.
   ["editorial/domain/news/factories/news-hit", "news flow and hybrid tests"],
+  // The Doubao mapper's tier table is asserted by the dto tests alongside the
+  // parsed page it produces.
+  [
+    "integrations/doubao/mapper",
+    "integrations/doubao/dto tests assert the mapped credibility tiers",
+  ],
+  // The Grok layers are thin binds: the Live layers wrap the CLI clients the
+  // cli tests exercise directly, and the shared provider suite runs them.
+  [
+    "integrations/grok/provider",
+    "integrations/grok/cli tests and the shared search-provider suite",
+  ],
+  // The Grok request schema and native-receipt predicates run inside the CLI
+  // transport and the stream mapper both.
+  [
+    "integrations/grok/search/dto",
+    "integrations/grok/cli tests and search mapper tests",
+  ],
+  // The GLM MCP transport runs behind both the search and reader suites; its
+  // handshake, SSE parsing, and size limits are asserted end to end there.
+  ["integrations/glm/mcp-client", "integrations/glm research, provider, and reader tests"],
+  // The webReader payload decode and page projection run inside readGlmPage,
+  // asserted by the reader and research tests (dates, truncation, origin).
+  ["integrations/glm/reader/dto", "integrations/glm reader and research tests"],
+  ["integrations/glm/reader/mapper", "integrations/glm reader and research tests"],
+  // The search result-list shape is exercised by the mapper tests.
+  ["integrations/glm/search/dto", "integrations/glm search mapper tests"],
+  // The browser lifecycle runs behind the GitHub Home flows and the article
+  // browser reader, both of which drive it end to end with substitutes.
+  [
+    "integrations/shared/browser",
+    "integrations/github home-browser tests and integrations/browser reader tests",
+  ],
+  // The remaining thin binds and secondary halves of split adapter files run
+  // inside the suites named beside them.
+  [
+    "acquisition/infra/factories/live",
+    "app/layers AcquisitionLive tests and the source-catalog repository tests",
+  ],
+  [
+    "integrations/github/activity",
+    "app/layers AcquisitionLive tests (missing storage state) and conduit tests",
+  ],
+  ["integrations/github/catalog", "integrations/github client tests"],
+  [
+    "integrations/github/event/mapper",
+    "integrations/github event dto tests and app/layers AcquisitionLive tests",
+  ],
+  [
+    "integrations/github/home/dto",
+    "integrations/github home mapper and home-browser tests",
+  ],
+  [
+    "integrations/github/repository/dto",
+    "integrations/github repository mapper tests and client tests",
+  ],
+  ["integrations/rss/dto", "integrations/rss mapper tests parse through it"],
+  ["integrations/rss/feed", "app/layers AcquisitionLive tests and rss client tests"],
+  ["integrations/web-page/dto", "integrations/web-page mapper tests extract through it"],
+  ["integrations/web-page/feed", "app/layers AcquisitionLive tests and web-page client tests"],
   // Categories and title cleaning run in the Daily AI flow; the category enum
   // is also locked verbatim by the golden registration snapshot.
   [

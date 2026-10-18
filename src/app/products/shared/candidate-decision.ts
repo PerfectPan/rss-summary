@@ -1,4 +1,4 @@
-import { candidateIdentity } from "../../../acquisition/index.js";
+import { candidateIdentity } from "../../../integrations/shared/index.js";
 import { decideCandidate } from "../../../editorial/index.js";
 
 import type { CandidateProject } from "../../../editorial/index.js";

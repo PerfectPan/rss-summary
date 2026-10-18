@@ -24,6 +24,15 @@ export const cacheRequestSchema = Schema.Struct({
 });
 
 /** Stored pages keep this field order. Optional fields that are absent stay absent. */
+/**
+ * Mirrors `rawPageSchema`'s provider literals: the persisted cache can only
+ * represent pages from the providers the state format knows, so the budget
+ * asks the format (not a service name of its own) which pages may be stored.
+ */
+export function pageRepresentable(page: { provider?: string }): boolean {
+  return page.provider === undefined || page.provider === "doubao" || page.provider === "grok";
+}
+
 export const rawPageSchema = Schema.Struct({
   provider: Schema.optional(Schema.Literals(["doubao", "grok"])),
   grok: Schema.optional(

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { candidateIdentity } from "../../../../acquisition/index.js";
+import { candidateIdentity } from "../../../../integrations/shared/index.js";
 import { decideCandidate } from "./decide-candidate.js";
 import type { CandidateProject } from "../../../index.js";
 

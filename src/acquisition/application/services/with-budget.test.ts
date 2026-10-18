@@ -2,7 +2,8 @@ import { Effect } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
 
 import { withBudget, type BudgetDriver } from "./with-budget.js";
-import { isCacheablePage, normalizeProvider } from "../../domain/budget/adapters/provider.js";
+import { cacheablePage } from "../../domain/budget/index.js";
+import { normalizeProvider } from "../../../integrations/grok/identity.js";
 import { SearchBudget, type BudgetLimits, type CachedPage } from "../../domain/budget/index.js";
 import { NewsSearchError, type SearchInput, type SearchPage } from "../../domain/search/index.js";
 
@@ -36,7 +37,7 @@ function driver(
     now: () => new Date("2026-09-29T03:00:00.000Z"),
     hash,
     normalize: normalizeProvider,
-    isCacheable: isCacheablePage,
+    isCacheable: cacheablePage,
     decodePage: (value) =>
       ({
         resultCount: value.resultCount,

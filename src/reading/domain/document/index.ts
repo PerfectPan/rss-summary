@@ -16,3 +16,4 @@ export {
   type VideoFrame,
   type VideoVisuals,
 } from "./value-objects/document.js";
+export type { ArticleExtract } from "./value-objects/article-extract.js";

@@ -1,8 +1,7 @@
 import { Effect, Schema } from "effect";
 
 import { calendarDayAtOffset } from "../../../kernel/time.js";
-import type { GrokRequest } from "../../domain/item/adapters/grok.js";
-import { errorAudit, pageAudit, type GrokSearchAudit } from "../../domain/search/adapters/audit.js";
+import { GrokProcessRequest } from "../ports.js";
 import {
   isSearchFailure,
   type NewsSearchError,
@@ -23,6 +22,25 @@ const inputSchema = Schema.Struct({
   until: instantSchema,
 });
 
+/**
+ * Native-search receipt copied onto a page or failure. The JSON field name is
+ * the historical one; the canonical shape lives in the provider's ACL.
+ */
+type NativeSearchReceipt = {
+  nativeTools: string[];
+  nativeCallCount?: number;
+  elapsedMs?: number;
+  rejectedResults: number;
+};
+
+function pageReceipt(page: SearchPage): NativeSearchReceipt | undefined {
+  return (page as SearchPage & { grok?: NativeSearchReceipt }).grok;
+}
+
+function errorReceipt(error: NewsSearchError): NativeSearchReceipt | undefined {
+  return (error as NewsSearchError & { grok?: NativeSearchReceipt }).grok;
+}
+
 export type XAccountPosts = {
   posts: Array<{
     id: string;
@@ -38,13 +56,13 @@ export type XAccountPosts = {
     acceptedCount: number;
     limitReached?: boolean;
     errorCode?: string;
-    grok?: GrokSearchAudit;
+    grok?: NativeSearchReceipt;
     searchUsage?: SearchUsage;
   }>;
 };
 
 export type XAccountClient = {
-  search: (value: GrokRequest) => Promise<SearchPage>;
+  search: (value: GrokProcessRequest) => Promise<SearchPage>;
 };
 
 export type OpenSearchBudget = (options: {
@@ -166,7 +184,7 @@ export function collectXAccountPosts(
           status: "failed",
           acceptedCount: 0,
           errorCode: error.code,
-          grok: errorAudit(error as NewsSearchError),
+          grok: errorReceipt(error as NewsSearchError),
         });
         continue;
       }
@@ -186,7 +204,7 @@ export function collectXAccountPosts(
         status: "ok",
         acceptedCount: page.results.length,
         limitReached: page.resultCount >= count,
-        grok: pageAudit(page),
+        grok: pageReceipt(page),
         searchUsage: page.searchUsage,
       });
     }

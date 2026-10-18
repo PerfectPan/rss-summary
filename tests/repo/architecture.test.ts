@@ -59,13 +59,13 @@ describe("architecture boundaries", () => {
         source: "export const run = () => Effect.runPromise(Promise.resolve(1));\n",
       },
       {
-        path: "src/acquisition/infra/adapters/rss-http.ts",
+        path: "src/integrations/rss/client.ts",
         source: "export const run = () => Effect.runPromise(Promise.resolve(1));\n",
       },
     ]);
 
     expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
-      "src/acquisition/infra/adapters/rss-http.ts effect-run",
+      "src/integrations/rss/client.ts effect-run",
     ]);
   });
 
@@ -190,7 +190,7 @@ describe("architecture boundaries", () => {
       rulesOf(
         checkBoundaries([
           {
-            path: "src/delivery/infra/adapters/notifier.ts",
+            path: "src/delivery/infra/notifier/notifier.ts",
             source: [
               'import { appendFileSync } from "node:fs";',
               'import { load } from "cheerio";',
@@ -217,10 +217,10 @@ describe("architecture boundaries", () => {
           'import { readFileSync } from "node:fs";',
           'import { Effect } from "effect";',
           'import { collectRssFeeds } from "../acquisition/index.js";',
-          'import { RssClient } from "../acquisition/infra/adapters/rss-http.js";',
+          'import { budget } from "../acquisition/infra/factories/budgeted-search.js";',
           'import { suite } from "../../tests/support/suite.js";',
           'import { gone } from "../../../../outside.js";',
-          "export const value = [readFileSync, Effect, collectRssFeeds, RssClient, suite, gone];",
+          "export const value = [readFileSync, Effect, collectRssFeeds, budget, suite, gone];",
         ].join("\n"),
       },
     ]);
@@ -236,21 +236,17 @@ describe("architecture boundaries", () => {
       {
         path: "src/acquisition/domain/item/value-objects/model.ts",
         source: [
-          'import { readRss } from "../adapters/rss.js";',
+          'import { search } from "../../../application/ports.js";',
           "export const now = new Date();",
           "export const label = Date.now();",
           'export const source = "github";',
-          "export const adapter = readRss;",
+          "export const adapter = search;",
         ].join("\n"),
-      },
-      {
-        path: "src/acquisition/domain/item/adapters/rss.ts",
-        source: 'import { Effect } from "effect";\nexport const effect = Effect;\n',
       },
       {
         path: "src/acquisition/application/use-cases/search.ts",
         source: [
-          'import { read } from "../../infra/adapters/rss-http.js";',
+          'import { read } from "../../infra/factories/budgeted-search.js";',
           'import { readFileSync } from "node:fs";',
           "const token = process.env.TOKEN;",
           'console.error("search");',
@@ -268,7 +264,7 @@ describe("architecture boundaries", () => {
           'import { search } from "../../../acquisition/application/use-cases/search.js";\nexport const flow = search;\n',
       },
       {
-        path: "src/acquisition/infra/adapters/rss-http.ts",
+        path: "src/acquisition/infra/factories/live.ts",
         source: 'import { chromium } from "playwright";\nexport const browser = chromium;\n',
       },
     ]);
@@ -278,11 +274,10 @@ describe("architecture boundaries", () => {
       "src/acquisition/application/use-cases/search.ts layer",
       "src/acquisition/application/use-cases/search.ts node-builtin",
       "src/acquisition/application/use-cases/search.ts process-env",
-      "src/acquisition/domain/item/adapters/rss.ts effect",
       "src/acquisition/domain/item/value-objects/model.ts clock",
       "src/acquisition/domain/item/value-objects/model.ts layer",
       "src/acquisition/domain/item/value-objects/model.ts source-vocabulary",
-      "src/acquisition/infra/adapters/rss-http.ts playwright",
+      "src/acquisition/infra/factories/live.ts playwright",
       "src/app/products/news/flow.ts deep-import",
       "src/editorial/domain/news/policies/rank.ts types-only",
     ]);
@@ -316,8 +311,8 @@ describe("architecture boundaries", () => {
             source: "export const budget = true;\n",
           },
           {
-            path: "src/acquisition/domain/budget/adapters/provider.ts",
-            source: "export const provider = true;\n",
+            path: "src/acquisition/domain/budget/services/cached-page.ts",
+            source: "export const cachedPage = true;\n",
           },
           {
             path: "src/editorial/domain/news/policies/news-funnel.test.ts",
@@ -373,8 +368,157 @@ describe("architecture boundaries", () => {
             source: "export const live = true;\n",
           },
           {
-            path: "src/reading/infra/services/json-record.ts",
-            source: "export const record = true;\n",
+            path: "src/acquisition/infra/platform/node-file-system.ts",
+            source: "export const platform = true;\n",
+          },
+        ]),
+      ),
+    ).toEqual([]);
+  });
+
+  it("accepts an integration composed from module facades, kernel, and shared code", () => {
+    expect(
+      rulesOf(
+        checkBoundaries([
+          {
+            path: "src/integrations/glm/search/provider.ts",
+            source: [
+              'import { Layer } from "effect";',
+              'import { readFile } from "node:fs/promises";',
+              'import { HttpClient } from "effect/http";',
+              'import { SearchProvider } from "../../../acquisition/index.js";',
+              'import { canonicalizeUrl } from "../../../kernel/text.js";',
+              'import { asRecord } from "../../shared/json-record.js";',
+              "export const provider = [Layer, readFile, HttpClient, SearchProvider, canonicalizeUrl, asRecord];",
+            ].join("\n"),
+          },
+          {
+            path: "src/integrations/shared/http.ts",
+            source: 'import { cheerioLoad } from "cheerio";\nexport const http = cheerioLoad;\n',
+          },
+          {
+            path: "src/app/layers.ts",
+            source:
+              'import { GlmSearchLive } from "../integrations/glm/index.js";\nexport const live = GlmSearchLive;\n',
+          },
+        ]),
+      ),
+    ).toEqual([]);
+  });
+
+  it("detects integrations reaching a sibling service, app, or module internals", () => {
+    const violations = checkBoundaries([
+      {
+        path: "src/integrations/doubao/provider.ts",
+        source:
+          'import { parseGrokStream } from "../grok/search/mapper.js";\nexport const provider = parseGrokStream;\n',
+      },
+      {
+        path: "src/integrations/shared/http.ts",
+        source:
+          'import { readConduit } from "../github/home-browser.js";\nexport const http = readConduit;\n',
+      },
+      {
+        path: "src/integrations/glm/search/provider.ts",
+        source:
+          'import { runPluginEffect } from "../../../app/runtime.js";\nexport const provider = runPluginEffect;\n',
+      },
+      {
+        path: "src/integrations/glm/search/provider.ts",
+        source:
+          'import { parseFeedXml } from "../../../acquisition/domain/item/adapters/rss.js";\nexport const provider = parseFeedXml;\n',
+      },
+      {
+        path: "src/integrations/doubao/provider.ts",
+        source: 'import { chromium } from "playwright";\nexport const provider = chromium;\n',
+      },
+      {
+        path: "src/integrations/loose.ts",
+        source: "export const loose = true;\n",
+      },
+    ]);
+
+    expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
+      "src/integrations/doubao/provider.ts integration-isolation",
+      "src/integrations/doubao/provider.ts playwright",
+      "src/integrations/glm/search/provider.ts deep-import",
+      "src/integrations/glm/search/provider.ts integration-dependency",
+      "src/integrations/loose.ts integration-root",
+      "src/integrations/shared/http.ts shared-isolation",
+    ]);
+  });
+
+  it("keeps business modules and their entry files off the integrations tree", () => {
+    const violations = checkBoundaries([
+      {
+        path: "src/acquisition/infra/factories/live.ts",
+        source:
+          'import { RssFeedLive } from "../../../integrations/rss/feed.js";\nexport const live = RssFeedLive;\n',
+      },
+      {
+        path: "src/acquisition/index.ts",
+        source:
+          'import { DoubaoSearchLive } from "../integrations/doubao/index.js";\nexport const live = DoubaoSearchLive;\n',
+      },
+      {
+        path: "src/editorial/domain/news/policies/rank.ts",
+        source:
+          'import { grokAudit } from "../../../../integrations/grok/audit.js";\nexport const ranked = grokAudit;\n',
+      },
+    ]);
+
+    expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
+      "src/acquisition/index.ts module-dependency",
+      "src/acquisition/index.ts source-vocabulary",
+      "src/acquisition/infra/factories/live.ts module-dependency",
+      "src/acquisition/infra/factories/live.ts source-vocabulary",
+      "src/editorial/domain/news/policies/rank.ts module-dependency",
+      "src/editorial/domain/news/policies/rank.ts source-vocabulary",
+    ]);
+  });
+
+  it("keeps provider names out of application and infra unless the surface is locked", () => {
+    const violations = checkBoundaries([
+      {
+        path: "src/acquisition/application/services/budget-defaults.ts",
+        source: 'export const provider = "github";\n',
+      },
+      {
+        path: "src/reading/infra/repository/notes.ts",
+        source: 'export const note = "doubao";\n',
+      },
+      // Locked surfaces: the package's own name and the whitelisted files keep
+      // their historical wording.
+      {
+        path: "src/acquisition/application/ports.ts",
+        source:
+          'export class RssFeed extends Context.Service<RssFeed>("rss-summary/acquisition/RssFeed/v1") {}\n',
+      },
+      {
+        path: "src/acquisition/application/services/budget-defaults.ts",
+        source: "export const defaults = { grok: { dailyLimit: 4 } };\n",
+      },
+    ]);
+
+    expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
+      "src/acquisition/application/services/budget-defaults.ts source-vocabulary",
+      "src/reading/infra/repository/notes.ts source-vocabulary",
+    ]);
+  });
+
+  it("lets sibling tests reach integrations at file level", () => {
+    expect(
+      rulesOf(
+        checkBoundaries([
+          {
+            path: "src/integrations/glm/search/provider.test.ts",
+            source:
+              'import { parseGrokStream } from "../../grok/search/mapper.js";\nexport const suite = parseGrokStream;\n',
+          },
+          {
+            path: "src/editorial/domain/news/policies/rank.test.ts",
+            source:
+              'import { pageAudit } from "../../../../integrations/grok/audit.js";\nexport const test = pageAudit;\n',
           },
         ]),
       ),
@@ -398,7 +542,7 @@ function testGraph(): SourceInput[] {
       path: "src/acquisition/domain/item/item.test.ts",
       source: [
         'import { Effect } from "effect";',
-        'import { readConduit } from "../../infra/adapters/browser.js";',
+        'import { readConduit } from "../../../integrations/github/index.js";',
         'import { scoreAcquired } from "../../../editorial/index.js";',
         'import { suite } from "../../../../tests/support/search-provider-suite.js";',
         "export const value = [Effect, readConduit, scoreAcquired, suite];",
@@ -416,23 +560,24 @@ function legalGraph(): SourceInput[] {
         'import { empty } from "../../../../kernel/text.js";\nexport const created = (value: string) => new Date(value);\nexport const label = empty;\n',
     },
     {
-      path: "src/acquisition/domain/item/adapters/rss.ts",
-      source:
-        'import { Schema } from "effect";\nimport { created } from "../value-objects/model.js";\nexport const parsed = [Schema, created];\n',
-    },
-    {
       path: "src/acquisition/application/use-cases/search.ts",
       source:
         'import { Effect } from "effect";\nimport { created } from "../../domain/item/value-objects/model.js";\nexport const search = [Effect, created];\n',
     },
     {
-      path: "src/acquisition/infra/adapters/browser.ts",
-      source: 'import { chromium } from "playwright";\nexport const browser = chromium;\n',
+      path: "src/integrations/rss/mapper.ts",
+      source:
+        'import { created } from "../../acquisition/index.js";\nimport { decodeSchema } from "../shared/decode.js";\nexport const parsed = [created, decodeSchema];\n',
     },
     {
-      path: "src/acquisition/infra/adapters/rss-http.ts",
+      path: "src/integrations/shared/scoring-trace.ts",
       source:
-        'import { parsed } from "../../domain/item/adapters/rss.js";\nexport const events = parsed;\n',
+        'import type { Acquired } from "../../acquisition/index.js";\nexport const routed = (acquired: Acquired) => acquired;\n',
+    },
+    {
+      path: "src/acquisition/infra/repository/search-budget-file.ts",
+      source:
+        'import { Effect } from "effect";\nimport { empty } from "../../../kernel/text.js";\nexport const file = [Effect, empty];\n',
     },
     {
       path: "src/editorial/domain/news/policies/rank.ts",
@@ -440,14 +585,14 @@ function legalGraph(): SourceInput[] {
         'import type { created } from "../../../../acquisition/domain/item/value-objects/model.js";\nimport { empty } from "../../../../kernel/text.js";\nexport const rank = [empty, created];\n',
     },
     {
-      path: "src/app/products/shared/glm-research.ts",
+      path: "src/app/products/shared/industry.ts",
       source:
-        'import { GlmSearchClient } from "../../../acquisition/index.js";\nimport { readGlmPage } from "../../../reading/index.js";\nexport const research = [GlmSearchClient, readGlmPage];\n',
+        'import { collectIndustrySources } from "../../../acquisition/index.js";\nimport { refreshRouting } from "../../../integrations/shared/index.js";\nexport const industry = [collectIndustrySources, refreshRouting];\n',
     },
     {
       path: "src/app/products/news/flow.ts",
       source:
-        'import { search } from "../../../acquisition/index.js";\nimport { empty } from "../../../kernel/index.js";\nimport { createGlmResearch } from "../shared/glm-research.js";\nexport const flow = [search, empty, createGlmResearch];\n',
+        'import { settleSearches } from "../../../acquisition/index.js";\nimport { empty } from "../../../kernel/index.js";\nimport { createGlmResearch } from "../../../integrations/glm/index.js";\nexport const flow = [settleSearches, empty, createGlmResearch];\n',
     },
   ];
 }

@@ -3,12 +3,12 @@ import { describe, expect, it, vi } from "vite-plus/test";
 
 import { runGithubHomeCommand, writeGithubHomeHelp } from "./github-home.js";
 
-vi.mock("../../acquisition/index.js", async (importOriginal) => ({
+vi.mock("../../integrations/github/index.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
-  saveGithubHomeStorageState: vi.fn(),
+  saveLoginStorageState: vi.fn(),
 }));
 
-import { saveGithubHomeStorageState } from "../../acquisition/index.js";
+import { saveLoginStorageState } from "../../integrations/github/index.js";
 
 describe("github-home CLI command", () => {
   it("prints help for the help subcommand", async () => {
@@ -35,7 +35,7 @@ describe("github-home CLI command", () => {
   it("reports login failures on stderr without a trace", async () => {
     const output: string[] = [];
     const errors: string[] = [];
-    vi.mocked(saveGithubHomeStorageState).mockReturnValueOnce(
+    vi.mocked(saveLoginStorageState).mockReturnValueOnce(
       Effect.fail(new Error("browser unavailable")) as never,
     );
 

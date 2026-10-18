@@ -2,14 +2,14 @@ import { layer as NodeFileSystemLayer } from "@effect/platform-node/NodeFileSyst
 import { Effect, Layer } from "effect";
 
 import {
-  AcquisitionLive,
   GitHubActivity,
   GitHubCatalog,
   RssFeed,
   SearchBudgetRepository,
   SourceCatalogStore,
+  SearchBudgetRepositoryLive,
+  SourceCatalogStoreLive,
   WebPage,
-  type AcquisitionOptions,
 } from "../acquisition/index.js";
 import {
   DeliveryLive,
@@ -22,12 +22,134 @@ import {
   BrowserReader,
   GlmReader,
   HttpReader,
-  ReadingLive,
+  type GlmPage,
   VideoReader,
-  type ReadingLiveOptions,
 } from "../reading/index.js";
+import { ArticleResearchClient, extractArticle } from "../integrations/article-http/index.js";
+import { browserArticleResearch, type BrowserPageFetcher } from "../integrations/browser/index.js";
+import { readGlmPage } from "../integrations/glm/index.js";
+import { GitHubActivityLive, GitHubCatalogLive } from "../integrations/github/index.js";
+import { RssFeedLive } from "../integrations/rss/index.js";
+import { WebPageLive } from "../integrations/web-page/index.js";
+import type { GithubHomeClientOptions } from "../integrations/github/index.js";
+import {
+  transcriptEvidence,
+  VideoResearchClient,
+  videoVisualEvidence,
+  type VideoTranscriptFormatter,
+  type VideoVisualFormatter,
+} from "../integrations/video/index.js";
+import type { ReadRequest, ReadResult } from "../reading/index.js";
 import type { DeliveryOptions } from "../delivery/index.js";
 import { loadEnvConfig, type AppConfig } from "./config/env.js";
+
+export type ReadingLiveOptions = {
+  apiKey?: string;
+  browserChannel?: string;
+  browserResearch?: (request: ReadRequest) => Effect.Effect<ReadResult>;
+  browserTimeoutMs?: number;
+  fetch?: typeof fetch;
+  fetchPage?: BrowserPageFetcher;
+  formatTranscript?: VideoTranscriptFormatter;
+  formatVisuals?: VideoVisualFormatter;
+  glmRead?: (url: string) => Promise<GlmPage>;
+  glmTimeoutMs?: number;
+  headless?: boolean;
+  httpResearch?: ArticleResearchClient["research"];
+  maxBytes?: number;
+  maxChars?: number;
+  now?: () => Date;
+  timeoutMs?: number;
+  videoEnv?: NodeJS.ProcessEnv;
+  videoResearch?: VideoResearchClient["research"];
+};
+
+/**
+ * Assemble the reading ports from their integrations: the HTTP/browser/video
+ * readers and the GLM fallback. Substitutes let hosts and tests replace one
+ * leg of the chain without touching the others.
+ */
+export function ReadingLive(
+  options: ReadingLiveOptions = {},
+): Layer.Layer<HttpReader | BrowserReader | VideoReader | GlmReader, never, never> {
+  const httpClient = new ArticleResearchClient({
+    extract: extractArticle,
+    fetch: options.fetch,
+    maxBytes: options.maxBytes,
+    maxChars: options.maxChars,
+    now: options.now,
+    timeoutMs: options.timeoutMs,
+  });
+  const browserResearch = browserArticleResearch({
+    browserChannel: options.browserChannel,
+    extract: extractArticle,
+    fetchPage: options.fetchPage,
+    headless: options.headless,
+    maxChars: options.maxChars,
+    timeoutMs: options.browserTimeoutMs,
+  });
+  const videoClient = new VideoResearchClient({
+    env: options.videoEnv,
+    fetch: options.fetch,
+    formatTranscript: options.formatTranscript ?? transcriptEvidence,
+    formatVisuals: options.formatVisuals ?? videoVisualEvidence,
+  });
+  const http = Layer.succeed(HttpReader, {
+    research: (request) =>
+      Effect.promise(() => (options.httpResearch ?? httpClient.research.bind(httpClient))(request)),
+  });
+  const browser = Layer.succeed(BrowserReader, {
+    research: options.browserResearch ?? browserResearch,
+  });
+  const video = Layer.succeed(VideoReader, {
+    research: (request) =>
+      Effect.promise(() =>
+        (options.videoResearch ?? videoClient.research.bind(videoClient))(request),
+      ),
+  });
+  const glm = Layer.succeed(GlmReader, {
+    read: (url) =>
+      Effect.tryPromise({
+        try: () =>
+          (
+            options.glmRead ??
+            ((target: string) =>
+              readGlmPage(target, {
+                apiKey: options.apiKey ?? "",
+                fetch: options.fetch,
+                timeoutMs: options.glmTimeoutMs,
+              }))
+          )(url),
+        catch: (cause) => cause,
+      }),
+  });
+  return Layer.mergeAll(http, browser, video, glm);
+}
+
+export type AcquisitionOptions = {
+  token?: string;
+  fetch?: typeof fetch;
+  githubHome?: GithubHomeClientOptions;
+};
+
+/**
+ * Assemble the acquisition ports from their integrations (feed, listing pages,
+ * GitHub activity and catalog) plus the module's own state-backed stores.
+ */
+export function AcquisitionLive(
+  options: AcquisitionOptions = {},
+): Layer.Layer<
+  RssFeed | WebPage | GitHubActivity | GitHubCatalog | SourceCatalogStore | SearchBudgetRepository
+> {
+  return Layer.mergeAll(
+    RssFeedLive({ fetch: options.fetch }),
+    WebPageLive({ fetch: options.fetch }),
+    GitHubActivityLive(options),
+    GitHubCatalogLive({ token: options.token, fetch: options.fetch }),
+    SourceCatalogStoreLive,
+    SearchBudgetRepositoryLive,
+  );
+}
 
 /** Every port the app consumes, provided by AppLive. */
 export type AppServices =

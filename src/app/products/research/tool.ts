@@ -3,12 +3,12 @@ import { Effect } from "effect";
 
 import {
   readOriginal,
-  ReadingLive,
   type GlmPage,
   type ReadOriginalResult,
   type ReadRequest,
   type ReadResult,
 } from "../../../reading/index.js";
+import { ReadingLive } from "../../layers.js";
 import { loadEnvConfig } from "../../config/env.js";
 import { runPluginEffect } from "../../runtime.js";
 

@@ -23,12 +23,10 @@ import {
 } from "../../../kernel/index.js";
 import { boundedInteger } from "../../config/parse.js";
 import { loadNewsTopics } from "./topics.js";
-import { createGlmResearch, type GlmResearch } from "../shared/glm-research.js";
+import { createGlmResearch, type GlmResearch } from "../../../integrations/glm/index.js";
 import {
   createBudgetedNewsSearch,
-  DoubaoSearchClient,
   editionRotation,
-  GrokSearchClient,
   isSearchFailure,
   NewsSearchError,
   resolveNewsCredibility,
@@ -37,8 +35,10 @@ import {
   selectQueryIds,
   settleSearches,
   type NewsSearchInput,
-  type NewsSearchPage,
 } from "../../../acquisition/index.js";
+import { DoubaoSearchClient } from "../../../integrations/doubao/index.js";
+import { GrokSearchClient, normalizeProvider } from "../../../integrations/grok/index.js";
+import type { AuditedSearchPage as NewsSearchPage } from "../../../integrations/grok/index.js";
 import { createHybridNewsSearch } from "./hybrid.js";
 
 export type { NewsBriefEdition };
@@ -413,6 +413,7 @@ function createSearch(
     return createBudgetedNewsSearch({
       search: (input) => client.search(input),
       provider: `grok://cli/v1/${model ?? "default"}`,
+      normalize: normalizeProvider,
       stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || searchBudgetDefaults.stateFile,
       dailyLimit: boundedInteger(
         env.NEWS_SEARCH_DAILY_LIMIT,

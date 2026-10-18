@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 
 import { errorMessage } from "../../../kernel/text.js";
-import type { Acquired } from "../../domain/item/adapters/activity-card.js";
+import type { Acquired } from "../../domain/item/index.js";
 import {
   isWebPageSource,
   type FeedSubscription,

@@ -4,7 +4,8 @@ import { dirname, join } from "node:path";
 
 import { describe, expect, it } from "vite-plus/test";
 
-import { publicationAcquired, type ActivityCardDto } from "../../../acquisition/index.js";
+import type { ActivityCardDto } from "../../../acquisition/index.js";
+import { publicationAcquired } from "../../../integrations/shared/index.js";
 import { runDigestCommand, runFeedsCommand } from "./cli.js";
 
 describe("subscriptions digest CLI", () => {

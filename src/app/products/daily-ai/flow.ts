@@ -4,7 +4,7 @@ import {
   createDailyAiDeliveryReceipt,
   type DailyAiDeliveryReceipt,
 } from "../../../delivery/index.js";
-import { collectXAccountPosts, type XAccountPosts } from "../../../acquisition/index.js";
+import { collectXAccountPosts, type XAccountPosts } from "../../../integrations/grok/index.js";
 import {
   buildDailyAiDigest,
   cleanDailyAiTitle,
@@ -14,7 +14,7 @@ import {
 } from "../../../editorial/index.js";
 import { calendarDayAtOffset, parseOffsetMilliseconds } from "../../../kernel/index.js";
 import { loadEnvConfig } from "../../config/env.js";
-import { isDailyAiPaperSource } from "../../../acquisition/index.js";
+import { isDailyAiPaperSource } from "../../../integrations/rss/index.js";
 
 export type DailyAiDigestResult = DailyAiDigest & {
   day: string;

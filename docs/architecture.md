@@ -4,25 +4,30 @@
 
 ## Module layout
 
-The code base is one package with a shared kernel, four business modules, and one application layer that composes them into products:
+The code base is one package with a shared kernel, four business modules, the integrations tree for external services, and one application layer that composes them into products:
 
 ```text
 src/
-  kernel/       shared Result type, time windows, text helpers (pure TS)
-  acquisition/  where information comes from: the source-neutral Item model,
-                source catalog rules, search budgets, and the adapters that
-                translate RSS / listing pages / GitHub / Doubao / Grok / GLM
-  reading/      what one URL says: the Document model, URL safety policy,
-                text extraction, and the video → browser → HTTP → GLM chain
-  editorial/    what is worth publishing: identity, subscription scoring,
-                presentation depth, paper quota, news relevance and quotas,
-                Daily AI categories, evidence validation, decisions
-                (pure computation — no application/ or infra/)
-  delivery/     what was sent and what is remembered: the delivered/researched
-                ledger, Daily AI receipts, notifier, run archive storage
-  app/          the consumer application: product flows (subscriptions,
-                frontier, news, daily-ai, research), the Rivus plugin, the
-                CLI, Markdown/Automation rendering, and configuration
+  kernel/         shared Result type, time windows, text helpers (pure TS)
+  acquisition/    where information comes from: the source-neutral Item model,
+                  source catalog rules, search budgets, collection use cases
+  reading/        what one URL says: the Document model, URL safety policy,
+                  the read-original use case behind the reader ports
+  editorial/      what is worth publishing: identity, subscription scoring,
+                  presentation depth, paper quota, news relevance and quotas,
+                  Daily AI categories, evidence validation, decisions
+                  (pure computation — no application/ or infra/)
+  delivery/       what was sent and what is remembered: the delivered/researched
+                  ledger, Daily AI receipts, notifier, run archive storage
+  integrations/   one anti-corruption layer per external service (rss, web-page,
+                  github, doubao, grok, glm, article-http, browser, video) plus
+                  shared/ for the technical code several services need; each
+                  service owns its transport, DTO decoding, mapping, and the
+                  Layer implementing the owning module's port
+  app/            the consumer application: product flows (subscriptions,
+                  frontier, news, daily-ai, research), the Rivus plugin, the
+                  CLI, Markdown/Automation rendering, configuration, and the
+                  layer assembly in layers.ts that wires integrations to ports
 ```
 
 Each business module follows the same internal shape (only the directories it uses exist):
@@ -39,27 +44,29 @@ Each business module follows the same internal shape (only the directories it us
                             cache entries; read only through the root)
     factories/              constructors assembling the model's inputs
     services/               stateless computation over several value objects
-    adapters/               external formats → the concept's model (effect/Schema)
     index.ts                the concept facade; concepts reach each other through it
   application/              ports.ts (Context.Service) + use-cases/ + services/;
                             the root keeps only ports.ts and errors.ts
-  infra/                    adapters/ (port implementations), repository/,
-                            models/ (storage schemas), factories/ (layer
-                            compositions), services/ (helpers shared inside infra);
-                            no loose files at the root
+  infra/                    repository/ (state files), models/ (storage and
+                            config schemas), factories/ (layer compositions),
+                            and purposeful platform directories (notifier/,
+                            platform/); no loose files at the root
   index.ts                  the module's public boundary
 ```
+
+`src/integrations/<service>/` is flat for single-capability services (`client.ts` transport, `dto.ts` schemas/decoding, `mapper.ts` DTO → module models, and the port implementation named after its port) and splits into capability subdirectories (`search/`, `reader/`) for multi-capability services sharing one transport. `src/integrations/shared/` holds the multi-service technical code: the HTTP client plumbing, the one Playwright browser lifecycle, JSON record helpers, and the historical activity-card projection. No `adapters/` directory exists anywhere: that name split one service's knowledge across module layers, so it was replaced by the integration (the whole service in one place) and by purposeful infra names for module-local plumbing.
 
 ## Module boundaries
 
 | Module | Answers | Owns | Never does |
 | --- | --- | --- | --- |
 | **kernel** | shared vocabulary | `Result`, time windows, text helpers | know about any module |
-| **acquisition** | where information comes from | the source-neutral `Item`, source catalog rules, paper-source detection, `SearchBudget`, format adapters, fetching | decide what is worth publishing |
-| **reading** | what this URL says | `Document`, URL safety, body extraction, the reader fallback chain | credibility or window judgments; depends only on kernel |
+| **acquisition** | where information comes from | the source-neutral `Item`, source catalog rules, `SearchBudget`, the collection and search use cases, their ports | decide what is worth publishing |
+| **reading** | what this URL says | `Document`, URL safety, the read-original use case and reader ports | credibility or window judgments; depends only on kernel |
 | **editorial** | what is worth publishing and at what depth | identity/dedup, scoring, presentation depth, paper quota, news funnel, Daily AI rules, evidence validation, reasoned decisions | any IO or state |
 | **delivery** | what was sent and remembered | seen/researched ledger, only-new filtering, Daily AI receipts, notifier, run/diagnostics storage | content judgments |
-| **app** | how products are assembled | product flows, Rivus protocol and session cache, CLI, rendering, env config, layer assembly | business rules that belong to a module |
+| **integrations** | what each external service's wire format means | one ACL per service: transport, DTO decoding, field-semantics mapping, port implementations | business rules, or knowledge of another service |
+| **app** | how products are assembled | product flows, Rivus protocol and session cache, CLI, rendering, env config, layer assembly (modules + integrations) | business rules that belong to a module |
 
 Cross-module orchestration — "collect → rank → top up → deliver" — lives in `app/products/`. Modules never call each other's use cases, and products never import each other: composition shared by products lives in `app/products/shared/`. Daily AI composes two existing paths: acquisition's `collectXAccountPosts` for X accounts and the shared industry pipeline's `buildIndustryDocument` (`app/products/shared/industry.ts`) for official sources.
 
@@ -74,23 +81,31 @@ Between modules:
 | kernel | nothing |
 | acquisition, reading, delivery | kernel |
 | editorial | kernel; acquisition and reading (types only) |
-| app | every module, through each module's `index.ts` only |
+| app | every module, through each module's `index.ts` only; `src/integrations/` freely |
 
 Inside a module:
 
 | Layer | May import | Never |
 | --- | --- | --- |
-| `domain/<concept>/` | sibling concepts, kernel, upstream module types | `adapters/`, external packages (incl. Effect), `node:*`, IO, bare `Date.now()` / `new Date()`, source vocabulary (github, rss, doubao, grok, glm, arxiv, x.com) |
-| `domain/<concept>/adapters/` | the module's domain and adapters, kernel, `effect/Schema`, parser libraries | `node:*`, IO, other Effect APIs |
-| `application/` | the module's domain and adapters, kernel, Effect | the module's infra, `node:*`, `process.env`, `console` |
-| `infra/` | the module's domain/adapters/application, kernel, Effect, `node:*`, allow-listed packages (Playwright only in the two browser adapters) | other modules' internals |
-| `app/` | module `index.ts` files, kernel, Effect, `@rivus/agent`, `node:*` | module internals |
+| `domain/<concept>/` | sibling concepts, kernel, upstream module types | external packages (incl. Effect), `node:*`, IO, bare `Date.now()` / `new Date()`, source vocabulary (github, rss, doubao, grok, glm, arxiv, x.com) |
+| `application/` | the module's domain, kernel, Effect | the module's infra, `src/integrations/`, `node:*`, `process.env`, `console` |
+| `infra/` | the module's domain/application/infra, kernel, Effect, `node:*`, allow-listed packages | `src/integrations/`, other modules' internals |
+| any business module | — | `src/integrations/` (only `app` composes integrations) |
+
+Inside `src/integrations/`:
+
+| Location | May import | Never |
+| --- | --- | --- |
+| `<service>/` | module `index.ts` facades, kernel, Effect, `node:*`, allow-listed parser packages, `integrations/shared/` | another service, `app`, module internals, `Effect.run*` |
+| `shared/` | module `index.ts` facades, kernel, Effect, `node:*` (playwright only here) | any concrete service |
+
+The source vocabulary (github, rss, doubao, grok, glm, arxiv, x.com, …) is banned in every business module layer — domain, application, infra, and the module `index.ts` — and free in `integrations/` and `app`. A narrow, documented allowlist in `scripts/architecture/boundaries.ts` keeps the occurrences that are themselves locked external surfaces (run-audit kind values, provider receipts, budget identities, persisted provider literals, the reader chain's method names).
 
 ## Effect usage
 
-- `domain/` (including adapters) is pure TypeScript. Failures return kernel `Result` values; validation errors with fixed messages are `Error` subclasses carrying a `_tag`. Adapters may use `effect/Schema` for decoding and nothing else from Effect.
+- `domain/` is pure TypeScript. Failures return kernel `Result` values; validation errors with fixed messages are `Error` subclasses carrying a `_tag`. Effect stays out of the domain entirely; DTO decoding with `effect/Schema` happens in the integrations.
 - `application/` use cases return `Effect`. Ports are `Context.Service` with keys like `rss-summary/<module>/<Port>/v1`; the domain's `Result` values enter the error channel at the boundary.
-- `infra/` implements ports as `Layer`s named `<Variant><Port>Live`. Acquisition HTTP goes through Effect's `HttpClient` over an injected `fetch`; the source catalog repository reads through the platform `FileSystem` (`@effect/platform-node`). The other state files use `node:fs` inside Effect: the search budget lock is held with `acquireUseRelease` and state writes run `uninterruptible`. Playwright sessions are managed with `acquireRelease`.
+- `infra/` implements module-local ports as `Layer`s named `<Variant><Port>Live`; service ports are implemented by `src/integrations/<service>/` layers of the same naming. Acquisition HTTP goes through Effect's `HttpClient` over an injected `fetch` (the plumbing lives in `integrations/shared/http.ts`); the source catalog repository reads through the platform `FileSystem` (`@effect/platform-node`). The other state files use `node:fs` inside Effect: the search budget lock is held with `acquireUseRelease` and state writes run `uninterruptible`. Playwright sessions are managed with `acquireRelease` in `integrations/shared/browser.ts`.
 - `app/` assembles `AppLive` from the module layers and is the only place that runs effects: `Effect.run*` may appear in `src/app/runtime.ts` alone (test files excepted; enforced by the `effect-run` boundary rule). The CLI runs one `runPromiseExit` per command; the Rivus plugin builds a `ManagedRuntime` over `AppLive` for each execution (`src/app/layers.ts` assembles the layers).
 
 ## Product boundaries
@@ -259,7 +274,7 @@ Unit tests live next to the source file they exercise: `src/<module>/<path>/<nam
 - Add a personal source with `rss-summary feeds add`; this changes `feeds.json`.
 - Add a frontier RSS/Atom source when it is first-party. A `page` source additionally requires a same-origin path prefix, explicit dates, policy review, fixture coverage, and a live dry-run; edit `industry-feeds.json` intentionally.
 - Adjust importance in `src/editorial/domain/subscription/policies/scoring.ts`; adjust display depth in `policies/presentation.ts` of the same concept.
-- Add a source: a new format adapter under `acquisition/domain/item/adapters/` plus a port implementation under `acquisition/infra/adapters/`.
+- Add a source: a new directory under `src/integrations/` owning the transport, DTO decoding, mapper, and the port implementation (`feed.ts`/`activity.ts`/…), then wire it in `app/layers.ts`.
 - Add a search provider: implement the `SearchProvider` port; `withBudget` and `withRetry` wrap it unchanged.
 - Add a delivery channel: route the output through the View IR first, then extend the `Notifier` port.
 - Add a host (CLI alternative, webhook service): a new directory under `app/` iterating the same product registry.

@@ -393,6 +393,7 @@ infra 可以直接调用同模块的 adapters，把取到的原始数据解码�
 - **`withBudget` 的请求共享限定在同一个 fiber 树内**（P6）：每个 key 一个 `Deferred`，同一 fiber 树内相同请求共享一次预约；不同的 `run*` 调用之间不再共享。生产路径（`settleSearches` 的 fiber 树、X 账号的串行采集）不受影响。
 - **研究合并函数留在 `editorial/domain/evidence`**（P5a）：放进 `subscription` 会形成 import 环。
 - **Automation Presentation 从 Markdown 解码**（P7）：Rivus 只把 Agent 回复的文本交给 presentation 钩子，因此 `app/render/view-decode.ts` 先把 Markdown 解码为 View IR，再投影。`--json` 输出不经过 View IR。
+- **外部服务按服务归集到 `src/integrations/`**（P12 后续）：每个外部服务的传输、DTO 解码、字段语义映射和端口实现集中到 `src/integrations/<服务>/`，多服务共用的技术代码放 `integrations/shared/`；各模块的 `domain/<concept>/adapters/` 与 `infra/adapters/` 因此消失。这与 agent-kit「按概念在 domain 内放 adapters」的做法不同：同一个服务的格式与传输知识被一层模块边界拆成两半（GLM 的 MCP 传输甚至写了两份），按服务集中才是一份完整的防腐层（ACL）兼被动适配器（driven adapter）；模块只保留端口和模型，组装集中在 `app/layers.ts`，依赖方向由 `boundaries.ts` 强制为「integration → 模块门面、业务模块 ↛ integration」。
 - **测试布局**（P8）：单元测试与源文件同目录。`tests/` 保留 `golden/`、`fixtures/`、`repo/`、`support/` 四个目录：仓库配置文件测试（`feed-config.test.ts`）放在 `tests/repo/`，多个 SearchProvider 共用的测试套件放在 `tests/support/`，`src` 中没有测试辅助文件。测试文件不受所在层的依赖规则约束，跨模块 import 不限方向，但仍只能经过 `index.ts`。
 
 - D11 只在 pnpm 开发工作区成立：npm 消费者环境里，Rivus 0.12.7 兼容基线会带入 effect 3.x，0.18.0 配置下 `@effect/platform-node-shared` 会解析到 4.0.5。因此 `check-package` 改为校验「本包实际加载的 effect 是 4.0.0」，其他副本只提示、不判失败（跨插件边界只传 Promise 和纯数据，不受影响）。

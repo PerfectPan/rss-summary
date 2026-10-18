@@ -1,8 +1,8 @@
 import { Deferred, Effect } from "effect";
 
 import { isErr } from "../../../kernel/result.js";
-import { parseCacheRequest } from "../../domain/budget/adapters/request.js";
-import { presentCachedPage } from "../../domain/budget/adapters/provider.js";
+import { parseCacheRequest } from "./cache-request.js";
+import { presentCachedPage } from "../../domain/budget/index.js";
 import {
   cacheKey,
   validateBudgetOptions,
@@ -15,7 +15,6 @@ import {
   type PresentCache,
   type SearchBudget,
 } from "../../domain/budget/index.js";
-import type { AuditedSearchPage } from "../../domain/search/adapters/audit.js";
 import {
   NewsSearchError,
   type SearchInput,
@@ -23,7 +22,7 @@ import {
   type SearchUsage,
 } from "../../domain/search/index.js";
 
-export type BudgetedSearchPage = AuditedSearchPage & { searchUsage: SearchUsage };
+export type BudgetedSearchPage = SearchPage & { searchUsage: SearchUsage };
 
 export type BudgetedSearch = {
   (input: SearchInput): Effect.Effect<BudgetedSearchPage, unknown>;

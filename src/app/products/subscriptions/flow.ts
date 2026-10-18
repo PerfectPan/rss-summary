@@ -2,12 +2,11 @@ import { randomUUID } from "node:crypto";
 
 import { Effect } from "effect";
 
+import { applyScoringContext, refreshRouting } from "../../../integrations/shared/index.js";
 import {
-  applyScoringContext,
   GitHubActivity,
   GitHubCatalog,
   collectRssFeeds,
-  refreshRouting,
   RssFeed,
   type Acquired,
   type ActivityCardDto,

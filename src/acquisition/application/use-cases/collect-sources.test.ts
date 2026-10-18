@@ -2,7 +2,7 @@ import { Effect, Layer } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 
 import { RssFeed, WebPage } from "../ports.js";
-import { acquireActivityCard } from "../../domain/item/adapters/scoring-trace.js";
+import { acquireActivityCard } from "../../../integrations/shared/index.js";
 import { collectIndustrySources, collectRssFeeds } from "./collect-sources.js";
 
 describe("source collection", () => {

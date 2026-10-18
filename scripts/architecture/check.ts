@@ -4,13 +4,16 @@ import { posix } from "node:path";
 import ts from "typescript";
 
 import {
-  adapterPackages,
   applicationRootDirs,
   applicationRootFiles,
   domainBuildingBlocks,
   effectRunFiles,
   infraPackages,
   infraRootDirs,
+  integrationsModule,
+  integrationsSharedDirectory,
+  type AnyModule,
+  integrationPackages,
   layeredModules,
   layerDependencies,
   type LayerName,
@@ -21,6 +24,7 @@ import {
   productsRoot,
   sharedProductDirectory,
   sourceVocabulary,
+  sourceVocabularyExceptions,
 } from "./boundaries.js";
 
 export type SourceInput = {
@@ -47,11 +51,11 @@ type ImportRef = {
 
 type Location = {
   layer: LayerName;
-  module: ModuleName;
+  module: AnyModule;
   test: boolean;
 };
 
-const planned = new Set<string>(modules);
+const planned = new Set<string>([...modules, integrationsModule]);
 const sourceWord = new RegExp(`\\b(?:${sourceVocabulary.map(escapeRegExp).join("|")})\\b`, "giu");
 
 export function checkBoundaries(files: readonly SourceInput[]): Violation[] {
@@ -81,7 +85,20 @@ function checkStructure(path: string): Violation[] {
   const parts = path.replace(/\\/gu, "/").split("/");
   if (parts[0] !== "src" || parts.length < 3) return [];
   const [head, module, layer] = parts;
-  if (head !== "src" || !(layeredModules as readonly string[]).includes(module)) return [];
+  if (head !== "src") return [];
+  if (module === integrationsModule) {
+    if (parts.length === 3) {
+      return [
+        violation(
+          path,
+          "integration-root",
+          "src/integrations/ keeps only service directories (plus shared/); no loose files",
+        ),
+      ];
+    }
+    return [];
+  }
+  if (!(layeredModules as readonly string[]).includes(module)) return [];
   const rest = parts.slice(3);
   if (layer === "domain") {
     const [concept, child] = rest;
@@ -179,6 +196,64 @@ function checkImports(file: SourceInput, location: Location): Violation[] {
 }
 
 /**
+ * Integrations are driven adapters: they implement the business modules' ports,
+ * so they may read module facades and kernel, share technical code through
+ * `integrations/shared/`, and never reach into app or a sibling service.
+ */
+function checkIntegrationRelative(file: string, targetPath: string): Violation[] {
+  const self = integrationService(file);
+  if (targetPath.startsWith(`${integrationsPath}/`)) {
+    const targetService = targetPath.slice(integrationsPath.length + 1).split("/")[0]!;
+    if (targetService === self) return [];
+    if (self !== integrationsSharedDirectory && targetService === integrationsSharedDirectory) {
+      return [];
+    }
+    if (self === integrationsSharedDirectory) {
+      return [
+        violation(
+          file,
+          "shared-isolation",
+          `integrations/shared/ may not import the ${targetService} service`,
+        ),
+      ];
+    }
+    return [
+      violation(
+        file,
+        "integration-isolation",
+        `integrations/${self} may not import integrations/${targetService}; shared code goes in integrations/shared/`,
+      ),
+    ];
+  }
+  const target = locate(targetPath);
+  if (!target) {
+    return [violation(file, "relative-escape", `${targetPath} does not resolve inside a module`)];
+  }
+  if (target.module === "app" || target.module === integrationsModule) {
+    return [
+      violation(file, "integration-dependency", `integrations may not import ${target.module}`),
+    ];
+  }
+  if (target.module !== "kernel" && !isModuleIndex(targetPath)) {
+    return [
+      violation(
+        file,
+        "deep-import",
+        `integrations may import ${target.module} only through index.ts`,
+      ),
+    ];
+  }
+  return [];
+}
+
+const integrationsPath = "src/integrations";
+
+/** The integration directory a file belongs to (`shared` or a service name). */
+function integrationService(file: string): string {
+  return file.slice(integrationsPath.length + 1).split("/")[0]!;
+}
+
+/**
  * Sibling tests (`*.test.ts`) are exempt from their layer's dependency rules —
  * they may use `node:*`, Effect, and substitute layers — but they may not reach
  * into another module's internals: cross-module imports go through the module's
@@ -200,6 +275,10 @@ function checkTestImports(file: SourceInput, location: Location): Violation[] {
       violations.push(violation(file.path, "relative-escape", `${ref.specifier} leaves src/`));
       continue;
     }
+    // Integrations are test-visible at file level: sibling tests substitute
+    // transports and assert against mapper output, and business-module tests
+    // verify combinations against the same anti-corruption layer the app uses.
+    if (target.module === integrationsModule) continue;
     if (target.module === location.module) continue;
     if (!isModuleIndex(targetPath!)) {
       violations.push(
@@ -226,6 +305,9 @@ function checkRelative(file: string, location: Location, ref: ImportRef): Violat
   if (!targetPath.startsWith("src/")) {
     return [violation(file, "relative-escape", `${ref.specifier} leaves src/`)];
   }
+  if (location.layer === "integration") {
+    return checkIntegrationRelative(file, targetPath);
+  }
   const target = locate(targetPath);
   if (!target) {
     return [violation(file, "relative-escape", `${ref.specifier} does not resolve inside a module`)];
@@ -233,9 +315,6 @@ function checkRelative(file: string, location: Location, ref: ImportRef): Violat
   const productViolations = checkProductIsolation(file, targetPath);
   if (productViolations.length > 0) return productViolations;
   if (target.module !== location.module) return checkCrossModule(file, location, target, targetPath, ref);
-  if (location.layer === "domain" && target.layer === "adapters") {
-    return [violation(file, "layer", "domain/ may not import adapters/")];
-  }
   if (!layerDependencies[location.layer].includes(target.layer)) {
     return [violation(file, "layer", `${location.layer}/ may not import ${target.layer}/`)];
   }
@@ -280,7 +359,9 @@ function checkCrossModule(
   targetPath: string,
   ref: ImportRef,
 ): Violation[] {
-  const rule = moduleRules[source.module];
+  // Integrations resolve their relative imports through the service-isolation
+  // rules before this generic module path runs.
+  const rule = moduleRules[source.module as ModuleName];
   if (!rule.dependsOn.includes(target.module)) {
     return [
       violation(
@@ -295,6 +376,9 @@ function checkCrossModule(
       violation(file, "types-only", `${source.module} may import ${target.module} only with import type`),
     ];
   }
+  // app composes integrations directly (app/layers.ts and the product files
+  // that genuinely need a service); the index-only rule stays for modules.
+  if (target.module === integrationsModule && source.module === "app") return [];
   if ((rule.indexOnly || source.layer === "app") && !isModuleIndex(targetPath)) {
     return [violation(file, "deep-import", `${source.module} may import ${target.module} only through index.ts`)];
   }
@@ -302,12 +386,15 @@ function checkCrossModule(
 }
 
 function checkEffect(file: string, layer: LayerName, ref: ImportRef): Violation[] {
-  if (layer === "adapters") {
-    return schemaOnly(ref)
-      ? []
-      : [violation(file, "effect", "adapters/ may import only effect/Schema, not other Effect APIs")];
+  if (
+    layer === "application" ||
+    layer === "infra" ||
+    layer === "app" ||
+    layer === "entry" ||
+    layer === "integration"
+  ) {
+    return [];
   }
-  if (layer === "application" || layer === "infra" || layer === "app" || layer === "entry") return [];
   return [violation(file, "effect", `${layer}/ may not import ${ref.specifier}`)];
 }
 
@@ -321,10 +408,14 @@ function checkPackage(file: string, location: Location, ref: ImportRef): Violati
   if (name === "playwright") {
     return (playwrightFiles as readonly string[]).includes(file)
       ? []
-      : [violation(file, "playwright", "playwright is only allowed in the browser adapters")];
+      : [violation(file, "playwright", "playwright is only allowed in the browser modules")];
   }
   const allowed: readonly string[] =
-    location.layer === "adapters" ? adapterPackages : location.layer === "infra" ? infraPackages : [];
+    location.layer === "infra"
+      ? infraPackages
+      : location.layer === "integration"
+        ? integrationPackages
+        : [];
   if (allowed.includes(name)) return [];
   return [violation(file, "external", `${location.layer}/ may not import ${name}`)];
 }
@@ -344,12 +435,26 @@ function checkText(file: SourceInput, location: Location): Violation[] {
     }
   }
   if (location.test) return violations;
-  // Concept directories and the editorial entry (the module that must stay
-  // source-neutral end to end) may not name any provider.
+  // Business modules may not name a provider in domain, application, infra, or
+  // their entry facade: naming a service means depending on it, and the place
+  // for that knowledge is src/integrations/. `integrations/` and `app/` are
+  // exempt, and the package's own "rss-summary" name never counts.
   const vocabularyChecked =
-    location.layer === "domain" || (location.layer === "entry" && location.module === "editorial");
+    location.module !== "kernel" &&
+    (location.layer === "domain" ||
+      location.layer === "application" ||
+      location.layer === "infra" ||
+      location.layer === "entry");
   if (vocabularyChecked) {
-    const words = [...new Set((file.source.match(sourceWord) ?? []).map((word) => word.toLowerCase()))].sort();
+    const words = [
+      ...new Set(
+        (file.source.replace(/rss-summary/gu, "").match(sourceWord) ?? []).map((word) =>
+          word.toLowerCase(),
+        ),
+      ),
+    ]
+      .filter((word) => !(sourceVocabularyExceptions[file.path] ?? []).includes(word))
+      .sort();
     if (words.length > 0) {
       violations.push(violation(file.path, "source-vocabulary", `concept directory contains ${words.join(", ")}`));
     }
@@ -430,12 +535,6 @@ function importNames(node: ts.ImportDeclaration | ts.ExportDeclaration): ImportN
   }));
 }
 
-function schemaOnly(ref: ImportRef): boolean {
-  const names = ref.names.map((name) => name.name);
-  if (names.length === 0 || names.some((name) => name !== "Schema")) return false;
-  return ref.specifier === "effect" || ref.specifier === "effect/Schema";
-}
-
 function moduleSpecifier(node: ts.ImportDeclaration | ts.ExportDeclaration): string | undefined {
   const specifier = node.moduleSpecifier;
   return specifier && ts.isStringLiteral(specifier) ? specifier.text : undefined;
@@ -448,6 +547,7 @@ function locate(path: string): Location | undefined {
   const parts = normalized.slice("src/".length).split("/");
   const [head, ...rest] = parts;
   if (!head || rest.length === 0 && !normalized.endsWith(".ts")) return undefined;
+  if (head === integrationsModule) return { layer: "integration", module: integrationsModule, test };
   if (planned.has(head)) return locatePlanned(head as ModuleName, rest, test);
   return undefined;
 }
@@ -457,10 +557,7 @@ function locatePlanned(moduleName: ModuleName, parts: string[], test: boolean): 
   if (moduleName === "app") return { layer: "app", module: moduleName, test };
   if (parts.length === 1 && parts[0] === "index.ts")
     return { layer: "entry", module: moduleName, test };
-  const [layer, concept, maybeAdapters] = parts;
-  if (layer === "domain" && concept && maybeAdapters === "adapters" && parts.length > 3) {
-    return { layer: "adapters", module: moduleName, test };
-  }
+  const [layer] = parts;
   if (layer === "domain" && parts.length > 2) return { layer: "domain", module: moduleName, test };
   if (layer === "application" && parts.length > 1)
     return { layer: "application", module: moduleName, test };
@@ -478,7 +575,7 @@ function isModuleIndex(path: string): boolean {
 }
 
 function nodeAllowed(layer: LayerName): boolean {
-  return layer === "infra" || layer === "app" || layer === "entry";
+  return layer === "infra" || layer === "app" || layer === "entry" || layer === "integration";
 }
 
 function isNode(specifier: string): boolean {

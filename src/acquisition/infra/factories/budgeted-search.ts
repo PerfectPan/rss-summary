@@ -3,17 +3,17 @@ import { Schema } from "effect";
 
 import { withBudget, type BudgetedSearch } from "../../application/services/with-budget.js";
 import {
-  isCacheablePage,
-  normalizeProvider,
+  cacheablePage,
+  normalizeHttpProvider,
   presentCachedPage,
-} from "../../domain/budget/adapters/provider.js";
+} from "../../domain/budget/index.js";
 import {
   validateBudgetOptions,
   type BudgetLimits,
   type CachedPage,
 } from "../../domain/budget/index.js";
 import type { SearchInput, SearchPage } from "../../domain/search/index.js";
-import { rawPageSchema } from "../models/news-search.js";
+import { pageRepresentable, rawPageSchema } from "../models/news-search.js";
 import {
   loadSearchBudget,
   saveSearchBudget,
@@ -30,6 +30,10 @@ export type BudgetOptions = {
   provider: string;
   search: (input: SearchInput) => Promise<SearchPage>;
   now?: () => Date;
+  /** Provider-declared identity normalization; defaults to the neutral HTTP rule. */
+  normalize?: (provider: string) => string;
+  /** Provider-declared cacheability; false opts a provider's pages out entirely. */
+  cacheable?: boolean;
 };
 
 export function createBudgetedNewsSearch(options: BudgetOptions): BudgetedSearch {
@@ -53,8 +57,9 @@ export function createBudgetedNewsSearch(options: BudgetOptions): BudgetedSearch
     provider: options.provider,
     now: options.now ?? (() => new Date()),
     hash: sha256,
-    normalize: normalizeProvider,
-    isCacheable: isCacheablePage,
+    normalize: options.normalize ?? normalizeHttpProvider,
+    isCacheable: (page) =>
+      (options.cacheable ?? true) && pageRepresentable(page) && cacheablePage(page),
     presentCache: presentCachedPage,
     decodePage: (page) => Schema.decodeUnknownSync(rawPageSchema)(page) as CachedPage,
     load: () => loadSearchBudget(stateFile, limits),

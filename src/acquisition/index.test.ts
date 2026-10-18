@@ -1,19 +1,10 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import {
-  AcquisitionLive,
-  RssFeedLive,
-  isDailyAiPaperSource,
-  parseFeedXml,
-  saveGithubHomeStorageState,
-} from "./index.js";
+import { SourceCatalogStoreLive, parseFeedSubscriptions } from "./index.js";
 
 describe("acquisition entry", () => {
-  it("re-exports the feed boundary used by the existing callers", () => {
-    expect(typeof parseFeedXml).toBe("function");
-    expect(typeof isDailyAiPaperSource).toBe("function");
-    expect(typeof saveGithubHomeStorageState).toBe("function");
-    expect(typeof AcquisitionLive).toBe("function");
-    expect(typeof RssFeedLive).toBe("function");
+  it("re-exports the module boundary the app assembles integrations over", () => {
+    expect(typeof parseFeedSubscriptions).toBe("function");
+    expect(typeof SourceCatalogStoreLive).toBe("object");
   });
 });

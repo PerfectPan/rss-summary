@@ -1,9 +1,6 @@
 import { Effect } from "effect";
 
-import {
-  addFeedSubscription,
-  removeFeedSubscription,
-} from "../../domain/source/adapters/catalog.js";
+import { addFeedSubscription, removeFeedSubscription } from "../../domain/source/index.js";
 import type { FeedSubscription, FeedSubscriptionInput } from "../../domain/source/index.js";
 import { SourceCatalogStore } from "../ports.js";
 
