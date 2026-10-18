@@ -1,7 +1,7 @@
 import type { RivusAutomationTemplate } from "@rivus/agent";
 import { describe, expect, it } from "vite-plus/test";
 
-import type { RssAutomationPresentation } from "../../src/app/render/automation-presentation.js";
+import type { RssAutomationPresentation } from "../../src/app/render/automation.js";
 import { matchSnapshot, registerPlugin } from "./harness.js";
 
 const occurrence = "2026-08-16T04:00:00.000Z";

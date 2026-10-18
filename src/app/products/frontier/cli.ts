@@ -5,7 +5,7 @@ import { applyCliArgs, loadEnvConfig } from "../../config/env.js";
 import { appLayerFromConfig } from "../../layers.js";
 import { runCliEffect } from "../../runtime.js";
 import { industryView, renderJsonIndustryBrief } from "../../render/layouts/industry.js";
-import { renderViewMarkdown } from "../../render/markdown.js";
+import { renderDeliveredMarkdown } from "../../render/view-store.js";
 import { runIndustryFlow } from "./flow.js";
 
 type Writable = {
@@ -24,7 +24,7 @@ export async function runIndustryCommand(
       runIndustryFlow(resolved, (document, format) =>
         format === "json"
           ? renderJsonIndustryBrief(document)
-          : renderViewMarkdown(industryView(document)),
+          : renderDeliveredMarkdown(industryView(document)),
       ),
     ),
     { stderr, layer: appLayerFromConfig(config) },

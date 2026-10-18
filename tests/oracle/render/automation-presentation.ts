@@ -1,3 +1,9 @@
+/**
+ * Frozen copy of the legacy Markdown→Automation Presentation parser (removed
+ * from src/app/render in P7). The differential tests in this directory
+ * compare it against the View IR projections; deleted in P8 together with
+ * the rest of tests/oracle.
+ */
 type AutomationPresentationSource = {
   label: string;
   url: string;

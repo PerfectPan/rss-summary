@@ -1,6 +1,6 @@
 import type { RivusAutomationTemplate } from "@rivus/agent";
 
-import type { RssAutomationPresentation } from "../render/automation-presentation.js";
+import type { RssAutomationPresentation } from "../render/automation.js";
 
 /** Automation templates carry a Markdown → presentation adapter for renderers. */
 export type PresentationAutomation = RivusAutomationTemplate & {

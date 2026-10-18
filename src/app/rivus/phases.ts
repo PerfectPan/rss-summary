@@ -13,7 +13,7 @@ import {
 } from "../products/subscriptions/output.js";
 import { digestView } from "../render/layouts/digest.js";
 import { dailyAiView } from "../render/layouts/daily-ai.js";
-import { renderViewMarkdown } from "../render/markdown.js";
+import { renderDeliveredMarkdown } from "../render/view-store.js";
 import { buildDailyAiDigest, dailyAiCategories } from "../../editorial/index.js";
 import { dailyAiEditorialPolicy } from "../products/daily-ai/tool.js";
 import { createDailyAiDeliveryReceipt, saveDailyAiDiagnostics } from "../../delivery/index.js";
@@ -158,7 +158,7 @@ export function createRivusSubscriptionExecutor(
     return {
       candidateCount: document.candidates.length - paperCandidateCount,
       generatedAt: document.generatedAt,
-      markdown: renderViewMarkdown(digestView(document, { summaries: editorial.summaries })),
+      markdown: renderDeliveredMarkdown(digestView(document, { summaries: editorial.summaries })),
       paperCandidateCount,
       phase: "render",
       selectedCount,
@@ -310,7 +310,7 @@ export function createRivusDailyAiDigestExecutor(
       audit: { editorialIssues: result.audit.editorialIssues },
       phase: "render",
       itemCount: result.items.length,
-      markdown: renderViewMarkdown(
+      markdown: renderDeliveredMarkdown(
         dailyAiView({
           day: result.day,
           windowLabel: result.windowLabel,

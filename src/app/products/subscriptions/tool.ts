@@ -10,7 +10,7 @@ import type { RivusToolDescriptor } from "@rivus/agent";
 
 import { createRivusSubscriptionExecutor } from "../../rivus/phases.js";
 import { digestView } from "../../render/layouts/digest.js";
-import { renderViewMarkdown } from "../../render/markdown.js";
+import { renderDeliveredMarkdown } from "../../render/view-store.js";
 
 export const RSS_SUMMARY_TOOL_ID = "rss-summary/generate-digest";
 
@@ -52,7 +52,9 @@ export async function generateRivusDigest(
   return {
     candidateCount: document.candidates.length - paperCandidateCount,
     generatedAt: document.generatedAt,
-    markdown: renderViewMarkdown(digestView(day ? { ...document, displayDate: day } : document)),
+    markdown: renderDeliveredMarkdown(
+      digestView(day ? { ...document, displayDate: day } : document),
+    ),
     paperCandidateCount,
     ...(document.windowLabel ? { windowLabel: document.windowLabel } : {}),
     ...(document.audit ? { audit: document.audit } : {}),

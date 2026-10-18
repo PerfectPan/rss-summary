@@ -1,9 +1,7 @@
 import type { RivusAutomationTemplate } from "@rivus/agent";
 
-import {
-  createRssAutomationPresentation,
-  type RssAutomationPresentation,
-} from "../../render/automation-presentation.js";
+import type { RssAutomationPresentation } from "../../render/automation.js";
+import { automationPresentationForText } from "../../render/view-store.js";
 import { RSS_SUMMARY_RESEARCH_TOOL_ID } from "../research/tool.js";
 import { RSS_SUMMARY_TOOL_ID } from "./tool.js";
 
@@ -13,7 +11,7 @@ export const RSS_SUMMARY_AUTOMATION_SUPPRESSED =
 
 /** Automation presentations reuse the subscriptions renderer's section titles. */
 export const subscriptionsPresentation = (text: string): RssAutomationPresentation =>
-  createRssAutomationPresentation(text, "subscriptions");
+  automationPresentationForText(text, "subscriptions");
 
 export function subscriptionsAutomation(profileId: string): RivusAutomationTemplate & {
   createPresentation(output: { occurrence: string; text: string }): RssAutomationPresentation;
