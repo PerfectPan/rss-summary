@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { extractArticle } from "../../domain/document/adapters/html-article.js";
-import { ArticleResearchClient } from "./http-reader.js";
+import { extractArticle } from "./mapper.js";
+import { ArticleResearchClient } from "./reader.js";
 
 describe("article research", () => {
   it("returns structured failure for a private URL without making a request", async () => {

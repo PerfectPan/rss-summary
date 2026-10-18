@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { extractArticle } from "./html-article.js";
+import { extractArticle } from "./mapper.js";
 
 describe("html article extraction", () => {
   it("extracts the content column instead of navigation chrome", () => {

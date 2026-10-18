@@ -5,7 +5,7 @@ import {
   type ReadRequest,
   type ReadResult,
 } from "../../domain/document/index.js";
-import type { ArticleExtract } from "./http-reader.js";
+import type { ArticleExtract } from "../../domain/document/index.js";
 
 export type BrowserReaderOptions = {
   browserChannel?: string;

@@ -19,16 +19,15 @@ import {
   RunArchive,
 } from "../delivery/index.js";
 import {
-  ArticleResearchClient,
   BrowserReader,
   browserArticleResearch,
-  extractArticle,
   GlmReader,
   HttpReader,
   type BrowserPageFetcher,
   type GlmPage,
   VideoReader,
 } from "../reading/index.js";
+import { ArticleResearchClient, extractArticle } from "../integrations/article-http/index.js";
 import { readGlmPage } from "../integrations/glm/index.js";
 import {
   transcriptEvidence,

@@ -16,7 +16,7 @@ export {
   validateArticleResearchUrl,
   validateResearchUrl,
 } from "./domain/document/index.js";
-export { extractArticle } from "./domain/document/adapters/html-article.js";
+export type { ArticleExtract } from "./domain/document/index.js";
 export {
   BrowserReader,
   GlmReader,
@@ -31,13 +31,6 @@ export {
   type ReadOriginalRequest,
   type ReadOriginalResult,
 } from "./application/use-cases/read-original.js";
-export {
-  ArticleResearchClient,
-  type ArticleExtract,
-  type ArticleResearchClientOptions,
-  type ArticleResearchRequest,
-  type ArticleResearchResult,
-} from "./infra/adapters/http-reader.js";
 export {
   browserArticleResearch,
   type BrowserPageFetcher,

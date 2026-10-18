@@ -1,11 +1,5 @@
-import type { ReadRequest, ReadResult } from "../../domain/document/index.js";
-import { validateArticleResearchUrl } from "../../domain/document/index.js";
-
-export type ArticleExtract = (
-  body: string,
-  url: string,
-  maxChars?: number,
-) => { content: string; title: string };
+import type { ArticleExtract, ReadRequest, ReadResult } from "../../reading/index.js";
+import { validateArticleResearchUrl } from "../../reading/index.js";
 
 export type ArticleResearchRequest = ReadRequest;
 
