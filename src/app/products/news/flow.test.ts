@@ -1108,7 +1108,6 @@ it("preserves safe Grok timeout diagnostics in the failed evening brief", async 
 
 describe("DeepSeek news fallback", () => {
   const doubaoUrl = "https://open.feedcoopapi.com/search_api/web_search";
-  const deepSeekUrl = "https://api.deepseek.com/v1/tools/search";
   const occurrence = "2026-10-04T12:30:00+08:00";
   const publishedAt = "2026-10-04T04:00:00.000Z";
 
