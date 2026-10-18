@@ -7,7 +7,8 @@ import { Effect } from "effect";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { createBudgetedNewsSearch } from "./budgeted-search.js";
-import { NewsSearchError, type NewsSearchInput, type NewsSearchPage } from "../../index.js";
+import { NewsSearchError, type NewsSearchInput, type SearchUsage } from "../../index.js";
+import type { AuditedSearchPage as NewsSearchPage } from "../../../integrations/grok/index.js";
 
 const executeFile = promisify(execFile);
 const directories: string[] = [];
@@ -81,7 +82,9 @@ describe("persistent news search budget", () => {
     await Effect.runPromise(search(input));
     expect((await Effect.runPromise(search(noon))).searchUsage.source).toBe("network");
     expect((await Effect.runPromise(search(evening))).searchUsage.source).toBe("network");
-    const cached = await Effect.runPromise(search(evening));
+    const cached = (await Effect.runPromise(search(evening))) as NewsSearchPage & {
+      searchUsage: SearchUsage;
+    };
     expect(cached.searchUsage.source).toBe("cache");
     expect(cached.grok).toMatchObject({ nativeCallCount: 1, elapsedMs: 1200 });
     expect(providerSearch).toHaveBeenCalledTimes(3);
@@ -501,13 +504,13 @@ it("isolates Grok cache by model/provider while sharing attempt counters with Do
     source: "network",
     dailyUsed: 2,
   });
-  const reused = await Effect.runPromise(
+  const reused = (await Effect.runPromise(
     createBudgetedNewsSearch({
       ...options,
       provider: "grok://cli/v1/default",
       search: provider,
     })(input),
-  );
+  )) as NewsSearchPage & { searchUsage: SearchUsage };
   expect(reused.searchUsage).toMatchObject({ source: "cache", dailyUsed: 2 });
   expect(reused.grok).toEqual(grokPage.grok);
   expect(provider).toHaveBeenCalledTimes(1);

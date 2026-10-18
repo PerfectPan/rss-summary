@@ -3,6 +3,7 @@ import { expect, it } from "vite-plus/test";
 import { isCacheablePage, normalizeProvider, presentCachedPage } from "./provider.js";
 import type { CacheEntry } from "../entities/cache-entry.js";
 import type { BudgetUsage } from "../index.js";
+import type { AuditedSearchPage } from "../../../../integrations/grok/audit.js";
 
 const usage: BudgetUsage = {
   dailyUsed: 1,
@@ -72,7 +73,7 @@ it("clones a cached native-search receipt", () => {
       grok: { nativeTools, rejectedResults: 0 },
     },
   } as CacheEntry;
-  const page = presentCachedPage(entry, usage);
+  const page = presentCachedPage(entry, usage) as AuditedSearchPage;
   page.grok?.nativeTools.push("x_thread_fetch");
   expect(nativeTools).toEqual(["x_keyword_search"]);
   expect(page.searchUsage).toEqual({

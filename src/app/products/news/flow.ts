@@ -27,7 +27,6 @@ import { createGlmResearch, type GlmResearch } from "../shared/glm-research.js";
 import {
   createBudgetedNewsSearch,
   editionRotation,
-  GrokSearchClient,
   isSearchFailure,
   NewsSearchError,
   resolveNewsCredibility,
@@ -36,9 +35,10 @@ import {
   selectQueryIds,
   settleSearches,
   type NewsSearchInput,
-  type NewsSearchPage,
 } from "../../../acquisition/index.js";
 import { DoubaoSearchClient } from "../../../integrations/doubao/index.js";
+import { GrokSearchClient } from "../../../integrations/grok/index.js";
+import type { AuditedSearchPage as NewsSearchPage } from "../../../integrations/grok/index.js";
 import { createHybridNewsSearch } from "./hybrid.js";
 
 export type { NewsBriefEdition };

@@ -1,7 +1,7 @@
 import { expect, it } from "vite-plus/test";
 
 import { clonePageAudit, errorAudit, pageAudit, withPageAudit } from "./audit.js";
-import { NewsSearchError } from "../index.js";
+import { NewsSearchError } from "../../acquisition/index.js";
 
 const grok = { nativeTools: ["x_keyword_search"], rejectedResults: 1 };
 

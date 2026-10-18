@@ -4,10 +4,10 @@ import { join } from "node:path";
 import { Effect } from "effect";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { collectXAccountPosts } from "./x-account-posts.js";
-import { GrokXClient } from "../adapters/grok-cli.js";
-import { createBudgetedNewsSearch } from "./budgeted-search.js";
-import { NewsSearchError, type NewsSearchPage } from "../../index.js";
+import { createBudgetedNewsSearch, NewsSearchError } from "../../acquisition/index.js";
+import { collectXAccountPosts } from "./x-account.js";
+import { GrokXClient } from "./cli.js";
+import type { AuditedSearchPage as NewsSearchPage } from "./audit.js";
 
 const directories: string[] = [];
 afterEach(async () => {

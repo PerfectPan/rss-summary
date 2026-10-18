@@ -1,6 +1,7 @@
 import { expect, it } from "vite-plus/test";
 
-import { isNativeCall, isNativeReceipt, parseGrokStream } from "./grok.js";
+import { isNativeCall, isNativeReceipt } from "./dto.js";
+import { parseGrokStream } from "./mapper.js";
 
 const publishedAt = "2026-08-16T04:00:00.000Z";
 const postId = ((BigInt(Date.parse(publishedAt)) - 1288834974657n) << 22n).toString();

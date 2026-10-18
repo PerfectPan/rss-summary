@@ -77,6 +77,18 @@ const coveredElsewhere = new Map([
     "integrations/doubao/mapper",
     "integrations/doubao/dto tests assert the mapped credibility tiers",
   ],
+  // The Grok layers are thin binds: the Live layers wrap the CLI clients the
+  // cli tests exercise directly, and the shared provider suite runs them.
+  [
+    "integrations/grok/provider",
+    "integrations/grok/cli tests and the shared search-provider suite",
+  ],
+  // The Grok request schema and native-receipt predicates run inside the CLI
+  // transport and the stream mapper both.
+  [
+    "integrations/grok/search/dto",
+    "integrations/grok/cli tests and search mapper tests",
+  ],
   // Categories and title cleaning run in the Daily AI flow; the category enum
   // is also locked verbatim by the golden registration snapshot.
   [

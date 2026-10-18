@@ -1,6 +1,3 @@
-import type { GrokSearchAudit as GrokAudit } from "./domain/search/adapters/audit.js";
-import type { SearchPage as SearchPageDocument } from "./domain/search/index.js";
-
 export type {
   ActivityCardDto,
   ActivitySource,
@@ -130,13 +127,6 @@ export {
   type SearchResult,
   type SearchUsage,
 } from "./domain/search/index.js";
-export {
-  errorAudit,
-  pageAudit,
-  type AuditedSearchPage,
-  type GrokSearchAudit,
-} from "./domain/search/adapters/audit.js";
-export type NewsSearchPage = SearchPageDocument & { grok?: GrokAudit };
 export { searchBudgetDefaults } from "./application/services/budget-defaults.js";
 export {
   GrokProcess,
@@ -156,12 +146,6 @@ export {
   type BudgetedSearchPage,
 } from "./application/services/with-budget.js";
 export { settleSearches, type SearchSettlement } from "./application/use-cases/search.js";
-export {
-  GrokProcessLive,
-  GrokSearchClient,
-  GrokSearchLive,
-  GrokXClient,
-} from "./infra/adapters/grok-cli.js";
 export { GlmSearchClient, GlmSearchLive } from "./infra/adapters/glm-search.js";
 export type { ResearchSearchResult } from "./domain/item/adapters/glm.js";
 export {
@@ -171,4 +155,8 @@ export {
   type IdentitySubject,
 } from "./domain/item/adapters/identity.js";
 export { createBudgetedNewsSearch, type BudgetOptions } from "./infra/factories/budgeted-search.js";
-export { collectXAccountPosts, type XAccountPosts } from "./infra/factories/x-account-posts.js";
+export {
+  collectXAccountPosts,
+  type CollectXAccountOptions,
+  type XAccountPosts,
+} from "./application/use-cases/collect-x-posts.js";

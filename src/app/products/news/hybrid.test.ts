@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 import { createHybridNewsSearch, type NewsSearchRequest } from "./hybrid.js";
-import { type NewsSearchPage } from "../../../acquisition/index.js";
 import { DoubaoSearchError } from "../../../integrations/doubao/index.js";
+import type { AuditedSearchPage as NewsSearchPage } from "../../../integrations/grok/index.js";
 import type { ResearchPage } from "../shared/glm-research.js";
 
 const window = {

@@ -3,19 +3,19 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
-import { Effect, Layer, Schema } from "effect";
+import { Schema } from "effect";
 
-import { GrokProcess, type GrokProcessRequest, SearchProvider } from "../../application/ports.js";
+import { NewsSearchError, type SearchInput } from "../../acquisition/index.js";
+import { startOfCalendarDay } from "../../kernel/time.js";
+
+import { pageAudit, type AuditedSearchPage } from "./audit.js";
 import {
+  grokRequestSchema,
   isNativeCall,
   isNativeReceipt,
-  parseGrokStream,
-  grokRequestSchema,
   type GrokRequest,
-} from "../../domain/item/adapters/grok.js";
-import { pageAudit, type AuditedSearchPage } from "../../domain/search/adapters/audit.js";
-import { NewsSearchError, type SearchInput } from "../../domain/search/index.js";
-import { startOfCalendarDay } from "../../../kernel/time.js";
+} from "./search/dto.js";
+import { parseGrokStream } from "./search/mapper.js";
 
 const maxNativeCalls = 2;
 
@@ -179,30 +179,7 @@ export class GrokSearchClient {
   }
 }
 
-export const GrokProcessLive = (options: GrokOptions = {}): Layer.Layer<GrokProcess> =>
-  Layer.succeed(GrokProcess, {
-    run: (request: GrokProcessRequest) =>
-      Effect.tryPromise({
-        try: () =>
-          new GrokXClient({
-            executable: request.executable ?? options.executable,
-            model: request.model ?? options.model,
-            timeoutMs: request.timeoutMs ?? options.timeoutMs,
-          }).search(request),
-        catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
-      }),
-  });
-
-export const GrokSearchLive = (options: GrokSearchOptions): Layer.Layer<SearchProvider> => {
-  const client = new GrokSearchClient(options);
-  return Layer.succeed(SearchProvider, {
-    search: (input) =>
-      Effect.tryPromise({
-        try: () => client.search(input),
-        catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
-      }),
-  });
-};
+export type { GrokOptions, GrokSearchOptions };
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);

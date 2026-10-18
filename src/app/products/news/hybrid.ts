@@ -4,9 +4,9 @@ import {
   resolveNewsCredibility,
   shareSearchBudget,
   type NewsSearchInput,
-  type NewsSearchPage,
   type ResearchSearchResult,
 } from "../../../acquisition/index.js";
+import type { AuditedSearchPage as NewsSearchPage } from "../../../integrations/grok/index.js";
 import { canonicalizeUrl } from "../../../kernel/index.js";
 import {
   buildNewsStoriesWithAudit,

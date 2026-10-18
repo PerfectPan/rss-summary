@@ -1,7 +1,6 @@
 import { Context, Effect } from "effect";
 
 import type { BudgetLimits, BudgetState, SearchBudget } from "../domain/budget/index.js";
-import type { GrokRequest } from "../domain/item/adapters/grok.js";
 import type {
   Acquired,
   PullRequestDetails,
@@ -89,7 +88,13 @@ export class SearchBudgetRepository extends Context.Service<
   }
 >()("rss-summary/acquisition/SearchBudgetRepository/v1") {}
 
-export type GrokProcessRequest = GrokRequest & {
+/** One native X search: a bounded instruction plus the transport overrides. */
+export type GrokProcessRequest = {
+  instruction: string;
+  count: number;
+  since: string;
+  until: string;
+  handle?: string;
   executable?: string;
   model?: string;
   timeoutMs?: number;

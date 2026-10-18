@@ -4,7 +4,7 @@ import {
   createDailyAiDeliveryReceipt,
   type DailyAiDeliveryReceipt,
 } from "../../../delivery/index.js";
-import { collectXAccountPosts, type XAccountPosts } from "../../../acquisition/index.js";
+import { collectXAccountPosts, type XAccountPosts } from "../../../integrations/grok/index.js";
 import {
   buildDailyAiDigest,
   cleanDailyAiTitle,

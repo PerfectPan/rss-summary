@@ -1,6 +1,5 @@
 import type { CacheEntry } from "../entities/cache-entry.js";
 import type { BudgetUsage } from "../index.js";
-import { clonePageAudit, pageAudit, type AuditedSearchPage } from "../../search/adapters/audit.js";
 import type { SearchPage } from "../../search/index.js";
 
 /** CLI identities keep their full string. HTTP identities drop credentials and queries. */
@@ -15,13 +14,15 @@ export function normalizeProvider(value: string): string {
   return `${url.origin}${url.pathname.replace(/\/+$/u, "")}`;
 }
 
-/** Cache hits clone the native-search receipt so a caller cannot mutate the stored page. */
-export function presentCachedPage(entry: CacheEntry, usage: BudgetUsage): AuditedSearchPage {
-  const grok = clonePageAudit(pageAudit(entry.page));
+/**
+ * Cache hits return a detached copy so a caller cannot mutate the stored page.
+ * Cached pages are JSON-safe, so a JSON round-trip clones the audit receipt
+ * and every result without naming any provider's field.
+ */
+export function presentCachedPage(entry: CacheEntry, usage: BudgetUsage): SearchPage {
+  const page = JSON.parse(JSON.stringify(entry.page)) as SearchPage;
   return {
-    ...entry.page,
-    ...(grok ? { grok } : {}),
-    results: entry.page.results.map((result) => ({ ...result })),
+    ...page,
     searchUsage: { ...usage, source: "cache", fetchedAt: entry.fetchedAt },
   };
 }
