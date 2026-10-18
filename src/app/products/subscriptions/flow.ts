@@ -18,7 +18,8 @@ import {
   selectResearchCandidates,
   type CandidateProject,
 } from "../../../editorial/index.js";
-import { candidateDecision, type DigestDocument } from "./output.js";
+import type { DigestDocument } from "./output.js";
+import { candidateDecision } from "../shared/candidate-decision.js";
 import { errorMessage, isWithinEventWindow, resolveEventWindow } from "../../../kernel/index.js";
 import {
   deliver,

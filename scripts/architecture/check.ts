@@ -13,6 +13,8 @@ import {
   moduleRules,
   modules,
   playwrightFiles,
+  productsRoot,
+  sharedProductDirectory,
   sourceVocabulary,
 } from "./boundaries.js";
 
@@ -136,6 +138,8 @@ function checkRelative(file: string, location: Location, ref: ImportRef): Violat
   if (!target) {
     return [violation(file, "relative-escape", `${ref.specifier} does not resolve inside a module`)];
   }
+  const productViolations = checkProductIsolation(file, targetPath);
+  if (productViolations.length > 0) return productViolations;
   if (target.module !== location.module) return checkCrossModule(file, location, target, targetPath, ref);
   if (location.layer === "domain" && target.layer === "adapters") {
     return [violation(file, "layer", "domain/ may not import adapters/")];
@@ -144,6 +148,37 @@ function checkRelative(file: string, location: Location, ref: ImportRef): Violat
     return [violation(file, "layer", `${location.layer}/ may not import ${target.layer}/`)];
   }
   return [];
+}
+
+/**
+ * `src/app/products/<a>/` may not import `src/app/products/<b>/`: products are
+ * isolated from each other and compose through `products/shared/`, which every
+ * product may import but which must stay product-agnostic itself. Files
+ * directly under products/ (the registry) are not a product. Test files reach
+ * this only through checkRelative's non-test caller, so sibling tests keep
+ * their exemption.
+ */
+function checkProductIsolation(file: string, targetPath: string): Violation[] {
+  const source = productDirectory(file);
+  const target = productDirectory(targetPath);
+  if (!source || !target || source === target) return [];
+  if (target === sharedProductDirectory && source !== sharedProductDirectory) return [];
+  return [
+    violation(
+      file,
+      "product-boundary",
+      `products/${source} may not import products/${target}; shared composition goes in products/${sharedProductDirectory}/`,
+    ),
+  ];
+}
+
+/** The product subdirectory a path lives in, if any (`shared` counts as one). */
+function productDirectory(path: string): string | undefined {
+  const prefix = `${productsRoot}/`;
+  if (!path.startsWith(prefix)) return undefined;
+  const rest = path.slice(prefix.length);
+  const slash = rest.indexOf("/");
+  return slash === -1 ? undefined : rest.slice(0, slash);
 }
 
 function checkCrossModule(

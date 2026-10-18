@@ -62,6 +62,28 @@ try {
     consumer,
   );
 
+  // D11/D12: effect is pinned to exactly 4.0.0, and the copy rss-summary's own
+  // dependency edge resolves to — the one the dist code loads — must be that
+  // version. Other copies owned by other ranges may legitimately coexist: the
+  // historical @rivus/agent 0.12.7 baseline ships effect 3.x, and npm resolves
+  // @effect/platform-node's ^4.0.0 to platform-node-shared@4.0.5, which peers
+  // on effect ^4.0.5. The plugin passes only promises and plain data across
+  // those boundaries, so this check locks the pinned copy itself.
+  const expectedEffectVersion = "4.0.0";
+  const effectTree = JSON.parse(npmLsEffectJson(consumer));
+  const resolvedEffect = rssSummaryEffectVersion(effectTree);
+  if (resolvedEffect !== expectedEffectVersion) {
+    throw new Error(
+      `rss-summary resolves effect to ${resolvedEffect ?? "none"} in the consumer tree; expected the pinned ${expectedEffectVersion}`,
+    );
+  }
+  const otherCopies = [...collectEffectVersions(effectTree)]
+    .filter((version) => version !== expectedEffectVersion)
+    .sort();
+  if (otherCopies.length > 0) {
+    console.log(`check-package: note — other effect copies in the tree: ${otherCopies.join(", ")}`);
+  }
+
   const installed = join(consumer, "node_modules", "rss-summary");
   requireFile(join(installed, "dist", "app", "rivus", "plugin.d.ts"));
   requireFile(join(installed, "docs", "rivus-plugin.md"));
@@ -140,6 +162,37 @@ if (report.pluginId !== "rss-summary") throw new Error("Unexpected Plugin confor
 
 function requireFile(path) {
   if (!existsSync(path)) throw new Error(`Packed package is missing ${path}`);
+}
+
+/**
+ * `npm ls effect --json` output. npm exits non-zero when the tree has peer
+ * problems (ELSPROBLEMS); the printed JSON is still the evidence to parse.
+ */
+function npmLsEffectJson(consumer) {
+  try {
+    return execFileSync("npm", ["ls", "effect", "--json"], { cwd: consumer, encoding: "utf8" });
+  } catch (error) {
+    if (typeof error?.stdout === "string" && error.stdout.trim().length > 0) return error.stdout;
+    throw error;
+  }
+}
+
+/** The effect version on rss-summary's own dependency edge, if resolvable. */
+function rssSummaryEffectVersion(node) {
+  const edge = node?.dependencies?.["rss-summary"];
+  return edge?.dependencies?.effect?.version;
+}
+
+/** Every `effect` version reachable in the `npm ls --json` dependency tree. */
+function collectEffectVersions(node, versions = new Set()) {
+  if (!node || typeof node !== "object") return versions;
+  for (const [name, child] of Object.entries(node.dependencies ?? {})) {
+    if (name === "effect" && child && typeof child === "object" && typeof child.version === "string") {
+      versions.add(child.version);
+    }
+    collectEffectVersions(child, versions);
+  }
+  return versions;
 }
 
 function run(command, args, cwd, env) {

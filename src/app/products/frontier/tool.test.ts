@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { Effect } from "effect";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
-import type { IndustryBriefDocument } from "./flow.js";
+import type { IndustryBriefDocument } from "../shared/industry.js";
 import type { AppConfig } from "../../config/env.js";
 import { generateRivusIndustryBrief } from "./tool.js";
 

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 
 import { generateDailyAiDigest } from "./flow.js";
 import * as newsBrief from "../news/flow.js";
-import type { IndustryBriefDocument } from "../frontier/flow.js";
+import type { IndustryBriefDocument } from "../shared/industry.js";
 import type { XAccountPosts } from "../../../acquisition/index.js";
 
 const occurrence = "2026-08-11T01:00:00.000Z";

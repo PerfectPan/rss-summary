@@ -1,4 +1,4 @@
-import type { IndustryBriefDocument } from "../../products/frontier/flow.js";
+import type { IndustryBriefDocument } from "../../products/shared/industry.js";
 import type { ViewDocument } from "../view.js";
 import { candidateBriefView } from "./candidate.js";
 

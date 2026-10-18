@@ -8,7 +8,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { generateRivusNewsBrief } from "../products/news/flow.js";
 import { loadNewsTopics } from "../products/news/topics.js";
 import { generateDailyAiDigest } from "../products/daily-ai/flow.js";
-import type { IndustryBriefDocument } from "../products/frontier/flow.js";
+import type { IndustryBriefDocument } from "../products/shared/industry.js";
 import type { XAccountPosts } from "../../acquisition/index.js";
 import { applyCliArgs, loadEnvConfig, type AppConfig } from "./env.js";
 import { parseCliArgs } from "./argv.js";

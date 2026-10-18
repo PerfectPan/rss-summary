@@ -5,7 +5,7 @@ import type { RunAudit } from "../../../delivery/index.js";
 import { calendarDayAtOffset } from "../../../kernel/index.js";
 import { runPluginEffect } from "../../runtime.js";
 import { loadEnvConfig, type AppConfig } from "../../config/env.js";
-import { buildIndustryDocument, type IndustryBriefDocument } from "./flow.js";
+import { buildIndustryDocument, type IndustryBriefDocument } from "../shared/industry.js";
 import { industryView } from "../../render/layouts/industry.js";
 import { renderViewMarkdown } from "../../render/markdown.js";
 

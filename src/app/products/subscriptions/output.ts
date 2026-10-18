@@ -6,7 +6,6 @@ import {
 import {
   assembleSubscriptionEditorial,
   assembleSubscriptionEvidence,
-  decideCandidate,
   selectedSubscriptionCandidates,
 } from "../../../editorial/index.js";
 
@@ -99,21 +98,6 @@ export function applySubscriptionSelection<T extends DigestDocument>(
     ...document,
     candidates: selectedSubscriptionCandidates(document.candidates, selection, candidateIdentity),
   };
-}
-
-export function candidateDecision(
-  candidate: CandidateProject,
-  selectedCandidates: CandidateProject[],
-  reasonWhenFiltered: (candidate: CandidateProject) => string,
-  presentationPolicy?: Parameters<typeof decideCandidate>[4],
-) {
-  return decideCandidate(
-    candidate,
-    selectedCandidates,
-    reasonWhenFiltered,
-    candidateIdentity,
-    presentationPolicy,
-  );
 }
 
 export { candidateIdentity, researchKeyForCandidate };

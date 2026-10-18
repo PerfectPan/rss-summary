@@ -1,5 +1,5 @@
 import { runPluginEffect } from "../../runtime.js";
-import { buildIndustryDocument, type IndustryBriefDocument } from "../frontier/flow.js";
+import { buildIndustryDocument, type IndustryBriefDocument } from "../shared/industry.js";
 import {
   createDailyAiDeliveryReceipt,
   type DailyAiDeliveryReceipt,

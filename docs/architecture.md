@@ -48,7 +48,7 @@ Each business module follows the same internal shape (only the directories it us
 | **delivery** | what was sent and remembered | seen/researched ledger, only-new filtering, Daily AI receipts, notifier, run/diagnostics storage | content judgments |
 | **app** | how products are assembled | product flows, Rivus protocol and session cache, CLI, rendering, env config, layer assembly | business rules that belong to a module |
 
-Cross-module orchestration — "collect → rank → top up → deliver" — lives in `app/products/`. Modules never call each other's use cases. Daily AI composes two existing paths: acquisition's `collectXAccountPosts` for X accounts and the frontier flow's `buildIndustryDocument` (`app/products/frontier/flow.ts`) for official sources.
+Cross-module orchestration — "collect → rank → top up → deliver" — lives in `app/products/`. Modules never call each other's use cases, and products never import each other: composition shared by products lives in `app/products/shared/`. Daily AI composes two existing paths: acquisition's `collectXAccountPosts` for X accounts and the shared industry pipeline's `buildIndustryDocument` (`app/products/shared/industry.ts`) for official sources.
 
 ## Dependency rules
 
@@ -91,7 +91,7 @@ The source type does not decide the product. The user's relationship to the sour
 | Noon/evening news | What happened in the last hours? | rotating event-specific Doubao/Grok queries from `news-topics.json`, with official/authoritative source policy | operational request budget + raw search cache |
 | Daily AI Digest | What important AI events happened in the last 24 hours? | subscribed X accounts (Grok-compiled) + curated first-party `industry-feeds.json` sources with paper feeds excluded | delivery receipt + public evidence audit + shared news operational state |
 
-Daily AI does **not** run a broad news search. X posts come from account-scoped Grok collection (`acquisition`'s `collect-x-posts` use case); the official half reuses the frontier flow with paper sources removed before fetching. News search state is shared only because the X collection goes through the same budgeted search adapter.
+Daily AI does **not** run a broad news search. X posts come from account-scoped Grok collection (`acquisition`'s `collect-x-posts` use case); the official half reuses the shared industry pipeline with paper sources removed before fetching. News search state is shared only because the X collection goes through the same budgeted search adapter.
 
 GitHub Home belongs to subscriptions because it is already personalized. Public GitHub Repository Search and Hacker News discovery are intentionally not a product: they optimize for popularity and novelty rather than the user's explicit subscriptions or curated official sources.
 
