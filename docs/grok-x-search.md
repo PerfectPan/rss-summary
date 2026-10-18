@@ -10,9 +10,9 @@ Daily AI 使用官方 RSS／官网和订阅 X 账号，**不调用新闻搜索**
 
 ## 账号订阅与复用
 
-`src/application/x-account-posts.ts` 接收账号列表与精确的 `[since, until)` 时间窗口，返回帖子
+`src/acquisition/application/use-cases/collect-x-posts.ts` 接收账号列表与精确的 `[since, until)` 时间窗口，返回帖子
 和逐账号审计；不依赖 Daily AI 栏目或新闻主题。Daily AI 传入运行时刻之前 24 小时，未来
-RSS／“我的订阅”可传入自己的自然日窗口。`src/infrastructure/grok-x.ts` 统一处理 CLI 调用、
+RSS／“我的订阅”可传入自己的自然日窗口。`src/acquisition/infra/adapters/grok-cli.ts` 统一处理 CLI 调用、
 原生工具回执、链接／作者／时间校验；新闻适配器与账号采集器各自生成查询策略。
 
 账号查询使用 `from:handle`，本地再拒绝其他作者的帖子。采集原创与带作者评论的引用帖，
