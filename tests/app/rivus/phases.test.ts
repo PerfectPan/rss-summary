@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import type { DigestDocument } from "../../src/editorial/index.js";
-import { createRivusSubscriptionExecutor } from "../../src/presentation/subscription-tool.js";
+import type { DigestDocument } from "../../../src/editorial/index.js";
+import { createRivusSubscriptionExecutor } from "../../../src/app/rivus/phases.js";
 
 describe("subscription Tool editorial workflow", () => {
   it("reuses collected evidence, applies AI selection, and renders grounded summaries", async () => {

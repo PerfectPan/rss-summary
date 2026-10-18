@@ -2,10 +2,9 @@
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
+import { runDigestCommand } from "../app/products/subscriptions/cli.js";
 import { runCliEffect } from "../app/runtime.js";
-import { run as runDigest } from "../application/digest.js";
 import { runIndustry } from "../application/industry-brief.js";
-import { renderJsonDigest, renderMarkdownDigest } from "../app/render/render.js";
 import {
   renderJsonIndustryBrief,
   renderMarkdownIndustryBrief,
@@ -61,12 +60,7 @@ export async function runCliCommand(
   }
 
   if (command === "digest") {
-    return runCliEffect(
-      runDigest((document, format) =>
-        format === "json" ? renderJsonDigest(document) : renderMarkdownDigest(document),
-      ),
-      { stderr },
-    );
+    return runDigestCommand(rest, { stderr });
   }
 
   if (command === "help" || command === "--help" || command === "-h") {

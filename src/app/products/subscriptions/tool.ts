@@ -1,13 +1,14 @@
 import { Effect } from "effect";
 
-import { runPluginEffect } from "../app/runtime.js";
-import type { RunAudit } from "../delivery/index.js";
-import type { DigestDocument } from "../editorial/index.js";
-import type { AppConfig } from "../infrastructure/config.js";
-import { loadConfig } from "../infrastructure/config.js";
-import { buildDigestDocument } from "../application/digest.js";
-import { renderMarkdownDigest } from "../app/render/render.js";
-import { calendarDayAtOffset, shiftCalendarDay } from "../domain/time.js";
+import type { RunAudit } from "../../../delivery/index.js";
+import type { DigestDocument } from "../../../editorial/index.js";
+import { calendarDayAtOffset, shiftCalendarDay } from "../../../kernel/index.js";
+import { runPluginEffect } from "../../runtime.js";
+import { loadEnvConfig, type AppConfig } from "../../config/env.js";
+import { buildDigestDocument } from "./flow.js";
+import { renderMarkdownDigest } from "../../render/render.js";
+
+export const RSS_SUMMARY_TOOL_ID = "rss-summary/generate-digest";
 
 export type RivusDigestInput = {
   day?: string;
@@ -54,6 +55,11 @@ export async function generateRivusDigest(
   };
 }
 
+/**
+ * Decode the Tool input into the digest request: dry-run is forced, onlyNew
+ * defaults to true, and `previous-calendar-day` resolves from the occurrence's
+ * local calendar day. No argv round-trip and no environment mutation.
+ */
 export async function collectRivusDigest(
   value: unknown,
   dependencies: RivusDigestDependencies = {},
@@ -80,16 +86,20 @@ export async function collectRivusDigest(
     throw new Error("day must use YYYY-MM-DD format.");
   }
 
-  const argv = ["--dry-run", "--timezone-offset", timezoneOffset];
-  if (day) argv.push("--day", day);
-  if (input.onlyNew ?? true) argv.push("--only-new");
-  if (input.rssOnly) argv.push("--rss-only");
-
-  const configEnv = { ...env };
-  if (input.onlyNew !== undefined) configEnv.FEED_ONLY_NEW = String(input.onlyNew);
-  if (input.rssOnly !== undefined) configEnv.FEED_RSS_ONLY = String(input.rssOnly);
+  const base = await runPluginEffect(loadEnvConfig(env));
+  const onlyNew = input.onlyNew ?? true;
+  const rssOnly = input.rssOnly ?? (env.FEED_RSS_ONLY === "1" || env.FEED_RSS_ONLY === "true");
+  const config: AppConfig = {
+    ...base,
+    timezoneOffset,
+    day: day ?? base.day,
+    dryRun: true,
+    webhookUrl: undefined,
+    onlyNew,
+    ...(input.rssOnly !== undefined || rssOnly ? { rssOnly } : { rssOnly: false }),
+  };
   const document = await runPluginEffect(
-    (dependencies.buildDigestDocument ?? buildDigestDocument)(loadConfig(configEnv, argv)),
+    (dependencies.buildDigestDocument ?? buildDigestDocument)(config),
   );
   return {
     ...(day ? { day } : {}),

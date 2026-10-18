@@ -5,12 +5,37 @@ import { join } from "node:path";
 import { Effect } from "effect";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
-import { loadConfig } from "../../src/infrastructure/config.js";
-import { listRunArtifacts } from "../../src/delivery/index.js";
+import { listRunArtifacts } from "../../../../src/delivery/index.js";
+import { parseCliArgs } from "../../../../src/app/config/argv.js";
+import { applyCliArgs, loadEnvConfig } from "../../../../src/app/config/env.js";
+import { AppLive, appLiveOptions } from "../../../../src/app/layers.js";
 
 // The notifier writes to stdout; capture it instead of mocking the old module.
 let restoreStdout: (() => void) | undefined;
 const sentOutputs: string[] = [];
+
+async function resolveTestConfig(stateFile: string) {
+  const base = await Effect.runPromise(
+    loadEnvConfig({
+      GITHUB_USERNAME: "PerfectPan",
+      RSS_FEEDS: JSON.stringify([
+        { name: "Example Feed", url: "https://example.com/feed", tags: ["ai"] },
+      ]),
+    }),
+  );
+  return applyCliArgs(
+    base,
+    parseCliArgs([
+      "--only-new",
+      "--since",
+      "2026-07-14T00:00:00+08:00",
+      "--until",
+      "2026-07-15T00:00:00+08:00",
+      "--state-file",
+      stateFile,
+    ]),
+  );
+}
 
 function captureStdout(): void {
   const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk) => {
@@ -20,7 +45,7 @@ function captureStdout(): void {
   restoreStdout = () => spy.mockRestore();
 }
 
-vi.mock("../../src/acquisition/infra/adapters/github-home-browser.js", () => ({
+vi.mock("../../../../src/acquisition/infra/adapters/github-home-browser.js", () => ({
   GitHubHomeClient: class {
     getHomeEvents(): Promise<never> {
       return Promise.reject(new Error("home unavailable"));
@@ -29,7 +54,7 @@ vi.mock("../../src/acquisition/infra/adapters/github-home-browser.js", () => ({
   saveGithubHomeStorageState: vi.fn(),
 }));
 
-vi.mock("../../src/acquisition/infra/adapters/rss-http.js", () => ({
+vi.mock("../../../../src/acquisition/infra/adapters/rss-http.js", () => ({
   RssClient: class {
     getFeedEvents(): Promise<Array<Record<string, unknown>>> {
       return Promise.resolve([
@@ -81,14 +106,30 @@ describe("digest source isolation", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     captureStdout();
 
-    const { run } = await import("../../src/application/digest.js");
     const { renderMarkdownDigest, renderJsonDigest } =
-      await import("../../src/app/render/render.js");
+      await import("../../../../src/app/render/render.js");
 
     try {
+      const base = await Effect.runPromise(loadEnvConfig());
+      const config = applyCliArgs(
+        base,
+        parseCliArgs([
+          "--dry-run",
+          "--json",
+          "--since",
+          "2026-07-14T00:00:00+08:00",
+          "--until",
+          "2026-07-15T00:00:00+08:00",
+        ]),
+      );
+      const { runSubscriptionFlow } =
+        await import("../../../../src/app/products/subscriptions/flow.js");
       await Effect.runPromise(
-        run((document, format) =>
-          format === "json" ? renderJsonDigest(document) : renderMarkdownDigest(document),
+        Effect.provide(
+          runSubscriptionFlow(config, (document, format) =>
+            format === "json" ? renderJsonDigest(document) : renderMarkdownDigest(document),
+          ),
+          AppLive(appLiveOptions(config)),
         ),
       );
 
@@ -106,26 +147,13 @@ describe("digest source isolation", () => {
     const stateFile = join(root, "feed-state.json");
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     try {
-      const config = loadConfig(
-        {
-          GITHUB_USERNAME: "PerfectPan",
-          RSS_FEEDS: JSON.stringify([
-            { name: "Example Feed", url: "https://example.com/feed", tags: ["ai"] },
-          ]),
-        },
-        [
-          "--only-new",
-          "--since",
-          "2026-07-14T00:00:00+08:00",
-          "--until",
-          "2026-07-15T00:00:00+08:00",
-          "--state-file",
-          stateFile,
-        ],
-      );
-      const { buildDigestDocument } = await import("../../src/application/digest.js");
+      const config = await resolveTestConfig(stateFile);
+      const { buildDigestDocument } =
+        await import("../../../../src/app/products/subscriptions/flow.js");
 
-      const document = await Effect.runPromise(buildDigestDocument(config));
+      const document = await Effect.runPromise(
+        Effect.provide(buildDigestDocument(config), AppLive(appLiveOptions(config))),
+      );
 
       expect(document.candidates).toHaveLength(1);
       expect(sentOutputs).toHaveLength(0);
@@ -150,26 +178,13 @@ describe("digest source isolation", () => {
     );
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     try {
-      const config = loadConfig(
-        {
-          GITHUB_USERNAME: "PerfectPan",
-          RSS_FEEDS: JSON.stringify([
-            { name: "Example Feed", url: "https://example.com/feed", tags: ["ai"] },
-          ]),
-        },
-        [
-          "--only-new",
-          "--since",
-          "2026-07-14T00:00:00+08:00",
-          "--until",
-          "2026-07-15T00:00:00+08:00",
-          "--state-file",
-          stateFile,
-        ],
-      );
-      const { buildDigestDocument } = await import("../../src/application/digest.js");
+      const config = await resolveTestConfig(stateFile);
+      const { buildDigestDocument } =
+        await import("../../../../src/app/products/subscriptions/flow.js");
 
-      const document = await Effect.runPromise(buildDigestDocument(config));
+      const document = await Effect.runPromise(
+        Effect.provide(buildDigestDocument(config), AppLive(appLiveOptions(config))),
+      );
 
       expect(document.candidates).toHaveLength(1);
     } finally {

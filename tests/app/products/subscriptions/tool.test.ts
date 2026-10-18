@@ -1,7 +1,7 @@
 import { Effect } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { generateRivusDigest } from "../../src/presentation/rivus-digest.js";
+import { generateRivusDigest } from "../../../../src/app/products/subscriptions/tool.js";
 
 describe("Rivus digest Tool adapter", () => {
   it("maps a scheduled occurrence to the configured local day without delivery or state writes", async () => {

@@ -1,4 +1,4 @@
-import type { RunAudit } from "../delivery/index.js";
+import type { RunAudit } from "../../delivery/index.js";
 import {
   applyEditorialSelectionToAudit,
   applySubscriptionSelection,
@@ -8,14 +8,14 @@ import {
   validateSubscriptionResearch,
   validateSubscriptionSelectionDraft,
   type SubscriptionEvidence,
-} from "../editorial/index.js";
+} from "../../editorial/index.js";
+import { renderMarkdownDigest } from "../render/render.js";
 import {
   collectRivusDigest,
   generateRivusDigest,
   type CollectedRivusDigest,
   type RivusDigestResult,
-} from "./rivus-digest.js";
-import { renderMarkdownDigest } from "../app/render/render.js";
+} from "../products/subscriptions/tool.js";
 
 export type RivusSubscriptionToolResult =
   | {
@@ -60,6 +60,7 @@ export function createRivusSubscriptionExecutor(
 ): (value: unknown) => Promise<RivusSubscriptionToolResult | RivusDigestResult> {
   const collect = dependencies.collect ?? collectRivusDigest;
   const generate = dependencies.generate ?? generateRivusDigest;
+  // Session cache: at most 8 collected requests, evicted in insertion order.
   const cache = new Map<string, CollectedRivusDigest>();
 
   return async (value) => {
