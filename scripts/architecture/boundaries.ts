@@ -1,8 +1,6 @@
 /**
  * Dependency rules from docs/plans/0001-ddd-layered-refactor.md section 3.5.
- * The planned module directories do not exist yet. The checker still classifies today's
- * src/domain, src/application, src/infrastructure, and src/presentation tree as one legacy
- * module so the current violations can be reported.
+ * Modules are the six top-level directories under src/.
  */
 
 export const modules = [
@@ -14,7 +12,7 @@ export const modules = [
   "app",
 ] as const;
 
-export type ModuleName = (typeof modules)[number] | "legacy";
+export type ModuleName = (typeof modules)[number];
 
 export type LayerName =
   | "adapters"
@@ -34,7 +32,7 @@ export type ModuleRule = {
   readonly indexOnly?: boolean;
 };
 
-export const moduleRules: Readonly<Record<Exclude<ModuleName, "legacy">, ModuleRule>> = {
+export const moduleRules: Readonly<Record<ModuleName, ModuleRule>> = {
   kernel: { dependsOn: [] },
   acquisition: { dependsOn: ["kernel"] },
   reading: { dependsOn: ["kernel"] },
@@ -77,9 +75,4 @@ export const playwrightFiles = [
  */
 export const effectRunFiles = ["src/app/runtime.ts"] as const;
 
-export const legacyLayer: Readonly<Record<string, LayerName>> = {
-  application: "application",
-  domain: "domain",
-  infrastructure: "infra",
-  presentation: "app",
-};
+

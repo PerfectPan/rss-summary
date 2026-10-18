@@ -43,7 +43,7 @@ const coveredElsewhere = new Map([
 ]);
 
 /** Directories allowed under tests/. */
-const testTreeAllowlist = ["fixtures", "golden", "oracle", "repo", "support"];
+const testTreeAllowlist = ["fixtures", "golden", "repo", "support"];
 
 function listTs(dir) {
   const out = [];

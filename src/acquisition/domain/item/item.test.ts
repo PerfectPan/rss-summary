@@ -3,8 +3,8 @@ import { describe, expect, it } from "vite-plus/test";
 import type { SignalType } from "./item.js";
 
 /**
- * Same numbers as baseScore in src/domain/digest.ts. Scoring still reads the
- * activity card; these names are the 1:1 signal row for each of those numbers.
+ * One row per historical base-score number: scoring still reads the activity
+ * card, and these signals are the 1:1 replacement for each of those numbers.
  */
 const baseScoreBySignal: Record<SignalType, number> = {
   endorsed: 90,

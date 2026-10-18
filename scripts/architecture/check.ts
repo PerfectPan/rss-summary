@@ -107,16 +107,6 @@ function checkTestImports(file: SourceInput, location: Location): Violation[] {
       continue;
     }
     if (target.module === location.module) continue;
-    if (target.module === "legacy" || location.module === "legacy") {
-      violations.push(
-        violation(
-          file.path,
-          "module-dependency",
-          `${location.module} may not import ${target.module}`,
-        ),
-      );
-      continue;
-    }
     if (!isModuleIndex(targetPath!)) {
       violations.push(
         violation(
@@ -163,9 +153,6 @@ function checkCrossModule(
   targetPath: string,
   ref: ImportRef,
 ): Violation[] {
-  if (source.module === "legacy" || target.module === "legacy") {
-    return [violation(file, "module-dependency", `${source.module} may not import ${target.module}`)];
-  }
   const rule = moduleRules[source.module];
   if (!rule.dependsOn.includes(target.module)) {
     return [
@@ -334,20 +321,11 @@ function locate(path: string): Location | undefined {
   const parts = normalized.slice("src/".length).split("/");
   const [head, ...rest] = parts;
   if (!head || rest.length === 0 && !normalized.endsWith(".ts")) return undefined;
-  if (planned.has(head)) return locatePlanned(head as Exclude<ModuleName, "legacy">, rest, test);
-  if (head === "domain")
-    return { layer: rest[1] === "adapters" ? "adapters" : "domain", module: "legacy", test };
-  if (head === "application") return { layer: "application", module: "legacy", test };
-  if (head === "infrastructure") return { layer: "infra", module: "legacy", test };
-  if (head === "presentation") return { layer: "app", module: "legacy", test };
+  if (planned.has(head)) return locatePlanned(head as ModuleName, rest, test);
   return undefined;
 }
 
-function locatePlanned(
-  moduleName: Exclude<ModuleName, "legacy">,
-  parts: string[],
-  test: boolean,
-): Location | undefined {
+function locatePlanned(moduleName: ModuleName, parts: string[], test: boolean): Location | undefined {
   if (moduleName === "kernel") return { layer: "kernel", module: moduleName, test };
   if (moduleName === "app") return { layer: "app", module: moduleName, test };
   if (parts.length === 1 && parts[0] === "index.ts")

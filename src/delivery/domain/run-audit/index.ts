@@ -6,10 +6,12 @@
  */
 export type RunProduct = "subscriptions" | "frontier";
 
-/** Mirror of PresentationDepth in src/domain/attention.ts until the editorial module owns it. */
+/**
+ * Storage-format mirrors of editorial's presentation types, kept literal so
+ * the persisted run record does not change shape when editorial refines them.
+ */
 export type RunPresentationDepth = "link" | "summary" | "research";
 
-/** Mirror of PresentationReasonCode in src/domain/attention.ts until the editorial module owns it. */
 export type RunPresentationReasonCode =
   | "ordinary-update"
   | "semantic-summary"
