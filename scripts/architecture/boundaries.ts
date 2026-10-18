@@ -26,7 +26,6 @@ export const integrationsModule = "integrations" as const;
 export type AnyModule = ModuleName | typeof integrationsModule;
 
 export type LayerName =
-  | "adapters"
   | "app"
   | "application"
   | "domain"
@@ -56,17 +55,19 @@ export const moduleRules: Readonly<Record<ModuleName, ModuleRule>> = {
   },
 };
 
-/** Layers of the same module that a layer may import. */
+/**
+ * Layers of the same module that a layer may import. There is no adapters
+ * layer: translating an external service's format lives in
+ * `src/integrations/<service>/`, so a module's domain, application, and infra
+ * no longer split that knowledge between themselves.
+ */
 export const layerDependencies: Readonly<Record<LayerName, readonly LayerName[]>> = {
   domain: ["domain", "kernel"],
-  adapters: ["domain", "adapters", "kernel"],
-  application: ["domain", "adapters", "application", "kernel"],
-  // Infra calls the module's domain adapters so "fetch → DTO → model" happens
-  // in one place (plan section 3.5; agent-kit does not allow this edge).
-  infra: ["domain", "adapters", "application", "infra", "kernel"],
+  application: ["domain", "application", "kernel"],
+  infra: ["domain", "application", "infra", "kernel"],
   app: ["app"],
   kernel: ["kernel"],
-  entry: ["domain", "adapters", "application", "infra", "kernel", "entry"],
+  entry: ["domain", "application", "infra", "kernel", "entry"],
   // Integrations live in their own tree; relative imports inside it are judged
   // by the service-isolation rules, not by module layers.
   integration: ["integration"],
@@ -97,11 +98,25 @@ export const sourceVocabularyExceptions: Readonly<Record<string, readonly string
   // already exists", …) and the feeds.json `type: "rss"` tag; both are the
   // product's own config/output surface, not coupling to the feed service.
   "src/acquisition/domain/source/services/catalog.ts": ["rss"],
+  // SourceHealth.kind values ("rss") are part of the run-audit JSON the CLI
+  // exposes; the collection use case reports them verbatim.
+  "src/acquisition/application/use-cases/collect-sources.ts": ["rss"],
+  // The X-account audit's `grok` receipt field and the `grok://cli/v1/`
+  // budget identity are locked by the tool's JSON output and the cache keys
+  // persisted in news-search.json.
+  "src/acquisition/application/use-cases/collect-x-posts.ts": ["grok"],
+  // Per-provider budget defaults are keyed by the provider env namespaces.
+  "src/acquisition/application/services/budget-defaults.ts": ["doubao", "grok"],
+  // The persisted cache schema names the providers whose pages it can store.
+  "src/acquisition/infra/models/news-search.ts": ["doubao", "grok"],
+  // The reader fallback chain's "glm" method value and failure message are
+  // part of the read-original JSON contract.
+  "src/reading/application/use-cases/read-original.ts": ["glm"],
+  // Diagnostics records carry the provider receipt field verbatim.
+  "src/delivery/application/ports.ts": ["grok"],
 };
 
-export const adapterPackages = ["cheerio", "fast-xml-parser", "he"] as const;
-
-export const infraPackages = ["cheerio", "fast-xml-parser", "he", "playwright"] as const;
+export const infraPackages = ["cheerio", "fast-xml-parser", "he"] as const;
 
 /** Packages an integration may import besides Effect and `node:*`. */
 export const integrationPackages = [
@@ -114,15 +129,8 @@ export const integrationPackages = [
 /** The integrations tree's shared technical directory (multi-service reuse). */
 export const integrationsSharedDirectory = "shared";
 
-/**
- * Playwright stays behind the browser modules: the shared browser lifecycle
- * plus, until their services migrate, the two legacy browser adapters.
- */
-export const playwrightFiles = [
-  "src/integrations/shared/browser.ts",
-  "src/acquisition/infra/adapters/browser.ts",
-  "src/reading/infra/adapters/browser-reader.ts",
-] as const;
+/** Playwright stays behind the one shared browser lifecycle module. */
+export const playwrightFiles = ["src/integrations/shared/browser.ts"] as const;
 
 /**
  * Effects are run only at the application runtime boundary; modules express
@@ -143,7 +151,6 @@ export const domainBuildingBlocks = [
   "errors",
   "events",
   "services",
-  "adapters",
 ] as const;
 
 /** The only loose files `application/` may keep at its root (plus their tests). */

@@ -4,7 +4,6 @@ import { posix } from "node:path";
 import ts from "typescript";
 
 import {
-  adapterPackages,
   applicationRootDirs,
   applicationRootFiles,
   domainBuildingBlocks,
@@ -316,9 +315,6 @@ function checkRelative(file: string, location: Location, ref: ImportRef): Violat
   const productViolations = checkProductIsolation(file, targetPath);
   if (productViolations.length > 0) return productViolations;
   if (target.module !== location.module) return checkCrossModule(file, location, target, targetPath, ref);
-  if (location.layer === "domain" && target.layer === "adapters") {
-    return [violation(file, "layer", "domain/ may not import adapters/")];
-  }
   if (!layerDependencies[location.layer].includes(target.layer)) {
     return [violation(file, "layer", `${location.layer}/ may not import ${target.layer}/`)];
   }
@@ -390,11 +386,6 @@ function checkCrossModule(
 }
 
 function checkEffect(file: string, layer: LayerName, ref: ImportRef): Violation[] {
-  if (layer === "adapters") {
-    return schemaOnly(ref)
-      ? []
-      : [violation(file, "effect", "adapters/ may import only effect/Schema, not other Effect APIs")];
-  }
   if (
     layer === "application" ||
     layer === "infra" ||
@@ -420,13 +411,11 @@ function checkPackage(file: string, location: Location, ref: ImportRef): Violati
       : [violation(file, "playwright", "playwright is only allowed in the browser modules")];
   }
   const allowed: readonly string[] =
-    location.layer === "adapters"
-      ? adapterPackages
-      : location.layer === "infra"
-        ? infraPackages
-        : location.layer === "integration"
-          ? integrationPackages
-          : [];
+    location.layer === "infra"
+      ? infraPackages
+      : location.layer === "integration"
+        ? integrationPackages
+        : [];
   if (allowed.includes(name)) return [];
   return [violation(file, "external", `${location.layer}/ may not import ${name}`)];
 }
@@ -446,12 +435,24 @@ function checkText(file: SourceInput, location: Location): Violation[] {
     }
   }
   if (location.test) return violations;
-  // Concept directories and the editorial entry (the module that must stay
-  // source-neutral end to end) may not name any provider.
+  // Business modules may not name a provider in domain, application, infra, or
+  // their entry facade: naming a service means depending on it, and the place
+  // for that knowledge is src/integrations/. `integrations/` and `app/` are
+  // exempt, and the package's own "rss-summary" name never counts.
   const vocabularyChecked =
-    location.layer === "domain" || (location.layer === "entry" && location.module === "editorial");
+    location.module !== "kernel" &&
+    (location.layer === "domain" ||
+      location.layer === "application" ||
+      location.layer === "infra" ||
+      location.layer === "entry");
   if (vocabularyChecked) {
-    const words = [...new Set((file.source.match(sourceWord) ?? []).map((word) => word.toLowerCase()))]
+    const words = [
+      ...new Set(
+        (file.source.replace(/rss-summary/gu, "").match(sourceWord) ?? []).map((word) =>
+          word.toLowerCase(),
+        ),
+      ),
+    ]
       .filter((word) => !(sourceVocabularyExceptions[file.path] ?? []).includes(word))
       .sort();
     if (words.length > 0) {
@@ -534,12 +535,6 @@ function importNames(node: ts.ImportDeclaration | ts.ExportDeclaration): ImportN
   }));
 }
 
-function schemaOnly(ref: ImportRef): boolean {
-  const names = ref.names.map((name) => name.name);
-  if (names.length === 0 || names.some((name) => name !== "Schema")) return false;
-  return ref.specifier === "effect" || ref.specifier === "effect/Schema";
-}
-
 function moduleSpecifier(node: ts.ImportDeclaration | ts.ExportDeclaration): string | undefined {
   const specifier = node.moduleSpecifier;
   return specifier && ts.isStringLiteral(specifier) ? specifier.text : undefined;
@@ -562,10 +557,7 @@ function locatePlanned(moduleName: ModuleName, parts: string[], test: boolean): 
   if (moduleName === "app") return { layer: "app", module: moduleName, test };
   if (parts.length === 1 && parts[0] === "index.ts")
     return { layer: "entry", module: moduleName, test };
-  const [layer, concept, maybeAdapters] = parts;
-  if (layer === "domain" && concept && maybeAdapters === "adapters" && parts.length > 3) {
-    return { layer: "adapters", module: moduleName, test };
-  }
+  const [layer] = parts;
   if (layer === "domain" && parts.length > 2) return { layer: "domain", module: moduleName, test };
   if (layer === "application" && parts.length > 1)
     return { layer: "application", module: moduleName, test };
