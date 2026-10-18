@@ -35,6 +35,8 @@ Each business module follows the same internal shape (only the directories it us
     errors/                 typed failure values
     events/                 domain events emitted by transitions
     aggregates/             aggregate roots (SearchBudget is the only one)
+    entities/               child entities inside an aggregate (SearchBudget's
+                            cache entries; read only through the root)
     factories/              constructors assembling the model's inputs
     services/               stateless computation over several value objects
     adapters/               external formats → the concept's model (effect/Schema)

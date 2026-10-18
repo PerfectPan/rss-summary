@@ -57,6 +57,12 @@ const coveredElsewhere = new Map([
     "acquisition/domain/budget/value-objects/budget",
     "budget aggregate tests and search-budget-file repository tests",
   ],
+  // usageFor runs inside the aggregate's usage(); its invalid monthly total is
+  // asserted by the budget aggregate tests.
+  [
+    "acquisition/domain/budget/services/budget-state",
+    "budget aggregate tests: usage reads the counters, the invalid monthly total throws",
+  ],
   // The audit projection is applied by the Rivus subscription phases, which
   // assert the editorialSelection audit it writes.
   [

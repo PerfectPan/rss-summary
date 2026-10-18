@@ -5,12 +5,7 @@ import { Effect } from "effect";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
 import { presentCachedPage } from "../../domain/budget/adapters/provider.js";
-import {
-  cacheKey,
-  findCache,
-  type BudgetLimits,
-  type CacheRequest,
-} from "../../domain/budget/index.js";
+import { cacheKey, type BudgetLimits, type CacheRequest } from "../../domain/budget/index.js";
 import { loadSearchBudget, saveSearchBudget, sha256 } from "./search-budget-file.js";
 
 const fixtureUrl = new URL("../../../../tests/fixtures/state/news-search.json", import.meta.url);
@@ -47,12 +42,7 @@ describe("search budget file", () => {
     await writeFile(path, original);
 
     const budget = await Effect.runPromise(loadSearchBudget(path, limits));
-    const hit = findCache(
-      budget.persisted,
-      request,
-      Date.parse("2026-08-16T04:00:00.000Z"),
-      limits.cacheTtlMs,
-    );
+    const hit = budget.findCache(request, Date.parse("2026-08-16T04:00:00.000Z"));
     expect(hit?.page.logId).toBe("log-golden");
     const reserved = budget.reserve(
       request,

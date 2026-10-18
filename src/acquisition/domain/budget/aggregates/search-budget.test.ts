@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import { isCacheablePage } from "../adapters/provider.js";
+import type { CacheEntry } from "../entities/cache-entry.js";
 import {
   cacheKeyMaterial,
-  usageFor,
   type BudgetLimits,
   type BudgetState,
   type CacheRequest,
   type PresentCache,
 } from "../index.js";
+import { usageFor } from "../services/budget-state.js";
 import { SearchBudget } from "./search-budget.js";
 
 const hash = (material: string) => material;
@@ -83,6 +84,34 @@ describe("SearchBudget", () => {
       dailyUsed: 0,
       monthlyUsed: 0,
     });
+  });
+
+  it("finds a covering cache entry through the root and misses outside its day range", () => {
+    const entry: CacheEntry = {
+      request: request({ sinceDay: "2026-09-25", day: "2026-09-30" }),
+      fetchedAt: "2026-09-29T03:00:00.000Z",
+      page: { resultCount: 0, results: [] },
+    };
+    const restored = SearchBudget.restore(
+      {
+        version: 1,
+        timezoneOffset: "+08:00",
+        daily: {},
+        cache: { [hash(cacheKeyMaterial(entry.request))]: entry },
+      },
+      limits,
+      { hash, normalize },
+    );
+    expect(restored._tag).toBe("Ok");
+    if (restored._tag !== "Ok") return;
+    const fetched = Date.parse(entry.fetchedAt);
+    expect(restored.value.state.findCache(request({ sinceDay: "2026-09-28" }), fetched)).toBe(
+      entry,
+    );
+    expect(
+      restored.value.state.findCache(request({ sinceDay: "2026-09-24" }), fetched),
+    ).toBeUndefined();
+    expect(restored.value.state.findCache(request({ day: "2026-10-01" }), fetched)).toBeUndefined();
   });
 
   it("returns the same state on a cache hit even when the allowance is exhausted", () => {
