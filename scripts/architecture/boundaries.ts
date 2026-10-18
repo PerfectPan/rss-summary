@@ -49,8 +49,8 @@ export const layerDependencies: Readonly<Record<LayerName, readonly LayerName[]>
   domain: ["domain", "kernel"],
   adapters: ["domain", "adapters", "kernel"],
   application: ["domain", "adapters", "application", "kernel"],
-  // Infra calls domain adapters to turn a fetched document into the port's
-  // historical value. The plan's dependency table omits this edge.
+  // Infra calls the module's domain adapters so "fetch → DTO → model" happens
+  // in one place (plan section 3.5; agent-kit does not allow this edge).
   infra: ["domain", "adapters", "application", "infra", "kernel"],
   app: ["app"],
   kernel: ["kernel"],
@@ -61,7 +61,7 @@ export const sourceVocabulary = ["github", "rss", "doubao", "grok", "glm", "arxi
 
 export const adapterPackages = ["cheerio", "fast-xml-parser", "he"] as const;
 
-export const infraPackages = ["cheerio", "fast-xml-parser", "he", "lodash-es", "playwright"] as const;
+export const infraPackages = ["cheerio", "fast-xml-parser", "he", "playwright"] as const;
 
 /** Playwright stays behind the two browser adapters named in section 3.5. */
 export const playwrightFiles = [
