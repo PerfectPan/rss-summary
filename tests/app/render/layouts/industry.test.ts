@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import type { IndustryBriefDocument } from "../../../src/app/products/frontier/flow.js";
+import type { IndustryBriefDocument } from "../../../../src/app/products/frontier/flow.js";
 import {
+  industryView,
   renderJsonIndustryBrief,
-  renderMarkdownIndustryBrief,
-} from "../../../src/app/render/industry-render.js";
+} from "../../../../src/app/render/layouts/industry.js";
+import { renderViewMarkdown } from "../../../../src/app/render/markdown.js";
 
 describe("industry brief render", () => {
   it("renders the card header and ranked candidates", () => {
@@ -29,7 +30,7 @@ describe("industry brief render", () => {
       ],
     };
 
-    const markdown = renderMarkdownIndustryBrief(document);
+    const markdown = renderViewMarkdown(industryView(document));
 
     expect(markdown).toContain("# 行业前沿 · 2026-08-09");
     expect(markdown).toContain("**[New agent release](https://example.com/a)**");
@@ -37,10 +38,12 @@ describe("industry brief render", () => {
   });
 
   it("renders an empty note when there are no candidates", () => {
-    const markdown = renderMarkdownIndustryBrief({
-      generatedAt: "2026-08-09T01:00:00.000Z",
-      candidates: [],
-    });
+    const markdown = renderViewMarkdown(
+      industryView({
+        generatedAt: "2026-08-09T01:00:00.000Z",
+        candidates: [],
+      }),
+    );
 
     expect(markdown).toContain("没有新的行业前沿动态");
   });
@@ -64,7 +67,7 @@ describe("industry brief render", () => {
       ],
     };
 
-    const markdown = renderMarkdownIndustryBrief(document);
+    const markdown = renderViewMarkdown(industryView(document));
     const json = JSON.parse(renderJsonIndustryBrief(document));
 
     expect(markdown).toContain("1 篇论文待研究");

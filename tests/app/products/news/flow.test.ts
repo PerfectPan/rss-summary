@@ -17,20 +17,23 @@ import {
   NewsSearchError,
   type NewsSearchInput,
 } from "../../../../src/acquisition/index.js";
-import { renderNewsBrief } from "../../../../src/app/render/news-render.js";
+import { newsView } from "../../../../src/app/render/layouts/news.js";
+import { renderViewMarkdown } from "../../../../src/app/render/markdown.js";
 
 function withNewsMarkdown(result: RivusNewsBriefResult) {
   return {
     ...result,
-    markdown: renderNewsBrief({
-      day: result.day,
-      edition: result.edition,
-      generatedAt: result.generatedAt,
-      stories: result.stories,
-      topics: result.topics,
-      warnings: result.warnings,
-      windowLabel: result.windowLabel,
-    }),
+    markdown: renderViewMarkdown(
+      newsView({
+        day: result.day,
+        edition: result.edition,
+        generatedAt: result.generatedAt,
+        stories: result.stories,
+        topics: result.topics,
+        warnings: result.warnings,
+        windowLabel: result.windowLabel,
+      }),
+    ),
   };
 }
 

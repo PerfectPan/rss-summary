@@ -16,6 +16,9 @@ const coveredBySibling = new Map([
   // feed list contract tests sit next to the env config; no module under
   // src/app/config/feed-config.ts
   ["app/config/feed-config", "app/config/env and the acquisition catalog tests"],
+  // The View IR is a type-only module; its projections (markdown, automation,
+  // layouts) and their tests exercise every field.
+  ["app/render/view", "app/render markdown/automation tests and app/render/layouts tests"],
   // Tool metadata (ids, digests, editorial policy strings) and the automation
   // prompts/presentations are locked verbatim by the golden registration
   // snapshot; executors are covered by the product and phase tests.
