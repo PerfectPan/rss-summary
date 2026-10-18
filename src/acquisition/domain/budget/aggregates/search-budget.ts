@@ -7,14 +7,30 @@ import { usageFor } from "../services/budget-state.js";
 import {
   cacheKey,
   type BudgetLimits,
-  type BudgetState,
   type BudgetUsage,
   type CacheRequest,
   type CachedPage,
   type HashText,
-  type PresentCache,
   type Reservation,
 } from "../value-objects/budget.js";
+
+/**
+ * The aggregate's persisted snapshot. Prior days stay in `daily` so a rollback
+ * cannot reopen a spent allowance; `cache` holds the entity entries, saved with
+ * the aggregate as a whole.
+ */
+export type BudgetState = {
+  version: 1;
+  timezoneOffset: string;
+  daily: Record<string, number>;
+  cache: Record<string, CacheEntry>;
+};
+
+/**
+ * Renders a cache hit in the caller's page shape; `reserve` takes it as an
+ * argument so the aggregate itself does not present pages.
+ */
+export type PresentCache = (entry: CacheEntry, usage: BudgetUsage) => SearchPage;
 
 export type BudgetTransition<A> = {
   readonly state: SearchBudget;

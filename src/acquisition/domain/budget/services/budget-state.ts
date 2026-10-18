@@ -1,6 +1,7 @@
 import { calendarDayAtOffset } from "../../../../kernel/time.js";
 import { NewsSearchError } from "../../search/index.js";
-import type { BudgetLimits, BudgetState, BudgetUsage } from "../value-objects/budget.js";
+import type { BudgetState } from "../aggregates/search-budget.js";
+import type { BudgetLimits, BudgetUsage } from "../value-objects/budget.js";
 
 export function usageFor(state: BudgetState, instant: Date, limits: BudgetLimits): BudgetUsage {
   const day = calendarDayAtOffset(instant.toISOString(), limits.timezoneOffset);
