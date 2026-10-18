@@ -500,6 +500,8 @@ infra 可以直接调用同模块的 adapters，把取到的原始数据解码�
 
 ### P8 强制约束与文档
 
+0. 单元测试和源文件放在一起（与 agent-kit 一致）：`tests/<module>/**` 移到 `src/<module>/**/x.test.ts`，与源文件同目录；`tests/` 只保留 golden、fixtures、repo 和跨模块的集成测试。构建时排除测试文件，Vitest、覆盖率、边界检查和布局检查同步调整。
+
 1. 边界测试切换为失败模式；删除 `vite.config.ts` 中的两条 `no-restricted-imports` 覆盖；清零过渡 re-export；删除 `tests/oracle/`。
 2. `scripts/check-test-layout.mjs` 改为按新目录做镜像检查。
 3. 文档：
