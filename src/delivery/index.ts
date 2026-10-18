@@ -5,7 +5,7 @@
 import { Layer } from "effect";
 
 import { DiagnosticsStore, Notifier, FeedStateStore, RunArchive } from "./application/ports.js";
-import { NotifierLive, type NotifierOptions } from "./infra/adapters/notifier.js";
+import { NotifierLive, type NotifierOptions } from "./infra/notifier/notifier.js";
 import { FeedStateFileLive } from "./infra/repository/feed-state-file.js";
 import { RunArchiveFilesLive } from "./infra/repository/run-archive-files.js";
 import { DiagnosticsFileLive } from "./infra/repository/diagnostics-file.js";
@@ -56,7 +56,7 @@ export {
   readRunArtifact,
   type RunSummary,
 } from "./application/use-cases/inspect-runs.js";
-export { NotifierLive, type NotifierOptions } from "./infra/adapters/notifier.js";
+export { NotifierLive, type NotifierOptions } from "./infra/notifier/notifier.js";
 export {
   loadFeedState,
   saveFeedState,

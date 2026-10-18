@@ -1,6 +1,6 @@
 import { Layer } from "effect";
 
-import { NodeFileSystemLive } from "../adapters/node-file-system.js";
+import { NodeFileSystemLive } from "../platform/node-file-system.js";
 import { SourceCatalogFileLive } from "../repository/source-catalog-file.js";
 import { SourceCatalogStore } from "../../application/ports.js";
 

@@ -153,7 +153,13 @@ export const applicationRootFiles = ["ports.ts", "errors.ts"] as const;
 export const applicationRootDirs = ["use-cases", "services"] as const;
 
 /** The only subdirectories `infra/` may contain at its root. */
-export const infraRootDirs = ["repository", "models", "adapters", "factories", "services"] as const;
+export const infraRootDirs = [
+  "repository",
+  "models",
+  "factories",
+  "notifier",
+  "platform",
+] as const;
 
 /** Modules that follow the domain/application/infra layout. */
 export const layeredModules = ["acquisition", "reading", "editorial", "delivery"] as const;
