@@ -57,6 +57,17 @@ export const layerDependencies: Readonly<Record<LayerName, readonly LayerName[]>
   entry: ["domain", "adapters", "application", "infra", "kernel", "entry"],
 };
 
+/**
+ * Products under src/app/products/ never import each other (plan section 3.2:
+ * composition shared by products is product-agnostic code in `shared/`, which
+ * every product may import but which may not import any product back). Files
+ * directly under products/ (the registry) are exempt. Sibling tests are exempt
+ * along with their layer's other rules.
+ */
+export const productsRoot = "src/app/products";
+
+export const sharedProductDirectory = "shared";
+
 export const sourceVocabulary = ["github", "rss", "doubao", "grok", "glm", "arxiv", "x.com"] as const;
 
 export const adapterPackages = ["cheerio", "fast-xml-parser", "he"] as const;

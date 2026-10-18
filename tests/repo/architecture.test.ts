@@ -69,6 +69,88 @@ describe("architecture boundaries", () => {
     ]);
   });
 
+  it("accepts products importing the shared composition, not each other", () => {
+    expect(
+      rulesOf(
+        checkBoundaries([
+          {
+            path: "src/app/products/frontier/flow.ts",
+            source: [
+              'import { collectIndustryBrief } from "../shared/industry.js";',
+              'import { tool } from "./tool.js";',
+              "export const flow = [collectIndustryBrief, tool];",
+            ].join("\n"),
+          },
+          {
+            path: "src/app/products/shared/industry.ts",
+            source: [
+              'import { candidateDecision } from "./candidate-decision.js";',
+              'import { collectSources } from "../../../acquisition/index.js";',
+              "export const industry = [candidateDecision, collectSources];",
+            ].join("\n"),
+          },
+          // The registry directly under products/ composes every product.
+          {
+            path: "src/app/products/index.ts",
+            source:
+              'import { frontierToolDescriptor } from "./frontier/tool.js";\nexport const descriptor = frontierToolDescriptor;\n',
+          },
+          // Sibling tests keep their exemption from product isolation.
+          {
+            path: "src/app/products/daily-ai/flow.test.ts",
+            source:
+              'import { generateNewsBrief } from "../news/flow.js";\nexport const spy = generateNewsBrief;\n',
+          },
+        ]),
+      ),
+    ).toEqual([]);
+  });
+
+  it("detects a product importing another product, value or type", () => {
+    const violations = checkBoundaries([
+      {
+        path: "src/app/products/daily-ai/flow.ts",
+        source:
+          'import { buildIndustryDocument } from "../frontier/flow.js";\nexport const flow = buildIndustryDocument;\n',
+      },
+      {
+        path: "src/app/products/frontier/flow.ts",
+        source:
+          'import { candidateDecision } from "../subscriptions/output.js";\nexport const flow = candidateDecision;\n',
+      },
+      {
+        path: "src/app/products/research/cli.ts",
+        source:
+          'import { createGlmResearch } from "../news/hybrid.js";\nexport const cli = createGlmResearch;\n',
+      },
+      {
+        path: "src/app/products/subscriptions/automation.ts",
+        source:
+          'import { RSS_SUMMARY_RESEARCH_TOOL_ID } from "../research/tool.js";\nexport const automation = RSS_SUMMARY_RESEARCH_TOOL_ID;\n',
+      },
+      {
+        path: "src/app/products/daily-ai/tool.ts",
+        source:
+          'import type { IndustryBriefDocument } from "../frontier/flow.js";\nexport type Doc = IndustryBriefDocument;\n',
+      },
+      // shared/ must stay product-agnostic.
+      {
+        path: "src/app/products/shared/industry.ts",
+        source:
+          'import { buildIndustryDocument } from "../frontier/tool.js";\nexport const industry = buildIndustryDocument;\n',
+      },
+    ]);
+
+    expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
+      "src/app/products/daily-ai/flow.ts product-boundary",
+      "src/app/products/daily-ai/tool.ts product-boundary",
+      "src/app/products/frontier/flow.ts product-boundary",
+      "src/app/products/research/cli.ts product-boundary",
+      "src/app/products/shared/industry.ts product-boundary",
+      "src/app/products/subscriptions/automation.ts product-boundary",
+    ]);
+  });
+
   it("detects module, escape, external, and entry vocabulary violations", () => {
     const violations = checkBoundaries([
       {
@@ -265,9 +347,14 @@ function legalGraph(): SourceInput[] {
         'import type { created } from "../../../acquisition/domain/item/model.js";\nimport { empty } from "../../../kernel/text.js";\nexport const rank = [empty, created];\n',
     },
     {
+      path: "src/app/products/shared/glm-research.ts",
+      source:
+        'import { GlmSearchClient } from "../../../acquisition/index.js";\nimport { readGlmPage } from "../../../reading/index.js";\nexport const research = [GlmSearchClient, readGlmPage];\n',
+    },
+    {
       path: "src/app/products/news/flow.ts",
       source:
-        'import { search } from "../../../acquisition/index.js";\nimport { empty } from "../../../kernel/index.js";\nexport const flow = [search, empty];\n',
+        'import { search } from "../../../acquisition/index.js";\nimport { empty } from "../../../kernel/index.js";\nimport { createGlmResearch } from "../shared/glm-research.js";\nexport const flow = [search, empty, createGlmResearch];\n',
     },
   ];
 }
