@@ -23,7 +23,7 @@ import {
 } from "../../../kernel/index.js";
 import { boundedInteger } from "../../config/parse.js";
 import { loadNewsTopics } from "./topics.js";
-import { createGlmResearch, type GlmResearch } from "../shared/glm-research.js";
+import { createGlmResearch, type GlmResearch } from "../../../integrations/glm/index.js";
 import {
   createBudgetedNewsSearch,
   editionRotation,

@@ -1,5 +1,8 @@
-import { GlmSearchClient, type ResearchSearchResult } from "../../../acquisition/index.js";
-import { readGlmPage, type GlmPage } from "../../../reading/index.js";
+import type { GlmPage } from "../../reading/index.js";
+
+import { GlmSearchClient } from "./search/provider.js";
+import type { ResearchSearchResult } from "./search/mapper.js";
+import { readGlmPage } from "./reader/reader.js";
 
 export type ResearchPage = GlmPage;
 

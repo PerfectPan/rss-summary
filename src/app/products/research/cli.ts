@@ -6,7 +6,7 @@ import { recordResearch } from "../../../delivery/index.js";
 import { errorMessage } from "../../../kernel/index.js";
 import { GlmReader } from "../../../reading/index.js";
 import { runPluginEffect } from "../../runtime.js";
-import { createGlmResearch, type GlmResearch } from "../shared/glm-research.js";
+import { createGlmResearch, type GlmResearch } from "../../../integrations/glm/index.js";
 
 type Writable = {
   write(chunk: string): unknown;

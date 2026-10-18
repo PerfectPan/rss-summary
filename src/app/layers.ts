@@ -19,15 +19,108 @@ import {
   RunArchive,
 } from "../delivery/index.js";
 import {
+  ArticleResearchClient,
   BrowserReader,
+  browserArticleResearch,
+  extractArticle,
   GlmReader,
   HttpReader,
-  ReadingLive,
+  type BrowserPageFetcher,
+  type GlmPage,
+  transcriptEvidence,
   VideoReader,
-  type ReadingLiveOptions,
+  VideoResearchClient,
+  videoVisualEvidence,
+  type VideoTranscriptFormatter,
+  type VideoVisualFormatter,
 } from "../reading/index.js";
+import { readGlmPage } from "../integrations/glm/index.js";
+import type { ReadRequest, ReadResult } from "../reading/index.js";
 import type { DeliveryOptions } from "../delivery/index.js";
 import { loadEnvConfig, type AppConfig } from "./config/env.js";
+
+export type ReadingLiveOptions = {
+  apiKey?: string;
+  browserChannel?: string;
+  browserResearch?: (request: ReadRequest) => Effect.Effect<ReadResult>;
+  browserTimeoutMs?: number;
+  fetch?: typeof fetch;
+  fetchPage?: BrowserPageFetcher;
+  formatTranscript?: VideoTranscriptFormatter;
+  formatVisuals?: VideoVisualFormatter;
+  glmRead?: (url: string) => Promise<GlmPage>;
+  glmTimeoutMs?: number;
+  headless?: boolean;
+  httpResearch?: ArticleResearchClient["research"];
+  maxBytes?: number;
+  maxChars?: number;
+  now?: () => Date;
+  timeoutMs?: number;
+  videoEnv?: NodeJS.ProcessEnv;
+  videoResearch?: VideoResearchClient["research"];
+};
+
+/**
+ * Assemble the reading ports from their integrations: the HTTP/browser/video
+ * readers and the GLM fallback. Substitutes let hosts and tests replace one
+ * leg of the chain without touching the others.
+ */
+export function ReadingLive(
+  options: ReadingLiveOptions = {},
+): Layer.Layer<HttpReader | BrowserReader | VideoReader | GlmReader, never, never> {
+  const httpClient = new ArticleResearchClient({
+    extract: extractArticle,
+    fetch: options.fetch,
+    maxBytes: options.maxBytes,
+    maxChars: options.maxChars,
+    now: options.now,
+    timeoutMs: options.timeoutMs,
+  });
+  const browserResearch = browserArticleResearch({
+    browserChannel: options.browserChannel,
+    extract: extractArticle,
+    fetchPage: options.fetchPage,
+    headless: options.headless,
+    maxChars: options.maxChars,
+    timeoutMs: options.browserTimeoutMs,
+  });
+  const videoClient = new VideoResearchClient({
+    env: options.videoEnv,
+    fetch: options.fetch,
+    formatTranscript: options.formatTranscript ?? transcriptEvidence,
+    formatVisuals: options.formatVisuals ?? videoVisualEvidence,
+  });
+  const http = Layer.succeed(HttpReader, {
+    research: (request) =>
+      Effect.promise(() => (options.httpResearch ?? httpClient.research.bind(httpClient))(request)),
+  });
+  const browser = Layer.succeed(BrowserReader, {
+    research: options.browserResearch ?? browserResearch,
+  });
+  const video = Layer.succeed(VideoReader, {
+    research: (request) =>
+      Effect.promise(() =>
+        (options.videoResearch ?? videoClient.research.bind(videoClient))(request),
+      ),
+  });
+  const glm = Layer.succeed(GlmReader, {
+    read: (url) =>
+      Effect.tryPromise({
+        try: () =>
+          (
+            options.glmRead ??
+            ((target: string) =>
+              readGlmPage(target, {
+                apiKey: options.apiKey ?? "",
+                fetch: options.fetch,
+                timeoutMs: options.glmTimeoutMs,
+              }))
+          )(url),
+        catch: (cause) => cause,
+      }),
+  });
+  return Layer.mergeAll(http, browser, video, glm);
+}
 
 /** Every port the app consumes, provided by AppLive. */
 export type AppServices =

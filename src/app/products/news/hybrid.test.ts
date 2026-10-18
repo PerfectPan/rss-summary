@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { createHybridNewsSearch, type NewsSearchRequest } from "./hybrid.js";
 import { DoubaoSearchError } from "../../../integrations/doubao/index.js";
 import type { AuditedSearchPage as NewsSearchPage } from "../../../integrations/grok/index.js";
-import type { ResearchPage } from "../shared/glm-research.js";
+import type { ResearchPage } from "../../../integrations/glm/index.js";
 
 const window = {
   since: Date.parse("2026-09-29T00:00:00+08:00"),

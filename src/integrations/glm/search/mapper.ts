@@ -1,4 +1,7 @@
-import type { Item } from "../index.js";
+import type { Item } from "../../../acquisition/index.js";
+
+import { publicUrl } from "../public-url.js";
+import { glmResultList, text } from "./dto.js";
 
 export type ResearchSearchResult = {
   title: string;
@@ -13,49 +16,16 @@ export type GlmSearchAcquired = {
   domainRejected: number;
 };
 
-export function publicUrl(input: string): URL {
-  let url: URL;
-  try {
-    url = new URL(input);
-  } catch {
-    throw new Error("A public HTTP(S) URL is required.");
-  }
-  const host = url.hostname;
-  if (
-    !["http:", "https:"].includes(url.protocol) ||
-    url.username ||
-    url.password ||
-    !host.includes(".") ||
-    host.includes(":") ||
-    /^[\d.]+$/u.test(host) ||
-    /(?:^|\.)(?:localhost|local|internal|test|invalid)$/iu.test(host)
-  ) {
-    throw new Error("A public HTTP(S) URL without credentials is required.");
-  }
-  return url;
-}
-
-export function allowedSearchDomains(domains: readonly string[]): string[] {
-  return domains.map((domain) => {
-    const url = publicUrl(`https://${domain}`);
-    if (url.host !== domain.toLowerCase() || url.pathname !== "/" || url.search || url.hash) {
-      throw new Error("Source domains must be hostnames without paths or ports.");
-    }
-    return url.hostname;
-  });
-}
-
 export function parseGlmSearchResults(
   value: unknown,
   allowed: readonly string[],
 ): GlmSearchAcquired {
-  if (!Array.isArray(value)) throw new Error("GLM search returned an invalid result list.");
+  const records = glmResultList(value);
   const results: ResearchSearchResult[] = [];
   const items: Item[] = [];
   let domainRejected = 0;
   const seen = new Set<string>();
-  for (const item of value) {
-    const record = asRecord(item);
+  for (const record of records) {
     if (
       typeof record.title !== "string" ||
       typeof record.link !== "string" ||
@@ -87,7 +57,7 @@ export function parseGlmSearchResults(
     items.push(itemFromGlm(result, results.length));
     if (results.length === 10) break;
   }
-  return { results, items, rawResults: value.length, domainRejected };
+  return { results, items, rawResults: records.length, domainRejected };
 }
 
 function itemFromGlm(result: ResearchSearchResult, rankPosition: number): Item {
@@ -109,14 +79,4 @@ function itemFromGlm(result: ResearchSearchResult, rankPosition: number): Item {
     rank: { position: rankPosition },
     display: { label: name, reference: result.url, facts: [] },
   };
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-}
-
-function text(value: unknown): string {
-  return typeof value === "string" ? value : "";
 }

@@ -1,6 +1,6 @@
 import { expect, it } from "vite-plus/test";
 
-import { allowedSearchDomains, parseGlmSearchResults, publicUrl } from "./glm.js";
+import { parseGlmSearchResults } from "./mapper.js";
 
 it("keeps allowed public results, drops the rest, and leaves items unrated", () => {
   const parsed = parseGlmSearchResults(
@@ -22,15 +22,4 @@ it("keeps allowed public results, drops the rest, and leaves items unrated", () 
   });
   expect(parsed.domainRejected).toBe(1);
   expect(parsed.rawResults).toBe(4);
-});
-
-it("rejects a credentialed URL and a domain that is not a bare hostname", () => {
-  expect(publicUrl("https://example.com/post").href).toBe("https://example.com/post");
-  expect(() => publicUrl("https://user:secret@example.com/post")).toThrow(
-    "A public HTTP(S) URL without credentials is required.",
-  );
-  expect(allowedSearchDomains(["Example.com"])).toEqual(["example.com"]);
-  expect(() => allowedSearchDomains(["example.com/path"])).toThrow(
-    "Source domains must be hostnames without paths or ports.",
-  );
 });

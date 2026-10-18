@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { createGlmResearch } from "./glm-research.js";
+import { createGlmResearch } from "./research.js";
 
 function clientWith(payload: unknown, { sse = true, isError = false } = {}) {
   const fetchMock = vi.fn(async (_url: unknown, init?: RequestInit) => {

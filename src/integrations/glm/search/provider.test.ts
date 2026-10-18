@@ -1,8 +1,8 @@
 import { Effect } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { SearchProvider } from "../../application/ports.js";
-import { GlmSearchClient, GlmSearchLive } from "./glm-search.js";
+import { SearchProvider } from "../../../acquisition/index.js";
+import { GlmSearchClient, GlmSearchLive } from "./provider.js";
 import {
   describeSearchProvider,
   type ProviderStep,

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { readGlmPage } from "./glm-reader.js";
+import { readGlmPage } from "./reader.js";
 
 function pageWith(payload: unknown, { sse = true, isError = false } = {}) {
   const fetchMock = vi.fn(async (_url: unknown, init?: RequestInit) => {

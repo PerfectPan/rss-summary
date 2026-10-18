@@ -146,8 +146,6 @@ export {
   type BudgetedSearchPage,
 } from "./application/services/with-budget.js";
 export { settleSearches, type SearchSettlement } from "./application/use-cases/search.js";
-export { GlmSearchClient, GlmSearchLive } from "./infra/adapters/glm-search.js";
-export type { ResearchSearchResult } from "./domain/item/adapters/glm.js";
 export {
   candidateEvidenceUrl,
   candidateIdentity,

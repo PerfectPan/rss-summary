@@ -4,7 +4,6 @@ import {
   resolveNewsCredibility,
   shareSearchBudget,
   type NewsSearchInput,
-  type ResearchSearchResult,
 } from "../../../acquisition/index.js";
 import type { AuditedSearchPage as NewsSearchPage } from "../../../integrations/grok/index.js";
 import { canonicalizeUrl } from "../../../kernel/index.js";
@@ -16,7 +15,11 @@ import {
   type NewsTimeWindow,
 } from "../../../editorial/index.js";
 import type { NewsTopic, NewsTopicQuery } from "./output.js";
-import type { GlmResearch, ResearchPage } from "../shared/glm-research.js";
+import type {
+  GlmResearch,
+  ResearchPage,
+  ResearchSearchResult,
+} from "../../../integrations/glm/index.js";
 
 export type NewsSearchRequest = {
   input: NewsSearchInput;

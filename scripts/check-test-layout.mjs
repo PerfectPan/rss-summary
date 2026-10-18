@@ -89,6 +89,15 @@ const coveredElsewhere = new Map([
     "integrations/grok/search/dto",
     "integrations/grok/cli tests and search mapper tests",
   ],
+  // The GLM MCP transport runs behind both the search and reader suites; its
+  // handshake, SSE parsing, and size limits are asserted end to end there.
+  ["integrations/glm/mcp-client", "integrations/glm research, provider, and reader tests"],
+  // The webReader payload decode and page projection run inside readGlmPage,
+  // asserted by the reader and research tests (dates, truncation, origin).
+  ["integrations/glm/reader/dto", "integrations/glm reader and research tests"],
+  ["integrations/glm/reader/mapper", "integrations/glm reader and research tests"],
+  // The search result-list shape is exercised by the mapper tests.
+  ["integrations/glm/search/dto", "integrations/glm search mapper tests"],
   // Categories and title cleaning run in the Daily AI flow; the category enum
   // is also locked verbatim by the golden registration snapshot.
   [
