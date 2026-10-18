@@ -1,13 +1,13 @@
 import { Effect } from "effect";
 
-import { runPluginEffect } from "../app/runtime.js";
-import type { IndustryBriefDocument } from "../application/industry-brief.js";
-import { buildIndustryDocument } from "../application/industry-brief.js";
-import { calendarDayAtOffset } from "../domain/time.js";
-import type { RunAudit } from "../delivery/index.js";
-import type { AppConfig } from "../infrastructure/config.js";
-import { loadConfig } from "../infrastructure/config.js";
-import { renderMarkdownIndustryBrief } from "../app/render/industry-render.js";
+import type { RunAudit } from "../../../delivery/index.js";
+import { calendarDayAtOffset } from "../../../kernel/index.js";
+import { runPluginEffect } from "../../runtime.js";
+import { loadEnvConfig, type AppConfig } from "../../config/env.js";
+import { buildIndustryDocument, type IndustryBriefDocument } from "./flow.js";
+import { renderMarkdownIndustryBrief } from "../../render/industry-render.js";
+
+export const RSS_SUMMARY_INDUSTRY_TOOL_ID = "rss-summary/generate-industry-brief";
 
 export type RivusIndustryBriefInput = {
   day?: string;
@@ -29,7 +29,7 @@ type RivusIndustryBriefDependencies = {
   env?: NodeJS.ProcessEnv;
 };
 
-/** Observe-only industry brief Tool: first-party sources only, never writes state or sends webhooks. */
+/** Observe-only frontier Tool: first-party sources only, never writes state or sends webhooks. */
 export async function generateRivusIndustryBrief(
   value: unknown,
   dependencies: RivusIndustryBriefDependencies = {},
@@ -49,12 +49,21 @@ export async function generateRivusIndustryBrief(
     throw new Error("day must use YYYY-MM-DD format.");
   }
 
-  const argv = ["--dry-run", "--timezone-offset", timezoneOffset];
-  if (day) argv.push("--day", day);
-  if (input.onlyNew ?? true) argv.push("--only-new");
-
+  const base = await runPluginEffect(loadEnvConfig(env));
+  // An explicit `onlyNew: false` falls back to the environment; anything else
+  // keeps the Tool's read-only default.
+  const onlyNew =
+    input.onlyNew === false ? env.FEED_ONLY_NEW === "1" || env.FEED_ONLY_NEW === "true" : true;
+  const config: AppConfig = {
+    ...base,
+    timezoneOffset,
+    day: day ?? base.day,
+    dryRun: true,
+    webhookUrl: undefined,
+    onlyNew,
+  };
   const document = await runPluginEffect(
-    (dependencies.buildIndustryDocument ?? buildIndustryDocument)(loadConfig(env, argv)),
+    (dependencies.buildIndustryDocument ?? buildIndustryDocument)(config),
   );
   const paperCandidateCount = document.candidates.filter(
     (candidate) => candidate.category === "paper",

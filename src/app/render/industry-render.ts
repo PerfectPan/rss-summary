@@ -1,4 +1,4 @@
-import type { IndustryBriefDocument } from "../../application/industry-brief.js";
+import type { IndustryBriefDocument } from "../products/frontier/flow.js";
 import { renderCandidateBrief } from "./candidate-brief.js";
 
 /** Render the frontier brief as Feishu-friendly Markdown. */

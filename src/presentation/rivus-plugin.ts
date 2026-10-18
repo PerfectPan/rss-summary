@@ -11,7 +11,10 @@ import {
   type RivusNewsBriefResult,
 } from "../application/news-brief.js";
 import { dailyAiCategories } from "../editorial/index.js";
-import { generateRivusIndustryBrief, type RivusIndustryBriefResult } from "./rivus-industry.js";
+import {
+  generateRivusIndustryBrief,
+  type RivusIndustryBriefResult,
+} from "../app/products/frontier/tool.js";
 import { renderNewsBrief } from "../app/render/news-render.js";
 import { runPluginEffect } from "../app/runtime.js";
 import { createRivusSubscriptionExecutor } from "../app/rivus/phases.js";

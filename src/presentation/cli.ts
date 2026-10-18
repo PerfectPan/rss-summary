@@ -3,12 +3,7 @@ import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { runDigestCommand } from "../app/products/subscriptions/cli.js";
-import { runCliEffect } from "../app/runtime.js";
-import { runIndustry } from "../application/industry-brief.js";
-import {
-  renderJsonIndustryBrief,
-  renderMarkdownIndustryBrief,
-} from "../app/render/industry-render.js";
+import { runIndustryCommand } from "../app/products/frontier/cli.js";
 import { runFeedsCommand } from "./feeds-cli.js";
 import { runGithubHomeCommand } from "./github-home-cli.js";
 import { runResearchCommand } from "./research-cli.js";
@@ -49,14 +44,7 @@ export async function runCliCommand(
   }
 
   if (command === "industry") {
-    return runCliEffect(
-      runIndustry((document, format) =>
-        format === "json"
-          ? renderJsonIndustryBrief(document)
-          : renderMarkdownIndustryBrief(document),
-      ),
-      { stderr },
-    );
+    return runIndustryCommand(rest, { stderr });
   }
 
   if (command === "digest") {

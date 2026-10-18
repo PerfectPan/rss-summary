@@ -1,8 +1,8 @@
 import { Effect } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 
-import type { IndustryBriefDocument } from "../../src/application/industry-brief.js";
-import { generateRivusIndustryBrief } from "../../src/presentation/rivus-industry.js";
+import type { IndustryBriefDocument } from "../../../../src/app/products/frontier/flow.js";
+import { generateRivusIndustryBrief } from "../../../../src/app/products/frontier/tool.js";
 
 describe("Rivus industry brief adapter", () => {
   it("renders markdown from the industry document and reports candidate count", async () => {

@@ -4,9 +4,24 @@ import { join } from "node:path";
 import { Effect } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { loadConfig } from "../../src/infrastructure/config.js";
+import { parseCliArgs } from "../../../../src/app/config/argv.js";
+import { applyCliArgs, loadEnvConfig } from "../../../../src/app/config/env.js";
+import { AppLive, appLiveOptions } from "../../../../src/app/layers.js";
 
-vi.mock("../../src/acquisition/infra/adapters/rss-http.js", () => ({
+async function resolveConfig(env: NodeJS.ProcessEnv, argv: string[]) {
+  const base = await Effect.runPromise(loadEnvConfig(env));
+  return applyCliArgs(base, parseCliArgs(argv));
+}
+
+async function build(env: NodeJS.ProcessEnv, argv: string[]) {
+  const { buildIndustryDocument } = await import("../../../../src/app/products/frontier/flow.js");
+  const config = await resolveConfig(env, argv);
+  return Effect.runPromise(
+    Effect.provide(buildIndustryDocument(config), AppLive(appLiveOptions(config))),
+  );
+}
+
+vi.mock("../../../../src/acquisition/infra/adapters/rss-http.js", () => ({
   RssClient: class {
     getFeedEvents(feed: { name: string; url: string; tags: string[] }) {
       return Promise.resolve([
@@ -30,7 +45,7 @@ vi.mock("../../src/acquisition/infra/adapters/rss-http.js", () => ({
   },
 }));
 
-vi.mock("../../src/acquisition/infra/adapters/web-page-http.js", () => ({
+vi.mock("../../../../src/acquisition/infra/adapters/web-page-http.js", () => ({
   WebPageClient: class {
     getEvents(source: { name: string; url: string; tags: string[] }) {
       return Promise.resolve([
@@ -55,14 +70,10 @@ vi.mock("../../src/acquisition/infra/adapters/web-page-http.js", () => ({
 
 describe("industry brief", () => {
   it("collects first-party RSS and page candidates without touching GitHub", async () => {
-    const config = loadConfig({ GITHUB_USERNAME: "PerfectPan", FEED_TIMEZONE_OFFSET: "+08:00" }, [
-      "--only-new",
-      "--day",
-      "2026-08-09",
-    ]);
-    const { buildIndustryDocument } = await import("../../src/application/industry-brief.js");
-
-    const document = await Effect.runPromise(buildIndustryDocument(config));
+    const document = await build(
+      { GITHUB_USERNAME: "PerfectPan", FEED_TIMEZONE_OFFSET: "+08:00" },
+      ["--only-new", "--day", "2026-08-09"],
+    );
 
     expect(document.candidates.length).toBeGreaterThan(0);
     expect(new Set(document.candidates.map((candidate) => candidate.source))).toEqual(
@@ -71,15 +82,12 @@ describe("industry brief", () => {
   });
 
   it("bounds the abstract-matched paper research queue", async () => {
-    const config = loadConfig({ FEED_TIMEZONE_OFFSET: "+08:00" }, [
+    const document = await build({ FEED_TIMEZONE_OFFSET: "+08:00" }, [
       "--day",
       "2026-08-09",
       "--max-papers",
       "1",
     ]);
-    const { buildIndustryDocument } = await import("../../src/application/industry-brief.js");
-
-    const document = await Effect.runPromise(buildIndustryDocument(config));
 
     expect(document.candidates.filter((candidate) => candidate.category === "paper")).toHaveLength(
       1,
@@ -98,12 +106,8 @@ describe("industry brief", () => {
       "--industry-state-file",
       stateFile,
     ];
-    const { buildIndustryDocument } = await import("../../src/application/industry-brief.js");
-
     try {
-      const initial = await Effect.runPromise(
-        buildIndustryDocument(loadConfig({ FEED_TIMEZONE_OFFSET: "+08:00" }, args)),
-      );
+      const initial = await build({ FEED_TIMEZONE_OFFSET: "+08:00" }, args);
       const paper = initial.candidates.find((candidate) => candidate.category === "paper");
       expect(paper?.url).toBeDefined();
       if (!paper?.url) throw new Error("Expected a paper candidate URL");
@@ -117,9 +121,7 @@ describe("industry brief", () => {
         }),
       );
 
-      const filtered = await Effect.runPromise(
-        buildIndustryDocument(loadConfig({ FEED_TIMEZONE_OFFSET: "+08:00" }, args)),
-      );
+      const filtered = await build({ FEED_TIMEZONE_OFFSET: "+08:00" }, args);
 
       expect(filtered.candidates.some((candidate) => candidate.category === "paper")).toBe(false);
     } finally {

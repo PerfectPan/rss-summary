@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 
 import { generateDailyAiDigest } from "../../src/application/daily-ai-digest.js";
 import * as newsBrief from "../../src/application/news-brief.js";
-import type { IndustryBriefDocument } from "../../src/application/industry-brief.js";
+import type { IndustryBriefDocument } from "../../src/app/products/frontier/flow.js";
 import type { XAccountPosts } from "../../src/acquisition/index.js";
 
 import { RssClient } from "../../src/acquisition/infra/adapters/rss-http.js";

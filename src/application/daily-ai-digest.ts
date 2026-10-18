@@ -1,7 +1,8 @@
-import { Effect } from "effect";
-
 import { runPluginEffect } from "../app/runtime.js";
-import { buildIndustryDocument, type IndustryBriefDocument } from "./industry-brief.js";
+import {
+  buildIndustryDocument,
+  type IndustryBriefDocument,
+} from "../app/products/frontier/flow.js";
 import { createDailyAiDeliveryReceipt, type DailyAiDeliveryReceipt } from "../delivery/index.js";
 import { collectXAccountPosts, type XAccountPosts } from "../acquisition/index.js";
 import {
@@ -12,7 +13,7 @@ import {
   type DailyAiEvidence,
 } from "../editorial/index.js";
 import { calendarDayAtOffset, parseOffsetMilliseconds } from "../domain/time.js";
-import { loadConfig } from "../infrastructure/config.js";
+import { loadEnvConfig } from "../app/config/env.js";
 import { isDailyAiPaperSource } from "../acquisition/index.js";
 
 export type DailyAiDigestResult = DailyAiDigest & {
@@ -130,16 +131,16 @@ async function defaultIndustry(
   window: DailyAiWindow,
   env: NodeJS.ProcessEnv,
 ): Promise<IndustryBriefDocument> {
-  const config = loadConfig(env, [
-    "--dry-run",
-    "--since",
-    window.since,
-    "--until",
-    window.until,
-    "--timezone-offset",
-    env.FEED_TIMEZONE_OFFSET ?? "+08:00",
-  ]);
-  return Effect.runPromise(
+  const timezoneOffset = env.FEED_TIMEZONE_OFFSET ?? "+08:00";
+  const base = await runPluginEffect(loadEnvConfig(env));
+  const config = {
+    ...base,
+    since: window.since,
+    until: window.until,
+    timezoneOffset,
+    dryRun: true,
+  };
+  return runPluginEffect(
     buildIndustryDocument({
       ...config,
       // Daily AI cannot publish paper candidates, so exclude their sources before fetching.
