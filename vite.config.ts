@@ -47,47 +47,6 @@ export default defineConfig({
       "no-console": ["error", { allow: ["error", "warn"] }],
       "vite-plus/prefer-vite-plus-imports": "error",
     },
-    overrides: [
-      {
-        files: ["src/domain/**/*.ts"],
-        rules: {
-          "no-restricted-imports": [
-            "error",
-            {
-              patterns: [
-                {
-                  group: [
-                    "**/application/*",
-                    "**/infrastructure/*",
-                    "**/presentation/*",
-                    "effect",
-                    "node:*",
-                  ],
-                  message: "domain must stay pure: no outer layers, Effect, or Node built-ins.",
-                },
-              ],
-            },
-          ],
-        },
-      },
-      {
-        files: ["src/application/**/*.ts"],
-        rules: {
-          "no-restricted-imports": [
-            "error",
-            {
-              patterns: [
-                {
-                  group: ["**/presentation/*"],
-                  message:
-                    "application must not import presentation; inject render at the entrypoint.",
-                },
-              ],
-            },
-          ],
-        },
-      },
-    ],
     jsPlugins: [
       {
         name: "vite-plus",

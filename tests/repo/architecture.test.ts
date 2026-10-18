@@ -20,11 +20,6 @@ describe("architecture boundaries", () => {
     }));
     const violations = checkBoundaries(files);
 
-    console.error(`architecture baseline: ${violations.length} violation(s)`);
-    for (const violation of violations) {
-      console.error(`${violation.file}: ${violation.rule}: ${violation.message}`);
-    }
-
     expect(violations).toEqual([]);
   });
 
@@ -72,6 +67,63 @@ describe("architecture boundaries", () => {
     expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
       "src/acquisition/infra/adapters/rss-http.ts effect-run",
     ]);
+  });
+
+  it("detects module, escape, external, and entry vocabulary violations", () => {
+    const violations = checkBoundaries([
+      {
+        path: "src/editorial/domain/news/rank.ts",
+        source:
+          'import { deliver } from "../../../delivery/index.js";\nexport const ranked = deliver;\n',
+      },
+      {
+        path: "src/kernel/text.ts",
+        source: 'import { gone } from "../../outside.js";\nexport const text = gone;\n',
+      },
+      {
+        path: "src/acquisition/domain/item/item.ts",
+        source: 'import { load } from "cheerio";\nexport const item = load;\n',
+      },
+      {
+        path: "src/kernel/text.ts",
+        source: 'import { tool } from "@rivus/agent";\nexport const text = tool;\n',
+      },
+      {
+        path: "src/editorial/index.ts",
+        source: 'export const note = "github";\n',
+      },
+    ]);
+
+    expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
+      "src/acquisition/domain/item/item.ts external",
+      "src/editorial/domain/news/rank.ts module-dependency",
+      "src/editorial/index.ts source-vocabulary",
+      "src/kernel/text.ts external",
+      "src/kernel/text.ts relative-escape",
+    ]);
+  });
+
+  it("allows infra consoles, parser packages, and Rivus imports at the app boundary", () => {
+    expect(
+      rulesOf(
+        checkBoundaries([
+          {
+            path: "src/delivery/infra/adapters/notifier.ts",
+            source: [
+              'import { appendFileSync } from "node:fs";',
+              'import { load } from "cheerio";',
+              "const webhook = process.env.NOTIFY_WEBHOOK_URL;",
+              'console.error("delivery failed");',
+              "export const notifier = [appendFileSync, load, webhook];",
+            ].join("\n"),
+          },
+          {
+            path: "src/app/rivus/plugin.ts",
+            source: 'import { tool } from "@rivus/agent";\nexport const plugin = tool;\n',
+          },
+        ]),
+      ),
+    ).toEqual([]);
   });
 
   it("detects sibling tests reaching into another module's internals", () => {
