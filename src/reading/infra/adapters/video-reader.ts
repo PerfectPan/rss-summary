@@ -3,9 +3,14 @@ import { mkdtemp, open, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { extname, join } from "node:path";
 import { promisify } from "node:util";
-import type { ReadRequest, ReadResult, VideoVisuals } from "../../domain/document/document.js";
-import { isVideoResearchUrl, validateResearchUrl } from "../../domain/document/url-policy.js";
-import { asRecord, text } from "./json-record.js";
+import {
+  isVideoResearchUrl,
+  type ReadRequest,
+  type ReadResult,
+  validateResearchUrl,
+  type VideoVisuals,
+} from "../../domain/document/index.js";
+import { asRecord, text } from "../services/json-record.js";
 import { captureVideoFrames } from "./video-frames.js";
 
 type RunCommand = (

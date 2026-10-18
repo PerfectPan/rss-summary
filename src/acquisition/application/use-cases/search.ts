@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 
-import type { SearchPage } from "../../domain/search/search.js";
+import type { SearchPage } from "../../domain/search/index.js";
 
 export type SearchSettlement =
   | { readonly _tag: "Fulfilled"; readonly value: SearchPage }

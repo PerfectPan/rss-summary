@@ -16,12 +16,12 @@ import {
   type BudgetLimits,
   type BudgetState,
   type CachedPage,
-} from "../../src/acquisition/domain/budget/search-budget.js";
+} from "../../src/acquisition/domain/budget/index.js";
 import {
   NewsSearchError,
   type SearchInput,
   type SearchPage,
-} from "../../src/acquisition/domain/search/search.js";
+} from "../../src/acquisition/domain/search/index.js";
 
 /**
  * One contract for every SearchProvider.

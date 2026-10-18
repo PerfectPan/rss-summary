@@ -1,7 +1,11 @@
 import { Clock, Effect } from "effect";
 
-import type { DocumentMethod, ReadResult } from "../../domain/document/document.js";
-import { isVideoResearchUrl, validateResearchUrl } from "../../domain/document/url-policy.js";
+import {
+  isVideoResearchUrl,
+  type DocumentMethod,
+  type ReadResult,
+  validateResearchUrl,
+} from "../../domain/document/index.js";
 import { BrowserReader, GlmReader, HttpReader, VideoReader } from "../ports.js";
 
 export type ReadMode = "auto" | "browser" | "http";

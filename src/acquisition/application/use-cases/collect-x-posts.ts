@@ -8,8 +8,8 @@ import {
   type NewsSearchError,
   type SearchPage,
   type SearchUsage,
-} from "../../domain/search/search.js";
-import { searchBudgetDefaults } from "../budget-defaults.js";
+} from "../../domain/search/index.js";
+import { searchBudgetDefaults } from "../services/budget-defaults.js";
 import type { BudgetedSearch } from "../services/with-budget.js";
 
 const instantSchema = Schema.String.check(

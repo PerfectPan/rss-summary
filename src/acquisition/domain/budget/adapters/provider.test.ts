@@ -1,7 +1,7 @@
 import { expect, it } from "vite-plus/test";
 
 import { isCacheablePage, normalizeProvider, presentCachedPage } from "./provider.js";
-import type { CacheEntry, BudgetUsage } from "../search-budget.js";
+import type { CacheEntry, BudgetUsage } from "../index.js";
 
 const usage: BudgetUsage = {
   dailyUsed: 1,

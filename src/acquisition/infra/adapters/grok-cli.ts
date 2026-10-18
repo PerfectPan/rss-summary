@@ -14,7 +14,7 @@ import {
   type GrokRequest,
 } from "../../domain/item/adapters/grok.js";
 import { pageAudit, type AuditedSearchPage } from "../../domain/search/adapters/audit.js";
-import { NewsSearchError, type SearchInput } from "../../domain/search/search.js";
+import { NewsSearchError, type SearchInput } from "../../domain/search/index.js";
 import { startOfCalendarDay } from "../../../kernel/time.js";
 
 const maxNativeCalls = 2;

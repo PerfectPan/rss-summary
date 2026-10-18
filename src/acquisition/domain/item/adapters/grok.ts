@@ -1,8 +1,8 @@
 import { Schema } from "effect";
 
 import type { AuditedSearchPage, GrokSearchAudit } from "../../search/adapters/audit.js";
-import { NewsSearchError, type SearchResult } from "../../search/search.js";
-import type { Item } from "../item.js";
+import { NewsSearchError, type SearchResult } from "../../search/index.js";
+import type { Item } from "../index.js";
 
 const postSchema = Schema.Struct({
   url: Schema.String,

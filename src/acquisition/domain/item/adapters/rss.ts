@@ -3,7 +3,7 @@ import { XMLParser } from "fast-xml-parser";
 import he from "he";
 
 import { rssPublicationType } from "../../source/adapters/publication.js";
-import type { FeedSubscription } from "../../source/subscription.js";
+import type { FeedSubscription } from "../../source/index.js";
 import { decodeSchema } from "./decode.js";
 import { publicationAcquired, type Acquired, type ActivityCardDto } from "./activity-card.js";
 

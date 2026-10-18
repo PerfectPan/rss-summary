@@ -5,7 +5,7 @@ import { Effect } from "effect";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { SearchProvider } from "../../application/ports.js";
 import { GrokSearchClient, GrokSearchLive, GrokXClient } from "./grok-cli.js";
-import type { NewsSearchInput } from "../../domain/search/search.js";
+import type { NewsSearchInput } from "../../domain/search/index.js";
 import { describeSearchProvider } from "../../../../tests/support/search-provider-suite.js";
 
 const directories: string[] = [];

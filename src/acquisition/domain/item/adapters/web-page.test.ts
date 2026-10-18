@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import { extractWebPageEntries, acquireWebPage } from "./web-page.js";
-import type { WebPageSubscription } from "../../source/subscription.js";
+import type { WebPageSubscription } from "../../source/index.js";
 
 const source: WebPageSubscription = {
   type: "page",

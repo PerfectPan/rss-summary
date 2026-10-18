@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
 import { parseFeed, parseFeedXml as parseFeedXmlAt } from "./rss.js";
-import type { FeedSubscription } from "../../source/subscription.js";
+import type { FeedSubscription } from "../../source/index.js";
 
 const now = new Date("2026-08-10T00:00:00.000Z");
 const parseFeedXml = (xml: string, feed: FeedSubscription) => parseFeedXmlAt(xml, feed, now);

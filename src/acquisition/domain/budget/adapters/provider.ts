@@ -1,6 +1,6 @@
-import type { CacheEntry, BudgetUsage } from "../search-budget.js";
+import type { CacheEntry, BudgetUsage } from "../index.js";
 import { clonePageAudit, pageAudit, type AuditedSearchPage } from "../../search/adapters/audit.js";
-import type { SearchPage } from "../../search/search.js";
+import type { SearchPage } from "../../search/index.js";
 
 /** CLI identities keep their full string. HTTP identities drop credentials and queries. */
 export const cliIdentity = /^grok:\/\/cli\/v1\/[a-zA-Z0-9._-]+$/u;

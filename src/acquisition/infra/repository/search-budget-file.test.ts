@@ -10,7 +10,7 @@ import {
   findCache,
   type BudgetLimits,
   type CacheRequest,
-} from "../../domain/budget/search-budget.js";
+} from "../../domain/budget/index.js";
 import { loadSearchBudget, saveSearchBudget, sha256 } from "./search-budget-file.js";
 
 const fixtureUrl = new URL("../../../../tests/fixtures/state/news-search.json", import.meta.url);

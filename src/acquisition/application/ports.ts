@@ -1,14 +1,14 @@
 import { Context, Effect } from "effect";
 
-import type { BudgetLimits, BudgetState, SearchBudget } from "../domain/budget/search-budget.js";
+import type { BudgetLimits, BudgetState, SearchBudget } from "../domain/budget/index.js";
 import type { GrokRequest } from "../domain/item/adapters/grok.js";
 import type {
   Acquired,
   PullRequestDetails,
   RepositoryMetadata,
 } from "../domain/item/adapters/activity-card.js";
-import type { NewsSearchError, SearchInput, SearchPage } from "../domain/search/search.js";
-import type { FeedSubscription, WebPageSubscription } from "../domain/source/subscription.js";
+import type { NewsSearchError, SearchInput, SearchPage } from "../domain/search/index.js";
+import type { FeedSubscription, WebPageSubscription } from "../domain/source/index.js";
 
 export type PaginationOptions = {
   perPage: number;

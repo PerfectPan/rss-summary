@@ -5,7 +5,7 @@ import {
   type NewsSearchError,
   type SearchInput,
   type SearchPage,
-} from "../../domain/search/search.js";
+} from "../../domain/search/index.js";
 
 export const searchRetryLimit = 3;
 const retryBaseMs = 250;

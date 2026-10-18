@@ -3,7 +3,7 @@ import { TestClock } from "effect/testing";
 import { describe, expect, it } from "vite-plus/test";
 
 import { retryDelayMs, retryEffect, searchWithRetry } from "./with-retry.js";
-import { NewsSearchError, type SearchInput } from "../../domain/search/search.js";
+import { NewsSearchError, type SearchInput } from "../../domain/search/index.js";
 
 const input: SearchInput = {
   query: "retry",

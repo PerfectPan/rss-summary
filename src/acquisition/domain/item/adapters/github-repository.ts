@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 
 import { formatCompactCount } from "../../../../kernel/text.js";
-import type { Item } from "../item.js";
+import type { Item } from "../index.js";
 import type { PullRequestDetails, RepositoryMetadata } from "./activity-card.js";
 import { decodeSchema } from "./decode.js";
 

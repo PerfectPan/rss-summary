@@ -1,7 +1,10 @@
 import { Effect } from "effect";
 
-import type { ReadRequest, ReadResult } from "../../domain/document/document.js";
-import { validateArticleResearchUrl } from "../../domain/document/url-policy.js";
+import {
+  validateArticleResearchUrl,
+  type ReadRequest,
+  type ReadResult,
+} from "../../domain/document/index.js";
 import type { ArticleExtract } from "./http-reader.js";
 
 export type BrowserReaderOptions = {

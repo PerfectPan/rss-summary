@@ -3,7 +3,7 @@ import { dirname } from "node:path";
 import { Effect, FileSystem, Layer, PlatformError } from "effect";
 
 import { formatFeedSubscriptions } from "../../domain/source/adapters/catalog.js";
-import type { FeedSubscription } from "../../domain/source/subscription.js";
+import type { FeedSubscription } from "../../domain/source/index.js";
 import { SourceCatalogStore } from "../../application/ports.js";
 import { decodeFeedsJson } from "../models/feeds.js";
 

@@ -1,5 +1,5 @@
-import type { CredibilityMethod, CredibilityTier } from "../item.js";
-import type { SourceVerification } from "../../search/search.js";
+import type { CredibilityMethod, CredibilityTier } from "../index.js";
+import type { SourceVerification } from "../../search/index.js";
 import { credibilityForAuthLevel } from "./doubao.js";
 
 /**

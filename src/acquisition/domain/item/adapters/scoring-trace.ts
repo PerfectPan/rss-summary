@@ -1,4 +1,4 @@
-import type { Item, ItemRouting } from "../item.js";
+import type { Item, ItemRouting } from "../index.js";
 import {
   publicationAcquired,
   type Acquired,

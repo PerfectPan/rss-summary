@@ -6,7 +6,7 @@ import {
   parseGlmSearchResults,
   type ResearchSearchResult,
 } from "../../domain/item/adapters/glm.js";
-import type { SearchInput, SearchPage } from "../../domain/search/search.js";
+import type { SearchInput, SearchPage } from "../../domain/search/index.js";
 
 type Options = {
   apiKey: string;

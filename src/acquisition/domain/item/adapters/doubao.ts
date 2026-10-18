@@ -1,5 +1,5 @@
-import { NewsSearchError, type SearchPage, type SearchResult } from "../../search/search.js";
-import type { CredibilityTier, Item } from "../item.js";
+import { NewsSearchError, type SearchPage, type SearchResult } from "../../search/index.js";
+import type { CredibilityTier, Item } from "../index.js";
 
 export class DoubaoSearchError extends NewsSearchError {
   constructor(code: string, message: string, options: { retryAfterMs?: number } = {}) {

@@ -1,6 +1,6 @@
 import { Context, type Effect } from "effect";
 
-import type { ReadRequest, ReadResult } from "../domain/document/document.js";
+import type { ReadRequest, ReadResult } from "../domain/document/index.js";
 
 export type GlmPage = {
   title: string;

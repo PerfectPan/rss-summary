@@ -3,12 +3,8 @@ import { describe, expect, it, vi } from "vite-plus/test";
 
 import { withBudget, type BudgetDriver } from "./with-budget.js";
 import { isCacheablePage, normalizeProvider } from "../../domain/budget/adapters/provider.js";
-import {
-  SearchBudget,
-  type BudgetLimits,
-  type CachedPage,
-} from "../../domain/budget/search-budget.js";
-import { NewsSearchError, type SearchInput, type SearchPage } from "../../domain/search/search.js";
+import { SearchBudget, type BudgetLimits, type CachedPage } from "../../domain/budget/index.js";
+import { NewsSearchError, type SearchInput, type SearchPage } from "../../domain/search/index.js";
 
 const input: SearchInput = {
   query: "release",

@@ -1,4 +1,4 @@
-import type { FeedSubscription } from "../subscription.js";
+import type { FeedSubscription } from "../index.js";
 
 export type PublicationKind = "article" | "paper" | "release";
 
