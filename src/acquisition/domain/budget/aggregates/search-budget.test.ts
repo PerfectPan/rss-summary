@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { isCacheablePage } from "../adapters/provider.js";
+import { cacheablePage } from "../services/cached-page.js";
 import type { CacheEntry } from "../entities/cache-entry.js";
 import {
   cacheKeyMaterial,
@@ -212,10 +212,25 @@ describe("SearchBudget", () => {
 
     const remembered = budget.remember(
       request(),
-      { provider: "glm", resultCount: 0, results: [] },
+      {
+        resultCount: 1,
+        results: [
+          {
+            id: "1",
+            title: "T",
+            url: "https://example.com",
+            rankPosition: 1,
+            sourceVerification: {
+              method: "configured-domain",
+              domain: "example.com",
+              policy: "official",
+            },
+          },
+        ],
+      },
       instant.toISOString(),
       hash,
-      isCacheablePage,
+      cacheablePage,
     );
     expect(remembered._tag).toBe("Ok");
     if (remembered._tag !== "Ok") return;

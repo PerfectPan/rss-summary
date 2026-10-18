@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 
-import type { CacheRequest } from "../index.js";
-import type { SearchInput } from "../../search/index.js";
+import type { CacheRequest } from "../../domain/budget/index.js";
+import type { SearchInput } from "../../domain/search/index.js";
 
 const daySchema = Schema.String.check(Schema.makeFilter(isCalendarDay));
 const instantSchema = Schema.String.check(

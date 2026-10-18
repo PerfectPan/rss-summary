@@ -503,6 +503,7 @@ it("filters exact local day boundaries even when UTC discovery spans two days", 
 
 describeSearchProvider({
   name: "grok",
+  cacheable: true,
   emitsRateLimit: false,
   async create(next) {
     const publishedAt = "2026-08-16T04:00:00.000Z";

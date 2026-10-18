@@ -8,6 +8,7 @@ import {
 } from "../../acquisition/index.js";
 
 import { GrokXClient } from "./cli.js";
+import { normalizeProvider } from "./identity.js";
 
 type Dependencies = {
   env?: NodeJS.ProcessEnv;
@@ -33,7 +34,7 @@ export function collectXAccountPosts(
         model: env.NEWS_GROK_MODEL?.trim() || undefined,
         timeoutMs: boundedInteger(env.NEWS_GROK_TIMEOUT_MS, 120_000, 1_000, 180_000),
       }),
-    openBudget: (options) => createBudgetedNewsSearch(options),
+    openBudget: (options) => createBudgetedNewsSearch({ ...options, normalize: normalizeProvider }),
   });
 }
 

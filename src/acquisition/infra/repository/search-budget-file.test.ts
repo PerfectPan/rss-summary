@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { Effect } from "effect";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
-import { presentCachedPage } from "../../domain/budget/adapters/provider.js";
+import { presentCachedPage } from "../../domain/budget/index.js";
 import { cacheKey, type BudgetLimits, type CacheRequest } from "../../domain/budget/index.js";
 import { loadSearchBudget, saveSearchBudget, sha256 } from "./search-budget-file.js";
 

@@ -3,7 +3,7 @@ import { mkdir, open, readFile, rename, unlink, type FileHandle } from "node:fs/
 import { dirname } from "node:path";
 import { Effect, Layer, Schema } from "effect";
 
-import { normalizeProvider } from "../../domain/budget/adapters/provider.js";
+import { normalizeHttpProvider } from "../../domain/budget/index.js";
 import {
   SearchBudget,
   type BudgetLimits,
@@ -26,7 +26,7 @@ export function loadSearchBudget(
   path: string,
   limits: BudgetLimits,
   hash: HashText = sha256,
-  normalize: (provider: string) => string = normalizeProvider,
+  normalize: (provider: string) => string = normalizeHttpProvider,
 ): Effect.Effect<SearchBudget, NewsSearchError> {
   return Effect.gen(function* () {
     const read = yield* Effect.result(

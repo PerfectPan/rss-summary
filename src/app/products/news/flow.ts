@@ -37,7 +37,7 @@ import {
   type NewsSearchInput,
 } from "../../../acquisition/index.js";
 import { DoubaoSearchClient } from "../../../integrations/doubao/index.js";
-import { GrokSearchClient } from "../../../integrations/grok/index.js";
+import { GrokSearchClient, normalizeProvider } from "../../../integrations/grok/index.js";
 import type { AuditedSearchPage as NewsSearchPage } from "../../../integrations/grok/index.js";
 import { createHybridNewsSearch } from "./hybrid.js";
 
@@ -413,6 +413,7 @@ function createSearch(
     return createBudgetedNewsSearch({
       search: (input) => client.search(input),
       provider: `grok://cli/v1/${model ?? "default"}`,
+      normalize: normalizeProvider,
       stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || searchBudgetDefaults.stateFile,
       dailyLimit: boundedInteger(
         env.NEWS_SEARCH_DAILY_LIMIT,

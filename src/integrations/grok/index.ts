@@ -16,3 +16,4 @@ export {
 } from "./search/dto.js";
 export { parseGrokStream } from "./search/mapper.js";
 export { collectXAccountPosts, type XAccountPosts } from "./x-account.js";
+export { cliIdentity, normalizeProvider } from "./identity.js";

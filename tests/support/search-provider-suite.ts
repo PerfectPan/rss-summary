@@ -6,11 +6,8 @@ import {
   type BudgetDriver,
 } from "../../src/acquisition/application/services/with-budget.js";
 import { searchWithRetry } from "../../src/acquisition/application/services/with-retry.js";
-import {
-  isCacheablePage,
-  normalizeProvider,
-  presentCachedPage,
-} from "../../src/acquisition/domain/budget/adapters/provider.js";
+import { cacheablePage, presentCachedPage } from "../../src/acquisition/domain/budget/index.js";
+import { normalizeProvider } from "../../src/integrations/grok/identity.js";
 import {
   SearchBudget,
   type BudgetLimits,
@@ -45,6 +42,8 @@ const input: SearchInput = {
 export function describeSearchProvider(options: {
   name: string;
   emitsRateLimit: boolean;
+  /** The provider's declared cacheability; the budget composes it with its structural rule. */
+  cacheable: boolean;
   create: (next: () => ProviderStep) => ProviderHandle | Promise<ProviderHandle>;
 }): void {
   describe(`${options.name} search provider`, () => {
@@ -92,13 +91,12 @@ export function describeSearchProvider(options: {
       const handle = await Promise.resolve(options.create(() => "ok"));
       const budgeted = withBudget(
         (value) => Effect.runPromise(handle.search(value)),
-        memoryDriver(10),
+        memoryDriver(10, options.cacheable),
       );
       const first = await Effect.runPromise(budgeted(input));
       const second = await Effect.runPromise(budgeted(input));
       expect(first.searchUsage).toMatchObject({ source: "network", dailyUsed: 1, monthlyUsed: 1 });
-      const cacheable =
-        first.provider === undefined || first.provider === "doubao" || first.provider === "grok";
+      const cacheable = options.cacheable;
       if (cacheable) {
         expect(second.searchUsage.source).toBe("cache");
         expect(handle.invocations()).toBe(1);
@@ -112,7 +110,7 @@ export function describeSearchProvider(options: {
     it("reserves again for every rate-limit retry, then returns the provider page", async () => {
       const delays: number[] = [];
       const search = await rateLimitedSearch(options);
-      const budgeted = withBudget(search, memoryDriver(10));
+      const budgeted = withBudget(search, memoryDriver(10, options.cacheable));
       const page = await Effect.runPromise(
         searchWithRetry(input, (value) => Effect.runPromise(budgeted(value)), {
           random: () => 0,
@@ -150,7 +148,7 @@ async function rateLimitedSearch(options: {
   };
 }
 
-function memoryDriver(dailyLimit: number): BudgetDriver {
+function memoryDriver(dailyLimit: number, cacheable: boolean): BudgetDriver {
   const limits: BudgetLimits = {
     dailyLimit,
     monthlyLimit: dailyLimit,
@@ -166,7 +164,7 @@ function memoryDriver(dailyLimit: number): BudgetDriver {
     now: () => new Date("2026-08-16T04:00:00.000Z"),
     hash,
     normalize: normalizeProvider,
-    isCacheable: isCacheablePage,
+    isCacheable: (page) => cacheable && cacheablePage(page),
     presentCache: presentCachedPage,
     decodePage: (page) =>
       ({

@@ -11,6 +11,7 @@ import { DoubaoSearchLive } from "./provider.js";
 describeSearchProvider({
   name: "doubao",
   emitsRateLimit: true,
+  cacheable: true,
   create(next) {
     let invocations = 0;
     return {

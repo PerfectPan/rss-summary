@@ -74,6 +74,7 @@ describe("GLM search", () => {
 describeSearchProvider({
   name: "glm",
   emitsRateLimit: false,
+  cacheable: false,
   create(next) {
     let invocations = 0;
     return {

@@ -1,7 +1,7 @@
 import { expect, it } from "vite-plus/test";
 
-import { parseCacheRequest } from "./request.js";
-import type { SearchInput } from "../../search/index.js";
+import { parseCacheRequest } from "./cache-request.js";
+import type { SearchInput } from "../../domain/search/index.js";
 
 const input: SearchInput = {
   query: "release",
