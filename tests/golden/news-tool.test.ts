@@ -1,9 +1,17 @@
-import { join } from "node:path";
+import { mkdirSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 
 import { describe, it, vi } from "vite-plus/test";
 
 import { RSS_SUMMARY_NEWS_TOOL_ID } from "../../src/app/rivus/plugin.js";
-import { DOUBAO_URL, doubaoPayload, grokStream } from "./fixtures.js";
+import {
+  DEEPSEEK_URL,
+  DOUBAO_URL,
+  deepSeekPayload,
+  doubaoPayload,
+  grokStream,
+} from "./fixtures.js";
 import {
   errorRecord,
   executeTool,
@@ -124,7 +132,155 @@ describe("golden news tool", () => {
       [context.root],
     );
   });
+
+  it("falls back to DeepSeek when Doubao answers 5xx", async () => {
+    const context = harness.context();
+    process.env.NEWS_SEARCH_MODE = "doubao";
+    process.env.DOUBAO_SEARCH_API_KEY = "golden-key";
+    process.env.NEWS_SEARCH_FALLBACK = "deepseek";
+    process.env.DEEPSEEK_API_KEY = "golden-deepseek";
+    installFetch((url) => {
+      if (url === DOUBAO_URL) return new Response("down", { status: 500 });
+      if (url === DEEPSEEK_URL)
+        return jsonResponse(JSON.parse(deepSeekPayload("2026-08-16T02:00:00.000Z")));
+      throw new Error(`Unexpected fetch ${url}`);
+    });
+    const { tools } = registerPlugin();
+    const result = await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, {
+      edition: "noon",
+      occurrence: "2026-08-16T04:00:00.000Z",
+    });
+    await matchSnapshot(
+      "news-deepseek-fallback-doubao-5xx.txt",
+      { result, state: readTree(context.root) },
+      [context.root],
+    );
+  });
+
+  it("falls back to DeepSeek when Grok times out", async () => {
+    const context = harness.context();
+    const executable = join(context.root, "grok");
+    process.env.NEWS_SEARCH_MODE = "grok";
+    process.env.NEWS_GROK_MAX_QUERIES = "1";
+    process.env.NEWS_GROK_TIMEOUT_MS = "1000";
+    process.env.NEWS_SEARCH_FALLBACK = "deepseek";
+    process.env.DEEPSEEK_API_KEY = "golden-deepseek";
+    await writeHangingGrokExecutable(executable);
+    installFetch((url) => {
+      if (url === DEEPSEEK_URL)
+        return jsonResponse(JSON.parse(deepSeekPayload("2026-08-16T02:00:00.000Z")));
+      throw new Error(`Unexpected fetch ${url}`);
+    });
+    const { tools } = registerPlugin();
+    const result = await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, {
+      edition: "noon",
+      occurrence: "2026-08-16T04:00:00.000Z",
+    });
+    await matchSnapshot(
+      "news-deepseek-fallback-grok-timeout.txt",
+      { grokInvocations: grokInvocationCount(executable), result, state: readTree(context.root) },
+      [context.root],
+    );
+  });
+
+  it("does not spend the DeepSeek fallback when the shared local budget is exhausted", async () => {
+    const context = harness.context();
+    process.env.NEWS_SEARCH_MODE = "doubao";
+    process.env.DOUBAO_SEARCH_API_KEY = "golden-key";
+    process.env.NEWS_SEARCH_FALLBACK = "deepseek";
+    process.env.DEEPSEEK_API_KEY = "golden-deepseek";
+    process.env.NEWS_SEARCH_DAILY_LIMIT = "0";
+    const fetches = { doubao: 0, deepseek: 0 };
+    installFetch((url) => {
+      if (url === DEEPSEEK_URL) fetches.deepseek += 1;
+      else fetches.doubao += 1;
+      throw new Error("budget exhaustion must not fetch");
+    });
+    const { tools } = registerPlugin();
+    const result = await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, {
+      edition: "noon",
+      occurrence: "2026-08-16T04:00:00.000Z",
+    });
+    await matchSnapshot(
+      "news-deepseek-fallback-budget-exhausted.txt",
+      { fetches, result, state: readTree(context.root) },
+      [context.root],
+    );
+  });
+
+  it("keeps the primary failure for official topics the DeepSeek fallback cannot serve", async () => {
+    const context = harness.context();
+    process.env.NEWS_SEARCH_MODE = "doubao";
+    process.env.DOUBAO_SEARCH_API_KEY = "golden-key";
+    process.env.NEWS_SEARCH_FALLBACK = "deepseek";
+    process.env.DEEPSEEK_API_KEY = "golden-deepseek";
+    const topicsFile = join(context.root, "official-topics.json");
+    await writeFile(
+      topicsFile,
+      `${JSON.stringify(
+        [
+          {
+            id: "official-announcements",
+            label: "官方发布",
+            icon: "📰",
+            enabled: true,
+            sourcePolicy: "official",
+            maxItems: 2,
+            queries: [
+              {
+                id: "official-model-release",
+                text: "OpenAI 正式发布新模型",
+                intent: "model-release",
+                subjectAny: ["OpenAI"],
+                eventAny: ["正式发布"],
+                excludedAny: ["传闻"],
+              },
+            ],
+          },
+        ],
+        null,
+        2,
+      )}\n`,
+    );
+    process.env.NEWS_TOPICS_FILE = topicsFile;
+    const deepseekFetches = { count: 0 };
+    installFetch((url) => {
+      if (url === DEEPSEEK_URL) {
+        deepseekFetches.count += 1;
+        return jsonResponse(JSON.parse(deepSeekPayload("2026-08-16T02:00:00.000Z")));
+      }
+      return new Response("down", { status: 500 });
+    });
+    const { tools } = registerPlugin();
+    let thrown: unknown;
+    try {
+      await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, {
+        edition: "noon",
+        occurrence: "2026-08-16T04:00:00.000Z",
+      });
+    } catch (error) {
+      thrown = error;
+    }
+    await matchSnapshot(
+      "news-deepseek-fallback-official-topic.txt",
+      {
+        deepseekFetches: deepseekFetches.count,
+        error: errorRecord(thrown),
+        state: readTree(context.root),
+      },
+      [context.root],
+    );
+  });
 });
+
+/** Counts as an invocation, then outlives NEWS_GROK_TIMEOUT_MS so the CLI kills it. */
+async function writeHangingGrokExecutable(path: string): Promise<void> {
+  mkdirSync(dirname(path), { recursive: true });
+  const counter = `${path}.count`;
+  const script = `#!${process.execPath}\nconst fs = require("node:fs");\nfs.appendFileSync(${JSON.stringify(counter)}, "1\\n");\nsetInterval(() => {}, 60000);\n`;
+  await writeFile(path, script, { mode: 0o755 });
+  process.env.NEWS_GROK_EXECUTABLE = path;
+}
 
 async function matchDoubao(
   name: string,

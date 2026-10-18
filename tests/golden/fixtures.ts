@@ -10,6 +10,7 @@ export const ARTICLE_URL = "https://example.com/deno-2-4";
 export const INDUSTRY_ARTICLE_URL = "https://example.com/industry-note";
 export const INDUSTRY_PAGE_URL = "https://www.anthropic.com/news";
 export const DOUBAO_URL = "https://open.feedcoopapi.com/search_api/web_search";
+export const DEEPSEEK_URL = "https://api.deepseek.com/v1/tools/search";
 
 export const PERSONAL_RSS = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
@@ -196,5 +197,24 @@ export function doubaoPayload(publishTime: string): string {
         },
       ],
     },
+  });
+}
+
+export function deepSeekPayload(publishTime: string): string {
+  return JSON.stringify({
+    results: [
+      {
+        rerank_score: 2.4,
+        title: "OpenAI 正式发布新模型",
+        url: "https://openai.com/news/new-model",
+        snippet: "OpenAI announced a new model and opened the API.",
+        summary: "OpenAI 正式发布新模型，并开放 API。",
+        content: "",
+        site_name: "OpenAI",
+        site_icon: null,
+        date: publishTime,
+        authority: 3,
+      },
+    ],
   });
 }
