@@ -15,7 +15,7 @@ async function resolveConfig(env: NodeJS.ProcessEnv, argv: string[]) {
 }
 
 async function build(env: NodeJS.ProcessEnv, argv: string[]) {
-  const { buildIndustryDocument } = await import("./flow.js");
+  const { buildIndustryDocument } = await import("./industry.js");
   const config = await resolveConfig(env, argv);
   return Effect.runPromise(
     Effect.provide(buildIndustryDocument(config), AppLive(appLiveOptions(config))),

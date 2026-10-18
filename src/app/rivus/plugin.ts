@@ -18,9 +18,9 @@ import {
 } from "../products/daily-ai/tool.js";
 import {
   createArticleResearchExecutor,
-  RSS_SUMMARY_RESEARCH_TOOL_ID,
   type RivusArticleResearchResult,
 } from "../products/research/tool.js";
+import { RSS_SUMMARY_RESEARCH_TOOL_ID } from "../products/shared/tool-ids.js";
 import { RSS_SUMMARY_INDUSTRY_TOOL_ID } from "../products/frontier/tool.js";
 
 export const RSS_SUMMARY_PROFILE_ID = "rss-digest";
@@ -118,7 +118,7 @@ export { RSS_SUMMARY_TOOL_ID, type RivusDigestResult } from "../products/subscri
 export { RSS_SUMMARY_INDUSTRY_TOOL_ID } from "../products/frontier/tool.js";
 export { RSS_SUMMARY_NEWS_TOOL_ID } from "../products/news/tool.js";
 export { RSS_SUMMARY_DAILY_AI_TOOL_ID } from "../products/daily-ai/tool.js";
-export { RSS_SUMMARY_RESEARCH_TOOL_ID } from "../products/research/tool.js";
+export { RSS_SUMMARY_RESEARCH_TOOL_ID } from "../products/shared/tool-ids.js";
 export {
   RSS_SUMMARY_MORNING_AUTOMATION_ID,
   RSS_SUMMARY_AUTOMATION_SUPPRESSED,

@@ -4,7 +4,7 @@ import {
   automationPresentationForText,
   type RssAutomationPresentation,
 } from "../../render/automation.js";
-import { RSS_SUMMARY_RESEARCH_TOOL_ID } from "../research/tool.js";
+import { RSS_SUMMARY_RESEARCH_TOOL_ID } from "../shared/tool-ids.js";
 import { RSS_SUMMARY_TOOL_ID } from "./tool.js";
 
 export const RSS_SUMMARY_MORNING_AUTOMATION_ID = "rss-summary/morning-feed-digest";

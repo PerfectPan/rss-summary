@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import type { IndustryBriefDocument } from "../../products/frontier/flow.js";
+import type { IndustryBriefDocument } from "../../products/shared/industry.js";
 import { industryView, renderJsonIndustryBrief } from "./industry.js";
 import { renderViewMarkdown } from "../markdown.js";
 

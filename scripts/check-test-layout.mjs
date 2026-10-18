@@ -29,6 +29,17 @@ const coveredElsewhere = new Map([
   ["app/products/frontier/automation", "golden registration snapshot"],
   ["app/products/news/automation", "golden registration snapshot"],
   ["app/products/subscriptions/automation", "golden registration snapshot"],
+  // The cross-product Tool id is locked verbatim by the golden registration
+  // snapshot; consumers reference it through products/shared.
+  ["app/products/shared/tool-ids", "golden registration snapshot"],
+  // Thin bind of editorial's decideCandidate to the acquisition identity; the
+  // binding is exercised end to end by both of its callers' flow tests.
+  [
+    "app/products/shared/candidate-decision",
+    "subscriptions flow tests and shared industry tests",
+  ],
+  // The CLI command runs the flow end to end (config → collect → deliver).
+  ["app/products/frontier/flow", "app/products/frontier/cli tests"],
   // The product registry is iterated by the Rivus plugin registration and the
   // CLI dispatch tests.
   ["app/products/index", "app/rivus/plugin tests and app/cli dispatch tests"],

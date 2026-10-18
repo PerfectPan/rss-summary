@@ -12,8 +12,6 @@ import {
 import { loadEnvConfig } from "../../config/env.js";
 import { runPluginEffect } from "../../runtime.js";
 
-export const RSS_SUMMARY_RESEARCH_TOOL_ID = "rss-summary/research-article";
-
 export type RivusArticleResearchResult = ReadOriginalResult & {
   tool: "article-research";
 };
