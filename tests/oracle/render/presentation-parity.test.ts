@@ -3,12 +3,8 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vite-plus/test";
 
 import { renderAutomationPresentation } from "../../../src/app/render/automation.js";
+import { renderViewMarkdown } from "../../../src/app/render/markdown.js";
 import { decodeViewFromMarkdown } from "../../../src/app/render/view-decode.js";
-import {
-  clearDeliveredViews,
-  deliveredViews,
-  renderDeliveredMarkdown,
-} from "../../../src/app/render/view-store.js";
 import type { ViewDocument } from "../../../src/app/render/view.js";
 import { dailyAiView } from "../../../src/app/render/layouts/daily-ai.js";
 import { digestView } from "../../../src/app/render/layouts/digest.js";
@@ -51,6 +47,22 @@ vi.mock("node:crypto", async (importOriginal) => {
   return { ...actual, randomUUID: (() => nextUuid()) as typeof actual.randomUUID };
 });
 
+// Test-only capture: wrap the real Markdown projection so every scenario
+// render records the exact (Markdown, View IR) pair it produced. Production
+// has no equivalent state — Automations decode the delivered text instead.
+const rendered: Array<{ markdown: string; view: ViewDocument }> = [];
+vi.mock("../../../src/app/render/markdown.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../src/app/render/markdown.js")>();
+  return {
+    ...actual,
+    renderViewMarkdown: (view: ViewDocument): string => {
+      const markdown = actual.renderViewMarkdown(view);
+      rendered.push({ markdown, view });
+      return markdown;
+    },
+  };
+});
+
 const harness = useGoldenHarness();
 const windowArgs = ["--since", WINDOW_SINCE, "--until", WINDOW_UNTIL, "--pages", "1"];
 
@@ -76,20 +88,18 @@ function expectParity(
   expect(renderAutomationPresentation(view, kind)).toEqual(
     createRssAutomationPresentation(markdown, kind),
   );
-  // The fallback path (agent-altered text) must present identically too.
+  // The delivery path (agent text → decode) must present identically too.
   expect(renderAutomationPresentation(decodeViewFromMarkdown(markdown), kind)).toEqual(
     createRssAutomationPresentation(markdown, kind),
   );
 }
 
 /** Compare every view the scenarios rendered since the last clear. */
-function expectDeliveredParity(kind: RssAutomationPresentationKind): void {
-  const entries = deliveredViews();
-  expect(entries.length).toBeGreaterThan(0);
-  for (const { markdown, view } of entries) {
-    expectParity("delivered", kind, markdown, view);
+function expectRenderedParity(kind: RssAutomationPresentationKind): void {
+  expect(rendered.length).toBeGreaterThan(0);
+  for (const { markdown, view } of rendered.splice(0)) {
+    expectParity("rendered", kind, markdown, view);
   }
-  clearDeliveredViews();
 }
 
 describe("golden-scenario presentation parity", () => {
@@ -97,20 +107,20 @@ describe("golden-scenario presentation parity", () => {
     installDigestFetch();
     const context = harness.context();
     await runCommand(["digest", ...windowArgs], context);
-    expectDeliveredParity("subscriptions");
+    expectRenderedParity("subscriptions");
     await runCommand(["digest", "--rss-only", ...windowArgs], context);
-    expectDeliveredParity("subscriptions");
+    expectRenderedParity("subscriptions");
   });
 
   it("matches the second --only-new run and the dry-run", async () => {
     installDigestFetch();
     const context = harness.context();
     await runCommand(["digest", "--rss-only", "--only-new", ...windowArgs], context);
-    clearDeliveredViews();
+    rendered.splice(0);
     await runCommand(["digest", "--rss-only", "--only-new", ...windowArgs], context);
-    expectDeliveredParity("subscriptions");
+    expectRenderedParity("subscriptions");
     await runCommand(["digest", "--rss-only", "--only-new", "--dry-run", ...windowArgs], context);
-    expectDeliveredParity("subscriptions");
+    expectRenderedParity("subscriptions");
   });
 
   it("matches the frontier brief", async () => {
@@ -120,7 +130,7 @@ describe("golden-scenario presentation parity", () => {
       ["industry", "--since", WINDOW_SINCE, "--until", WINDOW_UNTIL, "--only-new"],
       context,
     );
-    expectDeliveredParity("industry");
+    expectRenderedParity("industry");
   });
 
   it("matches a Doubao noon and an exhausted-budget news brief", async () => {
@@ -137,14 +147,14 @@ describe("golden-scenario presentation parity", () => {
       edition: "noon",
       occurrence: "2026-08-16T04:00:00.000Z",
     });
-    expectDeliveredParity("news");
+    expectRenderedParity("news");
 
     process.env.NEWS_SEARCH_DAILY_LIMIT = "0";
     await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, {
       edition: "noon",
       occurrence: "2026-08-16T04:00:00.000Z",
     });
-    expectDeliveredParity("news");
+    expectRenderedParity("news");
   });
 
   it("matches a Grok news brief with degradation notes", async () => {
@@ -166,7 +176,7 @@ describe("golden-scenario presentation parity", () => {
       edition: "noon",
       occurrence: "2026-08-16T04:00:00.000Z",
     });
-    expectDeliveredParity("news");
+    expectRenderedParity("news");
   });
 
   it("matches the three-phase subscription render", async () => {
@@ -210,7 +220,7 @@ describe("golden-scenario presentation parity", () => {
       ],
       selection,
     });
-    expectDeliveredParity("subscriptions");
+    expectRenderedParity("subscriptions");
   });
 
   it("matches the daily-ai render with a Grok-relayed X source", async () => {
@@ -248,7 +258,7 @@ describe("golden-scenario presentation parity", () => {
       occurrence,
       phase: "render",
     });
-    expectDeliveredParity("daily-ai");
+    expectRenderedParity("daily-ai");
   });
 });
 
@@ -288,7 +298,7 @@ describe("layout-document presentation parity", () => {
         paperCandidate(),
       ],
     });
-    expectParity("digest rich", "subscriptions", renderDeliveredMarkdown(rich), rich);
+    expectParity("digest rich", "subscriptions", renderViewMarkdown(rich), rich);
 
     const empty = digestView({
       generatedAt: "2026-08-16T04:00:00.000Z",
@@ -296,7 +306,7 @@ describe("layout-document presentation parity", () => {
       windowLabel: "2026-08-15 +08:00",
       candidates: [],
     });
-    expectParity("digest empty", "subscriptions", renderDeliveredMarkdown(empty), empty);
+    expectParity("digest empty", "subscriptions", renderViewMarkdown(empty), empty);
 
     const papersOnly = digestView({
       generatedAt: "2026-08-16T04:00:00.000Z",
@@ -304,12 +314,7 @@ describe("layout-document presentation parity", () => {
       sourceMode: "rss",
       candidates: [paperCandidate()],
     });
-    expectParity(
-      "digest papers only",
-      "subscriptions",
-      renderDeliveredMarkdown(papersOnly),
-      papersOnly,
-    );
+    expectParity("digest papers only", "subscriptions", renderViewMarkdown(papersOnly), papersOnly);
   });
 
   it("matches frontier documents including the empty notice", () => {
@@ -334,10 +339,10 @@ describe("layout-document presentation parity", () => {
         paperCandidate(),
       ],
     });
-    expectParity("frontier rich", "industry", renderDeliveredMarkdown(rich), rich);
+    expectParity("frontier rich", "industry", renderViewMarkdown(rich), rich);
 
     const empty = industryView({ generatedAt: "2026-08-09T01:00:00.000Z", candidates: [] });
-    expectParity("frontier empty", "industry", renderDeliveredMarkdown(empty), empty);
+    expectParity("frontier empty", "industry", renderViewMarkdown(empty), empty);
   });
 
   it("matches news documents with recovery notes and empty states", () => {
@@ -402,7 +407,7 @@ describe("layout-document presentation parity", () => {
         notes: ["备用来源已完成"],
       },
     });
-    expectParity("news recovered notes", "news", renderDeliveredMarkdown(withNotes), withNotes);
+    expectParity("news recovered notes", "news", renderViewMarkdown(withNotes), withNotes);
 
     const partial = newsView({
       ...base,
@@ -416,7 +421,7 @@ describe("layout-document presentation parity", () => {
         notes: [],
       },
     });
-    expectParity("news partial empty", "news", renderDeliveredMarkdown(partial), partial);
+    expectParity("news partial empty", "news", renderViewMarkdown(partial), partial);
   });
 
   it("matches daily-ai documents across categories, badges, and warnings", () => {
@@ -452,7 +457,7 @@ describe("layout-document presentation parity", () => {
       evidence,
       warnings: [],
     });
-    expectParity("daily-ai rich", "daily-ai", renderDeliveredMarkdown(rich), rich);
+    expectParity("daily-ai rich", "daily-ai", renderViewMarkdown(rich), rich);
 
     const empty = dailyAiView({
       day: "2026-08-10",
@@ -461,7 +466,7 @@ describe("layout-document presentation parity", () => {
       evidence: [],
       warnings: ["Doubao 搜索暂不可用：本期仅使用官方来源"],
     });
-    expectParity("daily-ai empty + warnings", "daily-ai", renderDeliveredMarkdown(empty), empty);
+    expectParity("daily-ai empty + warnings", "daily-ai", renderViewMarkdown(empty), empty);
   });
 
   it("matches the registration snapshot's fixed Markdown from a hand-built view", () => {

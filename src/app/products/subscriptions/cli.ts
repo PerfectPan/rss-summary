@@ -5,7 +5,7 @@ import { applyCliArgs, loadEnvConfig } from "../../config/env.js";
 import { appLayerFromConfig } from "../../layers.js";
 import { runCliEffect } from "../../runtime.js";
 import { digestView, renderJsonDigest } from "../../render/layouts/digest.js";
-import { renderDeliveredMarkdown } from "../../render/view-store.js";
+import { renderViewMarkdown } from "../../render/markdown.js";
 import { runSubscriptionFlow } from "./flow.js";
 
 type Writable = {
@@ -22,9 +22,7 @@ export async function runDigestCommand(
   return runCliEffect(
     Effect.flatMap(config, (resolved) =>
       runSubscriptionFlow(resolved, (document, format) =>
-        format === "json"
-          ? renderJsonDigest(document)
-          : renderDeliveredMarkdown(digestView(document)),
+        format === "json" ? renderJsonDigest(document) : renderViewMarkdown(digestView(document)),
       ),
     ),
     { stderr, layer: appLayerFromConfig(config) },

@@ -1,3 +1,4 @@
+import { decodeViewFromMarkdown } from "./view-decode.js";
 import type { ViewDocument, ViewItem } from "./view.js";
 
 type AutomationPresentationSource = {
@@ -31,6 +32,19 @@ export type RssAutomationPresentation = {
   summary?: string;
   title: string;
 };
+
+/**
+ * Present the Automation reply text: decode the canonical Markdown grammar
+ * back into a View IR, then project it. Rivus hosts only hand the plugin the
+ * Agent's final text, so this single path serves both verbatim Tool output
+ * and Agent-altered replies, matching the legacy parser byte for byte.
+ */
+export function automationPresentationForText(
+  text: string,
+  kind: RssAutomationPresentationKind,
+): RssAutomationPresentation {
+  return renderAutomationPresentation(decodeViewFromMarkdown(text), kind);
+}
 
 /**
  * Project a View IR document into the channel-neutral Automation Presentation

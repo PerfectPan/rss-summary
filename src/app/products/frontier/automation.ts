@@ -1,7 +1,9 @@
 import type { RivusAutomationTemplate } from "@rivus/agent";
 
-import type { RssAutomationPresentation } from "../../render/automation.js";
-import { automationPresentationForText } from "../../render/view-store.js";
+import {
+  automationPresentationForText,
+  type RssAutomationPresentation,
+} from "../../render/automation.js";
 import { RSS_SUMMARY_INDUSTRY_TOOL_ID } from "./tool.js";
 
 export const RSS_SUMMARY_INDUSTRY_AUTOMATION_ID = "rss-summary/daily-industry-brief";

@@ -7,7 +7,7 @@ import {
   type RivusNewsBriefResult,
 } from "./flow.js";
 import { newsView } from "../../render/layouts/news.js";
-import { renderDeliveredMarkdown } from "../../render/view-store.js";
+import { renderViewMarkdown } from "../../render/markdown.js";
 import { runPluginEffect } from "../../runtime.js";
 
 export const RSS_SUMMARY_NEWS_TOOL_ID = "rss-summary/generate-news-brief";
@@ -18,7 +18,7 @@ export type { RivusNewsBriefInput, RivusNewsBriefOutput, RivusNewsBriefResult };
 function withNewsMarkdown(result: RivusNewsBriefResult): RivusNewsBriefOutput {
   return {
     ...result,
-    markdown: renderDeliveredMarkdown(
+    markdown: renderViewMarkdown(
       newsView({
         day: result.day,
         edition: result.edition,

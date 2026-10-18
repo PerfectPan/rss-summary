@@ -7,7 +7,7 @@ import { runPluginEffect } from "../../runtime.js";
 import { loadEnvConfig, type AppConfig } from "../../config/env.js";
 import { buildIndustryDocument, type IndustryBriefDocument } from "./flow.js";
 import { industryView } from "../../render/layouts/industry.js";
-import { renderDeliveredMarkdown } from "../../render/view-store.js";
+import { renderViewMarkdown } from "../../render/markdown.js";
 
 export const RSS_SUMMARY_INDUSTRY_TOOL_ID = "rss-summary/generate-industry-brief";
 
@@ -73,9 +73,7 @@ export async function generateRivusIndustryBrief(
   return {
     candidateCount: document.candidates.length - paperCandidateCount,
     generatedAt: document.generatedAt,
-    markdown: renderDeliveredMarkdown(
-      industryView(day ? { ...document, displayDate: day } : document),
-    ),
+    markdown: renderViewMarkdown(industryView(day ? { ...document, displayDate: day } : document)),
     paperCandidateCount,
     ...(document.windowLabel ? { windowLabel: document.windowLabel } : {}),
     ...(document.audit ? { audit: document.audit } : {}),

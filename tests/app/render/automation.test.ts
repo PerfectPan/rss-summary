@@ -1,9 +1,37 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { renderAutomationPresentation } from "../../../src/app/render/automation.js";
+import {
+  automationPresentationForText,
+  renderAutomationPresentation,
+} from "../../../src/app/render/automation.js";
 import type { ViewDocument } from "../../../src/app/render/view.js";
 
 describe("app/render/automation presentation", () => {
+  it("presents delivered reply text through the single decode path", () => {
+    const presentation = automationPresentationForText(
+      "# 固定标题\n\n一条固定说明\n\n## 模型发布\n\n1. 新模型上线 [↗ #1](https://example.com/item)\n",
+      "industry",
+    );
+    expect(presentation).toMatchObject({
+      kind: "industry",
+      meta: ["一条固定说明"],
+      sections: [
+        {
+          id: "1-models",
+          items: [{ headline: "新模型上线" }],
+          title: "模型发布",
+        },
+      ],
+      title: "固定标题",
+    });
+    expect(
+      automationPresentationForText(
+        "一条没有标题的说明\n\n- 列表项 [来源 ↗](https://example.com/a)",
+        "news",
+      ),
+    ).toMatchObject({ title: "Rivus 自动简报" });
+  });
+
   it("projects sections, items, notes, and sources from the view", () => {
     const view: ViewDocument = {
       title: "Daily AI Digest · 2026-08-13",
