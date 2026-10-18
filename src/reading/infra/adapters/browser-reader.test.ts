@@ -1,20 +1,22 @@
+import { Effect } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 
 import { extractArticle } from "../../domain/document/adapters/html-article.js";
-import { BrowserArticleResearchClient } from "./browser-reader.js";
+import { browserArticleResearch } from "./browser-reader.js";
 
 describe("browser article research", () => {
   it("extracts rendered article HTML through the injected page fetcher", async () => {
-    const client = new BrowserArticleResearchClient({
+    const research = browserArticleResearch({
       extract: extractArticle,
-      fetchPage: async ({ url }) => ({
-        html: `<html><head><title>Rendered article</title></head><body><nav>Menu</nav><article><h1>Rendered article</h1><p>${"Browser-rendered content. ".repeat(8)}</p></article></body></html>`,
-        url,
-      }),
+      fetchPage: ({ url }) =>
+        Effect.succeed({
+          html: `<html><head><title>Rendered article</title></head><body><nav>Menu</nav><article><h1>Rendered article</h1><p>${"Browser-rendered content. ".repeat(8)}</p></article></body></html>`,
+          url,
+        }),
     });
 
     await expect(
-      client.research({ ref: "article:1", url: "https://example.com/article" }),
+      Effect.runPromise(research({ ref: "article:1", url: "https://example.com/article" })),
     ).resolves.toMatchObject({
       ref: "article:1",
       method: "browser",
@@ -25,16 +27,17 @@ describe("browser article research", () => {
   });
 
   it("rejects private final redirects", async () => {
-    const client = new BrowserArticleResearchClient({
+    const research = browserArticleResearch({
       extract: extractArticle,
-      fetchPage: async () => ({
-        html: "<article>not used</article>",
-        url: "http://127.0.0.1/admin",
-      }),
+      fetchPage: () =>
+        Effect.succeed({
+          html: "<article>not used</article>",
+          url: "http://127.0.0.1/admin",
+        }),
     });
 
     await expect(
-      client.research({ ref: "article:1", url: "https://example.com/article" }),
+      Effect.runPromise(research({ ref: "article:1", url: "https://example.com/article" })),
     ).resolves.toMatchObject({
       error: "article URL points to a private or local host",
       ref: "article:1",

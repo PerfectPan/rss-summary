@@ -5,6 +5,7 @@ import ts from "typescript";
 
 import {
   adapterPackages,
+  effectRunFiles,
   infraPackages,
   layerDependencies,
   type LayerName,
@@ -215,8 +216,20 @@ function checkPackage(file: string, location: Location, ref: ImportRef): Violati
 }
 
 function checkText(file: SourceInput, location: Location): Violation[] {
-  if (location.test) return [];
   const violations: Violation[] = [];
+  if (!location.test && /\bEffect\.run\w*\(/u.test(file.source)) {
+    const allowed = (effectRunFiles as readonly string[]).includes(file.path);
+    if (!allowed) {
+      violations.push(
+        violation(
+          file.path,
+          "effect-run",
+          "Effect.run* may only be called in src/app/runtime.ts (test files excepted)",
+        ),
+      );
+    }
+  }
+  if (location.test) return violations;
   // Concept directories and the editorial entry (the module that must stay
   // source-neutral end to end) may not name any provider.
   const vocabularyChecked =

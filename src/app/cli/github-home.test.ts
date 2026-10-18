@@ -1,8 +1,10 @@
+import { Effect } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
 
 import { runGithubHomeCommand, writeGithubHomeHelp } from "./github-home.js";
 
-vi.mock("../../acquisition/index.js", () => ({
+vi.mock("../../acquisition/index.js", async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   saveGithubHomeStorageState: vi.fn(),
 }));
 
@@ -33,7 +35,9 @@ describe("github-home CLI command", () => {
   it("reports login failures on stderr without a trace", async () => {
     const output: string[] = [];
     const errors: string[] = [];
-    vi.mocked(saveGithubHomeStorageState).mockRejectedValueOnce(new Error("browser unavailable"));
+    vi.mocked(saveGithubHomeStorageState).mockReturnValueOnce(
+      Effect.fail(new Error("browser unavailable")) as never,
+    );
 
     const exitCode = await runGithubHomeCommand(
       ["login", "--storage-state", ".state/storage.json"],

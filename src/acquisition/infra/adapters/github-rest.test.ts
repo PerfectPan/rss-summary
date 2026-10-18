@@ -1,22 +1,30 @@
+import { Effect } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 
-import { GitHubClient } from "./github-rest.js";
+import { GitHubCatalog } from "../../application/ports.js";
+import { GitHubCatalogLive, readReceivedEvents } from "./github-rest.js";
 
-describe("GitHubClient", () => {
+const options = (fetchImpl: typeof fetch) => ({ token: "token-1", fetch: fetchImpl });
+
+describe("GitHub REST adapter", () => {
   it("fetches received events as the configured username with bearer auth", async () => {
     const calls: Array<{ url: string; auth: string | null }> = [];
-    const client = new GitHubClient({
-      token: "token-1",
-      fetch: async (url, init) => {
-        calls.push({
-          url: String(url),
-          auth: new Headers(init?.headers).get("authorization"),
-        });
-        return new Response(JSON.stringify([{ id: "evt-1" }]), { status: 200 });
-      },
-    });
-
-    const events = await client.getReceivedEvents("PerfectPan", { perPage: 100, pages: 1 });
+    const events = await Effect.runPromise(
+      readReceivedEvents(
+        "PerfectPan",
+        { perPage: 100, pages: 1 },
+        {
+          token: "token-1",
+          fetch: async (url, init) => {
+            calls.push({
+              url: String(url),
+              auth: new Headers(init?.headers).get("authorization"),
+            });
+            return new Response(JSON.stringify([{ id: "evt-1" }]), { status: 200 });
+          },
+        },
+      ),
+    );
 
     expect(events).toEqual([{ id: "evt-1" }]);
     expect(calls).toEqual([
@@ -28,23 +36,29 @@ describe("GitHubClient", () => {
   });
 
   it("parses repository metadata", async () => {
-    const client = new GitHubClient({
-      fetch: async () =>
-        new Response(
-          JSON.stringify({
-            full_name: "acme/agent-kit",
-            html_url: "https://github.com/acme/agent-kit",
-            description: "An agent harness",
-            language: "TypeScript",
-            stargazers_count: 123,
-            topics: ["agent"],
-            pushed_at: "2026-07-30T10:00:00Z",
-          }),
-          { status: 200 },
+    const repository = await Effect.runPromise(
+      Effect.provide(
+        GitHubCatalog.use((github) => github.getRepository("acme/agent-kit")),
+        GitHubCatalogLive(
+          options(
+            async () =>
+              new Response(
+                JSON.stringify({
+                  full_name: "acme/agent-kit",
+                  html_url: "https://github.com/acme/agent-kit",
+                  description: "An agent harness",
+                  language: "TypeScript",
+                  stargazers_count: 123,
+                  topics: ["agent"],
+                  pushed_at: "2026-07-30T10:00:00Z",
+                }),
+                { status: 200 },
+              ),
+          ),
         ),
-    });
-
-    await expect(client.getRepository("acme/agent-kit")).resolves.toEqual({
+      ),
+    );
+    await expect(Promise.resolve(repository)).resolves.toEqual({
       fullName: "acme/agent-kit",
       htmlUrl: "https://github.com/acme/agent-kit",
       description: "An agent harness",
@@ -56,19 +70,25 @@ describe("GitHubClient", () => {
   });
 
   it("parses pull request details", async () => {
-    const client = new GitHubClient({
-      fetch: async () =>
-        new Response(
-          JSON.stringify({
-            title: "feat: add search",
-            html_url: "https://github.com/acme/agent-kit/pull/12",
-            body: "Adds search.",
-          }),
-          { status: 200 },
+    const pullRequest = await Effect.runPromise(
+      Effect.provide(
+        GitHubCatalog.use((github) => github.getPullRequest("acme/agent-kit", 12)),
+        GitHubCatalogLive(
+          options(
+            async () =>
+              new Response(
+                JSON.stringify({
+                  title: "feat: add search",
+                  html_url: "https://github.com/acme/agent-kit/pull/12",
+                  body: "Adds search.",
+                }),
+                { status: 200 },
+              ),
+          ),
         ),
-    });
-
-    await expect(client.getPullRequest("acme/agent-kit", 12)).resolves.toEqual({
+      ),
+    );
+    await expect(Promise.resolve(pullRequest)).resolves.toEqual({
       title: "feat: add search",
       htmlUrl: "https://github.com/acme/agent-kit/pull/12",
       body: "Adds search.",
@@ -76,27 +96,32 @@ describe("GitHubClient", () => {
   });
 
   it("deduplicates the following list across pages", async () => {
-    const client = new GitHubClient({
-      fetch: async (url, _init) => {
-        const page = new URL(String(url)).searchParams.get("page");
-        const logins =
-          page === "1" ? [{ login: "a" }, { login: "b" }] : [{ login: "b" }, { login: "c" }];
-        return new Response(JSON.stringify(logins), { status: 200 });
-      },
-    });
-
-    await expect(client.getFollowing({ perPage: 100, pages: 2 })).resolves.toEqual(
-      new Set(["a", "b", "c"]),
+    const following = await Effect.runPromise(
+      Effect.provide(
+        GitHubCatalog.use((github) => github.getFollowing({ perPage: 100, pages: 2 })),
+        GitHubCatalogLive(
+          options(async (url, _init) => {
+            const page = new URL(String(url)).searchParams.get("page");
+            const logins =
+              page === "1" ? [{ login: "a" }, { login: "b" }] : [{ login: "b" }, { login: "c" }];
+            return new Response(JSON.stringify(logins), { status: 200 });
+          }),
+        ),
+      ),
     );
+    await expect(Promise.resolve(following)).resolves.toEqual(new Set(["a", "b", "c"]));
   });
 
   it("fails with the truncated API body on non-OK responses", async () => {
-    const client = new GitHubClient({
-      fetch: async () => new Response("rate limit reached, retry later", { status: 403 }),
-    });
-
-    await expect(client.getRepository("acme/agent-kit")).rejects.toThrow(
-      /403.*rate limit reached, retry later/,
-    );
+    await expect(
+      Effect.runPromise(
+        Effect.provide(
+          GitHubCatalog.use((github) => github.getRepository("acme/agent-kit")),
+          GitHubCatalogLive(
+            options(async () => new Response("rate limit reached, retry later", { status: 403 })),
+          ),
+        ),
+      ),
+    ).rejects.toThrow(/403.*rate limit reached, retry later/);
   });
 });

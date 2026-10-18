@@ -1,4 +1,5 @@
 import type { RivusToolDescriptor } from "@rivus/agent";
+import { Effect } from "effect";
 
 import {
   readOriginal,
@@ -39,10 +40,13 @@ export function createArticleResearchExecutor(
     const request = parseInput(value);
     const env = dependencies.env ?? process.env;
     const base = await runPluginEffect(loadEnvConfig(env));
+    const browserInjection = dependencies.browserClient?.research ?? dependencies.client?.research;
     const layer = ReadingLive({
       apiKey: base.glmCodingApiKey,
       browserChannel: base.articleResearch.browserChannel,
-      browserResearch: dependencies.browserClient?.research ?? dependencies.client?.research,
+      browserResearch: browserInjection
+        ? (request) => Effect.promise(() => browserInjection(request))
+        : undefined,
       browserTimeoutMs: base.articleResearch.browserTimeoutMs,
       glmRead: dependencies.glmClient?.read,
       headless: base.articleResearch.browserHeadless,

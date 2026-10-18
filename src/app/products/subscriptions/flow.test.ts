@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Effect } from "effect";
-import { afterEach, describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { listRunArtifacts } from "../../../delivery/index.js";
 import { parseCliArgs } from "../../config/argv.js";
@@ -45,37 +45,35 @@ function captureStdout(): void {
   restoreStdout = () => spy.mockRestore();
 }
 
-vi.mock("../../../acquisition/infra/adapters/github-home-browser.js", () => ({
-  GitHubHomeClient: class {
-    getHomeEvents(): Promise<never> {
-      return Promise.reject(new Error("home unavailable"));
-    }
-  },
-  saveGithubHomeStorageState: vi.fn(),
-}));
+// One in-window item on the configured feed; GitHub Home fails naturally
+// because its storage state file does not exist in the test environment.
+const feedXml = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Example Feed</title>
+    <item>
+      <title>RSS survives GitHub outage</title>
+      <link>https://example.com/post</link>
+      <guid>https://example.com/post</guid>
+      <pubDate>Tue, 14 Jul 2026 01:00:00 GMT</pubDate>
+      <description>A durable summary.</description>
+    </item>
+  </channel>
+</rss>
+`;
 
-vi.mock("../../../acquisition/infra/adapters/rss-http.js", () => ({
-  RssClient: class {
-    getFeedEvents(): Promise<Array<Record<string, unknown>>> {
-      return Promise.resolve([
-        {
-          id: "rss:https://example.com/feed:https://example.com/post",
-          type: "article",
-          source: "rss",
-          actor: "Example Feed",
-          repo: "rss:https://example.com/post",
-          createdAt: "2026-07-14T01:00:00.000Z",
-          action: "published",
-          htmlUrl: "https://example.com/post",
-          title: "RSS survives GitHub outage",
-          sourceName: "Example Feed",
-          sourceUrl: "https://example.com/feed",
-          tags: ["ai"],
-        },
-      ]);
+beforeEach(() => {
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL): Promise<Response> => {
+    const url = typeof input === "string" ? input : input.toString();
+    if (url === "https://example.com/feed") {
+      return new Response(feedXml, {
+        status: 200,
+        headers: { "content-type": "application/rss+xml" },
+      });
     }
-  },
-}));
+    return new Response("not found", { status: 404 });
+  });
+});
 
 describe("digest source isolation", () => {
   afterEach(() => {
@@ -83,6 +81,7 @@ describe("digest source isolation", () => {
     restoreStdout?.();
     restoreStdout = undefined;
     vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
   });
 
   it("keeps RSS candidates when GitHub Home is unavailable", async () => {

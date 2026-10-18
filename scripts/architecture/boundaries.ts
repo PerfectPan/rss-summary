@@ -71,6 +71,12 @@ export const playwrightFiles = [
   "src/reading/infra/adapters/browser-reader.ts",
 ] as const;
 
+/**
+ * Effects are run only at the application runtime boundary; modules express
+ * everything as Effect values. Test files are exempt.
+ */
+export const effectRunFiles = ["src/app/runtime.ts"] as const;
+
 export const legacyLayer: Readonly<Record<string, LayerName>> = {
   application: "application",
   domain: "domain",

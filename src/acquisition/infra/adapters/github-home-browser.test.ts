@@ -4,13 +4,15 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { Effect } from "effect";
+
 import {
   extractHomeFeedSnapshotsFromHtml,
   hasGitHubHomeFeedMarkup,
   normalizeHomeCardSnapshot,
   normalizeHomeCardSnapshots,
 } from "../../domain/item/adapters/github-home.js";
-import { GitHubHomeClient } from "./github-home-browser.js";
+import { readHomeEvents } from "./github-home-browser.js";
 
 describe("GitHub Home feed source", () => {
   it("normalizes a rendered Home merged pull request card", () => {
@@ -133,13 +135,11 @@ describe("GitHub Home feed source", () => {
   });
 
   it("explains how to initialize exact Home mode when storage state is missing", async () => {
-    const client = new GitHubHomeClient({
-      storageState: ".state/missing-github-home-storage.json",
-    });
-
-    await expect(client.getHomeEvents()).rejects.toThrow(
-      "Run 'rss-summary github-home login' first",
-    );
+    await expect(
+      Effect.runPromise(
+        readHomeEvents({ storageState: ".state/missing-github-home-storage.json" }),
+      ),
+    ).rejects.toThrow("Run 'rss-summary github-home login' first");
   });
 
   it("extracts Home card snapshots from conduit HTML", () => {
@@ -185,28 +185,33 @@ describe("GitHub Home feed source", () => {
   it("uses conduit snapshots before rendered browser snapshots", async () => {
     const storageState = createStorageState();
     let browserCalls = 0;
-    const client = new GitHubHomeClient({
-      storageState,
-      conduitFetcher: async () => [
-        {
-          id: "feed-item-0",
-          card: { card_type: "TRENDING_REPOSITORY", created_at: "2026-06-27T04:08:52.000-07:00" },
-          text: "Trending repositories simplex-chat/simplex-chat",
-          links: [
+    const events = await Effect.runPromise(
+      readHomeEvents({
+        storageState,
+        conduitFetcher: () =>
+          Effect.succeed([
             {
-              text: "simplex-chat/simplex-chat",
-              href: "https://github.com/simplex-chat/simplex-chat",
+              id: "feed-item-0",
+              card: {
+                card_type: "TRENDING_REPOSITORY",
+                created_at: "2026-06-27T04:08:52.000-07:00",
+              },
+              text: "Trending repositories simplex-chat/simplex-chat",
+              links: [
+                {
+                  text: "simplex-chat/simplex-chat",
+                  href: "https://github.com/simplex-chat/simplex-chat",
+                },
+              ],
             },
-          ],
-        },
-      ],
-      browserFetcher: async () => {
-        browserCalls += 1;
-        return [];
-      },
-    });
-
-    const events = await client.getHomeEvents();
+          ]),
+        browserFetcher: () =>
+          Effect.sync(() => {
+            browserCalls += 1;
+            return [];
+          }),
+      }),
+    );
 
     expect(events[0]?.repo).toBe("simplex-chat/simplex-chat");
     expect(browserCalls).toBe(0);
@@ -214,25 +219,27 @@ describe("GitHub Home feed source", () => {
 
   it("falls back to rendered browser snapshots when conduit fails", async () => {
     const storageState = createStorageState();
-    const client = new GitHubHomeClient({
-      storageState,
-      conduitFetcher: async () => {
-        throw new Error("conduit failed");
-      },
-      browserFetcher: async () => [
-        {
-          id: "feed-item-11077470689",
-          card: { card_type: "FORKED_REPOSITORY", created_at: "2026-06-27T21:24:13.000-07:00" },
-          text: "magic-akari forked a repository magic-akari/dprint",
-          links: [
-            { text: "magic-akari", href: "https://github.com/magic-akari" },
-            { text: "magic-akari/dprint", href: "https://github.com/magic-akari/dprint" },
-          ],
-        },
-      ],
-    });
-
-    const events = await client.getHomeEvents();
+    const events = await Effect.runPromise(
+      readHomeEvents({
+        storageState,
+        conduitFetcher: () => Effect.fail(new Error("conduit failed")),
+        browserFetcher: () =>
+          Effect.succeed([
+            {
+              id: "feed-item-11077470689",
+              card: {
+                card_type: "FORKED_REPOSITORY",
+                created_at: "2026-06-27T21:24:13.000-07:00",
+              },
+              text: "magic-akari forked a repository magic-akari/dprint",
+              links: [
+                { text: "magic-akari", href: "https://github.com/magic-akari" },
+                { text: "magic-akari/dprint", href: "https://github.com/magic-akari/dprint" },
+              ],
+            },
+          ]),
+      }),
+    );
 
     expect(events[0]?.repo).toBe("magic-akari/dprint");
   });
@@ -240,27 +247,29 @@ describe("GitHub Home feed source", () => {
   it("skips conduit when configured for rendered browser mode", async () => {
     const storageState = createStorageState();
     let conduitCalls = 0;
-    const client = new GitHubHomeClient({
-      storageState,
-      fetchMode: "browser",
-      conduitFetcher: async () => {
-        conduitCalls += 1;
-        return [];
-      },
-      browserFetcher: async () => [
-        {
-          id: "feed-item-0",
-          card: {
-            card_type: "REPOSITORY_RECOMMENDATION",
-            created_at: "2026-06-26T17:00:00.000-07:00",
-          },
-          text: "Popular projects among people you follow onnx/onnx",
-          links: [{ text: "onnx/onnx", href: "https://github.com/onnx/onnx" }],
-        },
-      ],
-    });
-
-    const events = await client.getHomeEvents();
+    const events = await Effect.runPromise(
+      readHomeEvents({
+        storageState,
+        fetchMode: "browser",
+        conduitFetcher: () =>
+          Effect.sync(() => {
+            conduitCalls += 1;
+            return [];
+          }),
+        browserFetcher: () =>
+          Effect.succeed([
+            {
+              id: "feed-item-0",
+              card: {
+                card_type: "REPOSITORY_RECOMMENDATION",
+                created_at: "2026-06-26T17:00:00.000-07:00",
+              },
+              text: "Popular projects among people you follow onnx/onnx",
+              links: [{ text: "onnx/onnx", href: "https://github.com/onnx/onnx" }],
+            },
+          ]),
+      }),
+    );
 
     expect(events[0]?.repo).toBe("onnx/onnx");
     expect(conduitCalls).toBe(0);

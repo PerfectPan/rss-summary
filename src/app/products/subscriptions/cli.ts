@@ -29,14 +29,13 @@ export async function runDigestCommand(
   );
 }
 
-import type { FeedSubscription } from "../../../acquisition/index.js";
-import { type ActivityCard } from "../../../editorial/index.js";
+import type { Acquired, FeedSubscription } from "../../../acquisition/index.js";
 import {
-  RssClient,
   addCatalogFeed,
   addFeedSubscription,
   listCatalogFeeds,
   removeCatalogFeed,
+  RssFeed,
 } from "../../../acquisition/index.js";
 import { errorMessage } from "../../../kernel/index.js";
 import { runPluginEffect } from "../../runtime.js";
@@ -44,7 +43,7 @@ import { runPluginEffect } from "../../runtime.js";
 type FeedsCommandDeps = {
   stdout?: Writable;
   stderr?: Writable;
-  rssClient?: Pick<RssClient, "getFeedEvents">;
+  fetchFeedEvents?: (feed: FeedSubscription) => Promise<Acquired[]>;
 };
 
 type ParsedArgs = {
@@ -83,7 +82,11 @@ export async function runFeedsCommand(
     }
 
     if (args.command === "test") {
-      await testFeeds(stdout, await loadFeedsForTest(args), deps.rssClient ?? new RssClient());
+      const fetchFeedEvents =
+        deps.fetchFeedEvents ??
+        ((feed: FeedSubscription) =>
+          runPluginEffect(RssFeed.use((rss) => rss.getFeedEvents(feed))));
+      await testFeeds(stdout, await loadFeedsForTest(args), fetchFeedEvents);
       return 0;
     }
 
@@ -152,7 +155,7 @@ function writeFeedList(stdout: Writable, feeds: FeedSubscription[], file: string
 async function testFeeds(
   stdout: Writable,
   feeds: FeedSubscription[],
-  rssClient: Pick<RssClient, "getFeedEvents">,
+  fetchFeedEvents: (feed: FeedSubscription) => Promise<Acquired[]>,
 ): Promise<void> {
   if (feeds.length === 0) {
     stdout.write("No RSS feeds to test.\n");
@@ -160,7 +163,7 @@ async function testFeeds(
   }
 
   for (const feed of feeds) {
-    const events = await rssClient.getFeedEvents(feed);
+    const events = await fetchFeedEvents(feed);
     stdout.write(`${feed.name}: ok, ${events.length} ${pluralize("item", events)}\n`);
   }
 }
@@ -184,7 +187,7 @@ function parseTags(value: string | undefined): string[] {
     .filter(Boolean);
 }
 
-function pluralize(label: string, events: ActivityCard[]): string {
+function pluralize(label: string, events: Acquired[]): string {
   return events.length === 1 ? label : `${label}s`;
 }
 

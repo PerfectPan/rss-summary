@@ -53,6 +53,27 @@ describe("architecture boundaries", () => {
     expect(rulesOf(checkBoundaries(testGraph()))).toEqual([]);
   });
 
+  it("restricts Effect.run* to the app runtime, exempting test files", () => {
+    const violations = checkBoundaries([
+      {
+        path: "src/app/runtime.ts",
+        source: "export const run = Effect.runPromise;\n",
+      },
+      {
+        path: "src/kernel/text.test.ts",
+        source: "export const run = () => Effect.runPromise(Promise.resolve(1));\n",
+      },
+      {
+        path: "src/acquisition/infra/adapters/rss-http.ts",
+        source: "export const run = () => Effect.runPromise(Promise.resolve(1));\n",
+      },
+    ]);
+
+    expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
+      "src/acquisition/infra/adapters/rss-http.ts effect-run",
+    ]);
+  });
+
   it("detects sibling tests reaching into another module's internals", () => {
     const file = "src/kernel/text.test.ts";
     const violations = checkBoundaries([

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   AcquisitionLive,
-  RssClient,
+  RssFeedLive,
   isDailyAiPaperSource,
   parseFeedXml,
   saveGithubHomeStorageState,
@@ -14,6 +14,6 @@ describe("acquisition entry", () => {
     expect(typeof isDailyAiPaperSource).toBe("function");
     expect(typeof saveGithubHomeStorageState).toBe("function");
     expect(typeof AcquisitionLive).toBe("function");
-    expect(typeof RssClient).toBe("function");
+    expect(typeof RssFeedLive).toBe("function");
   });
 });

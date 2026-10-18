@@ -1,8 +1,9 @@
+import { readFileSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Effect } from "effect";
-import { describe, expect, it, vi } from "vite-plus/test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { parseCliArgs } from "../../config/argv.js";
 import { applyCliArgs, loadEnvConfig } from "../../config/env.js";
@@ -21,52 +22,35 @@ async function build(env: NodeJS.ProcessEnv, argv: string[]) {
   );
 }
 
-vi.mock("../../../acquisition/infra/adapters/rss-http.js", () => ({
-  RssClient: class {
-    getFeedEvents(feed: { name: string; url: string; tags: string[] }) {
-      return Promise.resolve([
-        {
-          id: `rss:${feed.url}:1`,
-          type: feed.tags.includes("Papers") ? "paper" : "article",
-          source: "rss",
-          actor: feed.name,
-          repo: `rss:${feed.url}`,
-          createdAt: "2026-08-09T01:00:00.000Z",
-          action: "published",
-          htmlUrl: `${feed.url}/post`,
-          title: `${feed.name} agent release`,
-          summary: "A coding agent uses tools reliably.",
-          sourceName: feed.name,
-          sourceUrl: feed.url,
-          tags: feed.tags,
-        },
-      ]);
-    }
-  },
-}));
+// Every industry source (industry-feeds.json) serves exactly one in-window
+// item: RSS feeds one feed item, page sources one dated link.
+const industrySources = JSON.parse(
+  readFileSync(new URL("../../../../industry-feeds.json", import.meta.url), "utf8"),
+) as Array<{ name: string; url: string; tags: string[]; type?: string; pathPrefixes?: string[] }>;
 
-vi.mock("../../../acquisition/infra/adapters/web-page-http.js", () => ({
-  WebPageClient: class {
-    getEvents(source: { name: string; url: string; tags: string[] }) {
-      return Promise.resolve([
-        {
-          id: `web:${source.url}:1`,
-          type: "article",
-          source: "web",
-          actor: source.name,
-          repo: `web:${source.url}/post`,
-          createdAt: "2026-08-09T02:00:00.000Z",
-          action: "published",
-          htmlUrl: `${source.url}/post`,
-          title: `${source.name} product update`,
-          sourceName: source.name,
-          sourceUrl: source.url,
-          tags: source.tags,
-        },
-      ]);
+beforeEach(() => {
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL): Promise<Response> => {
+    const url = typeof input === "string" ? input : input.toString();
+    const source = industrySources.find((entry) => entry.url === url);
+    if (!source) return new Response("not found", { status: 404 });
+    if (source.type === "page") {
+      const prefix = source.pathPrefixes?.[0] ?? "/";
+      const slug = prefix.replace(/^\//u, "").replace(/\/$/u, "");
+      return new Response(
+        `<!doctype html><html><body><a href="${prefix}${slug}-post"><h2>${source.name} product update</h2><time datetime="2026-08-09T02:00:00Z">Aug 9</time></a></body></html>`,
+        { status: 200, headers: { "content-type": "text/html" } },
+      );
     }
-  },
-}));
+    return new Response(
+      `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>${source.name}</title><item><title>${source.name} agent release</title><link>${source.url}/post</link><guid>${source.url}/post</guid><pubDate>Sun, 09 Aug 2026 01:00:00 GMT</pubDate><description>A coding agent uses tools reliably.</description></item></channel></rss>`,
+      { status: 200, headers: { "content-type": "application/rss+xml" } },
+    );
+  });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe("industry brief", () => {
   it("collects first-party RSS and page candidates without touching GitHub", async () => {

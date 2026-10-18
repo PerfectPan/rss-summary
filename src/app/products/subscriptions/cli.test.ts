@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 
 import { describe, expect, it } from "vite-plus/test";
 
-import type { ActivityCard } from "../../../editorial/index.js";
+import { publicationAcquired, type ActivityCardDto } from "../../../acquisition/index.js";
 import { runDigestCommand, runFeedsCommand } from "./cli.js";
 
 describe("subscriptions digest CLI", () => {
@@ -81,19 +81,16 @@ describe("feeds CLI", () => {
 
     const exitCode = await runFeedsCommand(["test", "--file", file], {
       stdout: { write: (chunk) => output.push(String(chunk)) },
-      rssClient: {
-        async getFeedEvents(): Promise<ActivityCard[]> {
-          return [
-            {
-              id: "rss:test:1",
-              type: "article",
-              source: "rss",
-              actor: "GitHub Blog",
-              repo: "rss:https://github.blog/post",
-              createdAt: "2026-06-27T00:00:00.000Z",
-            },
-          ];
-        },
+      fetchFeedEvents: async () => {
+        const card: ActivityCardDto = {
+          id: "rss:test:1",
+          type: "article",
+          source: "rss",
+          actor: "GitHub Blog",
+          repo: "rss:https://github.blog/post",
+          createdAt: "2026-06-27T00:00:00.000Z",
+        };
+        return [publicationAcquired(card)];
       },
     });
 
