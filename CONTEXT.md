@@ -3,6 +3,40 @@
 Domain vocabulary used across the code base. When a word is overloaded, the
 "Same name, different meaning" rows say which file owns which sense.
 
+## Integrations
+
+**Integration** — one external service's complete anti-corruption layer
+(ACL) under `src/integrations/<service>/`: its transport (`client.ts`), the
+response schemas and decoding (`dto.ts`), the translation into module models
+with that service's field semantics (`mapper.ts`), and the `Layer`
+implementing the owning module's port. Grouping by service — not by the
+module layer that used to host each half — keeps transport and format
+knowledge in one place; it is a deliberate departure from agent-kit's
+per-concept `adapters/` split (see plan 0001's 实施中的偏差).
+
+**ACL (anti-corruption layer)** — the boundary that keeps an external
+format from leaking into the domain: DTOs are declared and decoded at the
+edge, and the mapper is the only code that knows what the service's fields
+mean (for example, an authority level mapping to a `CredibilityTier`).
+
+**Port** — a module's plug socket for an external capability: a
+`Context.Service` in `application/ports.ts` keyed
+`rss-summary/<module>/<Port>/v1`. Modules (and their tests) speak only the
+port; who fills it is decided in `app/layers.ts`.
+
+**Driven adapter** — the hexagonal-architecture role an integration plays:
+the application calls outward through a port, and the integration is the
+passive component that answers. This is why integrations may import module
+facades while business modules may never import integrations — the
+dependency points inward, and only `app` composes.
+
+**Why no `adapters/` directories remain** — "adapter" described the
+mechanism (translate a format) but scattered one service's knowledge across
+a module's domain and infra. The word now lives only in this glossary and in
+`tests/support/` suite names; per-service `integrations/` own the driven
+side, and module-local plumbing sits under purposeful names
+(`infra/notifier/`, `infra/platform/`).
+
 ## Acquisition
 
 **Item** — the source-neutral model of "one piece of information"
