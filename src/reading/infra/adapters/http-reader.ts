@@ -1,5 +1,5 @@
-import type { ReadRequest, ReadResult } from "../../domain/document/document.js";
-import { validateArticleResearchUrl } from "../../domain/document/url-policy.js";
+import type { ReadRequest, ReadResult } from "../../domain/document/index.js";
+import { validateArticleResearchUrl } from "../../domain/document/index.js";
 
 export type ArticleExtract = (
   body: string,

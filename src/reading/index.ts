@@ -8,7 +8,7 @@ import {
   type GlmPage,
 } from "./application/ports.js";
 import { extractArticle } from "./domain/document/adapters/html-article.js";
-import type { ReadRequest, ReadResult } from "./domain/document/document.js";
+import type { ReadRequest, ReadResult } from "./domain/document/index.js";
 import {
   transcriptEvidence,
   videoVisualEvidence,
@@ -36,13 +36,13 @@ export {
   type ReadSuccess,
   type VideoFrame,
   type VideoVisuals,
-} from "./domain/document/document.js";
+} from "./domain/document/index.js";
 export {
   isPrivateIpv4,
   isVideoResearchUrl,
   validateArticleResearchUrl,
   validateResearchUrl,
-} from "./domain/document/url-policy.js";
+} from "./domain/document/index.js";
 export { extractArticle } from "./domain/document/adapters/html-article.js";
 export {
   transcriptEvidence,

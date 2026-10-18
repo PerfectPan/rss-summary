@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 
 import { BrowserReader, GlmReader, HttpReader, VideoReader } from "../ports.js";
 import { readOriginal, type ReadOriginalRequest } from "./read-original.js";
-import type { ReadRequest, ReadResult } from "../../domain/document/document.js";
+import type { ReadRequest, ReadResult } from "../../domain/document/index.js";
 import type { GlmPage } from "../ports.js";
 
 const article = "https://example.com/article";
