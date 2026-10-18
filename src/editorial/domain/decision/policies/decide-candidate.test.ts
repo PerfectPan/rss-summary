@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { candidateIdentity } from "../../../acquisition/index.js";
-import { decideCandidate } from "./decision.js";
-import type { CandidateProject } from "../../index.js";
+import { candidateIdentity } from "../../../../acquisition/index.js";
+import { decideCandidate } from "./decide-candidate.js";
+import type { CandidateProject } from "../../../index.js";
 
 describe("run audit candidate decisions", () => {
   it("records selected output depth and explicit filter reasons", () => {

@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { DoubaoSearchError } from "../../../acquisition/index.js";
-import { buildNewsAudit, summarizeNewsSources, type NewsAuditRequest } from "./audit.js";
-import type { NewsHitDecision, NewsSearchHit, NewsStory, NewsStoryDecision } from "./news.js";
+import { DoubaoSearchError } from "../../../../acquisition/index.js";
+import { buildNewsAudit, summarizeNewsSources } from "./news-audit.js";
+import type { NewsAuditRequest } from "../value-objects/news-audit.js";
+import type {
+  NewsHitDecision,
+  NewsSearchHit,
+  NewsStory,
+  NewsStoryDecision,
+} from "../value-objects/news.js";
 
 describe("news audit", () => {
   it("explains query failures and every stage of the selection funnel", () => {

@@ -1,16 +1,14 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { resolveNewsCredibility } from "../../../acquisition/index.js";
+import { resolveNewsCredibility } from "../../../../acquisition/index.js";
+import type { NewsSearchHit, NewsTopic, NewsTopicQuery } from "../value-objects/news.js";
 import {
   buildNewsStories,
   buildNewsStoriesWithAudit,
   selectNewsStories,
   selectNewsStoriesWithAudit,
-  type NewsSearchHit,
-  type NewsTopic,
-  type NewsTopicQuery,
-} from "./news.js";
-import { parsePublishTime } from "../../../kernel/index.js";
+} from "./news-funnel.js";
+import { parsePublishTime } from "../../../../kernel/index.js";
 
 const window = {
   since: Date.parse("2026-07-29T00:00:00+08:00"),

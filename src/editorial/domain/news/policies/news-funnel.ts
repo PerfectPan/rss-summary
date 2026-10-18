@@ -1,205 +1,24 @@
-import type { CredibilityMethod, CredibilityTier } from "../../../acquisition/domain/item/index.js";
 import {
   canonicalizeUrl,
   compactSummary,
   newsPublicationRange,
   parsePublishTime,
-} from "../../../kernel/index.js";
-import { isSameTitleEvent } from "../identity/identity.js";
-
-export type NewsSourcePolicy = "authoritative" | "official" | "news";
-
-export type NewsBriefEdition = "noon" | "evening";
-
-export type NewsQueryIntent =
-  | "model-release"
-  | "developer-change"
-  | "service-incident"
-  | "security-advisory"
-  | "policy-action"
-  | "capital-event";
-
-export type NewsTopicQuery = {
-  id: string;
-  text: string;
-  intent: NewsQueryIntent;
-  subjectAny: string[];
-  eventAny: string[];
-  excludedAny: string[];
-};
-
-export type NewsTopic = {
-  id: string;
-  label: string;
-  icon: string;
-  enabled: boolean;
-  sourcePolicy: NewsSourcePolicy;
-  maxItems: number;
-  queries: NewsTopicQuery[];
-};
-
-/** Item credibility plus the numeric certificate the story field still publishes. */
-export type NewsCredibility = {
-  tier: CredibilityTier;
-  method?: CredibilityMethod;
-  rank: number;
-};
-
-export type NewsSearchHit = {
-  id: string;
-  title: string;
-  siteName?: string;
-  url: string;
-  snippet?: string;
-  summary?: string;
-  publishTime?: string;
-  rankScore?: number;
-  authInfoDescription?: string;
-  credibility: { tier: CredibilityTier; method?: CredibilityMethod };
-  authorityRank: number;
-  topicId: string;
-  topicLabel: string;
-  sourcePolicy: NewsSourcePolicy;
-  queryId: string;
-  queryText: string;
-  subjectAny: string[];
-  eventAny: string[];
-  excludedAny: string[];
-  rankPosition: number;
-};
-
-export type NewsScoreBreakdown = {
-  rank: number;
-  authority: number;
-  freshness: number;
-  crossQuery: number;
-};
-
-export type NewsStory = {
-  id: string;
-  title: string;
-  canonicalUrl: string;
-  summary: string;
-  siteName: string;
-  publishTime: string;
-  rankScore: number;
-  authInfoLevel: number;
-  authInfoDescription?: string;
-  topicIds: string[];
-  topicLabels: string[];
-  queryIds: string[];
-  queries: string[];
-  queryHits: number;
-  scoreBreakdown: NewsScoreBreakdown;
-  score: number;
-};
-
-export type SelectedNewsStory = NewsStory & {
-  selectedTopicId: string;
-};
-
-export type NewsStorySelectionReason =
-  | "duplicate-title"
-  | "topic-quota"
-  | "brief-cap"
-  | "no-enabled-topic";
-
-export type NewsStoryDecision = {
-  story: NewsStory;
-  status: "selected" | "filtered";
-  reason?: NewsStorySelectionReason;
-};
-
-export type NewsStorySelectionResult = {
-  stories: SelectedNewsStory[];
-  decisions: NewsStoryDecision[];
-};
-
-export type NewsTimeWindow = {
-  since: number;
-  until: number;
-  reportedUrls?: string[];
-  timezoneOffset?: string;
-};
-
-export type NewsHitRejectionReason =
-  | "missing-fields"
-  | "invalid-publish-time"
-  | "outside-window"
-  | "insufficient-authority"
-  | "already-reported"
-  | "excluded-content"
-  | "subject-mismatch"
-  | "intent-mismatch"
-  | "invalid-url";
-
-export type NewsHitDecision = {
-  hit: NewsSearchHit;
-  status: "accepted" | "rejected";
-  reason?: NewsHitRejectionReason;
-  canonicalUrl?: string;
-};
-
-export type NewsStoryBuildResult = {
-  stories: NewsStory[];
-  decisions: NewsHitDecision[];
-};
+} from "../../../../kernel/index.js";
+import { isSameTitleEvent } from "../../identity/index.js";
+import type {
+  NewsHitDecision,
+  NewsHitRejectionReason,
+  NewsScoreBreakdown,
+  NewsSearchHit,
+  NewsStory,
+  NewsStoryBuildResult,
+  NewsStorySelectionResult,
+  NewsTimeWindow,
+  NewsTopic,
+  SelectedNewsStory,
+} from "../value-objects/news.js";
 
 const maxNewsBriefItems = 8;
-
-export function projectNewsHit(
-  result: {
-    id: string;
-    title: string;
-    siteName?: string;
-    url: string;
-    snippet?: string;
-    summary?: string;
-    publishTime?: string;
-    rankScore?: number;
-    authInfoDescription?: string;
-    rankPosition: number;
-  },
-  binding: {
-    topicId: string;
-    topicLabel: string;
-    sourcePolicy: NewsSourcePolicy;
-    queryId: string;
-    queryText: string;
-    subjectAny: readonly string[];
-    eventAny: readonly string[];
-    excludedAny: readonly string[];
-  },
-  credibility: NewsCredibility,
-): NewsSearchHit {
-  return {
-    id: result.id,
-    title: result.title,
-    ...(result.siteName !== undefined ? { siteName: result.siteName } : {}),
-    url: result.url,
-    ...(result.snippet !== undefined ? { snippet: result.snippet } : {}),
-    ...(result.summary !== undefined ? { summary: result.summary } : {}),
-    ...(result.publishTime !== undefined ? { publishTime: result.publishTime } : {}),
-    ...(result.rankScore !== undefined ? { rankScore: result.rankScore } : {}),
-    ...(result.authInfoDescription !== undefined
-      ? { authInfoDescription: result.authInfoDescription }
-      : {}),
-    credibility: {
-      tier: credibility.tier,
-      ...(credibility.method ? { method: credibility.method } : {}),
-    },
-    authorityRank: credibility.rank,
-    topicId: binding.topicId,
-    topicLabel: binding.topicLabel,
-    sourcePolicy: binding.sourcePolicy,
-    queryId: binding.queryId,
-    queryText: binding.queryText,
-    subjectAny: [...binding.subjectAny],
-    eventAny: [...binding.eventAny],
-    excludedAny: [...binding.excludedAny],
-    rankPosition: result.rankPosition,
-  };
-}
 
 /** Whether a publisher timestamp falls inside the brief window, including date precision. */
 export function publicationFitsWindow(

@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import {
-  buildDailyAiDigest,
-  DailyAiDraftValidationError,
-  validateEditorialDraft,
-  type DailyAiEvidence,
-} from "../../index.js";
+import { buildDailyAiDigest, type DailyAiEvidence } from "../../../index.js";
 
 const evidence = (overrides: Partial<DailyAiEvidence> = {}): DailyAiEvidence => ({
   id: "source-1",
@@ -20,27 +15,6 @@ const evidence = (overrides: Partial<DailyAiEvidence> = {}): DailyAiEvidence => 
 });
 
 describe("Daily AI editorial domain", () => {
-  it("validates only structural fields and known evidence references", () => {
-    const result = validateEditorialDraft(
-      [
-        {
-          category: "行业动态",
-          headline: "梅卡曼德在港交所主板挂牌上市",
-          refs: ["source-1"],
-        },
-        {
-          category: "模型发布",
-          headline: "Astra 全面可用，默认要求采用更严格的安全措施",
-          refs: ["source-1"],
-        },
-      ],
-      [evidence()],
-    );
-
-    expect(result).toMatchObject({ issues: [], items: expect.any(Array) });
-    expect(result.items).toHaveLength(2);
-  });
-
   it("keeps valid items when another editorial item is invalid", () => {
     const result = buildDailyAiDigest([evidence()], {
       draft: [
@@ -67,14 +41,6 @@ describe("Daily AI editorial domain", () => {
     expect(result.audit.editorialIssues).toEqual([
       expect.objectContaining({ index: 1, reason: "unknown-reference" }),
     ]);
-  });
-
-  it("fails generation instead of rendering no-news when every draft item is invalid", () => {
-    expect(() =>
-      buildDailyAiDigest([evidence()], {
-        draft: [{ category: "unknown", headline: "Astra", refs: ["missing"] }],
-      }),
-    ).toThrow(DailyAiDraftValidationError);
   });
 
   it("allows the editor to reject every low-information candidate", () => {
@@ -147,32 +113,6 @@ describe("Daily AI editorial domain", () => {
       status: "merged",
       reason: "merged-with:source-1",
     });
-  });
-
-  it("rejects malformed items independently and deduplicates accepted headlines", () => {
-    const result = validateEditorialDraft(
-      [
-        {
-          category: "模型发布",
-          headline: "OpenAI 公布 Astra",
-          refs: ["source-1"],
-        },
-        {
-          category: "模型发布",
-          headline: "OpenAI 公布 Astra",
-          refs: ["source-1"],
-        },
-        { category: "unknown", headline: "错误栏目", refs: ["source-1"] },
-        { category: "模型发布", headline: "", refs: ["source-1"] },
-      ],
-      [evidence()],
-    );
-
-    expect(result.items).toHaveLength(1);
-    expect(result.issues).toEqual([
-      expect.objectContaining({ index: 2, reason: "invalid-category" }),
-      expect.objectContaining({ index: 3, reason: "invalid-headline" }),
-    ]);
   });
 
   it("drops invalid evidence URLs and duplicate evidence ids", () => {

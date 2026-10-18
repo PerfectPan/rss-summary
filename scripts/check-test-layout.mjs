@@ -57,6 +57,20 @@ const coveredElsewhere = new Map([
     "acquisition/domain/budget/value-objects/budget",
     "budget aggregate tests and search-budget-file repository tests",
   ],
+  // The audit projection is applied by the Rivus subscription phases, which
+  // assert the editorialSelection audit it writes.
+  [
+    "editorial/domain/subscription/services/editorial-audit",
+    "app/rivus/phases tests",
+  ],
+  // Hits are projected inside the news flow and hybrid retrieval paths.
+  ["editorial/domain/news/factories/news-hit", "news flow and hybrid tests"],
+  // Categories and title cleaning run in the Daily AI flow; the category enum
+  // is also locked verbatim by the golden registration snapshot.
+  [
+    "editorial/domain/daily-ai/value-objects/daily-ai",
+    "daily-ai flow tests and the golden registration snapshot",
+  ],
 ]);
 
 /** Directories allowed under tests/. */

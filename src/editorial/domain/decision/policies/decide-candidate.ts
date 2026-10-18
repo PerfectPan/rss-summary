@@ -4,19 +4,8 @@ import {
   type PresentationDepth,
   type PresentationPolicy,
   type PresentationReasonCode,
-} from "../subscription/subscription.js";
-
-export type CandidateDecision = {
-  key: string;
-  label: string;
-  url?: string;
-  score: number;
-  depth: PresentationDepth;
-  presentationReasonCode?: PresentationReasonCode;
-  presentationEvidence?: string;
-  status: "selected" | "research-pending" | "filtered";
-  reason: string;
-};
+} from "../../subscription/index.js";
+import type { CandidateDecision } from "../value-objects/candidate-decision.js";
 
 export function decideCandidate(
   candidate: CandidateProject,
