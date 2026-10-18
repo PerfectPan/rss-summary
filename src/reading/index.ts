@@ -31,8 +31,3 @@ export {
   type ReadOriginalRequest,
   type ReadOriginalResult,
 } from "./application/use-cases/read-original.js";
-export {
-  browserArticleResearch,
-  type BrowserPageFetcher,
-  type BrowserReaderOptions,
-} from "./infra/adapters/browser-reader.js";

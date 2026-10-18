@@ -2,10 +2,11 @@ import { Effect } from "effect";
 
 import {
   validateArticleResearchUrl,
+  type ArticleExtract,
   type ReadRequest,
   type ReadResult,
-} from "../../domain/document/index.js";
-import type { ArticleExtract } from "../../domain/document/index.js";
+} from "../../reading/index.js";
+import { renderPage } from "../shared/browser.js";
 
 export type BrowserReaderOptions = {
   browserChannel?: string;
@@ -22,6 +23,10 @@ export type BrowserPageFetcher = (input: {
   timeoutMs: number;
   url: string;
 }) => Effect.Effect<{ html: string; url: string }, unknown>;
+
+const articleRootSelector =
+  "article,main,[itemprop='articleBody'],[data-pagefind-body],.markdown-body,.prose";
+const readerUserAgent = "rss-summary/0.1 article-research-browser";
 
 const DEFAULT_MAX_CHARS = 16_000;
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -96,69 +101,13 @@ function fetchRenderedPage(input: {
   timeoutMs: number;
   url: string;
 }): Effect.Effect<{ html: string; url: string }, unknown> {
-  return Effect.scoped(
-    Effect.gen(function* () {
-      const playwright = yield* Effect.promise(() => import("playwright"));
-      const browser = yield* Effect.acquireRelease(
-        Effect.tryPromise({
-          try: () => launchBrowser(playwright, input),
-          catch: (cause) => cause,
-        }),
-        (launched) => Effect.promise(() => launched.close()),
-      );
-      const context = yield* Effect.tryPromise({
-        try: () =>
-          browser.newContext({
-            userAgent: "rss-summary/0.1 article-research-browser",
-          }),
-        catch: (cause) => cause,
-      });
-      const page = yield* Effect.tryPromise({
-        try: () => context.newPage(),
-        catch: (cause) => cause,
-      });
-      yield* Effect.tryPromise({
-        try: () => page.goto(input.url, { timeout: input.timeoutMs, waitUntil: "commit" }),
-        catch: (cause) => cause,
-      });
-      yield* Effect.tryPromise({
-        try: () =>
-          page
-            .waitForSelector(
-              "article,main,[itemprop='articleBody'],[data-pagefind-body],.markdown-body,.prose",
-              { timeout: input.timeoutMs },
-            )
-            .catch(() => undefined),
-        catch: (cause) => cause,
-      });
-      yield* Effect.tryPromise({
-        try: () =>
-          page
-            .waitForLoadState("networkidle", { timeout: Math.min(input.timeoutMs, 5_000) })
-            .catch(() => undefined),
-        catch: (cause) => cause,
-      });
-      const html = yield* Effect.tryPromise({
-        try: () => page.content(),
-        catch: (cause) => cause,
-      });
-      return { html, url: page.url() };
-    }),
-  );
-}
-
-async function launchBrowser(
-  playwright: typeof import("playwright"),
-  input: { browserChannel?: string; headless: boolean },
-): Promise<Awaited<ReturnType<(typeof import("playwright"))["chromium"]["launch"]>>> {
-  try {
-    return await playwright.chromium.launch({
-      channel: input.browserChannel,
-      headless: input.headless,
-    });
-  } catch (error) {
-    if (!input.browserChannel) throw error;
-    return playwright.chromium.launch({ headless: input.headless });
-  }
+  return renderPage({
+    browserChannel: input.browserChannel,
+    headless: input.headless,
+    timeoutMs: input.timeoutMs,
+    url: input.url,
+    userAgent: readerUserAgent,
+    waitForSelector: articleRootSelector,
+  });
 }
 /* v8 ignore stop */

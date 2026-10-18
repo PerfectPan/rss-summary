@@ -20,14 +20,13 @@ import {
 } from "../delivery/index.js";
 import {
   BrowserReader,
-  browserArticleResearch,
   GlmReader,
   HttpReader,
-  type BrowserPageFetcher,
   type GlmPage,
   VideoReader,
 } from "../reading/index.js";
 import { ArticleResearchClient, extractArticle } from "../integrations/article-http/index.js";
+import { browserArticleResearch, type BrowserPageFetcher } from "../integrations/browser/index.js";
 import { readGlmPage } from "../integrations/glm/index.js";
 import {
   transcriptEvidence,

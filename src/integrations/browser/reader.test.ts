@@ -1,8 +1,8 @@
 import { Effect } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 
-import { extractArticle } from "../../../integrations/article-http/index.js";
-import { browserArticleResearch } from "./browser-reader.js";
+import { extractArticle } from "../article-http/index.js";
+import { browserArticleResearch } from "./reader.js";
 
 describe("browser article research", () => {
   it("extracts rendered article HTML through the injected page fetcher", async () => {

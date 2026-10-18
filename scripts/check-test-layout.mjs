@@ -98,6 +98,12 @@ const coveredElsewhere = new Map([
   ["integrations/glm/reader/mapper", "integrations/glm reader and research tests"],
   // The search result-list shape is exercised by the mapper tests.
   ["integrations/glm/search/dto", "integrations/glm search mapper tests"],
+  // The browser lifecycle runs behind the GitHub Home flows and the article
+  // browser reader, both of which drive it end to end with substitutes.
+  [
+    "integrations/shared/browser",
+    "integrations/github home-browser tests and integrations/browser reader tests",
+  ],
   // Categories and title cleaning run in the Daily AI flow; the category enum
   // is also locked verbatim by the golden registration snapshot.
   [
