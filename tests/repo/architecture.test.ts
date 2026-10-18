@@ -28,7 +28,7 @@ describe("architecture boundaries", () => {
   });
 
   it("detects a domain import of node:fs or effect", () => {
-    const file = "src/acquisition/domain/item/model.ts";
+    const file = "src/acquisition/domain/item/value-objects/model.ts";
     const violations = checkBoundaries([
       {
         path: file,
@@ -154,16 +154,16 @@ describe("architecture boundaries", () => {
   it("detects module, escape, external, and entry vocabulary violations", () => {
     const violations = checkBoundaries([
       {
-        path: "src/editorial/domain/news/rank.ts",
+        path: "src/editorial/domain/news/policies/rank.ts",
         source:
-          'import { deliver } from "../../../delivery/index.js";\nexport const ranked = deliver;\n',
+          'import { deliver } from "../../../../delivery/index.js";\nexport const ranked = deliver;\n',
       },
       {
         path: "src/kernel/text.ts",
         source: 'import { gone } from "../../outside.js";\nexport const text = gone;\n',
       },
       {
-        path: "src/acquisition/domain/item/item.ts",
+        path: "src/acquisition/domain/item/value-objects/item.ts",
         source: 'import { load } from "cheerio";\nexport const item = load;\n',
       },
       {
@@ -177,8 +177,8 @@ describe("architecture boundaries", () => {
     ]);
 
     expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
-      "src/acquisition/domain/item/item.ts external",
-      "src/editorial/domain/news/rank.ts module-dependency",
+      "src/acquisition/domain/item/value-objects/item.ts external",
+      "src/editorial/domain/news/policies/rank.ts module-dependency",
       "src/editorial/index.ts source-vocabulary",
       "src/kernel/text.ts external",
       "src/kernel/text.ts relative-escape",
@@ -234,9 +234,9 @@ describe("architecture boundaries", () => {
   it("detects layer, type-only, deep import, clock, and source-vocabulary violations", () => {
     const violations = checkBoundaries([
       {
-        path: "src/acquisition/domain/item/model.ts",
+        path: "src/acquisition/domain/item/value-objects/model.ts",
         source: [
-          'import { readRss } from "./adapters/rss.js";',
+          'import { readRss } from "../adapters/rss.js";',
           "export const now = new Date();",
           "export const label = Date.now();",
           'export const source = "github";',
@@ -258,9 +258,9 @@ describe("architecture boundaries", () => {
         ].join("\n"),
       },
       {
-        path: "src/editorial/domain/news/rank.ts",
+        path: "src/editorial/domain/news/policies/rank.ts",
         source:
-          'import { value } from "../../../acquisition/domain/item/model.js";\nexport const ranked = value;\n',
+          'import { value } from "../../../../acquisition/domain/item/value-objects/model.js";\nexport const ranked = value;\n',
       },
       {
         path: "src/app/products/news/flow.ts",
@@ -279,13 +279,106 @@ describe("architecture boundaries", () => {
       "src/acquisition/application/use-cases/search.ts node-builtin",
       "src/acquisition/application/use-cases/search.ts process-env",
       "src/acquisition/domain/item/adapters/rss.ts effect",
-      "src/acquisition/domain/item/model.ts clock",
-      "src/acquisition/domain/item/model.ts layer",
-      "src/acquisition/domain/item/model.ts source-vocabulary",
+      "src/acquisition/domain/item/value-objects/model.ts clock",
+      "src/acquisition/domain/item/value-objects/model.ts layer",
+      "src/acquisition/domain/item/value-objects/model.ts source-vocabulary",
       "src/acquisition/infra/adapters/rss-http.ts playwright",
       "src/app/products/news/flow.ts deep-import",
-      "src/editorial/domain/news/rank.ts types-only",
+      "src/editorial/domain/news/policies/rank.ts types-only",
     ]);
+  });
+
+  it("keeps domain concepts to building blocks and their facade", () => {
+    const violations = checkBoundaries([
+      {
+        path: "src/acquisition/domain/item/item.ts",
+        source: "export const loose = true;\n",
+      },
+      {
+        path: "src/editorial/domain/news/projections/model.ts",
+        source: "export const nested = true;\n",
+      },
+    ]);
+
+    expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
+      "src/acquisition/domain/item/item.ts concept-structure",
+      "src/editorial/domain/news/projections/model.ts concept-structure",
+    ]);
+  });
+
+  it("allows concept facades, building blocks, and loose concept test files", () => {
+    expect(
+      rulesOf(
+        checkBoundaries([
+          { path: "src/acquisition/domain/budget/index.ts", source: "export {};\n" },
+          {
+            path: "src/acquisition/domain/budget/aggregates/search-budget.ts",
+            source: "export const budget = true;\n",
+          },
+          {
+            path: "src/acquisition/domain/budget/adapters/provider.ts",
+            source: "export const provider = true;\n",
+          },
+          {
+            path: "src/editorial/domain/news/policies/news-funnel.test.ts",
+            source: "export const test = true;\n",
+          },
+        ]),
+      ),
+    ).toEqual([]);
+  });
+
+  it("keeps the application and infra roots to their agreed entries", () => {
+    const violations = checkBoundaries([
+      {
+        path: "src/acquisition/application/budget-defaults.ts",
+        source: "export const defaults = true;\n",
+      },
+      {
+        path: "src/acquisition/application/helpers/budget-defaults.ts",
+        source: "export const defaults = true;\n",
+      },
+      {
+        path: "src/acquisition/infra/live.ts",
+        source: "export const live = true;\n",
+      },
+      {
+        path: "src/acquisition/infra/wiring/live.ts",
+        source: "export const live = true;\n",
+      },
+    ]);
+
+    expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
+      "src/acquisition/application/budget-defaults.ts application-root",
+      "src/acquisition/application/helpers/budget-defaults.ts application-root",
+      "src/acquisition/infra/live.ts infra-root",
+      "src/acquisition/infra/wiring/live.ts infra-root",
+    ]);
+  });
+
+  it("accepts ports at the application root and factories under infra", () => {
+    expect(
+      rulesOf(
+        checkBoundaries([
+          {
+            path: "src/delivery/application/ports.ts",
+            source: "export const ports = true;\n",
+          },
+          {
+            path: "src/delivery/application/ports.test.ts",
+            source: "export const portsTest = true;\n",
+          },
+          {
+            path: "src/acquisition/infra/factories/live.ts",
+            source: "export const live = true;\n",
+          },
+          {
+            path: "src/reading/infra/services/json-record.ts",
+            source: "export const record = true;\n",
+          },
+        ]),
+      ),
+    ).toEqual([]);
   });
 });
 
@@ -318,19 +411,19 @@ function legalGraph(): SourceInput[] {
   return [
     { path: "src/kernel/text.ts", source: "export const empty = '';\n" },
     {
-      path: "src/acquisition/domain/item/model.ts",
+      path: "src/acquisition/domain/item/value-objects/model.ts",
       source:
-        'import { empty } from "../../../kernel/text.js";\nexport const created = (value: string) => new Date(value);\nexport const label = empty;\n',
+        'import { empty } from "../../../../kernel/text.js";\nexport const created = (value: string) => new Date(value);\nexport const label = empty;\n',
     },
     {
       path: "src/acquisition/domain/item/adapters/rss.ts",
       source:
-        'import { Schema } from "effect";\nimport { created } from "../model.js";\nexport const parsed = [Schema, created];\n',
+        'import { Schema } from "effect";\nimport { created } from "../value-objects/model.js";\nexport const parsed = [Schema, created];\n',
     },
     {
       path: "src/acquisition/application/use-cases/search.ts",
       source:
-        'import { Effect } from "effect";\nimport { created } from "../../domain/item/model.js";\nexport const search = [Effect, created];\n',
+        'import { Effect } from "effect";\nimport { created } from "../../domain/item/value-objects/model.js";\nexport const search = [Effect, created];\n',
     },
     {
       path: "src/acquisition/infra/adapters/browser.ts",
@@ -342,9 +435,9 @@ function legalGraph(): SourceInput[] {
         'import { parsed } from "../../domain/item/adapters/rss.js";\nexport const events = parsed;\n',
     },
     {
-      path: "src/editorial/domain/news/rank.ts",
+      path: "src/editorial/domain/news/policies/rank.ts",
       source:
-        'import type { created } from "../../../acquisition/domain/item/model.js";\nimport { empty } from "../../../kernel/text.js";\nexport const rank = [empty, created];\n',
+        'import type { created } from "../../../../acquisition/domain/item/value-objects/model.js";\nimport { empty } from "../../../../kernel/text.js";\nexport const rank = [empty, created];\n',
     },
     {
       path: "src/app/products/shared/glm-research.ts",

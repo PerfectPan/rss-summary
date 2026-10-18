@@ -86,4 +86,32 @@ export const playwrightFiles = [
  */
 export const effectRunFiles = ["src/app/runtime.ts"] as const;
 
+/**
+ * DDD building blocks (agent-kit authoring conventions): the only subdirectories
+ * a `domain/<concept>/` folder may contain, besides its `index.ts` facade.
+ */
+export const domainBuildingBlocks = [
+  "aggregates",
+  "entities",
+  "value-objects",
+  "policies",
+  "factories",
+  "errors",
+  "events",
+  "services",
+  "adapters",
+] as const;
+
+/** The only loose files `application/` may keep at its root (plus their tests). */
+export const applicationRootFiles = ["ports.ts", "errors.ts"] as const;
+
+/** The only subdirectories `application/` may contain at its root. */
+export const applicationRootDirs = ["use-cases", "services"] as const;
+
+/** The only subdirectories `infra/` may contain at its root. */
+export const infraRootDirs = ["repository", "models", "adapters", "factories", "services"] as const;
+
+/** Modules that follow the domain/application/infra layout. */
+export const layeredModules = ["acquisition", "reading", "editorial", "delivery"] as const;
+
 

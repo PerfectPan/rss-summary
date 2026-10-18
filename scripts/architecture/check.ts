@@ -5,8 +5,13 @@ import ts from "typescript";
 
 import {
   adapterPackages,
+  applicationRootDirs,
+  applicationRootFiles,
+  domainBuildingBlocks,
   effectRunFiles,
   infraPackages,
+  infraRootDirs,
+  layeredModules,
   layerDependencies,
   type LayerName,
   type ModuleName,
@@ -52,6 +57,7 @@ const sourceWord = new RegExp(`\\b(?:${sourceVocabulary.map(escapeRegExp).join("
 export function checkBoundaries(files: readonly SourceInput[]): Violation[] {
   const violations: Violation[] = [];
   for (const file of files) {
+    violations.push(...checkStructure(file.path));
     const location = locate(file.path);
     if (!location) continue;
     violations.push(...checkImports(file, location), ...checkText(file, location));
@@ -61,6 +67,92 @@ export function checkBoundaries(files: readonly SourceInput[]): Violation[] {
       `${right.file}\0${right.rule}\0${right.message}`,
     ),
   );
+}
+
+
+/**
+ * Layout rules from the agent-kit conventions: a `domain/<concept>/` folder
+ * holds only its building-block subdirectories and the `index.ts` facade
+ * (loose `*.test.ts` siblings excepted); `application/` keeps only `ports.ts`
+ * and `errors.ts` beside its agreed subdirectories; `infra/` keeps no loose
+ * files at its root.
+ */
+function checkStructure(path: string): Violation[] {
+  const parts = path.replace(/\\/gu, "/").split("/");
+  if (parts[0] !== "src" || parts.length < 3) return [];
+  const [head, module, layer] = parts;
+  if (head !== "src" || !(layeredModules as readonly string[]).includes(module)) return [];
+  const rest = parts.slice(3);
+  if (layer === "domain") {
+    const [concept, child] = rest;
+    if (!concept || rest.length < 2) return [];
+    if (rest.length === 2) {
+      const allowed = child === "index.ts" || child?.endsWith(".test.ts");
+      if (!allowed) {
+        return [
+          violation(
+            path,
+            "concept-structure",
+            `domain/${concept}/ may contain only building-block directories and index.ts (plus sibling tests)`,
+          ),
+        ];
+      }
+      return [];
+    }
+    if (!(domainBuildingBlocks as readonly string[]).includes(child!)) {
+      return [
+        violation(
+          path,
+          "concept-structure",
+          `domain/${concept}/${child} is not a DDD building block (${domainBuildingBlocks.join(", ")})`,
+        ),
+      ];
+    }
+    return [];
+  }
+  if (layer === "application") {
+    if (rest.length === 1) {
+      const allowed = (applicationRootFiles as readonly string[]).some(
+        (name) => rest[0] === name || rest[0] === name.replace(/\.ts$/u, ".test.ts"),
+      );
+      if (!allowed) {
+        return [
+          violation(
+            path,
+            "application-root",
+            `application/ may keep only ${applicationRootFiles.join(", ")} at its root`,
+          ),
+        ];
+      }
+      return [];
+    }
+    if (!(applicationRootDirs as readonly string[]).includes(rest[0]!)) {
+      return [
+        violation(
+          path,
+          "application-root",
+          `application/${rest[0]} is not an agreed application directory (${applicationRootDirs.join(", ")})`,
+        ),
+      ];
+    }
+    return [];
+  }
+  if (layer === "infra") {
+    if (rest.length === 1) {
+      return [violation(path, "infra-root", "infra/ may not keep loose files at its root")];
+    }
+    if (!(infraRootDirs as readonly string[]).includes(rest[0]!)) {
+      return [
+        violation(
+          path,
+          "infra-root",
+          `infra/${rest[0]} is not an agreed infra directory (${infraRootDirs.join(", ")})`,
+        ),
+      ];
+    }
+    return [];
+  }
+  return [];
 }
 
 function checkImports(file: SourceInput, location: Location): Violation[] {
