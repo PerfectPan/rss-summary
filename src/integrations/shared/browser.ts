@@ -4,7 +4,8 @@ import { Effect } from "effect";
  * Playwright lives here and nowhere else: every service that needs a real
  * browser (GitHub Home's rendered feed and login, the article reader) launches
  * Chromium through this module so channel fallback, context options, and page
- * lifecycle stay in one place.
+ * lifecycle stay in one place. The launch helpers return scoped resources —
+ * pair them with `Effect.scoped` at the call site.
  */
 export type BrowserLaunchOptions = {
   browserChannel?: string;
@@ -26,6 +27,72 @@ export async function launchChromium(
   }
 }
 
+/** A launched Chromium inside the caller's scope. */
+export function launchBrowser(options: BrowserLaunchOptions) {
+  return Effect.gen(function* () {
+    const playwright = yield* Effect.promise(() => import("playwright"));
+    return yield* Effect.acquireRelease(
+      Effect.tryPromise({
+        try: () => launchChromium(playwright, options),
+        catch: asBrowserError,
+      }),
+      (launched) => Effect.promise(() => launched.close()),
+    );
+  });
+}
+
+function asBrowserError(cause: unknown): Error {
+  return cause instanceof Error ? cause : new Error(String(cause));
+}
+
+/** One page in a fresh context inside the caller's scope. */
+export function openPage(options: {
+  browserChannel?: string;
+  headless: boolean;
+  context?: Record<string, unknown>;
+}) {
+  return Effect.gen(function* () {
+    const browser = yield* launchBrowser(options);
+    const context = yield* Effect.acquireRelease(
+      Effect.tryPromise({
+        try: () => browser.newContext(options.context ?? {}),
+        catch: asBrowserError,
+      }),
+      (context) => Effect.promise(() => context.close()),
+    );
+    return yield* Effect.acquireRelease(
+      Effect.tryPromise({
+        try: () => context.newPage(),
+        catch: asBrowserError,
+      }),
+      (page) => Effect.promise(() => page.close()),
+    );
+  });
+}
+
+/** An HTTP-only API request context inside the caller's scope. */
+export function openRequestContext(options: {
+  baseURL: string;
+  storageState?: string;
+  extraHTTPHeaders?: Record<string, string>;
+}) {
+  return Effect.gen(function* () {
+    const playwright = yield* Effect.promise(() => import("playwright"));
+    return yield* Effect.acquireRelease(
+      Effect.tryPromise({
+        try: () =>
+          playwright.request.newContext({
+            baseURL: options.baseURL,
+            ...(options.storageState ? { storageState: options.storageState } : {}),
+            extraHTTPHeaders: options.extraHTTPHeaders ?? {},
+          }),
+        catch: asBrowserError,
+      }),
+      (context) => Effect.promise(() => context.dispose()),
+    );
+  });
+}
+
 export type RenderedPage = { html: string; url: string };
 
 export type RenderPageOptions = {
@@ -42,24 +109,10 @@ export type RenderPageOptions = {
 export function renderPage(input: RenderPageOptions): Effect.Effect<RenderedPage, unknown> {
   return Effect.scoped(
     Effect.gen(function* () {
-      const playwright = yield* Effect.promise(() => import("playwright"));
-      const browser = yield* Effect.acquireRelease(
-        Effect.tryPromise({
-          try: () => launchChromium(playwright, input),
-          catch: (cause) => cause,
-        }),
-        (launched) => Effect.promise(() => launched.close()),
-      );
-      const context = yield* Effect.tryPromise({
-        try: () =>
-          browser.newContext({
-            ...(input.userAgent ? { userAgent: input.userAgent } : {}),
-          }),
-        catch: (cause) => cause,
-      });
-      const page = yield* Effect.tryPromise({
-        try: () => context.newPage(),
-        catch: (cause) => cause,
+      const page = yield* openPage({
+        browserChannel: input.browserChannel,
+        headless: input.headless,
+        context: input.userAgent ? { userAgent: input.userAgent } : {},
       });
       yield* Effect.tryPromise({
         try: () => page.goto(input.url, { timeout: input.timeoutMs, waitUntil: "commit" }),

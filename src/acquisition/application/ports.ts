@@ -1,11 +1,7 @@
 import { Context, Effect } from "effect";
 
 import type { BudgetLimits, BudgetState, SearchBudget } from "../domain/budget/index.js";
-import type {
-  Acquired,
-  PullRequestDetails,
-  RepositoryMetadata,
-} from "../domain/item/adapters/activity-card.js";
+import type { Acquired, PullRequestDetails, RepositoryMetadata } from "../domain/item/index.js";
 import type { NewsSearchError, SearchInput, SearchPage } from "../domain/search/index.js";
 import type { FeedSubscription, WebPageSubscription } from "../domain/source/index.js";
 

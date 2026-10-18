@@ -2,7 +2,7 @@ import {
   candidateEvidenceUrl,
   candidateIdentity,
   researchKeyForCandidate,
-} from "../../../acquisition/index.js";
+} from "../../../integrations/shared/index.js";
 import {
   assembleSubscriptionEditorial,
   assembleSubscriptionEvidence,
@@ -100,7 +100,7 @@ export function applySubscriptionSelection<T extends DigestDocument>(
   };
 }
 
-export { candidateIdentity, researchKeyForCandidate };
+export { candidateIdentity, researchKeyForCandidate } from "../../../integrations/shared/index.js";
 
 /** Record a research decision under the historical ledger key. */
 export function markCandidateResearched(

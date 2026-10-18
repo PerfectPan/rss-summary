@@ -104,6 +104,33 @@ const coveredElsewhere = new Map([
     "integrations/shared/browser",
     "integrations/github home-browser tests and integrations/browser reader tests",
   ],
+  // The remaining thin binds and secondary halves of split adapter files run
+  // inside the suites named beside them.
+  [
+    "acquisition/infra/factories/live",
+    "app/layers AcquisitionLive tests and the source-catalog repository tests",
+  ],
+  [
+    "integrations/github/activity",
+    "app/layers AcquisitionLive tests (missing storage state) and conduit tests",
+  ],
+  ["integrations/github/catalog", "integrations/github client tests"],
+  [
+    "integrations/github/event/mapper",
+    "integrations/github event dto tests and app/layers AcquisitionLive tests",
+  ],
+  [
+    "integrations/github/home/dto",
+    "integrations/github home mapper and home-browser tests",
+  ],
+  [
+    "integrations/github/repository/dto",
+    "integrations/github repository mapper tests and client tests",
+  ],
+  ["integrations/rss/dto", "integrations/rss mapper tests parse through it"],
+  ["integrations/rss/feed", "app/layers AcquisitionLive tests and rss client tests"],
+  ["integrations/web-page/dto", "integrations/web-page mapper tests extract through it"],
+  ["integrations/web-page/feed", "app/layers AcquisitionLive tests and web-page client tests"],
   // Categories and title cleaning run in the Daily AI flow; the category enum
   // is also locked verbatim by the golden registration snapshot.
   [

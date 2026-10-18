@@ -2,14 +2,14 @@ import { layer as NodeFileSystemLayer } from "@effect/platform-node/NodeFileSyst
 import { Effect, Layer } from "effect";
 
 import {
-  AcquisitionLive,
   GitHubActivity,
   GitHubCatalog,
   RssFeed,
   SearchBudgetRepository,
   SourceCatalogStore,
+  SearchBudgetRepositoryLive,
+  SourceCatalogStoreLive,
   WebPage,
-  type AcquisitionOptions,
 } from "../acquisition/index.js";
 import {
   DeliveryLive,
@@ -28,6 +28,10 @@ import {
 import { ArticleResearchClient, extractArticle } from "../integrations/article-http/index.js";
 import { browserArticleResearch, type BrowserPageFetcher } from "../integrations/browser/index.js";
 import { readGlmPage } from "../integrations/glm/index.js";
+import { GitHubActivityLive, GitHubCatalogLive } from "../integrations/github/index.js";
+import { RssFeedLive } from "../integrations/rss/index.js";
+import { WebPageLive } from "../integrations/web-page/index.js";
+import type { GithubHomeClientOptions } from "../integrations/github/index.js";
 import {
   transcriptEvidence,
   VideoResearchClient,
@@ -120,6 +124,31 @@ export function ReadingLive(
       }),
   });
   return Layer.mergeAll(http, browser, video, glm);
+}
+
+export type AcquisitionOptions = {
+  token?: string;
+  fetch?: typeof fetch;
+  githubHome?: GithubHomeClientOptions;
+};
+
+/**
+ * Assemble the acquisition ports from their integrations (feed, listing pages,
+ * GitHub activity and catalog) plus the module's own state-backed stores.
+ */
+export function AcquisitionLive(
+  options: AcquisitionOptions = {},
+): Layer.Layer<
+  RssFeed | WebPage | GitHubActivity | GitHubCatalog | SourceCatalogStore | SearchBudgetRepository
+> {
+  return Layer.mergeAll(
+    RssFeedLive({ fetch: options.fetch }),
+    WebPageLive({ fetch: options.fetch }),
+    GitHubActivityLive(options),
+    GitHubCatalogLive({ token: options.token, fetch: options.fetch }),
+    SourceCatalogStoreLive,
+    SearchBudgetRepositoryLive,
+  );
 }
 
 /** Every port the app consumes, provided by AppLive. */

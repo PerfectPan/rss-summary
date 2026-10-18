@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { candidateEvidenceUrl, candidateIdentity } from "../../../../acquisition/index.js";
+import { candidateEvidenceUrl, candidateIdentity } from "../../../../integrations/shared/index.js";
 import { assembleSubscriptionEditorial } from "../../../index.js";
 import { SubscriptionDraftValidationError } from "./subscription-draft.js";
 import type { EvidenceDocument } from "../value-objects/evidence.js";

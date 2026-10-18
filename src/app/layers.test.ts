@@ -1,10 +1,15 @@
 import { Effect } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 
-import { GitHubCatalog } from "../acquisition/index.js";
+import {
+  GitHubCatalog,
+  GitHubActivity,
+  RssFeed,
+  SourceCatalogStore,
+} from "../acquisition/index.js";
 import { FeedStateStore } from "../delivery/index.js";
 import { HttpReader, readOriginal } from "../reading/index.js";
-import { AppLive, appLiveOptions, AppLiveFromEnv, ReadingLive } from "./layers.js";
+import { AcquisitionLive, AppLive, appLiveOptions, AppLiveFromEnv, ReadingLive } from "./layers.js";
 import { applyCliArgs, loadEnvConfig } from "./config/env.js";
 import { parseCliArgs } from "./config/argv.js";
 
@@ -74,5 +79,49 @@ describe("app/layers", () => {
       status: "ok",
       title: "Useful article",
     });
+  });
+});
+
+describe("AcquisitionLive", () => {
+  it("serves RSS events and an empty catalog through one layer", async () => {
+    const xml = `<rss><channel><item><title>Note</title><link>https://example.com/note</link><description>Body</description></item></channel></rss>`;
+    const fetchImpl: typeof fetch = async () => new Response(xml);
+    const result = await Effect.runPromise(
+      Effect.provide(
+        Effect.gen(function* () {
+          const rss = yield* RssFeed;
+          const store = yield* SourceCatalogStore;
+          return {
+            events: yield* rss.getFeedEvents({
+              name: "Example",
+              url: "https://example.com/feed.xml",
+              tags: [],
+            }),
+            feeds: yield* store.loadFeeds("/tmp/rss-summary-p2a-missing-feeds.json"),
+          };
+        }),
+        AcquisitionLive({ fetch: fetchImpl }),
+      ),
+    );
+    expect(result.events.map((entry) => entry.card)).toEqual([
+      expect.objectContaining({ title: "Note", source: "rss", type: "article" }),
+    ]);
+    expect(result.feeds).toEqual([]);
+  });
+
+  it("reports the historical missing storage-state error", async () => {
+    await expect(
+      Effect.runPromise(
+        Effect.provide(
+          Effect.gen(function* () {
+            const github = yield* GitHubActivity;
+            return yield* github.getHomeEvents();
+          }),
+          AcquisitionLive(),
+        ),
+      ),
+    ).rejects.toThrow(
+      "GitHub Home storage state not found: . Run 'rss-summary github-home login' first.",
+    );
   });
 });

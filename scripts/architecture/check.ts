@@ -25,6 +25,7 @@ import {
   productsRoot,
   sharedProductDirectory,
   sourceVocabulary,
+  sourceVocabularyExceptions,
 } from "./boundaries.js";
 
 export type SourceInput = {
@@ -450,7 +451,9 @@ function checkText(file: SourceInput, location: Location): Violation[] {
   const vocabularyChecked =
     location.layer === "domain" || (location.layer === "entry" && location.module === "editorial");
   if (vocabularyChecked) {
-    const words = [...new Set((file.source.match(sourceWord) ?? []).map((word) => word.toLowerCase()))].sort();
+    const words = [...new Set((file.source.match(sourceWord) ?? []).map((word) => word.toLowerCase()))]
+      .filter((word) => !(sourceVocabularyExceptions[file.path] ?? []).includes(word))
+      .sort();
     if (words.length > 0) {
       violations.push(violation(file.path, "source-vocabulary", `concept directory contains ${words.join(", ")}`));
     }

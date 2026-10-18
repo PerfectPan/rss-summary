@@ -85,6 +85,20 @@ export const sharedProductDirectory = "shared";
 
 export const sourceVocabulary = ["github", "rss", "doubao", "grok", "glm", "arxiv", "x.com"] as const;
 
+/**
+ * Occurrences of the source vocabulary that are part of a locked external
+ * surface (CLI messages, JSON field values, persisted identities) rather than
+ * hidden service knowledge. Each entry is deliberate: removing the word would
+ * change behavior that golden tests or state formats pin down. Everything
+ * outside this map stays banned.
+ */
+export const sourceVocabularyExceptions: Readonly<Record<string, readonly string[]>> = {
+  // The feed-catalog rules quote the historical CLI messages ("RSS feed
+  // already exists", …) and the feeds.json `type: "rss"` tag; both are the
+  // product's own config/output surface, not coupling to the feed service.
+  "src/acquisition/domain/source/services/catalog.ts": ["rss"],
+};
+
 export const adapterPackages = ["cheerio", "fast-xml-parser", "he"] as const;
 
 export const infraPackages = ["cheerio", "fast-xml-parser", "he", "playwright"] as const;

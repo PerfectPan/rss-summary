@@ -1,12 +1,8 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import {
-  candidateIdentity,
-  normalizeEvent,
-  projectActivity,
-  type ActivityCardDto,
-  type RepositoryMetadata,
-} from "../../../../acquisition/index.js";
+import { type ActivityCardDto, type RepositoryMetadata } from "../../../../acquisition/index.js";
+import { candidateIdentity, projectActivity } from "../../../../integrations/shared/index.js";
+import { normalizeEvent } from "../../../../integrations/github/index.js";
 import { scoreAcquired, selectResearchCandidates, type CandidateProject } from "../../../index.js";
 
 function buildCandidateProjects(

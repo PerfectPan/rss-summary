@@ -1,4 +1,4 @@
-import { saveGithubHomeStorageState } from "../../acquisition/index.js";
+import { saveLoginStorageState } from "../../integrations/github/index.js";
 import { errorMessage } from "../../kernel/index.js";
 import { runPluginEffect } from "../runtime.js";
 
@@ -27,7 +27,7 @@ export async function runGithubHomeCommand(
       ".state/github-home-storage.json";
     try {
       await runPluginEffect(
-        saveGithubHomeStorageState({
+        saveLoginStorageState({
           storageState,
           browserChannel: args.browserChannel ?? process.env.GITHUB_HOME_BROWSER_CHANNEL,
         }),

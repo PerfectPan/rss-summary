@@ -2,19 +2,17 @@ import { randomUUID } from "node:crypto";
 
 import { Effect } from "effect";
 
+import { collectIndustrySources, RssFeed, WebPage } from "../../../acquisition/index.js";
 import {
   applyScoringContext,
-  collectIndustrySources,
   refreshRouting,
-  RssFeed,
-  WebPage,
-} from "../../../acquisition/index.js";
+  researchKeyForCandidate,
+} from "../../../integrations/shared/index.js";
 import {
   scoreAcquired,
   selectResearchCandidates,
   type CandidateProject,
 } from "../../../editorial/index.js";
-import { researchKeyForCandidate } from "../../../acquisition/index.js";
 import { candidateDecision } from "./candidate-decision.js";
 import { isWithinEventWindow, resolveEventWindow } from "../../../kernel/index.js";
 import {
