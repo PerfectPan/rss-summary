@@ -106,3 +106,25 @@ describe("Rivus digest Tool adapter", () => {
     );
   });
 });
+
+describe("Rivus digest Tool onlyNew default", () => {
+  it("requests only-new when the Tool input omits onlyNew", async () => {
+    const buildDigestDocument = vi.fn((config) =>
+      Effect.succeed({
+        generatedAt: "2026-07-16T18:00:00.000Z",
+        username: config.username,
+        candidates: [],
+      }),
+    );
+
+    await generateRivusDigest(
+      { occurrence: "2026-07-16T18:00:00.000Z" },
+      {
+        buildDigestDocument,
+        env: { FEED_TIMEZONE_OFFSET: "+08:00", FEED_ONLY_NEW: "false" },
+      },
+    );
+
+    expect(buildDigestDocument).toHaveBeenCalledWith(expect.objectContaining({ onlyNew: true }));
+  });
+});
