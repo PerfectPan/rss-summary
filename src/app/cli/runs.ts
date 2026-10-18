@@ -9,7 +9,6 @@ import {
   readRunArtifact,
   runArtifactForLabel,
   RunArchive,
-  RunArchiveFilesLive,
 } from "../../delivery/index.js";
 import { errorMessage } from "../../kernel/index.js";
 import { runPluginEffect } from "../runtime.js";
@@ -67,7 +66,7 @@ export async function runRunsCommand(
 }
 
 function run<A, E>(effect: Effect.Effect<A, E, RunArchive>): Promise<A> {
-  return runPluginEffect<A, E, RunArchive>(effect, { layer: RunArchiveFilesLive });
+  return runPluginEffect(effect);
 }
 
 function valueFor(argv: string[], flag: string): string | undefined {

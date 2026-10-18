@@ -26,12 +26,6 @@ const coveredBySibling = new Map([
   ["app/products/daily-ai/automation", "golden registration snapshot"],
   ["app/products/frontier/automation", "golden registration snapshot"],
   ["app/products/index", "app/rivus/plugin tests and app/cli dispatch tests"],
-  // Legacy argv+env loader kept until the product flows move; its behavior is
-  // asserted by the app/config tests that replace it.
-  ["infrastructure/config", "app/config/env and app/config/argv"],
-  // Pure re-exports. Their behavior is covered by the kernel tests.
-  ["domain/time", "kernel/time"],
-  ["domain/text", "kernel/text"],
   ["kernel/index", "kernel/result, kernel/time, and kernel/text"],
   // Pure re-export shims kept for tests/golden imports; behavior lives in delivery.
   ["infrastructure/state", "delivery/domain/ledger and delivery/infra/repository/feed-state-file"],

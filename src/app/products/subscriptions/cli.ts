@@ -31,7 +31,6 @@ export async function runDigestCommand(
 import type { FeedSubscription } from "../../../acquisition/index.js";
 import { type ActivityCard } from "../../../editorial/index.js";
 import {
-  AcquisitionLive,
   RssClient,
   addCatalogFeed,
   addFeedSubscription,
@@ -65,27 +64,19 @@ export async function runFeedsCommand(
   try {
     const args = parseArgs(argv);
     if (args.command === "add") {
-      const feeds = await runPluginEffect(addCatalogFeed(args.file, requireFeedInput(args)), {
-        layer: AcquisitionLive(),
-      });
+      const feeds = await runPluginEffect(addCatalogFeed(args.file, requireFeedInput(args)));
       const added = feeds.at(-1);
       stdout.write(`Added ${added?.name ?? args.url} -> ${added?.url ?? args.url}\n`);
       return 0;
     }
 
     if (args.command === "list") {
-      writeFeedList(
-        stdout,
-        await runPluginEffect(listCatalogFeeds(args.file), { layer: AcquisitionLive() }),
-        args.file,
-      );
+      writeFeedList(stdout, await runPluginEffect(listCatalogFeeds(args.file)), args.file);
       return 0;
     }
 
     if (args.command === "remove" || args.command === "delete") {
-      await runPluginEffect(removeCatalogFeed(args.file, requireUrl(args)), {
-        layer: AcquisitionLive(),
-      });
+      await runPluginEffect(removeCatalogFeed(args.file, requireUrl(args)));
       stdout.write(`Removed ${args.url}\n`);
       return 0;
     }
@@ -143,7 +134,7 @@ function requireUrl(args: ParsedArgs): string {
 
 async function loadFeedsForTest(args: ParsedArgs): Promise<FeedSubscription[]> {
   if (args.url) return addFeedSubscription([], requireFeedInput(args));
-  return runPluginEffect(listCatalogFeeds(args.file), { layer: AcquisitionLive() });
+  return runPluginEffect(listCatalogFeeds(args.file));
 }
 
 function writeFeedList(stdout: Writable, feeds: FeedSubscription[], file: string): void {

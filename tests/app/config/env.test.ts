@@ -1,12 +1,53 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { Effect } from "effect";
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 
+import { generateRivusNewsBrief } from "../../../src/app/products/news/flow.js";
+import { loadNewsTopics } from "../../../src/app/products/news/topics.js";
+import { generateDailyAiDigest } from "../../../src/app/products/daily-ai/flow.js";
+import type { IndustryBriefDocument } from "../../../src/app/products/frontier/flow.js";
+import type { XAccountPosts } from "../../../src/acquisition/index.js";
+import { collectXAccountPosts } from "../../../src/acquisition/application/use-cases/collect-x-posts.js";
+import { VideoResearchClient } from "../../../src/reading/infra/adapters/video-reader.js";
+import { transcriptEvidence, videoVisualEvidence } from "../../../src/reading/index.js";
 import { applyCliArgs, loadEnvConfig, type AppConfig } from "../../../src/app/config/env.js";
 import { parseCliArgs } from "../../../src/app/config/argv.js";
+
+const newsTopics = [
+  {
+    id: "tools",
+    label: "开发工具",
+    icon: "💻",
+    enabled: true,
+    maxItems: 2,
+    sourcePolicy: "news" as const,
+    queries: [
+      {
+        id: "typescript",
+        text: "TypeScript release",
+        intent: "developer-change" as const,
+        subjectAny: ["TypeScript"],
+        eventAny: ["release"],
+        excludedAny: [],
+      },
+    ],
+  },
+];
+
+const newsInput = { edition: "noon" as const, occurrence: "2026-10-18T04:00:00.000Z" };
+
+async function runNewsBrief(env: NodeJS.ProcessEnv) {
+  return Effect.runPromise(
+    generateRivusNewsBrief(newsInput, {
+      env,
+      topics: newsTopics,
+      search: async () => ({ resultCount: 0, results: [] }),
+    }),
+  );
+}
 
 async function resolveConfig(env: NodeJS.ProcessEnv, argv: string[] = []): Promise<AppConfig> {
   const config = await Effect.runPromise(loadEnvConfig(env));
@@ -246,5 +287,288 @@ describe("app/config/env", () => {
 
     const long = await resolveConfig({ RSS_ARTICLE_BROWSER_TIMEOUT_MS: "60000" });
     expect(long.articleResearch.browserTimeoutMs).toBe(60_000);
+  });
+});
+
+describe("app/config/env news variables", () => {
+  it("accepts every documented NEWS_SEARCH_MODE value and rejects others with the historical message", async () => {
+    for (const mode of ["doubao", "hybrid", "combined", "grok"]) {
+      await expect(
+        runNewsBrief({ NEWS_SEARCH_MODE: mode, GLM_CODING_API_KEY: "key" }),
+      ).resolves.toBeTruthy();
+    }
+    await expect(runNewsBrief({ NEWS_SEARCH_MODE: "web" })).rejects.toThrow(
+      "NEWS_SEARCH_MODE must be doubao, hybrid, combined or grok.",
+    );
+  });
+
+  it("bounds NEWS_SEARCH_COUNT_PER_QUERY and NEWS_SEARCH_MAX_QUERIES", async () => {
+    await expect(runNewsBrief({ NEWS_SEARCH_COUNT_PER_QUERY: "0" })).rejects.toThrow(
+      "Numeric configuration must be an integer between 1 and 50.",
+    );
+    await expect(runNewsBrief({ NEWS_SEARCH_MAX_QUERIES: "0" })).rejects.toThrow(
+      "Numeric configuration must be an integer between 1 and 32.",
+    );
+    await expect(
+      runNewsBrief({ NEWS_SEARCH_MODE: "grok", NEWS_GROK_MAX_QUERIES: "9" }),
+    ).rejects.toThrow("Numeric configuration must be an integer between 1 and 4.");
+  });
+
+  it("validates the Grok CLI settings before any search runs", async () => {
+    await expect(
+      Effect.runPromise(
+        generateRivusNewsBrief(newsInput, {
+          env: { NEWS_SEARCH_MODE: "grok", NEWS_GROK_MODEL: "bad model" },
+          topics: newsTopics,
+        }),
+      ),
+    ).rejects.toThrow("Invalid NEWS_GROK_MODEL.");
+    await expect(
+      Effect.runPromise(
+        generateRivusNewsBrief(newsInput, {
+          env: { NEWS_SEARCH_MODE: "grok", NEWS_GROK_TIMEOUT_MS: "10" },
+          topics: newsTopics,
+        }),
+      ),
+    ).rejects.toThrow("Numeric configuration must be an integer between 1000 and 180000.");
+    await expect(
+      Effect.runPromise(
+        generateRivusNewsBrief(newsInput, {
+          env: { NEWS_SEARCH_MODE: "grok", NEWS_SEARCH_DAILY_LIMIT: "x" },
+          topics: newsTopics,
+        }),
+      ),
+    ).rejects.toThrow("Numeric configuration must be an integer between 0 and 100000.");
+    await expect(
+      Effect.runPromise(
+        generateRivusNewsBrief(newsInput, {
+          env: { NEWS_SEARCH_MODE: "grok", NEWS_SEARCH_MONTHLY_LIMIT: "x" },
+          topics: newsTopics,
+        }),
+      ),
+    ).rejects.toThrow("Numeric configuration must be an integer between 0 and 1000000.");
+    await expect(
+      Effect.runPromise(
+        generateRivusNewsBrief(newsInput, {
+          env: { NEWS_SEARCH_MODE: "grok", NEWS_SEARCH_CACHE_TTL_MINUTES: "-1" },
+          topics: newsTopics,
+        }),
+      ),
+    ).rejects.toThrow("Numeric configuration must be an integer between 0 and 43200.");
+  });
+
+  it("requires a Doubao key with the historical message and bounds its timeout", async () => {
+    await expect(
+      Effect.runPromise(
+        generateRivusNewsBrief(newsInput, {
+          env: { NEWS_SEARCH_MODE: "doubao" },
+          topics: newsTopics,
+        }),
+      ),
+    ).rejects.toThrow("DOUBAO_SEARCH_API_KEY is required for news briefs.");
+    await expect(
+      Effect.runPromise(
+        generateRivusNewsBrief(newsInput, {
+          env: {
+            NEWS_SEARCH_MODE: "doubao",
+            DOUBAO_SEARCH_API_KEY: "key",
+            NEWS_SEARCH_TIMEOUT_MS: "10",
+          },
+          topics: newsTopics,
+        }),
+      ),
+    ).rejects.toThrow("Numeric configuration must be an integer between 1000 and 60000.");
+  });
+
+  it("bounds the hybrid GLM search and read budgets", async () => {
+    await expect(
+      runNewsBrief({
+        NEWS_SEARCH_MODE: "hybrid",
+        GLM_CODING_API_KEY: "key",
+        NEWS_GLM_MAX_SEARCHES: "0",
+      }),
+    ).rejects.toThrow("Numeric configuration must be an integer between 1 and 64.");
+    await expect(
+      runNewsBrief({
+        NEWS_SEARCH_MODE: "hybrid",
+        GLM_CODING_API_KEY: "key",
+        NEWS_GLM_MAX_READS: "0",
+      }),
+    ).rejects.toThrow("Numeric configuration must be an integer between 1 and 64.");
+  });
+
+  it("loads topics from NEWS_TOPICS_FILE and requires at least one enabled topic", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "rss-summary-topics-"));
+    const topicsFile = join(directory, "topics.json");
+    try {
+      writeFileSync(topicsFile, JSON.stringify(newsTopics));
+      const result = await Effect.runPromise(
+        generateRivusNewsBrief(newsInput, {
+          env: { NEWS_TOPICS_FILE: topicsFile },
+          search: async () => ({ resultCount: 0, results: [] }),
+        }),
+      );
+      expect(result.topics.map(({ id }) => id)).toEqual(["tools"]);
+      expect(loadNewsTopics(topicsFile)).toHaveLength(1);
+
+      const disabled = join(directory, "disabled.json");
+      writeFileSync(disabled, JSON.stringify([{ ...newsTopics[0], enabled: false }]));
+      await expect(
+        Effect.runPromise(
+          generateRivusNewsBrief(newsInput, {
+            env: { NEWS_TOPICS_FILE: disabled },
+            search: async () => ({ resultCount: 0, results: [] }),
+          }),
+        ),
+      ).rejects.toThrow("At least one news topic must be enabled.");
+    } finally {
+      rmSync(directory, { force: true, recursive: true });
+    }
+  });
+
+  it("rejects an invalid timezone offset with the historical message", async () => {
+    await expect(runNewsBrief({ FEED_TIMEZONE_OFFSET: "nope" })).rejects.toThrow(
+      "FEED_TIMEZONE_OFFSET must use +HH:MM or -HH:MM format.",
+    );
+  });
+});
+
+describe("app/config/env daily-ai and video variables", () => {
+  const occurrence = "2026-08-11T01:00:00.000Z";
+  const official: IndustryBriefDocument = {
+    generatedAt: occurrence,
+    candidates: [
+      {
+        repo: "rss:openai",
+        source: "rss" as const,
+        category: "release" as const,
+        score: 80,
+        actors: ["OpenAI"],
+        eventTypes: ["release"],
+        reasons: [],
+        events: [
+          {
+            id: "rss-1",
+            type: "release" as const,
+            source: "rss" as const,
+            actor: "OpenAI",
+            repo: "rss:openai",
+            createdAt: "2026-08-10T02:00:00Z",
+            title: "OpenAI 发布 Codex 2.0",
+            htmlUrl: "https://openai.com/codex-2",
+            sourceName: "OpenAI",
+          },
+        ],
+        label: "OpenAI 发布 Codex 2.0",
+        url: "https://openai.com/codex-2",
+      },
+    ],
+  };
+
+  it("defaults DAILY_AI_X_HANDLES to ClaudeDevs and treats empty as disabled", async () => {
+    const xAccounts = vi.fn(
+      async (_value: { handles: string[] }): Promise<XAccountPosts> => ({ posts: [], audit: [] }),
+    );
+    await generateDailyAiDigest(
+      { occurrence },
+      { env: {}, industry: async () => official, xAccounts },
+    );
+    expect(xAccounts.mock.calls[0]?.[0]).toMatchObject({ handles: ["ClaudeDevs"] });
+
+    await generateDailyAiDigest(
+      { occurrence },
+      { env: { DAILY_AI_X_HANDLES: "" }, industry: async () => official, xAccounts },
+    );
+    expect(xAccounts.mock.calls[1]?.[0]).toMatchObject({ handles: [] });
+
+    await generateDailyAiDigest(
+      { occurrence },
+      {
+        env: { DAILY_AI_X_HANDLES: " ClaudeDevs, @OpenAI " },
+        industry: async () => official,
+        xAccounts,
+      },
+    );
+    expect(xAccounts.mock.calls[2]?.[0]).toMatchObject({ handles: ["ClaudeDevs", "@OpenAI"] });
+  });
+
+  it("bounds X_ACCOUNT_POSTS_PER_FETCH", async () => {
+    await expect(
+      Effect.runPromise(
+        collectXAccountPosts(
+          { handles: ["ClaudeDevs"], since: "2026-08-10T01:00:00Z", until: occurrence },
+          {
+            env: { X_ACCOUNT_POSTS_PER_FETCH: "0" },
+            openBudget: () => {
+              throw new Error("budget opened");
+            },
+            client: { search: async () => ({ resultCount: 0, results: [] }) },
+          },
+        ),
+      ),
+    ).rejects.toThrow("Numeric configuration must be an integer between 1 and 50.");
+  });
+
+  it("maps RSS_VIDEO_* settings onto the vision frame inspection", async () => {
+    const captureFrames = vi.fn(async () => ({
+      visuals: { status: "unavailable" as const, frames: [], reason: "none" },
+    }));
+    const client = new VideoResearchClient({
+      env: {
+        RSS_VIDEO_RESEARCH_DIR: ".state/video-env-test",
+        RSS_VIDEO_VISION_MODEL: "provider/model",
+        RSS_VIDEO_VISION_CLI: "unused-cli",
+      },
+      captureFrames,
+      runCommand: async () => ({
+        stdout: JSON.stringify({
+          extracted: {
+            title: "视频",
+            content: "详尽的视频转写内容，长度超过八十个字符以满足正文下限要求。".repeat(4),
+            transcriptSource: "captionTracks",
+            transcriptCharacters: 200,
+            truncated: false,
+          },
+        }),
+      }),
+      formatTranscript: transcriptEvidence,
+      formatVisuals: videoVisualEvidence,
+    });
+    const result = await client.research({
+      ref: "video:1",
+      url: "https://www.youtube.com/watch?v=video-env-test",
+    });
+    expect(result.status).toBe("ok");
+    expect(captureFrames).toHaveBeenCalledWith(
+      expect.objectContaining({
+        directory: ".state/video-env-test",
+        visionArgs: ["--model", "provider/model"],
+      }),
+    );
+
+    const cliClient = new VideoResearchClient({
+      env: { RSS_VIDEO_VISION_CLI: "custom-cli" },
+      captureFrames,
+      runCommand: async () => ({
+        stdout: JSON.stringify({
+          extracted: {
+            title: "视频",
+            content: "详尽的视频转写内容，长度超过八十个字符以满足正文下限要求。".repeat(4),
+            transcriptSource: "captionTracks",
+            transcriptCharacters: 200,
+            truncated: false,
+          },
+        }),
+      }),
+      formatTranscript: transcriptEvidence,
+      formatVisuals: videoVisualEvidence,
+    });
+    await cliClient.research({
+      ref: "video:2",
+      url: "https://www.youtube.com/watch?v=video-env-test-2",
+    });
+    expect(captureFrames).toHaveBeenLastCalledWith(
+      expect.objectContaining({ visionArgs: ["--cli", "custom-cli"] }),
+    );
   });
 });

@@ -2,9 +2,9 @@ import { readFileSync } from "node:fs";
 
 import { Effect } from "effect";
 
-import { recordResearch, FeedStateFileLive } from "../../../delivery/index.js";
+import { recordResearch } from "../../../delivery/index.js";
 import { errorMessage } from "../../../kernel/index.js";
-import { GlmReader, ReadingLive } from "../../../reading/index.js";
+import { GlmReader } from "../../../reading/index.js";
 import { runPluginEffect } from "../../runtime.js";
 import { createGlmResearch, type GlmResearch } from "../news/hybrid.js";
 
@@ -52,7 +52,6 @@ export async function runResearchCommand(
       }
       await runPluginEffect(
         recordResearch({ stateFile: args.stateFile, suggestions, at: new Date().toISOString() }),
-        { layer: FeedStateFileLive },
       );
       stdout.write(
         `Marked ${suggestions.length} research ${suggestions.length === 1 ? "decision" : "decisions"} in ${args.stateFile}\n`,
@@ -172,7 +171,6 @@ async function runGlmResearchCommand(
                 const reader = yield* GlmReader;
                 return yield* reader.read(options["--url"]!);
               }),
-              { layer: ReadingLive({ apiKey }) },
             );
     stdout.write(
       `${JSON.stringify(
