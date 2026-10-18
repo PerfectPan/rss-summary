@@ -73,6 +73,7 @@ export {
   type SearchPage,
   type SearchResult,
   type SearchUsage,
+  type SearchSourcePolicy,
 } from "./domain/search/index.js";
 export { searchBudgetDefaults } from "./application/services/budget-defaults.js";
 export {

@@ -22,6 +22,18 @@ describe("news credibility", () => {
     expect(resolveNewsCredibility({ url })).toEqual({ tier: "unrated", rank: 4 });
   });
 
+  it("maps an authority score onto the tiers without ever reaching official", () => {
+    expect(resolveNewsCredibility({ url, authority: 3 })).toEqual({
+      tier: "authoritative",
+      rank: 2,
+    });
+    expect(resolveNewsCredibility({ url, authority: 2 })).toEqual({ tier: "unrated", rank: 4 });
+    expect(resolveNewsCredibility({ url, authority: 4, authInfoLevel: 1 })).toEqual({
+      tier: "authoritative",
+      rank: 2,
+    });
+  });
+
   it("maps a configured domain and an article read without reading them in editorial", () => {
     expect(
       resolveNewsCredibility({

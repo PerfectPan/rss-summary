@@ -4,6 +4,7 @@ export type {
   NewsSearchInput,
   NewsSearchPage,
   NewsSearchResult,
+  ProviderFallback,
   SearchFallback,
   SearchInput,
   SearchPage,
