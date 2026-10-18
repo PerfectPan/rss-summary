@@ -11,8 +11,9 @@ import {
   buildSubscriptionEditorial,
   buildSubscriptionEvidence,
 } from "../products/subscriptions/output.js";
-import { renderMarkdownDigest } from "../render/render.js";
-import { renderDailyAiDigest } from "../render/daily-ai-render.js";
+import { digestView } from "../render/layouts/digest.js";
+import { dailyAiView } from "../render/layouts/daily-ai.js";
+import { renderViewMarkdown } from "../render/markdown.js";
 import { buildDailyAiDigest, dailyAiCategories } from "../../editorial/index.js";
 import { dailyAiEditorialPolicy } from "../products/daily-ai/tool.js";
 import { createDailyAiDeliveryReceipt, saveDailyAiDiagnostics } from "../../delivery/index.js";
@@ -157,7 +158,7 @@ export function createRivusSubscriptionExecutor(
     return {
       candidateCount: document.candidates.length - paperCandidateCount,
       generatedAt: document.generatedAt,
-      markdown: renderMarkdownDigest(document, { summaries: editorial.summaries }),
+      markdown: renderViewMarkdown(digestView(document, { summaries: editorial.summaries })),
       paperCandidateCount,
       phase: "render",
       selectedCount,
@@ -309,13 +310,15 @@ export function createRivusDailyAiDigestExecutor(
       audit: { editorialIssues: result.audit.editorialIssues },
       phase: "render",
       itemCount: result.items.length,
-      markdown: renderDailyAiDigest({
-        day: result.day,
-        windowLabel: result.windowLabel,
-        items: result.items,
-        evidence: result.evidence,
-        warnings: result.warnings,
-      }),
+      markdown: renderViewMarkdown(
+        dailyAiView({
+          day: result.day,
+          windowLabel: result.windowLabel,
+          items: result.items,
+          evidence: result.evidence,
+          warnings: result.warnings,
+        }),
+      ),
     };
   };
 }

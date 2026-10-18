@@ -1,0 +1,223 @@
+import { describe, expect, it } from "vite-plus/test";
+
+import { digestView, renderJsonDigest } from "../../../../src/app/render/layouts/digest.js";
+import { renderViewMarkdown } from "../../../../src/app/render/markdown.js";
+
+describe("markdown digest renderer", () => {
+  it("renders a concise project-focused digest", () => {
+    const markdown = renderViewMarkdown(
+      digestView({
+        generatedAt: "2026-06-22T10:00:00Z",
+        username: "PerfectPan",
+        candidates: [
+          {
+            repo: "BuilderIO/skills",
+            source: "github",
+            category: "discovery",
+            score: 135,
+            actors: ["fi3ework"],
+            eventTypes: ["watch"],
+            reasons: ["followee starred this repository", "matches interest: skills"],
+            matchedInterests: ["skills"],
+            events: [
+              {
+                id: "star-1",
+                type: "watch",
+                actor: "fi3ework",
+                repo: "BuilderIO/skills",
+                createdAt: "2026-06-22T09:47:11Z",
+                action: "started",
+              },
+            ],
+            repository: {
+              fullName: "BuilderIO/skills",
+              htmlUrl: "https://github.com/BuilderIO/skills",
+              description: "Skills for coding agents",
+              language: "JavaScript",
+              stargazersCount: 2389,
+              topics: ["skills"],
+              pushedAt: "2026-06-22T02:55:49Z",
+            },
+          },
+          {
+            repo: "rss:https://deno.com/blog/v2.4",
+            source: "rss",
+            category: "article",
+            score: 70,
+            actors: ["Deno Blog"],
+            eventTypes: ["article"],
+            reasons: ["rss feed: Deno Blog", "matches interest: deno"],
+            matchedInterests: ["deno"],
+            events: [
+              {
+                id: "rss-1",
+                type: "article",
+                source: "rss",
+                actor: "Deno Blog",
+                repo: "rss:https://deno.com/blog/v2.4",
+                createdAt: "2026-06-22T08:00:00Z",
+                title: "Deno 2.4",
+                htmlUrl: "https://deno.com/blog/v2.4",
+              },
+            ],
+            label: "Deno 2.4",
+            url: "https://deno.com/blog/v2.4",
+            description: "Runtime updates for TypeScript and JavaScript.",
+          },
+        ],
+      }),
+    );
+
+    expect(markdown).toContain("# 我的订阅 · 2026-06-22");
+    expect(markdown).toContain("**重点摘要**");
+    expect(markdown).toContain("**[BuilderIO/skills](https://github.com/BuilderIO/skills)**");
+    expect(markdown).toContain("**[Deno 2.4](https://deno.com/blog/v2.4)**");
+    expect(markdown).toContain("fi3ework");
+    expect(markdown).toContain("Skills for coding agents");
+  });
+
+  it("keeps RSS articles visible when GitHub activity has higher scores", () => {
+    const markdown = renderViewMarkdown(
+      digestView({
+        generatedAt: "2026-06-22T10:00:00Z",
+        username: "PerfectPan",
+        candidates: [
+          ...Array.from({ length: 12 }, (_, index) => ({
+            repo: `example/repo-${index}`,
+            source: "github" as const,
+            category: "activity" as const,
+            score: 100 - index,
+            actors: ["followee"],
+            eventTypes: ["pull_request" as const],
+            reasons: ["followed actor: followee"],
+            events: [
+              {
+                id: `pr-${index}`,
+                type: "pull_request" as const,
+                actor: "followee",
+                repo: `example/repo-${index}`,
+                createdAt: "2026-06-22T08:00:00Z",
+              },
+            ],
+          })),
+          {
+            repo: "rss:https://deno.com/blog/v2.4",
+            source: "rss",
+            category: "article",
+            score: 10,
+            actors: ["Deno Blog"],
+            eventTypes: ["article"],
+            reasons: ["rss feed: Deno Blog"],
+            events: [
+              {
+                id: "rss-1",
+                type: "article",
+                source: "rss",
+                actor: "Deno Blog",
+                repo: "rss:https://deno.com/blog/v2.4",
+                createdAt: "2026-06-22T08:00:00Z",
+              },
+            ],
+            label: "Deno 2.4",
+            url: "https://deno.com/blog/v2.4",
+          },
+        ],
+      }),
+    );
+
+    expect(markdown).toContain("**重点摘要**");
+    expect(markdown).toContain("**[Deno 2.4](https://deno.com/blog/v2.4)**");
+  });
+
+  it("does not directly publish papers that still require research", () => {
+    const markdown = renderViewMarkdown(
+      digestView({
+        generatedAt: "2026-08-09T01:00:00.000Z",
+        username: "PerfectPan",
+        candidates: [
+          {
+            repo: "rss:https://arxiv.org/abs/2608.01234",
+            source: "rss",
+            category: "paper",
+            score: 55,
+            actors: ["arXiv cs.AI"],
+            eventTypes: ["paper"],
+            reasons: ["matches paper abstract: agent"],
+            events: [],
+            label: "Unverified agent claim",
+            url: "https://arxiv.org/abs/2608.01234",
+          },
+        ],
+      }),
+    );
+
+    expect(markdown).toContain("1 篇论文待研究");
+    expect(markdown).not.toContain("Unverified agent claim");
+  });
+
+  it("renders machine-readable JSON for research skills", () => {
+    const json = renderJsonDigest({
+      generatedAt: "2026-06-22T10:00:00Z",
+      username: "PerfectPan",
+      windowLabel: "2026-06-22 +08:00",
+      candidates: [
+        {
+          repo: "rss:https://deno.com/blog/v2.4",
+          source: "rss",
+          category: "article",
+          score: 70,
+          actors: ["Deno Blog"],
+          eventTypes: ["article"],
+          reasons: ["rss feed: Deno Blog"],
+          events: [
+            {
+              id: "rss-1",
+              type: "article",
+              source: "rss",
+              actor: "Deno Blog",
+              repo: "rss:https://deno.com/blog/v2.4",
+              createdAt: "2026-06-22T08:00:00Z",
+              title: "Deno 2.4",
+              htmlUrl: "https://deno.com/blog/v2.4",
+            },
+          ],
+          label: "Deno 2.4",
+          url: "https://deno.com/blog/v2.4",
+        },
+      ],
+    });
+
+    expect(JSON.parse(json)).toMatchObject({
+      username: "PerfectPan",
+      windowLabel: "2026-06-22 +08:00",
+      candidates: [{ source: "rss", label: "Deno 2.4" }],
+    });
+  });
+
+  it("shows the event window in markdown output", () => {
+    const markdown = renderViewMarkdown(
+      digestView({
+        generatedAt: "2026-06-22T10:00:00Z",
+        username: "PerfectPan",
+        windowLabel: "2026-06-22 +08:00",
+        candidates: [],
+      }),
+    );
+
+    expect(markdown).toContain("0 条更新 · GitHub Home + 个人博客 · 2026-06-22 +08:00");
+  });
+
+  it("labels RSS-only output without showing a GitHub account", () => {
+    const markdown = renderViewMarkdown(
+      digestView({
+        generatedAt: "2026-06-22T10:00:00Z",
+        username: "PerfectPan",
+        sourceMode: "rss",
+        candidates: [],
+      }),
+    );
+
+    expect(markdown).toContain("0 条更新 · 个人博客");
+    expect(markdown).not.toContain("GitHub 账号：PerfectPan");
+  });
+});

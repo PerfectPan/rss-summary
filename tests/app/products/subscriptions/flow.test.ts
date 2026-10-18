@@ -106,8 +106,9 @@ describe("digest source isolation", () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     captureStdout();
 
-    const { renderMarkdownDigest, renderJsonDigest } =
-      await import("../../../../src/app/render/render.js");
+    const { digestView, renderJsonDigest } =
+      await import("../../../../src/app/render/layouts/digest.js");
+    const { renderViewMarkdown } = await import("../../../../src/app/render/markdown.js");
 
     try {
       const base = await Effect.runPromise(loadEnvConfig());
@@ -127,7 +128,9 @@ describe("digest source isolation", () => {
       await Effect.runPromise(
         Effect.provide(
           runSubscriptionFlow(config, (document, format) =>
-            format === "json" ? renderJsonDigest(document) : renderMarkdownDigest(document),
+            format === "json"
+              ? renderJsonDigest(document)
+              : renderViewMarkdown(digestView(document)),
           ),
           AppLive(appLiveOptions(config)),
         ),

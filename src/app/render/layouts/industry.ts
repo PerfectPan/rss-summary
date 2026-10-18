@@ -1,8 +1,9 @@
-import type { IndustryBriefDocument } from "../products/frontier/flow.js";
-import { renderCandidateBrief } from "./candidate-brief.js";
+import type { IndustryBriefDocument } from "../../products/frontier/flow.js";
+import type { ViewDocument } from "../view.js";
+import { candidateBriefView } from "./candidate.js";
 
-/** Render the frontier brief as Feishu-friendly Markdown. */
-export function renderMarkdownIndustryBrief(document: IndustryBriefDocument): string {
+/** Lay the frontier brief document out as a View IR brief. */
+export function industryView(document: IndustryBriefDocument): ViewDocument {
   const date = document.displayDate ?? document.generatedAt.slice(0, 10);
   const publishableCount = document.candidates.filter(
     (candidate) => candidate.category !== "paper",
@@ -15,7 +16,7 @@ export function renderMarkdownIndustryBrief(document: IndustryBriefDocument): st
   ]
     .filter(Boolean)
     .join(" · ");
-  return renderCandidateBrief({
+  return candidateBriefView({
     header: `# 行业前沿 · ${date}`,
     metadata,
     candidates: document.candidates,

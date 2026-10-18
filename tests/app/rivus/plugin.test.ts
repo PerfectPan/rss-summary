@@ -25,7 +25,7 @@ import rssSummaryPlugin, {
   RSS_SUMMARY_RESEARCH_TOOL_ID,
   RSS_SUMMARY_TOOL_ID,
 } from "../../../src/app/rivus/plugin.js";
-import type { RssAutomationPresentation } from "../../../src/app/render/automation-presentation.js";
+import type { RssAutomationPresentation } from "../../../src/app/render/automation.js";
 
 describe("rss-summary Rivus Plugin", () => {
   it("conforms as an external Plugin with five narrow read-only Tools", async () => {

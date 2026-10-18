@@ -1,12 +1,12 @@
-import type { DigestDocument } from "../products/subscriptions/output.js";
-import { renderCandidateBrief } from "./candidate-brief.js";
+import type { DigestDocument } from "../../products/subscriptions/output.js";
+import type { ViewDocument } from "../view.js";
+import { candidateBriefView } from "./candidate.js";
 
-export type { DigestDocument };
-
-export function renderMarkdownDigest(
+/** Lay the subscription digest document out as a View IR brief. */
+export function digestView(
   document: DigestDocument,
   options: { summaries?: ReadonlyMap<string, string> } = {},
-): string {
+): ViewDocument {
   const date = document.displayDate ?? document.generatedAt.slice(0, 10);
   const publishableCount = document.candidates.filter(
     (candidate) => candidate.category !== "paper",
@@ -21,7 +21,7 @@ export function renderMarkdownDigest(
   ]
     .filter(Boolean)
     .join(" · ");
-  return renderCandidateBrief({
+  return candidateBriefView({
     header: `# 我的订阅 · ${date}`,
     metadata,
     candidates: document.candidates,
