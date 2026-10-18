@@ -14,6 +14,17 @@ export const modules = [
 
 export type ModuleName = (typeof modules)[number];
 
+/**
+ * `src/integrations/` holds the anti-corruption layers for external services
+ * (one directory per service plus `shared/`). It is not a business module: it
+ * implements the business modules' ports, so the dependency direction is the
+ * reverse of a module — integrations may read module facades, never the other
+ * way around.
+ */
+export const integrationsModule = "integrations" as const;
+
+export type AnyModule = ModuleName | typeof integrationsModule;
+
 export type LayerName =
   | "adapters"
   | "app"
@@ -21,6 +32,7 @@ export type LayerName =
   | "domain"
   | "entry"
   | "infra"
+  | "integration"
   | "kernel";
 
 export type ModuleRule = {
@@ -39,7 +51,7 @@ export const moduleRules: Readonly<Record<ModuleName, ModuleRule>> = {
   editorial: { dependsOn: ["kernel", "acquisition", "reading"], typesOnly: ["acquisition", "reading"] },
   delivery: { dependsOn: ["kernel"] },
   app: {
-    dependsOn: ["kernel", "acquisition", "reading", "editorial", "delivery"],
+    dependsOn: ["kernel", "acquisition", "reading", "editorial", "delivery", "integrations"],
     indexOnly: true,
   },
 };
@@ -55,6 +67,9 @@ export const layerDependencies: Readonly<Record<LayerName, readonly LayerName[]>
   app: ["app"],
   kernel: ["kernel"],
   entry: ["domain", "adapters", "application", "infra", "kernel", "entry"],
+  // Integrations live in their own tree; relative imports inside it are judged
+  // by the service-isolation rules, not by module layers.
+  integration: ["integration"],
 };
 
 /**
@@ -74,8 +89,23 @@ export const adapterPackages = ["cheerio", "fast-xml-parser", "he"] as const;
 
 export const infraPackages = ["cheerio", "fast-xml-parser", "he", "playwright"] as const;
 
-/** Playwright stays behind the two browser adapters named in section 3.5. */
+/** Packages an integration may import besides Effect and `node:*`. */
+export const integrationPackages = [
+  "cheerio",
+  "fast-xml-parser",
+  "he",
+  "@effect/platform-node",
+] as const;
+
+/** The integrations tree's shared technical directory (multi-service reuse). */
+export const integrationsSharedDirectory = "shared";
+
+/**
+ * Playwright stays behind the browser modules: the shared browser lifecycle
+ * plus, until their services migrate, the two legacy browser adapters.
+ */
 export const playwrightFiles = [
+  "src/integrations/shared/browser.ts",
   "src/acquisition/infra/adapters/browser.ts",
   "src/reading/infra/adapters/browser-reader.ts",
 ] as const;

@@ -380,6 +380,124 @@ describe("architecture boundaries", () => {
       ),
     ).toEqual([]);
   });
+
+  it("accepts an integration composed from module facades, kernel, and shared code", () => {
+    expect(
+      rulesOf(
+        checkBoundaries([
+          {
+            path: "src/integrations/glm/search/provider.ts",
+            source: [
+              'import { Layer } from "effect";',
+              'import { readFile } from "node:fs/promises";',
+              'import { HttpClient } from "effect/http";',
+              'import { SearchProvider } from "../../../acquisition/index.js";',
+              'import { canonicalizeUrl } from "../../../kernel/text.js";',
+              'import { asRecord } from "../../shared/json-record.js";',
+              "export const provider = [Layer, readFile, HttpClient, SearchProvider, canonicalizeUrl, asRecord];",
+            ].join("\n"),
+          },
+          {
+            path: "src/integrations/shared/http.ts",
+            source: 'import { cheerioLoad } from "cheerio";\nexport const http = cheerioLoad;\n',
+          },
+          {
+            path: "src/app/layers.ts",
+            source:
+              'import { GlmSearchLive } from "../integrations/glm/index.js";\nexport const live = GlmSearchLive;\n',
+          },
+        ]),
+      ),
+    ).toEqual([]);
+  });
+
+  it("detects integrations reaching a sibling service, app, or module internals", () => {
+    const violations = checkBoundaries([
+      {
+        path: "src/integrations/doubao/provider.ts",
+        source:
+          'import { parseGrokStream } from "../grok/search/mapper.js";\nexport const provider = parseGrokStream;\n',
+      },
+      {
+        path: "src/integrations/shared/http.ts",
+        source:
+          'import { readConduit } from "../github/home-browser.js";\nexport const http = readConduit;\n',
+      },
+      {
+        path: "src/integrations/glm/search/provider.ts",
+        source:
+          'import { runPluginEffect } from "../../../app/runtime.js";\nexport const provider = runPluginEffect;\n',
+      },
+      {
+        path: "src/integrations/glm/search/provider.ts",
+        source:
+          'import { parseFeedXml } from "../../../acquisition/domain/item/adapters/rss.js";\nexport const provider = parseFeedXml;\n',
+      },
+      {
+        path: "src/integrations/doubao/provider.ts",
+        source: 'import { chromium } from "playwright";\nexport const provider = chromium;\n',
+      },
+      {
+        path: "src/integrations/loose.ts",
+        source: "export const loose = true;\n",
+      },
+    ]);
+
+    expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
+      "src/integrations/doubao/provider.ts integration-isolation",
+      "src/integrations/doubao/provider.ts playwright",
+      "src/integrations/glm/search/provider.ts deep-import",
+      "src/integrations/glm/search/provider.ts integration-dependency",
+      "src/integrations/loose.ts integration-root",
+      "src/integrations/shared/http.ts shared-isolation",
+    ]);
+  });
+
+  it("keeps business modules and their entry files off the integrations tree", () => {
+    const violations = checkBoundaries([
+      {
+        path: "src/acquisition/infra/factories/live.ts",
+        source:
+          'import { RssFeedLive } from "../../../integrations/rss/feed.js";\nexport const live = RssFeedLive;\n',
+      },
+      {
+        path: "src/acquisition/index.ts",
+        source:
+          'import { DoubaoSearchLive } from "../integrations/doubao/index.js";\nexport const live = DoubaoSearchLive;\n',
+      },
+      {
+        path: "src/editorial/domain/news/policies/rank.ts",
+        source:
+          'import { grokAudit } from "../../../../integrations/grok/audit.js";\nexport const ranked = grokAudit;\n',
+      },
+    ]);
+
+    expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
+      "src/acquisition/index.ts module-dependency",
+      "src/acquisition/infra/factories/live.ts module-dependency",
+      "src/editorial/domain/news/policies/rank.ts module-dependency",
+      "src/editorial/domain/news/policies/rank.ts source-vocabulary",
+    ]);
+  });
+
+  it("lets sibling tests reach integrations at file level", () => {
+    expect(
+      rulesOf(
+        checkBoundaries([
+          {
+            path: "src/integrations/glm/search/provider.test.ts",
+            source:
+              'import { parseGrokStream } from "../../grok/search/mapper.js";\nexport const suite = parseGrokStream;\n',
+          },
+          {
+            path: "src/editorial/domain/news/policies/rank.test.ts",
+            source:
+              'import { pageAudit } from "../../../../integrations/grok/audit.js";\nexport const test = pageAudit;\n',
+          },
+        ]),
+      ),
+    ).toEqual([]);
+  });
 });
 
 /** Sibling tests may bypass their layer's rules but not module internals. */
