@@ -28,8 +28,8 @@ Reader 样本由独立网页检索提供确定链接，不能计入 GLM Search �
 
 ## 当前实现会进一步限制覆盖
 
-1. `src/infrastructure/glm-research.ts` 仅在一个域名时发送服务端 `search_domain_filter`；`news-topics.json` 的七条配置均为多个域名。当前生产查询实际先全网搜索，再本地按域名丢弃，并不是在这些官网内分别检索。
-2. `src/application/hybrid-news-search.ts` 按顺序消耗预算，默认搜索上限为 4。豆包持续耗尽且前四条均进入补查时，后面的开源安全、政策和资本三条没有 GLM 搜索机会。
+1. `src/acquisition/infra/adapters/glm-search.ts` 仅在一个域名时发送服务端 `search_domain_filter`；`news-topics.json` 的七条配置均为多个域名。当前生产查询实际先全网搜索，再本地按域名丢弃，并不是在这些官网内分别检索。
+2. `src/app/products/news/hybrid.ts` 按顺序消耗预算，默认搜索上限为 4。豆包持续耗尽且前四条均进入补查时，后面的开源安全、政策和资本三条没有 GLM 搜索机会。
 3. 严格时间和来源筛选有必要；不能为了提高入选数量，把首页当文章，或用抓取时间代替发布时间。后续应先修复候选发现质量，再独立验证关键词和时间筛选的漏报率。
 
 ## 建议

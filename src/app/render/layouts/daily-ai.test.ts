@@ -1,0 +1,125 @@
+import { describe, expect, it } from "vite-plus/test";
+
+import { dailyAiView } from "./daily-ai.js";
+import { renderViewMarkdown } from "../markdown.js";
+
+describe("Daily AI digest renderer", () => {
+  it("renders source links as inline badges without a repeated source section", () => {
+    const markdown = renderViewMarkdown(
+      dailyAiView({
+        day: "2026-08-10",
+        windowLabel: "2026-08-09 09:00–2026-08-10 09:00 +08:00",
+        items: [
+          {
+            category: "开发生态",
+            headline: "OpenAI 发布 Codex 2.0，工具调用延迟降低 30%",
+            refs: ["s1"],
+          },
+        ],
+        evidence: [
+          {
+            id: "s1",
+            title: "Codex 2.0",
+            url: "https://openai.com/news/codex-2",
+            publishedAt: "2026-08-10T03:00:00Z",
+            excerpt: "release",
+            tier: "official",
+            sourceName: "OpenAI",
+            topicId: "developer-tools",
+          },
+        ],
+        warnings: [],
+      }),
+    );
+    expect(markdown).toMatchInlineSnapshot(`
+      "# Daily AI Digest · 2026-08-10
+
+      1 条 AI 动态 · 2026-08-09 09:00–2026-08-10 09:00 +08:00 · 来源可追溯 · 质量不足不凑数
+
+      ## 开发生态
+
+      1. OpenAI 发布 Codex 2.0，工具调用延迟降低 30% [↗ #1](https://openai.com/news/codex-2)"
+    `);
+  });
+
+  it("keeps a full six-section briefing scannable with global source numbering", () => {
+    const categories = [
+      "概览/要闻",
+      "模型发布",
+      "开发生态",
+      "产品应用",
+      "行业动态",
+      "技术与洞察",
+    ] as const;
+    const items = categories.flatMap((category, categoryIndex) =>
+      [0, 1].map((itemIndex) => ({
+        category,
+        headline: `OpenAI 发布第 ${categoryIndex * 2 + itemIndex + 1} 项可信 AI 更新`,
+        refs: [`s${categoryIndex * 2 + itemIndex + 1}`],
+      })),
+    );
+    const evidence = items.map((item, index) => ({
+      id: item.refs[0]!,
+      title: item.headline,
+      url: `https://openai.com/news/${index + 1}`,
+      publishedAt: "2026-08-10T03:00:00Z",
+      excerpt: item.headline,
+      tier: "official" as const,
+      sourceName: "OpenAI",
+    }));
+
+    const markdown = renderViewMarkdown(
+      dailyAiView({
+        day: "2026-08-10",
+        windowLabel: "2026-08-09 09:00–2026-08-10 09:00 +08:00",
+        items,
+        evidence,
+        warnings: [],
+      }),
+    );
+
+    expect(markdown).toContain("12 条 AI 动态");
+    categories.forEach((category) => expect(markdown).toContain(`## ${category}`));
+    expect(markdown.match(/^\d+\. /gmu)).toHaveLength(12);
+    expect(markdown.match(/\[↗ #\d+\]\(https:\/\/openai\.com\/news\/\d+\)/gu)).toHaveLength(12);
+    expect(markdown).not.toContain("## 来源");
+  });
+
+  it("marks model-relayed X sources without claiming every item is verified", () => {
+    const markdown = renderViewMarkdown(
+      dailyAiView({
+        day: "2026-10-14",
+        windowLabel: "24h",
+        warnings: [],
+        items: [{ category: "开发生态", headline: "ClaudeDevs 分享开发经验", refs: ["x:123"] }],
+        evidence: [
+          {
+            id: "x:123",
+            title: "开发经验",
+            url: "https://x.com/claudedevs/status/123",
+            publishedAt: "2026-10-14T01:00:00Z",
+            excerpt: "作者的经验",
+            tier: "unverified",
+            sourceName: "@claudedevs · X（Grok 整理）",
+          },
+        ],
+      }),
+    );
+    expect(markdown).toContain("[↗ #1 · X（Grok 整理）]");
+    expect(markdown).not.toContain("条可信动态");
+  });
+
+  it("renders source degradation warnings in the deliverable Markdown", () => {
+    const markdown = renderViewMarkdown(
+      dailyAiView({
+        day: "2026-08-10",
+        windowLabel: "2026-08-09 09:00–2026-08-10 09:00 +08:00",
+        items: [],
+        evidence: [],
+        warnings: ["Doubao 搜索暂不可用：本期仅使用官方来源"],
+      }),
+    );
+
+    expect(markdown).toContain("数据源状态：Doubao 搜索暂不可用：本期仅使用官方来源");
+  });
+});

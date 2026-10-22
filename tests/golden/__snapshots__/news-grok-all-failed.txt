@@ -1,0 +1,88 @@
+{
+  "error": {
+    "name": "AllNewsQueriesFailedError",
+    "message": "新闻搜索未完成：Grok 未返回完整、可验证的搜索结果。本次未生成新闻简报。",
+    "result": {
+      "audit": {
+        "queries": [
+          {
+            "queryId": "frontier-model-release",
+            "query": "OpenAI 正式发布新模型",
+            "intent": "model-release",
+            "topicId": "ai-model-releases",
+            "topicLabel": "AI 模型与 Agent 发布",
+            "status": "failed",
+            "fetched": 0,
+            "accepted": 0,
+            "rejected": {},
+            "errorCode": "grok_invalid_response",
+            "error": "Grok response lacks a completed native X search receipt, valid completion or structured results."
+          }
+        ],
+        "counts": {
+          "fetched": 0,
+          "acceptedHits": 0,
+          "rejectedHits": 0,
+          "canonicalDuplicates": 0,
+          "deduplicatedStories": 0,
+          "selectedStories": 0,
+          "duplicateTitleStories": 0,
+          "topicQuotaFilteredStories": 0,
+          "briefCapFilteredStories": 0
+        }
+      },
+      "day": "2026-08-16",
+      "edition": "noon",
+      "generatedAt": "2026-08-16T04:00:00.000Z",
+      "itemCount": 0,
+      "warnings": [
+        "资讯采集失败，无法判断本期是否有新增资讯"
+      ],
+      "sourceStatus": {
+        "state": "unavailable",
+        "queries": 1,
+        "completed": 0,
+        "recovered": 0,
+        "incompleteTopics": [
+          "AI 模型与 Agent 发布"
+        ],
+        "notes": []
+      },
+      "windowLabel": "00:00–12:00",
+      "stories": [],
+      "topics": [
+        {
+          "id": "ai-model-releases",
+          "label": "AI 模型与 Agent 发布",
+          "icon": "🤖",
+          "enabled": true,
+          "sourcePolicy": "news",
+          "maxItems": 2,
+          "queries": [
+            {
+              "id": "frontier-model-release",
+              "text": "OpenAI 正式发布新模型",
+              "intent": "model-release",
+              "subjectAny": [
+                "OpenAI"
+              ],
+              "eventAny": [
+                "正式发布"
+              ],
+              "excludedAny": [
+                "传闻"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "state": {
+    "feeds.json": "[]\n",
+    "grok": "#!<node>\nconst fs = require(\"node:fs\");\nfs.appendFileSync(\"<tmp>/grok.count\", \"1\\n\");\nprocess.stdout.write(\"not-json\\n\");\n",
+    "industry-sources.json": "[\n  {\n    \"name\": \"Industry Feed\",\n    \"url\": \"https://example.com/industry.xml\",\n    \"tags\": [\n      \"typescript\"\n    ]\n  },\n  {\n    \"type\": \"page\",\n    \"name\": \"Anthropic News\",\n    \"url\": \"https://www.anthropic.com/news\",\n    \"pathPrefixes\": [\n      \"/news/\"\n    ],\n    \"tags\": [\n      \"News\"\n    ]\n  }\n]\n",
+    "news-search.json": "{\"version\":1,\"timezoneOffset\":\"+08:00\",\"daily\":{\"2026-08-16\":1},\"cache\":{}}\n",
+    "news-topics.json": "[\n  {\n    \"id\": \"ai-model-releases\",\n    \"label\": \"AI 模型与 Agent 发布\",\n    \"icon\": \"🤖\",\n    \"enabled\": true,\n    \"sourcePolicy\": \"news\",\n    \"maxItems\": 2,\n    \"queries\": [\n      {\n        \"id\": \"frontier-model-release\",\n        \"text\": \"OpenAI 正式发布新模型\",\n        \"intent\": \"model-release\",\n        \"subjectAny\": [\n          \"OpenAI\"\n        ],\n        \"eventAny\": [\n          \"正式发布\"\n        ],\n        \"excludedAny\": [\n          \"传闻\"\n        ]\n      }\n    ]\n  }\n]\n"
+  }
+}

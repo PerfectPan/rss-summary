@@ -59,12 +59,14 @@ included in the package.
 
 ## Reservation and failure behavior
 
-`src/infrastructure/news-search-budget.ts` wraps the selected Doubao or Grok client. Under a short cross-process
+The budgeted search wrapper (`withBudget` in `src/acquisition/application/services/with-budget.ts`, state in
+`src/acquisition/infra/repository/search-budget-file.ts`) wraps the selected Doubao or Grok client. Under a short cross-process
 file lock it loads and validates state, checks the cache, checks both caps, and atomically persists
 one reserved attempt before the provider request starts. The provider runs outside the lock. A reservation is
 not refunded if the request fails, the process exits, or the successful response cannot be cached.
 Retries pass through the same wrapper and reserve again. Concurrent identical requests in one
-process share a pending operation; different processes still reserve independently on a cache miss.
+run (one Effect fiber tree) share a pending operation; separate runs and different processes still reserve
+independently on a cache miss.
 
 Accounting uses the real current clock plus `FEED_TIMEZONE_OFFSET`, not a requested historical
 occurrence. Running a historical digest today therefore consumes today's allowance. Monthly usage

@@ -6,10 +6,12 @@ import { defineConfig } from "vite-plus";
  */
 export default defineConfig({
   test: {
-    include: ["tests/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "tests/**/*.test.ts"],
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts"],
+      // Tests live next to their sources; coverage measures production files only.
+      exclude: ["src/**/*.test.ts"],
       reporter: ["text", "text-summary", "html", "json-summary"],
       reportsDirectory: "coverage",
       thresholds: {
@@ -45,47 +47,6 @@ export default defineConfig({
       "no-console": ["error", { allow: ["error", "warn"] }],
       "vite-plus/prefer-vite-plus-imports": "error",
     },
-    overrides: [
-      {
-        files: ["src/domain/**/*.ts"],
-        rules: {
-          "no-restricted-imports": [
-            "error",
-            {
-              patterns: [
-                {
-                  group: [
-                    "**/application/*",
-                    "**/infrastructure/*",
-                    "**/presentation/*",
-                    "effect",
-                    "node:*",
-                  ],
-                  message: "domain must stay pure: no outer layers, Effect, or Node built-ins.",
-                },
-              ],
-            },
-          ],
-        },
-      },
-      {
-        files: ["src/application/**/*.ts"],
-        rules: {
-          "no-restricted-imports": [
-            "error",
-            {
-              patterns: [
-                {
-                  group: ["**/presentation/*"],
-                  message:
-                    "application must not import presentation; inject render at the entrypoint.",
-                },
-              ],
-            },
-          ],
-        },
-      },
-    ],
     jsPlugins: [
       {
         name: "vite-plus",
@@ -104,6 +65,7 @@ export default defineConfig({
       "coverage/**",
       "node_modules/**",
       "docs/**",
+      "tests/fixtures/**",
       "feeds.json",
       "industry-feeds.json",
       "news-topics.json",

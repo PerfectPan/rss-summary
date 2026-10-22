@@ -1,0 +1,87 @@
+{
+  "fetches": 0,
+  "result": {
+    "audit": {
+      "queries": [
+        {
+          "queryId": "frontier-model-release",
+          "query": "OpenAI 正式发布新模型",
+          "intent": "model-release",
+          "topicId": "ai-model-releases",
+          "topicLabel": "AI 模型与 Agent 发布",
+          "status": "skipped",
+          "fetched": 0,
+          "accepted": 0,
+          "rejected": {},
+          "errorCode": "local_budget_exhausted",
+          "error": "Local search budget exhausted (daily 0/0, monthly 0/420)."
+        }
+      ],
+      "counts": {
+        "fetched": 0,
+        "acceptedHits": 0,
+        "rejectedHits": 0,
+        "canonicalDuplicates": 0,
+        "deduplicatedStories": 0,
+        "selectedStories": 0,
+        "duplicateTitleStories": 0,
+        "topicQuotaFilteredStories": 0,
+        "briefCapFilteredStories": 0
+      }
+    },
+    "day": "2026-08-16",
+    "edition": "noon",
+    "generatedAt": "2026-08-16T04:00:00.000Z",
+    "itemCount": 0,
+    "warnings": [
+      "搜索预算已用完，无法判断本期是否有新增资讯",
+      "搜索请求预算已用完，1 组未刷新；未转用其他付费搜索"
+    ],
+    "sourceStatus": {
+      "state": "unavailable",
+      "queries": 1,
+      "completed": 0,
+      "recovered": 0,
+      "incompleteTopics": [
+        "AI 模型与 Agent 发布"
+      ],
+      "notes": [
+        "搜索请求预算已用完，1 组未刷新；未转用其他付费搜索"
+      ]
+    },
+    "windowLabel": "00:00–12:00",
+    "stories": [],
+    "topics": [
+      {
+        "id": "ai-model-releases",
+        "label": "AI 模型与 Agent 发布",
+        "icon": "🤖",
+        "enabled": true,
+        "sourcePolicy": "news",
+        "maxItems": 2,
+        "queries": [
+          {
+            "id": "frontier-model-release",
+            "text": "OpenAI 正式发布新模型",
+            "intent": "model-release",
+            "subjectAny": [
+              "OpenAI"
+            ],
+            "eventAny": [
+              "正式发布"
+            ],
+            "excludedAny": [
+              "传闻"
+            ]
+          }
+        ]
+      }
+    ],
+    "markdown": "# 午间热点 · 2026-08-16\n\n0 条重要动态 · 00:00–12:00\n\n本期资讯采集未完成，无法判断是否有新增。\n\n数据源状态：搜索预算已用完，无法判断本期是否有新增资讯；搜索请求预算已用完，1 组未刷新；未转用其他付费搜索\n"
+  },
+  "state": {
+    "feeds.json": "[]\n",
+    "industry-sources.json": "[\n  {\n    \"name\": \"Industry Feed\",\n    \"url\": \"https://example.com/industry.xml\",\n    \"tags\": [\n      \"typescript\"\n    ]\n  },\n  {\n    \"type\": \"page\",\n    \"name\": \"Anthropic News\",\n    \"url\": \"https://www.anthropic.com/news\",\n    \"pathPrefixes\": [\n      \"/news/\"\n    ],\n    \"tags\": [\n      \"News\"\n    ]\n  }\n]\n",
+    "news-topics.json": "[\n  {\n    \"id\": \"ai-model-releases\",\n    \"label\": \"AI 模型与 Agent 发布\",\n    \"icon\": \"🤖\",\n    \"enabled\": true,\n    \"sourcePolicy\": \"news\",\n    \"maxItems\": 2,\n    \"queries\": [\n      {\n        \"id\": \"frontier-model-release\",\n        \"text\": \"OpenAI 正式发布新模型\",\n        \"intent\": \"model-release\",\n        \"subjectAny\": [\n          \"OpenAI\"\n        ],\n        \"eventAny\": [\n          \"正式发布\"\n        ],\n        \"excludedAny\": [\n          \"传闻\"\n        ]\n      }\n    ]\n  }\n]\n"
+  }
+}
