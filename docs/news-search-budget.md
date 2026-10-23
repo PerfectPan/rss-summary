@@ -44,6 +44,12 @@ ledger conservatively counts every reserved attempt, including failed attempts a
 | `NEWS_SEARCH_CACHE_TTL_MINUTES` | `360` | integer `0..43200` | Search page cache lifetime; `0` disables reuse |
 | `NEWS_SEARCH_STATE_FILE` | `.state/news-search.json` | nonempty path | Budget ledger and raw response cache; deployment must set a persistent absolute path |
 | `FEED_TIMEZONE_OFFSET` | `+08:00` for news | supported fixed offset | Calendar boundary for request accounting |
+| `NEWS_SEARCH_FALLBACK` | unset | `deepseek` | Enable the DeepSeek news fallback described below; any other value fails the run |
+| `DEEPSEEK_API_KEY` | unset | nonempty string | Required when `NEWS_SEARCH_FALLBACK=deepseek` |
+| `DEEPSEEK_SEARCH_BASE_URL` | `https://api.deepseek.com/v1/tools/search` | HTTP(S) URL | Endpoint override; the normalized URL is the fallback's provider identity |
+| `DEEPSEEK_SEARCH_TIMEOUT_MS` | `15000` | integer `1000..60000` | DeepSeek request timeout |
+| `DEEPSEEK_SEARCH_DAILY_LIMIT` | `14` | integer `0..100000` | Attempt cap the DeepSeek caller enforces over the shared ledger for the current local day |
+| `DEEPSEEK_SEARCH_MONTHLY_LIMIT` | `420` | integer `0..1000000` | Attempt cap the DeepSeek caller enforces over the shared ledger for the current local month |
 
 Grok further limits standalone news query plans with `NEWS_GROK_MAX_QUERIES=1` (range `1..4`). Query caps are
 bounded by the number of enabled configured queries. `DAILY_AI_NEWS_MAX_QUERIES` is obsolete.
@@ -156,3 +162,39 @@ A process can perform multiple X searches within its two-turn limit. There is no
 or paid fallback after a Grok failure. Cached `grok.costUsd` and token fields describe the original
 fetch; do not count them as new spending when `searchUsage.source=cache`.
 See [Grok X search](grok-x-search.md) for authentication and evidence limitations.
+
+## DeepSeek news fallback
+
+`NEWS_SEARCH_FALLBACK=deepseek` (any other value fails the run; unset keeps the
+previous behavior exactly) wraps only the noon/evening primary search — Doubao,
+Grok, hybrid and combined modes alike. The Daily AI X collection never falls
+back because the DeepSeek endpoint cannot search posts by author.
+
+The fallback activates only for source outages: timeouts, `http_429` that still
+fails after `withRetry`, HTTP 5xx, `network_error`, `invalid_response`, every
+Grok CLI failure code and Doubao's `10406` quota error. `local_budget_exhausted`,
+`local_budget_state`, `query_deferred` and non-search program errors never fall
+back — a local spending boundary must not quietly spend another provider's
+allowance. Official-policy topics never fall back either: DeepSeek serves only
+`news` and `authoritative` queries, so the primary failure stands. In hybrid and
+combined modes a failing primary first retries on DeepSeek; only when DeepSeek
+also fails does the existing GLM complement run, and the error it reacts to is
+the primary's. When DeepSeek itself fails, the primary failure is what the audit
+and downstream degradation see, because the primary is the configured source.
+
+The fallback provider carries its own caps (`DEEPSEEK_SEARCH_DAILY_LIMIT`,
+default 14, and `DEEPSEEK_SEARCH_MONTHLY_LIMIT`, default 420) but shares the
+`NEWS_SEARCH_*` state file and its single daily/monthly counters with every
+other caller; each caller enforces its own limit against that shared ledger, so
+the effective combined cap is the lowest limit any active caller checks. The
+endpoint URL is the provider identity, keeping DeepSeek cache entries separate
+from Doubao's and Grok's in the same cache map.
+
+DeepSeek Search bills $0.75 per 1,000 successful requests ([pricing](https://api-docs.deepseek.com/guides/search/));
+the API does not bill failed requests, empty results or timeouts, but the local
+ledger conservatively counts every reserved attempt, including fallback
+attempts. The endpoint has no time-range parameter, so every DeepSeek result is
+re-checked against the exact publication window by the normal funnel; the
+source-status note on each brief states this. Successful fallback pages enter
+the per-query audit with `provider: "deepseek"` and
+`providerFallback.triggeredBy`, the primary error code that caused the switch.

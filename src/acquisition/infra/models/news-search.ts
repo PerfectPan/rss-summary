@@ -30,11 +30,16 @@ export const cacheRequestSchema = Schema.Struct({
  * asks the format (not a service name of its own) which pages may be stored.
  */
 export function pageRepresentable(page: { provider?: string }): boolean {
-  return page.provider === undefined || page.provider === "doubao" || page.provider === "grok";
+  return (
+    page.provider === undefined ||
+    page.provider === "doubao" ||
+    page.provider === "grok" ||
+    page.provider === "deepseek"
+  );
 }
 
 export const rawPageSchema = Schema.Struct({
-  provider: Schema.optional(Schema.Literals(["doubao", "grok"])),
+  provider: Schema.optional(Schema.Literals(["doubao", "grok", "deepseek"])),
   grok: Schema.optional(
     Schema.Struct({
       nativeTools: Schema.Array(Schema.String),
@@ -64,6 +69,7 @@ export const rawPageSchema = Schema.Struct({
       rankScore: Schema.optional(Schema.Number),
       authInfoDescription: Schema.optional(Schema.String),
       authInfoLevel: Schema.optional(Schema.Number),
+      authority: Schema.optional(Schema.Number),
     }),
   ),
 });

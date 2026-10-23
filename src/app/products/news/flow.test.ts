@@ -1105,3 +1105,319 @@ it("preserves safe Grok timeout diagnostics in the failed evening brief", async 
   });
   expect(search).toHaveBeenCalledTimes(1);
 });
+
+describe("DeepSeek news fallback", () => {
+  const doubaoUrl = "https://open.feedcoopapi.com/search_api/web_search";
+  const occurrence = "2026-10-04T12:30:00+08:00";
+  const publishedAt = "2026-10-04T04:00:00.000Z";
+
+  const deepSeekPayload = JSON.stringify({
+    results: [
+      {
+        rerank_score: 2.4,
+        title: "TypeScript 正式发布 6.0",
+        url: "https://devblogs.microsoft.com/typescript/release",
+        snippet: "TypeScript 6.0 was released.",
+        summary: "TypeScript 正式发布 6.0，包含编译器改进。",
+        content: "",
+        site_name: "Microsoft DevBlogs",
+        site_icon: null,
+        date: publishedAt,
+        authority: 3,
+      },
+    ],
+  });
+
+  async function withStubbedFetch<T>(
+    respond: (url: string) => Response,
+    run: (counts: { doubao: number; deepseek: number }) => Promise<T>,
+  ): Promise<T> {
+    const counts = { doubao: 0, deepseek: 0 };
+    const fetch = vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url === doubaoUrl) {
+        counts.doubao += 1;
+        return respond(url);
+      }
+      counts.deepseek += 1;
+      return respond(url);
+    });
+    vi.stubGlobal("fetch", fetch);
+    try {
+      return await run(counts);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  }
+
+  it("rejects an unsupported fallback provider name", async () => {
+    const result = await Effect.runPromise(
+      Effect.result(
+        generateRivusNewsBrief(
+          { edition: "noon", occurrence },
+          {
+            env: { NEWS_SEARCH_MODE: "doubao", NEWS_SEARCH_FALLBACK: "perplexity" },
+            search: async () => ({ resultCount: 0, results: [] }),
+            topics: [newsTopic("technology", ["one"])],
+          },
+        ),
+      ),
+    );
+    expect(result).toMatchObject({
+      _tag: "Failure",
+      failure: { message: "NEWS_SEARCH_FALLBACK must be deepseek." },
+    });
+  });
+
+  it("requires a DeepSeek key when the fallback is enabled", async () => {
+    const result = await Effect.runPromise(
+      Effect.result(
+        generateRivusNewsBrief(
+          { edition: "noon", occurrence },
+          {
+            env: {
+              NEWS_SEARCH_MODE: "doubao",
+              NEWS_SEARCH_FALLBACK: "deepseek",
+              DOUBAO_SEARCH_API_KEY: "test",
+            },
+            topics: [newsTopic("technology", ["one"])],
+          },
+        ),
+      ),
+    );
+    expect(result).toMatchObject({
+      _tag: "Failure",
+      failure: { message: "DEEPSEEK_API_KEY is required for news briefs." },
+    });
+  });
+
+  it("recovers a Doubao server error through DeepSeek and discloses it", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "news-deepseek-fallback-"));
+    try {
+      const outcome = await withStubbedFetch(
+        (url) =>
+          url === doubaoUrl
+            ? new Response("down", { status: 500 })
+            : new Response(deepSeekPayload, { status: 200 }),
+        async (counts) => {
+          const result = await Effect.runPromise(
+            generateRivusNewsBrief(
+              { edition: "noon", occurrence },
+              {
+                env: {
+                  NEWS_SEARCH_MODE: "doubao",
+                  NEWS_SEARCH_FALLBACK: "deepseek",
+                  DOUBAO_SEARCH_API_KEY: "test",
+                  DEEPSEEK_API_KEY: "test",
+                  NEWS_SEARCH_STATE_FILE: join(directory, "budget.json"),
+                },
+                now: () => new Date(occurrence),
+                sleep: async () => undefined,
+                topics: [
+                  {
+                    ...newsTopic("technology", ["one"]),
+                    queries: [
+                      newsQuery("one", "TypeScript 正式发布", ["正式发布"], ["TypeScript"]),
+                    ],
+                  },
+                ],
+              },
+            ),
+          );
+          return { counts, result };
+        },
+      );
+      expect(outcome.counts).toEqual({ doubao: 1, deepseek: 1 });
+      expect(outcome.result.audit.queries[0]).toMatchObject({
+        status: "ok",
+        provider: "deepseek",
+        providerFallback: { triggeredBy: "http_500" },
+        searchUsage: { source: "network", dailyLimit: 14, monthlyLimit: 420 },
+      });
+      expect(outcome.result.stories[0]).toMatchObject({ siteName: "Microsoft DevBlogs" });
+      expect(outcome.result.sourceStatus?.notes.join(" ")).toContain(
+        "1 个查询由备用来源 DeepSeek 补查",
+      );
+      expect(outcome.result.sourceStatus?.notes.join(" ")).toContain("已按发布时间重新核对时间窗");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the primary failure for official topics DeepSeek cannot serve", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "news-deepseek-official-"));
+    try {
+      const outcome = await withStubbedFetch(
+        () => new Response("down", { status: 500 }),
+        async (counts) =>
+          Effect.runPromise(
+            Effect.result(
+              generateRivusNewsBrief(
+                { edition: "noon", occurrence },
+                {
+                  env: {
+                    NEWS_SEARCH_MODE: "doubao",
+                    NEWS_SEARCH_FALLBACK: "deepseek",
+                    DOUBAO_SEARCH_API_KEY: "test",
+                    DEEPSEEK_API_KEY: "test",
+                    NEWS_SEARCH_STATE_FILE: join(directory, "budget.json"),
+                  },
+                  now: () => new Date(occurrence),
+                  sleep: async () => undefined,
+                  topics: [
+                    {
+                      ...newsTopic("technology", ["one"]),
+                      sourcePolicy: "official" as const,
+                      queries: [
+                        newsQuery("one", "TypeScript 正式发布", ["正式发布"], ["TypeScript"]),
+                      ],
+                    },
+                  ],
+                },
+              ),
+            ),
+          ).then((result) => ({ counts, exit: result })),
+      );
+      expect(outcome.counts).toEqual({ doubao: 1, deepseek: 0 });
+      expect(outcome.exit).toMatchObject({
+        _tag: "Failure",
+        failure: {
+          result: {
+            audit: {
+              queries: [expect.objectContaining({ status: "failed", errorCode: "http_500" })],
+            },
+          },
+        },
+      });
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("tries DeepSeek before GLM in hybrid mode and keeps GLM when both fail", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "news-deepseek-hybrid-"));
+    const url = "https://devblogs.microsoft.com/typescript/release";
+    const glm = {
+      search: vi.fn(async () => [
+        { title: "TypeScript 正式发布 6.0", url, snippet: "TypeScript 6.0 was released." },
+      ]),
+      read: vi.fn(async () => ({
+        title: "TypeScript 正式发布 6.0",
+        url,
+        content: "TypeScript 正式发布 6.0，包含编译器改进。",
+        truncated: false,
+        publishedAt,
+      })),
+    };
+    try {
+      const doubaoQuota = JSON.stringify({
+        ResponseMetadata: { Error: { Code: "10406", Message: "free quota exhausted" } },
+      });
+      const outcome = await withStubbedFetch(
+        (urlToRespond: string) =>
+          urlToRespond === doubaoUrl
+            ? new Response(doubaoQuota, { status: 200 })
+            : new Response("down", { status: 503 }),
+        async (counts) => {
+          const result = await Effect.runPromise(
+            generateRivusNewsBrief(
+              { edition: "noon", occurrence },
+              {
+                env: {
+                  NEWS_SEARCH_MODE: "hybrid",
+                  NEWS_SEARCH_FALLBACK: "deepseek",
+                  DOUBAO_SEARCH_API_KEY: "test",
+                  DEEPSEEK_API_KEY: "test",
+                  NEWS_SEARCH_STATE_FILE: join(directory, "budget.json"),
+                },
+                now: () => new Date(occurrence),
+                sleep: async () => undefined,
+                glm,
+                topics: [
+                  {
+                    ...newsTopic("technology", ["one"]),
+                    queries: [
+                      {
+                        ...newsQuery("one", "TypeScript 正式发布", ["正式发布"], ["TypeScript"]),
+                        glm: { query: "TypeScript release", domains: ["devblogs.microsoft.com"] },
+                      },
+                    ],
+                  },
+                ],
+              },
+            ),
+          );
+          return { counts, result };
+        },
+      );
+      expect(outcome.counts).toEqual({ doubao: 1, deepseek: 1 });
+      expect(glm.search).toHaveBeenCalledTimes(1);
+      expect(outcome.result.audit.queries[0]?.provider).toBe("glm");
+      expect(outcome.result.stories.length).toBeGreaterThan(0);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("serves hybrid queries from DeepSeek without disturbing GLM when it recovers", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "news-deepseek-hybrid-ok-"));
+    const glm = {
+      search: vi.fn(async () => []),
+      read: vi.fn(async () => {
+        throw new Error("unused");
+      }),
+    };
+    try {
+      const doubaoQuota = JSON.stringify({
+        ResponseMetadata: { Error: { Code: "10406", Message: "free quota exhausted" } },
+      });
+      const outcome = await withStubbedFetch(
+        (urlToRespond: string) =>
+          urlToRespond === doubaoUrl
+            ? new Response(doubaoQuota, { status: 200 })
+            : new Response(deepSeekPayload, { status: 200 }),
+        async (counts) => {
+          const result = await Effect.runPromise(
+            generateRivusNewsBrief(
+              { edition: "noon", occurrence },
+              {
+                env: {
+                  NEWS_SEARCH_MODE: "hybrid",
+                  NEWS_SEARCH_FALLBACK: "deepseek",
+                  DOUBAO_SEARCH_API_KEY: "test",
+                  DEEPSEEK_API_KEY: "test",
+                  NEWS_SEARCH_STATE_FILE: join(directory, "budget.json"),
+                },
+                now: () => new Date(occurrence),
+                sleep: async () => undefined,
+                glm,
+                topics: [
+                  {
+                    ...newsTopic("technology", ["one"]),
+                    queries: [
+                      {
+                        ...newsQuery("one", "TypeScript 正式发布", ["正式发布"], ["TypeScript"]),
+                        glm: { query: "TypeScript release", domains: ["devblogs.microsoft.com"] },
+                      },
+                    ],
+                  },
+                ],
+              },
+            ),
+          );
+          return { counts, result };
+        },
+      );
+      expect(outcome.counts).toEqual({ doubao: 1, deepseek: 1 });
+      expect(glm.search).not.toHaveBeenCalled();
+      expect(outcome.result.audit.queries[0]).toMatchObject({
+        status: "ok",
+        provider: "deepseek",
+        providerFallback: { triggeredBy: "10406" },
+      });
+      expect(outcome.result.sourceStatus?.notes.join(" ")).toContain("备用来源 DeepSeek 补查");
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+});

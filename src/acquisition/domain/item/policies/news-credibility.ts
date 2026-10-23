@@ -14,6 +14,7 @@ export type ResolvedNewsCredibility = {
 export function resolveNewsCredibility(input: {
   url: string;
   authInfoLevel?: number;
+  authority?: number;
   sourceVerification?: SourceVerification;
 }): ResolvedNewsCredibility {
   if (input.sourceVerification) {
@@ -28,6 +29,14 @@ export function resolveNewsCredibility(input: {
     const { domain, policy } = input.sourceVerification;
     if (host !== domain && !host.endsWith(`.${domain}`)) return certified(4, method);
     return certified(policy === "official" ? 1 : 2, method);
+  }
+  // Authority-score providers never reach the authInfoLevel scale; their rank
+  // lands on the historical levels (2 authoritative, 4 unrated) for scoring.
+  // The 3-and-above threshold is the `SearchResult.authority` field contract;
+  // each search integration maps its own authority field onto the same tiers.
+  if (input.authority !== undefined) {
+    const authoritative = input.authority >= 3;
+    return { tier: authoritative ? "authoritative" : "unrated", rank: authoritative ? 2 : 4 };
   }
   return certified(input.authInfoLevel ?? 4);
 }

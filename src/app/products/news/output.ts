@@ -73,11 +73,23 @@ export function summarizeNewsSources(
   requests: readonly NewsAuditRequest[],
   settled: readonly SearchSettlement[],
 ): { sourceStatus: NewsSourceStatus; warnings: string[] } {
-  return summarizeNewsSourcesDraft(
+  const { sourceStatus, warnings } = summarizeNewsSourcesDraft(
     [...requests],
     settled.map(normalizeSettlement),
     modelSearchCaution,
   );
+  // The fallback provider has no time-range filter; the exact-window re-check
+  // every result already passes is the disclosure that matters here.
+  const backedUp = settled.filter(
+    (result) => result._tag === "Fulfilled" && result.value.providerFallback,
+  ).length;
+  if (backedUp) {
+    sourceStatus.notes = [
+      ...sourceStatus.notes,
+      `${backedUp} 个查询由备用来源 DeepSeek 补查；DeepSeek 结果无时间范围过滤，已按发布时间重新核对时间窗`,
+    ];
+  }
+  return { sourceStatus, warnings };
 }
 
 function publishQueryAudit(query: NewsQueryAuditDraft): NewsQueryAudit {
@@ -109,6 +121,7 @@ function publishQueryAudit(query: NewsQueryAuditDraft): NewsQueryAudit {
     ...(rest.provider ? { provider: rest.provider } : {}),
     ...(rest.searchUsage ? { searchUsage: rest.searchUsage } : {}),
     ...(rest.fallback ? { fallback: rest.fallback } : {}),
+    ...(rest.providerFallback ? { providerFallback: rest.providerFallback } : {}),
     ...(receipt ? { grok: receipt } : {}),
     reportedResultCount: rest.reportedResultCount,
     fetched: rest.fetched,
@@ -125,6 +138,7 @@ function normalizeSettlement(settlement: SearchSettlement): NewsQuerySettlement 
       ...(page.provider ? { provider: page.provider } : {}),
       ...(page.searchUsage ? { searchUsage: page.searchUsage } : {}),
       ...(page.fallback ? { fallback: page.fallback } : {}),
+      ...(page.providerFallback ? { providerFallback: page.providerFallback } : {}),
       ...(page.logId ? { logId: page.logId } : {}),
       resultCount: page.resultCount,
       results: page.results,

@@ -84,7 +84,16 @@ export const productsRoot = "src/app/products";
 
 export const sharedProductDirectory = "shared";
 
-export const sourceVocabulary = ["github", "rss", "doubao", "grok", "glm", "arxiv", "x.com"] as const;
+export const sourceVocabulary = [
+  "github",
+  "rss",
+  "doubao",
+  "grok",
+  "glm",
+  "deepseek",
+  "arxiv",
+  "x.com",
+] as const;
 
 /**
  * Occurrences of the source vocabulary that are part of a locked external
@@ -105,10 +114,13 @@ export const sourceVocabularyExceptions: Readonly<Record<string, readonly string
   // budget identity are locked by the tool's JSON output and the cache keys
   // persisted in news-search.json.
   "src/acquisition/application/use-cases/collect-x-posts.ts": ["grok"],
-  // Per-provider budget defaults are keyed by the provider env namespaces.
-  "src/acquisition/application/services/budget-defaults.ts": ["doubao", "grok"],
-  // The persisted cache schema names the providers whose pages it can store.
-  "src/acquisition/infra/models/news-search.ts": ["doubao", "grok"],
+  // Per-provider budget defaults are keyed by the provider env namespaces;
+  // deepseek joins for the fallback's DEEPSEEK_SEARCH_* caps.
+  "src/acquisition/application/services/budget-defaults.ts": ["doubao", "grok", "deepseek"],
+  // The persisted cache schema names the providers whose pages it can store;
+  // the deepseek literal is locked by the cached pages the news fallback
+  // writes into news-search.json.
+  "src/acquisition/infra/models/news-search.ts": ["doubao", "grok", "deepseek"],
   // The reader fallback chain's "glm" method value and failure message are
   // part of the read-original JSON contract.
   "src/reading/application/use-cases/read-original.ts": ["glm"],

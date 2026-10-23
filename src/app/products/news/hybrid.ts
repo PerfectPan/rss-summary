@@ -73,7 +73,8 @@ export function createHybridNewsSearch(options: Options) {
       options.window,
     ).stories;
     if ((accepted.length > 0 && !options.combine) || primary?.searchUsage?.source === "cache")
-      return { ...primary!, provider: "doubao" };
+      // The primary keeps its own provider label; a fallback page stays deepseek.
+      return { ...primary!, provider: primary!.provider ?? "doubao" };
 
     const fallback = {
       reason: primaryError?.code ?? (accepted.length ? "complement" : "no-eligible-results"),

@@ -30,6 +30,12 @@ export type SearchResult = {
   rankScore?: number;
   authInfoDescription?: string;
   authInfoLevel?: number;
+  /**
+   * Provider authority score on a 0–4 scale where 3 and above is high
+   * authority and -1 is unknown. Independent of `authInfoLevel`; adapters
+   * whose provider publishes such a score set only this field.
+   */
+  authority?: number;
   rankPosition: number;
   sourceVerification?: SourceVerification;
 };
@@ -43,10 +49,15 @@ export type SearchUsage = {
   monthlyLimit: number;
 };
 
+/** Why a query switched providers: the primary provider's failure code. */
+export type ProviderFallback = { readonly triggeredBy: string };
+
 export type SearchPage = {
   searchUsage?: SearchUsage;
   provider?: string;
   fallback?: SearchFallback;
+  /** Present when a fallback provider answered because the primary failed. */
+  providerFallback?: ProviderFallback;
   logId?: string;
   resultCount: number;
   timeCostMs?: number;
