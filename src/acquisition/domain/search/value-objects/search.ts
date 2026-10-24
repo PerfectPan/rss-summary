@@ -43,6 +43,8 @@ export type SearchResult = {
    * whose provider publishes such a score set only this field.
    */
   authority?: number;
+  /** Which parallel source contributed this result; set by the merge combinator. */
+  source?: string;
   rankPosition: number;
   sourceVerification?: SourceVerification;
 };
@@ -59,12 +61,27 @@ export type SearchUsage = {
 /** Why a query switched providers: the primary provider's failure code. */
 export type ProviderFallback = { readonly triggeredBy: string };
 
+/** One parallel source's contribution to a merged search page. */
+export type MergedSearchSource = {
+  /** Source label the composer chose when merging. */
+  readonly source: string;
+  readonly status: "ok" | "failed";
+  /** Results the source returned before cross-source deduplication. */
+  readonly fetched: number;
+  /** Results the source contributed to the merged page. */
+  readonly contributed: number;
+  /** Failure code, when the source failed. */
+  readonly code?: string;
+};
+
 export type SearchPage = {
   searchUsage?: SearchUsage;
   provider?: string;
   fallback?: SearchFallback;
   /** Present when a fallback provider answered because the primary failed. */
   providerFallback?: ProviderFallback;
+  /** Per-source outcomes, present when several providers were searched in parallel. */
+  mergedSources?: readonly MergedSearchSource[];
   logId?: string;
   resultCount: number;
   timeCostMs?: number;
