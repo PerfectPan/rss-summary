@@ -45,7 +45,8 @@ ledger conservatively counts every reserved attempt, including failed attempts a
 | `NEWS_SEARCH_STATE_FILE` | `.state/news-search.json` | nonempty path | Budget ledger and raw response cache; deployment must set a persistent absolute path |
 | `FEED_TIMEZONE_OFFSET` | `+08:00` for news | supported fixed offset | Calendar boundary for request accounting |
 | `NEWS_SEARCH_FALLBACK` | unset | `deepseek` | Enable the DeepSeek news fallback described below; any other value fails the run |
-| `DEEPSEEK_API_KEY` | unset | nonempty string | Required when `NEWS_SEARCH_FALLBACK=deepseek` |
+| `NEWS_SEARCH_SUPPLEMENT` | unset | `deepseek` | Enable the DeepSeek parallel supplement described below; any other value fails the run; cannot be combined with `NEWS_SEARCH_FALLBACK` |
+| `DEEPSEEK_API_KEY` | unset | nonempty string | Required when `NEWS_SEARCH_FALLBACK=deepseek` or `NEWS_SEARCH_SUPPLEMENT=deepseek` |
 | `DEEPSEEK_SEARCH_BASE_URL` | `https://api.deepseek.com/v1/tools/search` | HTTP(S) URL | Endpoint override; the normalized URL is the fallback's provider identity |
 | `DEEPSEEK_SEARCH_TIMEOUT_MS` | `15000` | integer `1000..60000` | DeepSeek request timeout |
 | `DEEPSEEK_SEARCH_DAILY_LIMIT` | `14` | integer `0..100000` | Attempt cap the DeepSeek caller enforces over the shared ledger for the current local day |
@@ -198,3 +199,42 @@ re-checked against the exact publication window by the normal funnel; the
 source-status note on each brief states this. Successful fallback pages enter
 the per-query audit with `provider: "deepseek"` and
 `providerFallback.triggeredBy`, the primary error code that caused the switch.
+
+## DeepSeek news supplement
+
+`NEWS_SEARCH_SUPPLEMENT=deepseek` (any other value fails the run; unset keeps
+the previous behavior exactly) searches DeepSeek **in parallel with the
+primary** instead of only after its failure. It cannot be combined with
+`NEWS_SEARCH_FALLBACK`: the merge already tolerates a primary failure, so a
+fallback would spend a second DeepSeek request on the same query. Setting both
+fails the run.
+
+A query participates only when its `news-topics.json` entry configures
+`deepseek.queries` (short keywords; the Grok-style long sentence is a poor
+DeepSeek query). Each keyword is one budgeted DeepSeek request; the client
+appends `after:<window start day>` to the outgoing query text because the
+endpoint has no time-range parameter and relevance dominates without a date
+constraint (keywords are truncated, never the operator, at the 128-character
+query limit). The pages merge by canonical URL — the primary's result wins a
+duplicate — and each merged page records per-source counts or failure codes
+in `mergedSources` for the audit.
+
+- Queries the primary budget selected run as primary + DeepSeek merged.
+- Queries the per-run budget deferred (for example beyond
+  `NEWS_GROK_MAX_QUERIES`) run on DeepSeek alone instead of staying
+  `query_deferred`; the audit marks them `providerFallback.triggeredBy:
+  "query_deferred"` and the source-status note says the primary never ran.
+- `official`-policy topics never supplement (the endpoint cannot promise
+  official sources), and queries without `deepseek.queries` keep the previous
+  behavior.
+- DeepSeek requests share the `NEWS_SEARCH_*` ledger and state file under
+  `DEEPSEEK_SEARCH_DAILY_LIMIT` / `DEEPSEEK_SEARCH_MONTHLY_LIMIT`. Budget
+  exhaustion fails only the DeepSeek leg; the primary leg is unaffected.
+  Daily AI's X collection is unchanged.
+
+Supplement spend scales with configured keywords: seven queries at three
+keywords each reserve up to 21 DeepSeek attempts per fresh run, so deployments
+should size `DEEPSEEK_SEARCH_DAILY_LIMIT` for their keyword count. Within the
+cache TTL, the noon and evening briefs of one day share a keyword cache entry
+(both windows start on the same calendar day), so the evening run reads the
+cache rather than spending again — with the existing freshness disclosure.

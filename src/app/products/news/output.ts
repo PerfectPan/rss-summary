@@ -33,6 +33,8 @@ export type NewsTopicQuery = DomainNewsTopicQuery & {
     domains: string[];
     sourceQueries?: Record<string, string>;
   };
+  /** Supplement-search keywords; one DeepSeek request per keyword. */
+  deepseek?: { queries: string[] };
 };
 
 export type NewsTopic = Omit<DomainNewsTopic, "queries"> & {
@@ -80,13 +82,27 @@ export function summarizeNewsSources(
   );
   // The fallback provider has no time-range filter; the exact-window re-check
   // every result already passes is the disclosure that matters here.
-  const backedUp = settled.filter(
-    (result) => result._tag === "Fulfilled" && result.value.providerFallback,
-  ).length;
-  if (backedUp) {
+  const outageBackedUp = settled.filter((result) => {
+    if (result._tag !== "Fulfilled") return false;
+    const triggeredBy = result.value.providerFallback?.triggeredBy;
+    return triggeredBy !== undefined && triggeredBy !== "query_deferred";
+  }).length;
+  if (outageBackedUp) {
     sourceStatus.notes = [
       ...sourceStatus.notes,
-      `${backedUp} 个查询由备用来源 DeepSeek 补查；DeepSeek 结果无时间范围过滤，已按发布时间重新核对时间窗`,
+      `${outageBackedUp} 个查询由备用来源 DeepSeek 补查；DeepSeek 结果无时间范围过滤，已按发布时间重新核对时间窗`,
+    ];
+  }
+  // Deferred queries the primary never executed; the supplement covered them.
+  const deferredBackedUp = settled.filter(
+    (result) =>
+      result._tag === "Fulfilled" &&
+      result.value.providerFallback?.triggeredBy === "query_deferred",
+  ).length;
+  if (deferredBackedUp) {
+    sourceStatus.notes = [
+      ...sourceStatus.notes,
+      `${deferredBackedUp} 个查询主来源本轮未执行，由 DeepSeek 补充采集`,
     ];
   }
   return { sourceStatus, warnings };
@@ -122,6 +138,7 @@ function publishQueryAudit(query: NewsQueryAuditDraft): NewsQueryAudit {
     ...(rest.searchUsage ? { searchUsage: rest.searchUsage } : {}),
     ...(rest.fallback ? { fallback: rest.fallback } : {}),
     ...(rest.providerFallback ? { providerFallback: rest.providerFallback } : {}),
+    ...(rest.mergedSources ? { mergedSources: rest.mergedSources } : {}),
     ...(receipt ? { grok: receipt } : {}),
     reportedResultCount: rest.reportedResultCount,
     fetched: rest.fetched,
@@ -139,6 +156,7 @@ function normalizeSettlement(settlement: SearchSettlement): NewsQuerySettlement 
       ...(page.searchUsage ? { searchUsage: page.searchUsage } : {}),
       ...(page.fallback ? { fallback: page.fallback } : {}),
       ...(page.providerFallback ? { providerFallback: page.providerFallback } : {}),
+      ...(page.mergedSources ? { mergedSources: page.mergedSources } : {}),
       ...(page.logId ? { logId: page.logId } : {}),
       resultCount: page.resultCount,
       results: page.results,

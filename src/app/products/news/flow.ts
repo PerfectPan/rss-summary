@@ -28,6 +28,7 @@ import {
   createBudgetedNewsSearch,
   editionRotation,
   isSearchFailure,
+  mergeSearches,
   NewsSearchError,
   resolveNewsCredibility,
   retrySearchEffect,
@@ -38,6 +39,7 @@ import {
   withFallback,
   type FallbackSearchProvider,
   type NewsSearchInput,
+  type SearchSource,
 } from "../../../acquisition/index.js";
 import {
   DeepSeekSearchClient,
@@ -186,6 +188,19 @@ export function generateRivusNewsBrief(
     if (fallbackName && fallbackName !== "deepseek") {
       return yield* Effect.fail(new Error("NEWS_SEARCH_FALLBACK must be deepseek."));
     }
+    const supplementName = env.NEWS_SEARCH_SUPPLEMENT?.trim() || undefined;
+    if (supplementName && supplementName !== "deepseek") {
+      return yield* Effect.fail(new Error("NEWS_SEARCH_SUPPLEMENT must be deepseek."));
+    }
+    // The supplement merge already tolerates a primary failure; a separate
+    // fallback would spend a second DeepSeek request on the same query.
+    if (supplementName && fallbackName) {
+      return yield* Effect.fail(
+        new Error(
+          "NEWS_SEARCH_SUPPLEMENT and NEWS_SEARCH_FALLBACK cannot be set together; unset NEWS_SEARCH_FALLBACK.",
+        ),
+      );
+    }
     const count = boundedInteger(env.NEWS_SEARCH_COUNT_PER_QUERY, 10, 1, 50);
     const managedSearch = yield* Effect.try({
       try: () => (dependencies.search ? undefined : createSearch(env, mode, dependencies.now)),
@@ -193,15 +208,25 @@ export function generateRivusNewsBrief(
     });
     // Only news briefs fall back to DeepSeek; X account collection cannot use
     // it because the endpoint cannot search posts by author.
+    const deepSeekRetry = {
+      now: dependencies.now,
+      random: dependencies.random ?? Math.random,
+      sleep: dependencies.sleep ?? sleep,
+    };
     const fallbackSearch = yield* Effect.try({
       try: () =>
         dependencies.search || !fallbackName
           ? undefined
-          : createDeepSeekFallback(env, {
-              now: dependencies.now,
-              random: dependencies.random ?? Math.random,
-              sleep: dependencies.sleep ?? sleep,
-            }),
+          : createDeepSeekFallback(env, deepSeekRetry),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+    });
+    // The supplement searches DeepSeek in parallel with the primary instead of
+    // only after its failure.
+    const supplementSearch = yield* Effect.try({
+      try: () =>
+        dependencies.search || !supplementName
+          ? undefined
+          : createDeepSeekSearch(env, deepSeekRetry),
       catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
     });
     const requests = topics.flatMap((topic) =>
@@ -295,17 +320,39 @@ export function generateRivusNewsBrief(
           : undefined,
       catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
     });
+    // One supplement request per configured keyword; official-policy topics and
+    // queries without keywords never supplement.
+    const supplementSources = (request: (typeof requests)[number]): SearchSource[] =>
+      !supplementSearch || !request.query.deepseek
+        ? []
+        : deepSeekSourcePolicies.includes(request.topic.sourcePolicy)
+          ? request.query.deepseek.queries.map((keyword) => ({
+              name: "deepseek",
+              search: (input: NewsSearchInput) => supplementSearch!({ ...input, query: keyword }),
+            }))
+          : [];
     const settled = yield* settleSearches(
       requests,
       (request) => {
+        const supplement = supplementSources(request);
         if (!selectedQueryIds.has(request.query.id)) {
-          return Effect.fail(
-            new NewsSearchError("query_deferred", "Query deferred by the per-run search limit."),
-          );
+          if (supplement.length === 0) {
+            return Effect.fail(
+              new NewsSearchError("query_deferred", "Query deferred by the per-run search limit."),
+            );
+          }
+          // The primary never ran for this query; the supplement answers alone
+          // and the audit discloses it through the deferral code.
+          return Effect.map(mergeSearches(supplement)(request.input), (page) => ({
+            ...page,
+            providerFallback: { triggeredBy: "query_deferred" },
+          }));
         }
-        return execute
+        const primary = execute
           ? Effect.tryPromise({ try: () => execute(request), catch: (reason) => reason })
           : newsSearch(request.input);
+        if (supplement.length === 0) return primary;
+        return mergeSearches([{ name: mode, search: () => primary }, ...supplement])(request.input);
       },
       mode !== "doubao" ? 1 : newsSearchConcurrency,
     );
@@ -509,15 +556,15 @@ function timeAtOffset(instant: number, timezoneOffset: string): string {
 }
 
 /**
- * The DeepSeek fallback provider: budgeted with its own limits and provider
- * identity (the endpoint URL), then retried like the primary. It shares the
- * primary's state file, so the ledger counts attempts from both callers while
- * each caller enforces its own cap.
+ * The DeepSeek search behind both the fallback and the supplement: budgeted
+ * with its own limits and provider identity (the endpoint URL), then retried
+ * like the primary. It shares the primary's state file, so the ledger counts
+ * attempts from both callers while each caller enforces its own cap.
  */
-function createDeepSeekFallback(
+function createDeepSeekSearch(
   env: NodeJS.ProcessEnv,
   retry: { now?: () => Date; random: () => number; sleep: (milliseconds: number) => Promise<void> },
-): FallbackSearchProvider {
+) {
   const apiKey = env.DEEPSEEK_API_KEY?.trim();
   if (!apiKey) throw new Error("DEEPSEEK_API_KEY is required for news briefs.");
   const baseUrl =
@@ -553,9 +600,14 @@ function createDeepSeekFallback(
       ) * 60_000,
     now: retry.now,
   });
-  return {
-    sourcePolicies: deepSeekSourcePolicies,
-    search: (input) =>
-      retrySearchEffect(budgeted(input), { random: retry.random, sleep: retry.sleep }),
-  };
+  return (input: NewsSearchInput) =>
+    retrySearchEffect(budgeted(input), { random: retry.random, sleep: retry.sleep });
+}
+
+/** The fallback flavor of the DeepSeek search: only policies it can serve. */
+function createDeepSeekFallback(
+  env: NodeJS.ProcessEnv,
+  retry: { now?: () => Date; random: () => number; sleep: (milliseconds: number) => Promise<void> },
+): FallbackSearchProvider {
+  return { sourcePolicies: deepSeekSourcePolicies, search: createDeepSeekSearch(env, retry) };
 }
