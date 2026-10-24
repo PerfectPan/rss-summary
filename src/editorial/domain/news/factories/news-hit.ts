@@ -9,6 +9,7 @@ export function projectNewsHit(
     snippet?: string;
     summary?: string;
     publishTime?: string;
+    publishDay?: NewsSearchHit["publishDay"];
     rankScore?: number;
     authInfoDescription?: string;
     rankPosition: number;
@@ -33,6 +34,7 @@ export function projectNewsHit(
     ...(result.snippet !== undefined ? { snippet: result.snippet } : {}),
     ...(result.summary !== undefined ? { summary: result.summary } : {}),
     ...(result.publishTime !== undefined ? { publishTime: result.publishTime } : {}),
+    ...(result.publishDay !== undefined ? { publishDay: result.publishDay } : {}),
     ...(result.rankScore !== undefined ? { rankScore: result.rankScore } : {}),
     ...(result.authInfoDescription !== undefined
       ? { authInfoDescription: result.authInfoDescription }

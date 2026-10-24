@@ -53,6 +53,7 @@ export function buildNewsAudit(
       ...(result.value.searchUsage ? { searchUsage: result.value.searchUsage } : {}),
       ...(result.value.fallback ? { fallback: result.value.fallback } : {}),
       ...(result.value.providerFallback ? { providerFallback: result.value.providerFallback } : {}),
+      ...(result.value.mergedSources ? { mergedSources: result.value.mergedSources } : {}),
       ...(result.value.receipt ? { receipt: result.value.receipt } : {}),
       reportedResultCount: result.value.resultCount,
       fetched: result.value.results.length,

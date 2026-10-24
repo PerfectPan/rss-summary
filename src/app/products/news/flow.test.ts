@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -1420,4 +1421,578 @@ describe("DeepSeek news fallback", () => {
       await rm(directory, { recursive: true, force: true });
     }
   });
+});
+
+describe("DeepSeek news supplement", () => {
+  const doubaoUrl = "https://open.feedcoopapi.com/search_api/web_search";
+  const occurrence = "2026-10-04T12:30:00+08:00";
+
+  function supplementQuery(id: string, keywords: string[]): NewsTopicQuery {
+    return {
+      ...newsQuery(id, id, ["正式发布"], ["正式发布"]),
+      deepseek: { queries: keywords },
+    };
+  }
+
+  function deepSeekBody(url: string, title: string): string {
+    return JSON.stringify({
+      results: [
+        {
+          rerank_score: 2.4,
+          title: `${title} 正式发布`,
+          url,
+          snippet: `${title} announced.`,
+          summary: `${title} 正式发布，并开放 API。`,
+          site_name: title,
+          date: "2026-10-03T16:00:00Z",
+          authority: 3,
+        },
+      ],
+    });
+  }
+
+  function doubaoBody(url: string, title: string): string {
+    return JSON.stringify({
+      ResponseMetadata: {},
+      Result: {
+        LogId: "log-supplement",
+        ResultCount: 1,
+        TimeCost: 9,
+        WebResults: [
+          {
+            Id: `doubao-${title}`,
+            Title: `${title} 正式发布`,
+            Url: url,
+            SiteName: title,
+            Summary: `${title} 正式发布，并开放 API。`,
+            PublishTime: "2026-10-04T09:00:00+08:00",
+            RankScore: 0.9,
+            SortId: 1,
+            AuthInfoDes: "官方站点",
+            AuthInfoLevel: 1,
+          },
+        ],
+      },
+    });
+  }
+
+  it("rejects combining the supplement with the fallback", async () => {
+    const result = await Effect.runPromise(
+      Effect.result(
+        generateRivusNewsBrief(
+          { edition: "noon", occurrence },
+          {
+            env: {
+              NEWS_SEARCH_MODE: "doubao",
+              NEWS_SEARCH_FALLBACK: "deepseek",
+              NEWS_SEARCH_SUPPLEMENT: "deepseek",
+            },
+            search: async () => ({ resultCount: 0, results: [] }),
+            topics: [newsTopic("technology", ["one"])],
+          },
+        ),
+      ),
+    );
+    expect(result).toMatchObject({
+      _tag: "Failure",
+      failure: { message: expect.stringContaining("cannot be set together") },
+    });
+  });
+
+  it("rejects an unsupported supplement provider name", async () => {
+    const result = await Effect.runPromise(
+      Effect.result(
+        generateRivusNewsBrief(
+          { edition: "noon", occurrence },
+          {
+            env: { NEWS_SEARCH_MODE: "doubao", NEWS_SEARCH_SUPPLEMENT: "perplexity" },
+            search: async () => ({ resultCount: 0, results: [] }),
+            topics: [newsTopic("technology", ["one"])],
+          },
+        ),
+      ),
+    );
+    expect(result).toMatchObject({
+      _tag: "Failure",
+      failure: { message: "NEWS_SEARCH_SUPPLEMENT must be deepseek." },
+    });
+  });
+
+  it("merges the primary page with per-keyword DeepSeek pages and deduplicates", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "news-deepseek-supplement-"));
+    const bodies: string[] = [];
+    const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url === doubaoUrl)
+        return new Response(doubaoBody("https://example.com/shared", "Doubao"), { status: 200 });
+      bodies.push(String(init?.body));
+      const query = JSON.parse(String(init?.body)).query as string;
+      if (query.startsWith("doubao-keyword"))
+        return new Response(
+          deepSeekBody("https://example.com/shared?utm_source=feed", "DeepSeek A"),
+          { status: 200 },
+        );
+      return new Response(deepSeekBody("https://example.com/supplement-only", "DeepSeek B"), {
+        status: 200,
+      });
+    });
+    vi.stubGlobal("fetch", fetch);
+    try {
+      const result = await Effect.runPromise(
+        generateRivusNewsBrief(
+          { edition: "noon", occurrence },
+          {
+            env: {
+              NEWS_SEARCH_MODE: "doubao",
+              NEWS_SEARCH_SUPPLEMENT: "deepseek",
+              DOUBAO_SEARCH_API_KEY: "test",
+              DEEPSEEK_API_KEY: "test",
+              NEWS_SEARCH_STATE_FILE: join(directory, "budget.json"),
+            },
+            now: () => new Date(occurrence),
+            topics: [
+              {
+                ...newsTopic("technology", []),
+                queries: [supplementQuery("one", ["doubao-keyword", "deepseek-keyword"])],
+              },
+            ],
+          },
+        ),
+      );
+      expect(fetch).toHaveBeenCalledTimes(3);
+      expect([...bodies].sort()).toEqual([
+        expect.stringContaining("deepseek-keyword after:2026-10-04"),
+        expect.stringContaining("doubao-keyword after:2026-10-04"),
+      ]);
+      expect(result.audit.queries[0]).toMatchObject({
+        status: "ok",
+        fetched: 2,
+        mergedSources: [
+          { source: "doubao", status: "ok", fetched: 1, contributed: 1 },
+          { source: "deepseek", status: "ok", fetched: 1, contributed: 0 },
+          { source: "deepseek", status: "ok", fetched: 1, contributed: 1 },
+        ],
+      });
+      expect(result.stories.map(({ canonicalUrl }) => canonicalUrl).sort()).toEqual([
+        "https://example.com/shared",
+        "https://example.com/supplement-only",
+      ]);
+      expect(result.sourceStatus?.state).toBe("healthy");
+    } finally {
+      vi.unstubAllGlobals();
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a failing supplement away from a successful primary", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "news-deepseek-supplement-budget-"));
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url === doubaoUrl)
+        return new Response(doubaoBody("https://example.com/primary", "Doubao"), { status: 200 });
+      throw new Error("deepseek budget must not fetch");
+    });
+    vi.stubGlobal("fetch", fetch);
+    try {
+      const result = await Effect.runPromise(
+        generateRivusNewsBrief(
+          { edition: "noon", occurrence },
+          {
+            env: {
+              NEWS_SEARCH_MODE: "doubao",
+              NEWS_SEARCH_SUPPLEMENT: "deepseek",
+              DOUBAO_SEARCH_API_KEY: "test",
+              DEEPSEEK_API_KEY: "test",
+              DEEPSEEK_SEARCH_DAILY_LIMIT: "0",
+              NEWS_SEARCH_STATE_FILE: join(directory, "budget.json"),
+            },
+            now: () => new Date(occurrence),
+            topics: [
+              {
+                ...newsTopic("technology", []),
+                queries: [supplementQuery("one", ["unused-keyword"])],
+              },
+            ],
+          },
+        ),
+      );
+      expect(result.audit.queries[0]).toMatchObject({
+        status: "ok",
+        mergedSources: [
+          { source: "doubao", status: "ok" },
+          {
+            source: "deepseek",
+            status: "failed",
+            code: "local_budget_exhausted",
+          },
+        ],
+      });
+      expect(result.stories).toHaveLength(1);
+    } finally {
+      vi.unstubAllGlobals();
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("answers deferred queries with DeepSeek alone and discloses the deferral", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "news-deepseek-supplement-deferred-"));
+    const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url === doubaoUrl)
+        return new Response(doubaoBody("https://example.com/selected", "Doubao"), { status: 200 });
+      const query = JSON.parse(String(init?.body)).query as string;
+      if (query.includes("selected-keyword"))
+        return new Response(deepSeekBody("https://example.com/selected-ds", "Selected"), {
+          status: 200,
+        });
+      return new Response(deepSeekBody("https://example.com/deferred-only", "Deferred"), {
+        status: 200,
+      });
+    });
+    vi.stubGlobal("fetch", fetch);
+    try {
+      const result = await Effect.runPromise(
+        generateRivusNewsBrief(
+          { edition: "noon", occurrence },
+          {
+            env: {
+              NEWS_SEARCH_MODE: "doubao",
+              NEWS_SEARCH_SUPPLEMENT: "deepseek",
+              DOUBAO_SEARCH_API_KEY: "test",
+              DEEPSEEK_API_KEY: "test",
+              NEWS_SEARCH_STATE_FILE: join(directory, "budget.json"),
+              NEWS_SEARCH_MAX_QUERIES: "1",
+            },
+            maxQueries: 1,
+            now: () => new Date(occurrence),
+            topics: [
+              {
+                ...newsTopic("technology", []),
+                queries: [
+                  supplementQuery("selected", ["selected-keyword"]),
+                  supplementQuery("deferred", ["deferred-keyword"]),
+                ],
+              },
+            ],
+          },
+        ),
+      );
+      expect(result.audit.queries[0]).toMatchObject({
+        queryId: "selected",
+        status: "ok",
+        mergedSources: [
+          { source: "doubao", status: "ok", fetched: 1, contributed: 1 },
+          { source: "deepseek", status: "ok", fetched: 1, contributed: 1 },
+        ],
+      });
+      expect(result.audit.queries[0].providerFallback).toBeUndefined();
+      expect(result.audit.queries[1]).toMatchObject({
+        queryId: "deferred",
+        status: "ok",
+        provider: "deepseek",
+        providerFallback: { triggeredBy: "query_deferred" },
+        mergedSources: [{ source: "deepseek", status: "ok", fetched: 1, contributed: 1 }],
+      });
+      expect(result.sourceStatus?.notes.join(" ")).toContain(
+        "1 个查询主来源本轮未执行，由 DeepSeek 补充采集",
+      );
+      expect(result.stories.map(({ canonicalUrl }) => canonicalUrl).sort()).toEqual([
+        "https://example.com/deferred-only",
+        "https://example.com/selected",
+        "https://example.com/selected-ds",
+      ]);
+    } finally {
+      vi.unstubAllGlobals();
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("runs DeepSeek alone when the primary has a source outage", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "news-deepseek-supplement-outage-"));
+    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === "string" ? input : input.toString();
+      if (url === doubaoUrl) return new Response("down", { status: 500 });
+      return new Response(deepSeekBody("https://example.com/deepseek-only", "DeepSeek"), {
+        status: 200,
+      });
+    });
+    vi.stubGlobal("fetch", fetch);
+    try {
+      const result = await Effect.runPromise(
+        generateRivusNewsBrief(
+          { edition: "noon", occurrence },
+          {
+            env: {
+              NEWS_SEARCH_MODE: "doubao",
+              NEWS_SEARCH_SUPPLEMENT: "deepseek",
+              DOUBAO_SEARCH_API_KEY: "test",
+              DEEPSEEK_API_KEY: "test",
+              NEWS_SEARCH_STATE_FILE: join(directory, "budget.json"),
+            },
+            now: () => new Date(occurrence),
+            topics: [
+              {
+                ...newsTopic("technology", []),
+                queries: [supplementQuery("one", ["outage-keyword"])],
+              },
+            ],
+          },
+        ),
+      );
+      expect(result.audit.queries[0]).toMatchObject({
+        status: "ok",
+        provider: "deepseek",
+        providerFallback: { triggeredBy: "http_500" },
+      });
+      expect(result.stories[0]).toMatchObject({
+        canonicalUrl: "https://example.com/deepseek-only",
+      });
+      expect(result.sourceStatus?.notes.join(" ")).toContain("由备用来源 DeepSeek 补查");
+    } finally {
+      vi.unstubAllGlobals();
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("DeepSeek independent budget ledger", () => {
+  const occurrence = "2026-10-04T12:30:00+08:00";
+
+  function supplementTopics() {
+    return [
+      {
+        ...newsTopic("technology", []),
+        sourcePolicy: "news" as const,
+        queries: [
+          {
+            ...newsQuery("one", "OpenAI 正式发布", ["正式发布"], ["OpenAI"]),
+            deepseek: { queries: ["OpenAI 新模型"] },
+          },
+        ],
+      },
+    ];
+  }
+
+  it("keeps the Grok leg running when DeepSeek exhausts its own ledger", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "news-ds-ledger-exhausted-"));
+    const grok = vi.spyOn(GrokSearchClient.prototype, "search").mockResolvedValue({
+      provider: "grok",
+      resultCount: 1,
+      results: [
+        {
+          id: "grok-post",
+          title: "OpenAI 正式发布新模型",
+          url: "https://x.com/OpenAI/status/1",
+          summary: "OpenAI 正式发布新模型，并开放 API。",
+          publishTime: "2026-10-04T03:00:00.000Z",
+          authInfoLevel: 2,
+          authInfoDescription: "正常权威",
+          rankPosition: 1,
+        },
+      ],
+    });
+    try {
+      const result = await Effect.runPromise(
+        generateRivusNewsBrief(
+          { edition: "noon", occurrence },
+          {
+            env: {
+              NEWS_SEARCH_MODE: "grok",
+              NEWS_SEARCH_SUPPLEMENT: "deepseek",
+              DEEPSEEK_API_KEY: "test",
+              DEEPSEEK_SEARCH_DAILY_LIMIT: "0",
+              NEWS_SEARCH_STATE_FILE: join(directory, "news-search.json"),
+            },
+            now: () => new Date(occurrence),
+            topics: supplementTopics(),
+          },
+        ),
+      );
+      expect(grok).toHaveBeenCalledTimes(1);
+      expect(result.audit.queries[0]).toMatchObject({
+        status: "ok",
+        mergedSources: [
+          { source: "grok", status: "ok", fetched: 1, contributed: 1 },
+          { source: "deepseek", status: "failed", code: "local_budget_exhausted" },
+        ],
+      });
+      expect(result.stories.map(({ canonicalUrl }) => canonicalUrl)).toEqual([
+        "https://x.com/OpenAI/status/1",
+      ]);
+      // The primary ledger carries only the Grok reservation and cache page;
+      // DeepSeek's exhausted ledger never wrote a file.
+      const primary = JSON.parse(await readFile(join(directory, "news-search.json"), "utf8")) as {
+        daily: Record<string, number>;
+        cache: Record<string, { request: { provider: string } }>;
+      };
+      expect(primary.daily).toEqual({ "2026-10-04": 1 });
+      expect(Object.values(primary.cache).map((entry) => entry.request.provider)).toEqual([
+        "grok://cli/v1/default",
+      ]);
+      expect(existsSync(join(directory, "deepseek-search.json"))).toBe(false);
+    } finally {
+      grok.mockRestore();
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the DeepSeek leg running when the primary exhausts its own ledger", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "news-primary-ledger-exhausted-"));
+    const grok = vi.spyOn(GrokSearchClient.prototype, "search");
+    const fetch = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            results: [
+              {
+                rerank_score: 2.4,
+                title: "OpenAI 正式发布新模型",
+                url: "https://openai.com/news/new-model",
+                summary: "OpenAI 正式发布新模型，并开放 API。",
+                site_name: "OpenAI",
+                date: "2026-10-03T16:00:00Z",
+                authority: 3,
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+    );
+    vi.stubGlobal("fetch", fetch);
+    try {
+      const result = await Effect.runPromise(
+        generateRivusNewsBrief(
+          { edition: "noon", occurrence },
+          {
+            env: {
+              NEWS_SEARCH_MODE: "grok",
+              NEWS_SEARCH_SUPPLEMENT: "deepseek",
+              DEEPSEEK_API_KEY: "test",
+              NEWS_SEARCH_DAILY_LIMIT: "0",
+              NEWS_SEARCH_STATE_FILE: join(directory, "news-search.json"),
+            },
+            now: () => new Date(occurrence),
+            topics: supplementTopics(),
+          },
+        ),
+      );
+      expect(grok).not.toHaveBeenCalled();
+      expect(result.audit.queries[0]).toMatchObject({
+        status: "ok",
+        provider: "deepseek",
+        providerFallback: { triggeredBy: "local_budget_exhausted" },
+        mergedSources: [
+          { source: "grok", status: "failed", code: "local_budget_exhausted" },
+          { source: "deepseek", status: "ok", fetched: 1, contributed: 1 },
+        ],
+      });
+      expect(result.stories.map(({ canonicalUrl }) => canonicalUrl)).toEqual([
+        "https://openai.com/news/new-model",
+      ]);
+      // The primary ledger stopped the Grok caller before any request; only
+      // DeepSeek's own ledger records the supplement attempt.
+      expect(existsSync(join(directory, "news-search.json"))).toBe(false);
+      const deepSeek = JSON.parse(
+        await readFile(join(directory, "deepseek-search.json"), "utf8"),
+      ) as { daily: Record<string, number> };
+      expect(deepSeek.daily).toEqual({ "2026-10-04": 1 });
+    } finally {
+      grok.mockRestore();
+      vi.unstubAllGlobals();
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+});
+
+it("runs the Grok leg after DeepSeek spending passes the primary's cap", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "news-ds-ledger-overspend-"));
+  const grok = vi.spyOn(GrokSearchClient.prototype, "search").mockResolvedValue({
+    provider: "grok",
+    resultCount: 0,
+    results: [],
+  });
+  const fetch = vi.fn(
+    async () =>
+      new Response(
+        JSON.stringify({
+          results: [
+            {
+              rerank_score: 2.4,
+              title: "OpenAI 正式发布新模型",
+              url: "https://openai.com/news/new-model",
+              summary: "OpenAI 正式发布新模型，并开放 API。",
+              site_name: "OpenAI",
+              date: "2026-10-03T16:00:00Z",
+              authority: 3,
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+  );
+  vi.stubGlobal("fetch", fetch);
+  try {
+    const options = {
+      env: {
+        NEWS_SEARCH_MODE: "grok",
+        NEWS_SEARCH_SUPPLEMENT: "deepseek",
+        DEEPSEEK_API_KEY: "test",
+        // The primary caller may only spend twice today; DeepSeek's own
+        // allowance is far larger.
+        NEWS_SEARCH_DAILY_LIMIT: "2",
+        DEEPSEEK_SEARCH_DAILY_LIMIT: "100",
+        NEWS_SEARCH_STATE_FILE: join(directory, "news-search.json"),
+      },
+      now: () => new Date("2026-10-04T12:30:00+08:00"),
+      topics: [
+        {
+          ...newsTopic("technology", []),
+          sourcePolicy: "news" as const,
+          queries: [
+            {
+              ...newsQuery("one", "OpenAI 正式发布", ["正式发布"], ["OpenAI"]),
+              deepseek: { queries: ["OpenAI 新模型", "OpenAI new model", "OpenAI model launch"] },
+            },
+          ],
+        },
+      ],
+    };
+    // Noon: three keyword reservations already exceed the primary's cap of 2.
+    const noon = await Effect.runPromise(
+      generateRivusNewsBrief({ edition: "noon", occurrence: "2026-10-04T12:30:00+08:00" }, options),
+    );
+    expect(noon.audit.queries[0]).toMatchObject({ status: "ok" });
+    expect(noon.audit.queries[0].mergedSources?.[0]).toMatchObject({
+      source: "grok",
+      status: "ok",
+    });
+    // Evening, same day and state files: the Grok leg must really run on its
+    // last allowed slot, not fail with local_budget_exhausted.
+    const evening = await Effect.runPromise(
+      generateRivusNewsBrief(
+        { edition: "evening", occurrence: "2026-10-04T19:00:00+08:00" },
+        options,
+      ),
+    );
+    expect(grok).toHaveBeenCalledTimes(2);
+    expect(evening.audit.queries[0]).toMatchObject({ status: "ok" });
+    expect(evening.audit.queries[0].mergedSources?.[0]).toMatchObject({
+      source: "grok",
+      status: "ok",
+      fetched: 0,
+      contributed: 0,
+    });
+    const primary = JSON.parse(await readFile(join(directory, "news-search.json"), "utf8")) as {
+      daily: Record<string, number>;
+    };
+    const deepSeek = JSON.parse(
+      await readFile(join(directory, "deepseek-search.json"), "utf8"),
+    ) as { daily: Record<string, number> };
+    expect(primary.daily).toEqual({ "2026-10-04": 2 });
+    expect(deepSeek.daily).toEqual({ "2026-10-04": 6 });
+  } finally {
+    grok.mockRestore();
+    vi.unstubAllGlobals();
+    await rm(directory, { recursive: true, force: true });
+  }
 });

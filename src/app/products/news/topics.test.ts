@@ -233,3 +233,32 @@ it("rejects per-source queries that escape the configured domains or query limit
     ).toThrow();
   }
 });
+
+it("parses optional DeepSeek supplement keywords with bounded length and count", () => {
+  const query = {
+    ...rawQuery("release"),
+    deepseek: { queries: ["TypeScript release", "Node.js 发布"] },
+  };
+  expect(parseNewsTopics(JSON.stringify([{ ...topicWith(query) }]))[0].queries[0].deepseek).toEqual(
+    {
+      queries: ["TypeScript release", "Node.js 发布"],
+    },
+  );
+  for (const queries of [[], ["a", "b", "c", "d", "e"], ["x".repeat(101)], ["  "]]) {
+    expect(() =>
+      parseNewsTopics(JSON.stringify([{ ...topicWith({ ...query, deepseek: { queries } }) }])),
+    ).toThrow();
+  }
+});
+
+function topicWith(query: ReturnType<typeof rawQuery> & { deepseek?: { queries: string[] } }) {
+  return {
+    id: "tools",
+    label: "Tools",
+    icon: "x",
+    enabled: true,
+    sourcePolicy: "news",
+    maxItems: 1,
+    queries: [query],
+  };
+}

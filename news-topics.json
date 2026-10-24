@@ -22,6 +22,9 @@
             "x.ai": "Grok model release"
           }
         },
+        "deepseek": {
+          "queries": ["OpenAI 发布 新模型", "Anthropic Claude new model launch", "Google Gemini model release", "xAI Grok Meta Llama release"]
+        },
         "subjectAny": ["OpenAI", "Anthropic", "Google DeepMind", "Meta", "xAI"],
         "eventAny": ["正式发布", "正式上线", "开放 API", "进入 GA", "general availability", "launches", "released", "introducing"],
         "excludedAny": ["教程", "评测", "传闻", "预测", "盘点", "tutorial", "review", "rumor", "prediction", "roundup"]
@@ -40,6 +43,9 @@
             "cursor.com": "Cursor release",
             "windsurf.com": "Windsurf release"
           }
+        },
+        "deepseek": {
+          "queries": ["Claude Code release", "OpenAI Codex update", "GitHub Copilot Cursor 发布"]
         },
         "subjectAny": ["Codex", "Claude Code", "Gemini CLI", "GitHub Copilot", "Cursor", "Windsurf"],
         "eventAny": ["进入 GA", "重大版本", "破坏性变更", "general availability", "major release", "breaking change"],
@@ -70,6 +76,9 @@
             "bun.sh": "Bun release"
           }
         },
+        "deepseek": {
+          "queries": ["TypeScript Node.js release", "Rust Deno Bun release"]
+        },
         "subjectAny": ["TypeScript", "Rust", "Node.js", "Deno", "Bun", "IDE"],
         "eventAny": ["重大版本", "弃用", "破坏性变更", "安全更新", "major release", "breaking change", "deprecation", "security update"],
         "excludedAny": ["教程", "评测", "传闻", "预测", "盘点", "tutorial", "review", "rumor", "prediction", "roundup"]
@@ -99,6 +108,9 @@
             "blog.cloudflare.com": "Cloudflare outage"
           }
         },
+        "deepseek": {
+          "queries": ["AWS Azure outage", "Google Cloud Cloudflare outage", "云服务 宕机 故障"]
+        },
         "subjectAny": ["AWS", "Azure", "Google Cloud", "Cloudflare"],
         "eventAny": ["服务中断", "大规模中断", "故障", "数据泄露", "安全事件", "outage", "service disruption", "data breach", "security incident"],
         "excludedAny": ["教程", "评测", "传闻", "预测", "盘点", "tutorial", "review", "rumor", "prediction", "roundup"]
@@ -114,6 +126,9 @@
             "github.blog": "npm supply chain security advisory",
             "cisa.gov": "software critical vulnerability"
           }
+        },
+        "deepseek": {
+          "queries": ["npm supply chain attack", "critical CVE open source", "供应链攻击 开源 漏洞"]
         },
         "subjectAny": ["开源", "GitHub", "npm", "PyPI", "软件包", "dependency", "package"],
         "eventAny": ["CVE-", "高危漏洞", "供应链攻击", "紧急弃用", "critical vulnerability", "supply-chain attack", "security advisory"],
@@ -143,6 +158,9 @@
             "ftc.gov": "AI ruling"
           }
         },
+        "deepseek": {
+          "queries": ["AI regulation takes effect", "人工智能 监管 新规 发布", "AI chip export controls"]
+        },
         "subjectAny": ["AI", "人工智能", "模型", "芯片", "数据"],
         "eventAny": ["正式发布", "生效", "通过", "裁定", "takes effect", "effective", "regulation", "ruling"],
         "excludedAny": ["解读", "观点", "传闻", "预测", "盘点", "opinion", "rumor", "prediction", "roundup"]
@@ -171,6 +189,9 @@
             "mistral.ai": "Mistral funding announcement",
             "cohere.com": "Cohere funding announcement"
           }
+        },
+        "deepseek": {
+          "queries": ["AI 融资 亿美元", "AI startup raises funding", "AI acquisition IPO"]
         },
         "subjectAny": ["AI", "人工智能", "大模型", "模型公司", "OpenAI", "Anthropic", "xAI", "Mistral", "Cohere", "Scale AI", "Hugging Face", "Cursor", "Windsurf", "Perplexity"],
         "eventAny": ["融资", "收购", "合并", "IPO", "财报", "funding", "acquisition", "merger", "earnings"],

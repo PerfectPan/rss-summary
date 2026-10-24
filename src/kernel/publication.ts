@@ -1,4 +1,30 @@
+import { startOfCalendarDay } from "./time.js";
 import { parsePublishTime } from "./text.js";
+
+/**
+ * A publication the provider reported as a calendar day in a known timezone.
+ * Unlike a bare date, the day can be resolved to exactly that zone's 24 hours.
+ */
+export type PublicationDay = {
+  readonly day: string;
+  readonly timezoneOffset: string;
+};
+
+/** A calendar day in a known timezone covers exactly that zone's day. */
+export function newsPublicationDayRange(
+  value: PublicationDay,
+): { since: number; until: number; precision: "day" } | undefined {
+  if (!/^\d{4}-\d{2}-\d{2}$/u.test(value.day)) return undefined;
+  const parsed = new Date(`${value.day}T00:00:00Z`);
+  if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value.day)
+    return undefined;
+  try {
+    const since = startOfCalendarDay(value.day, value.timezoneOffset);
+    return { since, until: since + 86_400_000, precision: "day" as const };
+  } catch {
+    return undefined;
+  }
+}
 
 /** A date describes a whole day; never manufacture an intra-day publication instant. */
 export function newsPublicationRange(value: string | undefined, timezoneOffset = "+08:00") {

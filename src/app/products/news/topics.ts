@@ -104,9 +104,29 @@ function parseQuery(
     text,
     intent,
     ...(record.glm === undefined ? {} : { glm: parseGlmQuery(record.glm, context) }),
+    ...(record.deepseek === undefined
+      ? {}
+      : { deepseek: parseDeepSeekQuery(record.deepseek, context) }),
     subjectAny: parseTerms(record.subjectAny, `${context} subjectAny`, true),
     eventAny: parseTerms(record.eventAny, `${context} eventAny`, true),
     excludedAny: parseTerms(record.excludedAny, `${context} excludedAny`, false),
+  };
+}
+
+/** Keywords for the parallel supplement search; one request per keyword. */
+function parseDeepSeekQuery(value: unknown, context: string): { queries: string[] } {
+  const record = requireRecord(value, `${context} deepseek`);
+  if (!Array.isArray(record.queries) || record.queries.length < 1 || record.queries.length > 4) {
+    throw new Error(`${context} deepseek queries must contain 1 to 4 keywords.`);
+  }
+  return {
+    queries: record.queries.map((item, index) => {
+      const keyword = requiredString(item, `${context} deepseek query ${index + 1}`);
+      if (keyword.length > 100) {
+        throw new Error(`${context} deepseek query must not exceed 100 characters.`);
+      }
+      return keyword;
+    }),
   };
 }
 

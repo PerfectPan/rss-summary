@@ -1,4 +1,5 @@
 import type {
+  MergedSearchSource,
   ProviderFallback,
   SearchFallback,
   SearchUsage,
@@ -24,6 +25,8 @@ export type NewsQueryPage = {
   fallback?: SearchFallback;
   /** Present when a fallback provider answered because the primary failed. */
   providerFallback?: ProviderFallback;
+  /** Per-source outcomes when several providers were searched in parallel. */
+  mergedSources?: readonly MergedSearchSource[];
   logId?: string;
   resultCount: number;
   results: readonly unknown[];
@@ -53,6 +56,7 @@ export type NewsQueryAuditDraft = {
   searchUsage?: NewsQueryPage["searchUsage"];
   fallback?: NewsQueryPage["fallback"];
   providerFallback?: NewsQueryPage["providerFallback"];
+  mergedSources?: NewsQueryPage["mergedSources"];
   logId?: string;
   reportedResultCount?: number;
   fetched: number;

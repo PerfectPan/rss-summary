@@ -8,7 +8,7 @@ import {
   type SearchResult,
 } from "../../acquisition/index.js";
 
-import { itemFromDeepSeek } from "./mapper.js";
+import { deepSeekPublicationDay, itemFromDeepSeek } from "./mapper.js";
 
 export class DeepSeekSearchError extends NewsSearchError {
   constructor(code: string, message: string, options: { retryAfterMs?: number } = {}) {
@@ -72,7 +72,7 @@ function deepSeekResult(hit: typeof resultSchema.Type, rankPosition: number): Se
   const url = hit.url;
   const canonical = canonicalizeUrl(url) ?? url;
   const siteName = hit.site_name ?? undefined;
-  const publishTime = hit.date ?? undefined;
+  const publishDay = hit.date ? deepSeekPublicationDay(hit.date) : undefined;
   return {
     id: `deepseek:${canonical}`,
     title: hit.title,
@@ -80,7 +80,8 @@ function deepSeekResult(hit: typeof resultSchema.Type, rankPosition: number): Se
     ...(siteName !== undefined ? { siteName } : {}),
     ...(hit.snippet !== undefined ? { snippet: hit.snippet } : {}),
     ...(hit.summary !== undefined ? { summary: hit.summary } : {}),
-    ...(publishTime !== undefined ? { publishTime } : {}),
+    ...(hit.date ? { publishTime: publishDay ? publishDay.day : hit.date } : {}),
+    ...(publishDay !== undefined ? { publishDay } : {}),
     ...(hit.rerank_score !== undefined ? { rankScore: hit.rerank_score } : {}),
     ...(hit.authority !== undefined ? { authority: hit.authority } : {}),
     rankPosition,

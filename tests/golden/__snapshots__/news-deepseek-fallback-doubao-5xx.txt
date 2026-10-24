@@ -11,8 +11,8 @@
           "status": "ok",
           "provider": "deepseek",
           "searchUsage": {
-            "dailyUsed": 2,
-            "monthlyUsed": 2,
+            "dailyUsed": 1,
+            "monthlyUsed": 1,
             "dailyLimit": 14,
             "monthlyLimit": 420,
             "source": "network",
@@ -117,9 +117,10 @@
     "markdown": "# 午间热点 · 2026-08-16\n\n1 条重要动态 · 00:00–12:00\n\n**🤖 AI 模型与 Agent 发布 · 1**\n\n**1. [OpenAI 正式发布新模型](https://openai.com/news/new-model)**\n并开放 API。\nOpenAI · 02:00\n\n采集说明：1 个查询由备用来源 DeepSeek 补查；DeepSeek 结果无时间范围过滤，已按发布时间重新核对时间窗\n"
   },
   "state": {
+    "deepseek-search.json": "{\"version\":1,\"timezoneOffset\":\"+08:00\",\"daily\":{\"2026-08-16\":1},\"cache\":{\"e37ea2b3b66a0495236cf2ac25bd8e33017918a2cd215d3eae0544ff80721d3d\":{\"request\":{\"provider\":\"https://api.deepseek.com/v1/tools/search\",\"query\":\"OpenAI 正式发布新模型\",\"count\":10,\"day\":\"2026-08-16\",\"sinceDay\":\"2026-08-16\",\"sourcePolicy\":\"news\"},\"fetchedAt\":\"2026-08-16T04:00:00.000Z\",\"page\":{\"provider\":\"deepseek\",\"resultCount\":1,\"results\":[{\"id\":\"deepseek:https://openai.com/news/new-model\",\"title\":\"OpenAI 正式发布新模型\",\"url\":\"https://openai.com/news/new-model\",\"rankPosition\":1,\"siteName\":\"OpenAI\",\"snippet\":\"OpenAI announced a new model and opened the API.\",\"summary\":\"OpenAI 正式发布新模型，并开放 API。\",\"publishTime\":\"2026-08-16T02:00:00.000Z\",\"rankScore\":2.4,\"authority\":3}]}}}}\n",
     "feeds.json": "[]\n",
     "industry-sources.json": "[\n  {\n    \"name\": \"Industry Feed\",\n    \"url\": \"https://example.com/industry.xml\",\n    \"tags\": [\n      \"typescript\"\n    ]\n  },\n  {\n    \"type\": \"page\",\n    \"name\": \"Anthropic News\",\n    \"url\": \"https://www.anthropic.com/news\",\n    \"pathPrefixes\": [\n      \"/news/\"\n    ],\n    \"tags\": [\n      \"News\"\n    ]\n  }\n]\n",
-    "news-search.json": "{\"version\":1,\"timezoneOffset\":\"+08:00\",\"daily\":{\"2026-08-16\":2},\"cache\":{\"e37ea2b3b66a0495236cf2ac25bd8e33017918a2cd215d3eae0544ff80721d3d\":{\"request\":{\"provider\":\"https://api.deepseek.com/v1/tools/search\",\"query\":\"OpenAI 正式发布新模型\",\"count\":10,\"day\":\"2026-08-16\",\"sinceDay\":\"2026-08-16\",\"sourcePolicy\":\"news\"},\"fetchedAt\":\"2026-08-16T04:00:00.000Z\",\"page\":{\"provider\":\"deepseek\",\"resultCount\":1,\"results\":[{\"id\":\"deepseek:https://openai.com/news/new-model\",\"title\":\"OpenAI 正式发布新模型\",\"url\":\"https://openai.com/news/new-model\",\"rankPosition\":1,\"siteName\":\"OpenAI\",\"snippet\":\"OpenAI announced a new model and opened the API.\",\"summary\":\"OpenAI 正式发布新模型，并开放 API。\",\"publishTime\":\"2026-08-16T02:00:00.000Z\",\"rankScore\":2.4,\"authority\":3}]}}}}\n",
+    "news-search.json": "{\"version\":1,\"timezoneOffset\":\"+08:00\",\"daily\":{\"2026-08-16\":1},\"cache\":{}}\n",
     "news-topics.json": "[\n  {\n    \"id\": \"ai-model-releases\",\n    \"label\": \"AI 模型与 Agent 发布\",\n    \"icon\": \"🤖\",\n    \"enabled\": true,\n    \"sourcePolicy\": \"news\",\n    \"maxItems\": 2,\n    \"queries\": [\n      {\n        \"id\": \"frontier-model-release\",\n        \"text\": \"OpenAI 正式发布新模型\",\n        \"intent\": \"model-release\",\n        \"subjectAny\": [\n          \"OpenAI\"\n        ],\n        \"eventAny\": [\n          \"正式发布\"\n        ],\n        \"excludedAny\": [\n          \"传闻\"\n        ]\n      }\n    ]\n  }\n]\n"
   }
 }

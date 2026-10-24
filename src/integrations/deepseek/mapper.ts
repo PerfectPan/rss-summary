@@ -1,5 +1,11 @@
-import type { CredibilityTier, Item } from "../../acquisition/index.js";
-import type { SearchSourcePolicy, SearchResult } from "../../acquisition/index.js";
+import type {
+  CredibilityTier,
+  Item,
+  SearchSourcePolicy,
+  SearchResult,
+} from "../../acquisition/index.js";
+import type { PublicationDay } from "../../kernel/index.js";
+import { shiftCalendarDay } from "../../kernel/index.js";
 
 /**
  * A provider authority score (0–4, `-1` unknown): 3 and above is highly
@@ -19,6 +25,18 @@ export function credibilityForAuthority(authority: number | undefined): {
  */
 export const deepSeekSourcePolicies: readonly SearchSourcePolicy[] = ["news", "authoritative"];
 
+/**
+ * The endpoint serializes date-granular publications as the UTC rendering of a
+ * Beijing midnight (`D T16:00:00Z` is midnight of the next Beijing day), so a
+ * matching value only establishes that Beijing calendar day. Timestamps with a
+ * real time-of-day stay instants.
+ */
+export function deepSeekPublicationDay(publishTime: string): PublicationDay | undefined {
+  const match = /^(\d{4}-\d{2}-\d{2})T16:00:00(?:\.000)?Z$/u.exec(publishTime);
+  if (!match) return undefined;
+  return { day: shiftCalendarDay(match[1]!, 1), timezoneOffset: "+08:00" };
+}
+
 export function itemFromDeepSeek(result: SearchResult): Item {
   const published = result.publishTime;
   return {
@@ -36,8 +54,7 @@ export function itemFromDeepSeek(result: SearchResult): Item {
     },
     publishedAt: {
       value: published ?? "",
-      // The endpoint returns RFC 3339 instants; only a missing date degrades.
-      precision: published ? "instant" : "date",
+      precision: published ? (result.publishDay ? "date" : "instant") : "date",
     },
     provenance: { origin: result.url },
     credibility: credibilityForAuthority(result.authority),
