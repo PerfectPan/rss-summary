@@ -1424,7 +1424,6 @@ describe("DeepSeek news fallback", () => {
 
 describe("DeepSeek news supplement", () => {
   const doubaoUrl = "https://open.feedcoopapi.com/search_api/web_search";
-  const deepSeekUrl = "https://api.deepseek.com/v1/tools/search";
   const occurrence = "2026-10-04T12:30:00+08:00";
 
   function supplementQuery(id: string, keywords: string[]): NewsTopicQuery {

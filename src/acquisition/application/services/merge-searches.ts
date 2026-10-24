@@ -4,7 +4,6 @@ import { canonicalizeUrl } from "../../../kernel/index.js";
 import {
   isSearchFailure,
   type MergedSearchSource,
-  type SearchInput,
   type SearchPage,
   type SearchResult,
 } from "../../domain/search/index.js";

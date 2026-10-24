@@ -133,10 +133,15 @@ function acquireLock(path: string): Effect.Effect<FileHandle, NewsSearchError> {
 
 async function writeState(path: string, state: BudgetState): Promise<void> {
   const temporary = `${path}.${randomUUID()}.tmp`;
+  // Parallel providers complete in any order; sorting the cache keys keeps the
+  // persisted bytes identical for the same logical state.
+  const cache = Object.fromEntries(
+    Object.entries(state.cache).sort(([left], [right]) => (left < right ? -1 : 1)),
+  );
   try {
     const file = await open(temporary, "wx", 0o600);
     try {
-      await file.writeFile(`${JSON.stringify(state)}\n`, "utf8");
+      await file.writeFile(`${JSON.stringify({ ...state, cache })}\n`, "utf8");
       await file.sync();
     } finally {
       await file.close();
