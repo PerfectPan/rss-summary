@@ -1,4 +1,5 @@
 import { Effect } from "effect";
+import { dirname, join } from "node:path";
 import { runPluginEffect } from "../../runtime.js";
 import { canonicalizeUrl } from "../../../kernel/index.js";
 
@@ -556,10 +557,21 @@ function timeAtOffset(instant: number, timezoneOffset: string): string {
 }
 
 /**
+ * DeepSeek keeps its own ledger beside the primary's state file, so supplement
+ * and fallback spending can never exhaust the primary's budget (and vice
+ * versa). Deployments override the location with DEEPSEEK_SEARCH_STATE_FILE.
+ */
+function deepSeekStateFile(env: NodeJS.ProcessEnv): string {
+  const override = env.DEEPSEEK_SEARCH_STATE_FILE?.trim();
+  if (override) return override;
+  const primary = env.NEWS_SEARCH_STATE_FILE?.trim() || searchBudgetDefaults.stateFile;
+  return join(dirname(primary), "deepseek-search.json");
+}
+
+/**
  * The DeepSeek search behind both the fallback and the supplement: budgeted
- * with its own limits and provider identity (the endpoint URL), then retried
- * like the primary. It shares the primary's state file, so the ledger counts
- * attempts from both callers while each caller enforces its own cap.
+ * with its own ledger, limits and provider identity (the endpoint URL), then
+ * retried like the primary.
  */
 function createDeepSeekSearch(
   env: NodeJS.ProcessEnv,
@@ -576,7 +588,7 @@ function createDeepSeekSearch(
   });
   const budgeted = createBudgetedNewsSearch({
     search: (input) => client.search(input),
-    stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || searchBudgetDefaults.stateFile,
+    stateFile: deepSeekStateFile(env),
     provider: baseUrl,
     dailyLimit: boundedInteger(
       env.DEEPSEEK_SEARCH_DAILY_LIMIT,

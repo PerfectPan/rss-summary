@@ -1,10 +1,12 @@
 # News search budget
 
 Daily AI's X account subscriptions, noon news and evening news share one persistent request budget
-and response cache. Daily AI combines official RSS/websites with selected X accounts and no longer
-calls broad news search. Grok is the default news provider; explicit Doubao, hybrid and combined
-modes remain supported. Account subscriptions always use Grok, independently of the news mode.
-Changing providers preserves the ledger and existing schedules.
+and response cache. DeepSeek — the news fallback and the parallel news supplement — keeps its own
+separate ledger, so its spending never touches the shared one. Daily AI combines official
+RSS/websites with selected X accounts and no longer calls broad news search. Grok is the default
+news provider; explicit Doubao, hybrid and combined modes remain supported. Account subscriptions
+always use Grok, independently of the news mode. Changing providers preserves the ledger and
+existing schedules.
 
 ## Request plan and account allowance
 
@@ -49,8 +51,9 @@ ledger conservatively counts every reserved attempt, including failed attempts a
 | `DEEPSEEK_API_KEY` | unset | nonempty string | Required when `NEWS_SEARCH_FALLBACK=deepseek` or `NEWS_SEARCH_SUPPLEMENT=deepseek` |
 | `DEEPSEEK_SEARCH_BASE_URL` | `https://api.deepseek.com/v1/tools/search` | HTTP(S) URL | Endpoint override; the normalized URL is the fallback's provider identity |
 | `DEEPSEEK_SEARCH_TIMEOUT_MS` | `15000` | integer `1000..60000` | DeepSeek request timeout |
-| `DEEPSEEK_SEARCH_DAILY_LIMIT` | `14` | integer `0..100000` | Attempt cap the DeepSeek caller enforces over the shared ledger for the current local day |
-| `DEEPSEEK_SEARCH_MONTHLY_LIMIT` | `420` | integer `0..1000000` | Attempt cap the DeepSeek caller enforces over the shared ledger for the current local month |
+| `DEEPSEEK_SEARCH_DAILY_LIMIT` | `14` | integer `0..100000` | Attempt cap the DeepSeek caller enforces over its own ledger for the current local day |
+| `DEEPSEEK_SEARCH_MONTHLY_LIMIT` | `420` | integer `0..1000000` | Attempt cap the DeepSeek caller enforces over its own ledger for the current local month |
+| `DEEPSEEK_SEARCH_STATE_FILE` | `deepseek-search.json` beside `NEWS_SEARCH_STATE_FILE` | nonempty path | DeepSeek's own budget ledger and raw cache, independent of the primary's |
 
 Grok further limits standalone news query plans with `NEWS_GROK_MAX_QUERIES=1` (range `1..4`). Query caps are
 bounded by the number of enabled configured queries. `DAILY_AI_NEWS_MAX_QUERIES` is obsolete.
@@ -154,6 +157,8 @@ state, timezone and persistent path have been checked.
 and 120/month, with a separate `NEWS_GROK_MAX_QUERIES=1` per-run cap that also bounds Daily AI's
 query override. Explicit common budget variables take precedence. Modes sharing one state file
 share counters; cache identities remain separate (`grok://cli/v1/<model>` versus HTTP endpoint).
+The DeepSeek fallback and supplement book into their own state file instead (see
+[the DeepSeek ledger](#the-deepseek-ledger)).
 Existing version-1 Doubao state is accepted without resetting its counters. Once Grok cache entries
 have been written, older releases without Grok support cannot read those entries; preserve the
 ledger and remove only Grok cache entries while callers are stopped if a rollback is required.
@@ -184,12 +189,10 @@ the primary's. When DeepSeek itself fails, the primary failure is what the audit
 and downstream degradation see, because the primary is the configured source.
 
 The fallback provider carries its own caps (`DEEPSEEK_SEARCH_DAILY_LIMIT`,
-default 14, and `DEEPSEEK_SEARCH_MONTHLY_LIMIT`, default 420) but shares the
-`NEWS_SEARCH_*` state file and its single daily/monthly counters with every
-other caller; each caller enforces its own limit against that shared ledger, so
-the effective combined cap is the lowest limit any active caller checks. The
-endpoint URL is the provider identity, keeping DeepSeek cache entries separate
-from Doubao's and Grok's in the same cache map.
+default 14, and `DEEPSEEK_SEARCH_MONTHLY_LIMIT`, default 420) and its **own
+ledger** (see [the DeepSeek ledger](#the-deepseek-ledger)): DeepSeek spending
+never exhausts the primary's budget, and a primary budget boundary never
+blocks DeepSeek. The endpoint URL is the provider identity.
 
 DeepSeek Search bills $0.75 per 1,000 successful requests ([pricing](https://api-docs.deepseek.com/guides/search/));
 the API does not bill failed requests, empty results or timeouts, but the local
@@ -199,6 +202,24 @@ re-checked against the exact publication window by the normal funnel; the
 source-status note on each brief states this. Successful fallback pages enter
 the per-query audit with `provider: "deepseek"` and
 `providerFallback.triggeredBy`, the primary error code that caused the switch.
+
+## The DeepSeek ledger
+
+DeepSeek search (both the fallback and the supplement paths) records its
+reservations and raw cache pages in a **separate state file** from the primary
+providers: `DEEPSEEK_SEARCH_STATE_FILE`, defaulting to `deepseek-search.json`
+beside `NEWS_SEARCH_STATE_FILE`. The format is the same versioned
+`SearchBudget` state; the two ledgers are independent instances, so
+`DEEPSEEK_SEARCH_DAILY_LIMIT` / `DEEPSEEK_SEARCH_MONTHLY_LIMIT` compare only
+DeepSeek's own counters, and `NEWS_SEARCH_DAILY_LIMIT` /
+`NEWS_SEARCH_MONTHLY_LIMIT` compare only the primary's. DeepSeek spending can
+never push the primary to `local_budget_exhausted`, and vice versa.
+
+Rollback note: primary state files written while DeepSeek shared the ledger may
+still contain DeepSeek cache entries; the state schema still accepts them, so
+those files keep loading. No migration moves them — simply let the primary
+ledger's old DeepSeek entries age out of the cache, or remove them while
+callers are stopped.
 
 ## DeepSeek news supplement
 
@@ -227,9 +248,9 @@ in `mergedSources` for the audit.
 - `official`-policy topics never supplement (the endpoint cannot promise
   official sources), and queries without `deepseek.queries` keep the previous
   behavior.
-- DeepSeek requests share the `NEWS_SEARCH_*` ledger and state file under
-  `DEEPSEEK_SEARCH_DAILY_LIMIT` / `DEEPSEEK_SEARCH_MONTHLY_LIMIT`. Budget
-  exhaustion fails only the DeepSeek leg; the primary leg is unaffected.
+- DeepSeek requests book into the separate DeepSeek ledger under
+  `DEEPSEEK_SEARCH_DAILY_LIMIT` / `DEEPSEEK_SEARCH_MONTHLY_LIMIT`. Either
+  side exhausting its own budget never blocks the other's leg.
   Daily AI's X collection is unchanged.
 
 Supplement spend scales with configured keywords: seven queries at three

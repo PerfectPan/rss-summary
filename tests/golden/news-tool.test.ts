@@ -183,7 +183,7 @@ describe("golden news tool", () => {
     );
   });
 
-  it("does not spend the DeepSeek fallback when the shared local budget is exhausted", async () => {
+  it("does not spend the DeepSeek fallback when the primary ledger is exhausted", async () => {
     const context = harness.context();
     process.env.NEWS_SEARCH_MODE = "doubao";
     process.env.DOUBAO_SEARCH_API_KEY = "golden-key";
@@ -393,12 +393,12 @@ describe("golden news tool DeepSeek supplement", () => {
       );
     });
     const { tools } = registerPlugin();
-    const input = { edition: "noon", occurrence: "2026-08-16T04:00:00.000Z" };
-    // The first run writes every cache entry; the snapshotted second run reads
-    // them all back, so the ledger counters do not depend on the order in
-    // which the parallel reservations landed.
-    await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, input);
-    const result = await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, input);
+    // DeepSearch keeps its own ledger, so the audited usage counters come from
+    // the Grok page alone and a single live run is deterministic.
+    const result = await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, {
+      edition: "noon",
+      occurrence: "2026-08-16T04:00:00.000Z",
+    });
     await matchSnapshot(
       "news-deepseek-supplement-merged.txt",
       { grokInvocations: grokInvocationCount(executable), result, state: readTree(context.root) },
@@ -412,10 +412,6 @@ describe("golden news tool DeepSeek supplement", () => {
     process.env.NEWS_GROK_MAX_QUERIES = "1";
     process.env.NEWS_SEARCH_SUPPLEMENT = "deepseek";
     process.env.DEEPSEEK_API_KEY = "golden-deepseek";
-    // Two shared-ledger attempts: the first run hits the Grok outage and caches
-    // the DeepSeek page; the snapshotted second run is read-only — Grok's leg
-    // stops at the shared cap without writing, so the numbers are stable.
-    process.env.NEWS_SEARCH_DAILY_LIMIT = "2";
     await writeSupplementTopics(context.root, [
       { id: "frontier-model-release", deepseek: ["OpenAI 新模型"] },
     ]);
@@ -433,9 +429,10 @@ describe("golden news tool DeepSeek supplement", () => {
       throw new Error(`Unexpected fetch ${url}`);
     });
     const { tools } = registerPlugin();
-    const input = { edition: "noon", occurrence: "2026-08-16T04:00:00.000Z" };
-    await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, input);
-    const result = await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, input);
+    const result = await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, {
+      edition: "noon",
+      occurrence: "2026-08-16T04:00:00.000Z",
+    });
     await matchSnapshot(
       "news-deepseek-supplement-grok-outage.txt",
       { result, state: readTree(context.root) },
