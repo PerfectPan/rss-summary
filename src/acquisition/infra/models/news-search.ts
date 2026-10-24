@@ -66,6 +66,7 @@ export const rawPageSchema = Schema.Struct({
       snippet: Schema.optional(Schema.String),
       summary: Schema.optional(Schema.String),
       publishTime: Schema.optional(Schema.String),
+      publishDay: Schema.optional(Schema.Struct({ day: daySchema, timezoneOffset: Schema.String })),
       rankScore: Schema.optional(Schema.Number),
       authInfoDescription: Schema.optional(Schema.String),
       authInfoLevel: Schema.optional(Schema.Number),

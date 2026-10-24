@@ -1,4 +1,5 @@
 import type { CredibilityMethod, CredibilityTier } from "../../../../acquisition/index.js";
+import type { PublicationDay } from "../../../../kernel/index.js";
 
 export type NewsSourcePolicy = "authoritative" | "official" | "news";
 
@@ -46,6 +47,8 @@ export type NewsSearchHit = {
   snippet?: string;
   summary?: string;
   publishTime?: string;
+  /** Day-granular publication in a known timezone; `publishTime` then holds the day. */
+  publishDay?: PublicationDay;
   rankScore?: number;
   authInfoDescription?: string;
   credibility: { tier: CredibilityTier; method?: CredibilityMethod };

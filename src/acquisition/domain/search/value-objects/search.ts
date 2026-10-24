@@ -1,3 +1,5 @@
+import type { PublicationDay } from "../../../../kernel/index.js";
+
 /**
  * Search documents shared by every provider. `provider` stays a string so this
  * concept file does not name a source. Adapters fill in the historical names.
@@ -27,6 +29,11 @@ export type SearchResult = {
   snippet?: string;
   summary?: string;
   publishTime?: string;
+  /**
+   * Present when the provider reports only a calendar day in a known timezone.
+   * `publishTime` then carries that day (YYYY-MM-DD) instead of an instant.
+   */
+  publishDay?: PublicationDay;
   rankScore?: number;
   authInfoDescription?: string;
   authInfoLevel?: number;

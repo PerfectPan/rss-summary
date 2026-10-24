@@ -330,6 +330,47 @@ it("defers date-only articles until their whole publication day fits the collect
   expect(buildNewsStoriesWithAudit([base], daily).stories[0].publishTime).toBe("2026-07-29");
 });
 
+it("accepts a known-timezone day that merely intersects the window and never scores it fresher than a same-day instant", () => {
+  const beijingDay = (day: string) =>
+    hit({ id: day, publishTime: day, publishDay: { day, timezoneOffset: "+08:00" } });
+  // The window is [2026-07-29 00:00, 12:30] in +08:00: the day before ends at
+  // its start, the day itself overlaps, the day after starts at its end.
+  const result = buildNewsStoriesWithAudit(
+    [beijingDay("2026-07-28"), beijingDay("2026-07-29"), beijingDay("2026-07-30")],
+    { ...window, timezoneOffset: "+08:00" },
+  );
+  expect(result.decisions.map(({ hit, reason }) => [hit.id, reason])).toEqual([
+    ["2026-07-28", "outside-window"],
+    ["2026-07-29", undefined],
+    ["2026-07-30", "outside-window"],
+  ]);
+
+  const dayStory = buildNewsStories(
+    [
+      hit({
+        id: "day",
+        url: "https://example.com/day",
+        publishTime: "2026-07-29",
+        publishDay: { day: "2026-07-29", timezoneOffset: "+08:00" },
+      }),
+    ],
+    { ...window, timezoneOffset: "+08:00" },
+  )[0];
+  const instantStory = buildNewsStories(
+    [
+      hit({
+        id: "instant",
+        url: "https://example.com/instant",
+        publishTime: "2026-07-29T09:30:00+08:00",
+      }),
+    ],
+    { ...window, timezoneOffset: "+08:00" },
+  )[0];
+  expect(dayStory.publishTime).toBe("2026-07-29");
+  expect(instantStory.scoreBreakdown.freshness).toBe(6);
+  expect(dayStory.scoreBreakdown.freshness).toBeLessThan(instantStory.scoreBreakdown.freshness);
+});
+
 it("scores rank, authority, and freshness from the certificate and the window", () => {
   const [official] = buildNewsStories(
     [hit({ authInfoLevel: 1, sourcePolicy: "official", rankPosition: 1 })],
