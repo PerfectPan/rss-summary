@@ -14,6 +14,9 @@ type SearchInputContract = {
   count: number;
 };
 
+/** The endpoint rejects queries longer than 128 characters. */
+const maxOutgoingQueryLength = 128;
+
 export function validateDeepSeekInput(input: SearchInputContract): void {
   if (input.query.trim() === "" || input.query.length > 128) {
     throw new Error("DeepSeek search query must contain 1 to 128 characters.");
@@ -21,6 +24,23 @@ export function validateDeepSeekInput(input: SearchInputContract): void {
   if (!Number.isInteger(input.count) || input.count < 1 || input.count > 50) {
     throw new Error("DeepSeek search count must be between 1 and 50.");
   }
+}
+
+/**
+ * The endpoint has no time-range parameter, but its query text accepts the
+ * `after:` operator with Beijing calendar-day boundaries, and without it
+ * relevance dominates over recency. Append the window's first calendar day
+ * (as seen from the caller's timezone offset) unless the query already
+ * constrains the window itself, truncating the keywords — never the operator —
+ * to stay within the length limit.
+ */
+export function deepSeekOutgoingQuery(query: string, sinceDay?: string): string {
+  if (!sinceDay) return query;
+  if (/(?:^|\s)after:\d/u.test(query)) return query;
+  const operator = `after:${sinceDay}`;
+  const keywordBudget = maxOutgoingQueryLength - operator.length - 1;
+  const keywords = query.trimEnd().slice(0, Math.max(0, keywordBudget)).trimEnd();
+  return `${keywords} ${operator}`;
 }
 
 export class DeepSeekSearchClient {
@@ -39,8 +59,9 @@ export class DeepSeekSearchClient {
 
   async search(input: SearchInput): Promise<SearchPage> {
     validateDeepSeekInput(input);
-    // The endpoint has no time-range parameter; callers re-check publication
-    // times against their exact window when consuming the page.
+    // The `after:` operator only narrows results; callers still re-check
+    // publication times against their exact window when consuming the page.
+    const outgoingQuery = deepSeekOutgoingQuery(input.query, input.sinceDay);
     let response: Response;
     try {
       response = await this.fetchImpl(this.baseUrl, {
@@ -49,7 +70,7 @@ export class DeepSeekSearchClient {
           Authorization: `Bearer ${this.apiKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ query: input.query, count: input.count }),
+        body: JSON.stringify({ query: outgoingQuery, count: input.count }),
         signal: AbortSignal.timeout(this.timeoutMs),
       });
     } catch (cause) {
