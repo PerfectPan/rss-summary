@@ -1,8 +1,10 @@
 import {
   canonicalizeUrl,
   compactSummary,
+  newsPublicationDayRange,
   newsPublicationRange,
   parsePublishTime,
+  startOfCalendarDay,
 } from "../../../../kernel/index.js";
 import { isSameTitleEvent } from "../../identity/index.js";
 import type {
@@ -125,9 +127,19 @@ function rejectionReasonForHit(
 ): NewsHitRejectionReason | undefined {
   if (!hit.title.trim() || !hit.url.trim()) return "missing-fields";
   if (window.reportedUrls?.includes(canonicalizeUrl(hit.url) ?? "")) return "already-reported";
-  const publication = newsPublicationRange(hit.publishTime, window.timezoneOffset);
+  const publication = hit.publishDay
+    ? newsPublicationDayRange(hit.publishDay)
+    : newsPublicationRange(hit.publishTime, window.timezoneOffset);
   if (!publication) return "invalid-publish-time";
-  if (publication.since < window.since || publication.until > window.until) return "outside-window";
+  if (publication.precision === "day") {
+    // Day granularity in a known timezone cannot be placed inside the day, so
+    // any overlap with the window counts; instants and zoneless dates above
+    // still have to fit completely.
+    if (!(publication.since < window.until && publication.until > window.since))
+      return "outside-window";
+  } else if (publication.since < window.since || publication.until > window.until) {
+    return "outside-window";
+  }
   if (rejectsForAuthority(hit)) return "insufficient-authority";
   const content = normalizeSearchText(
     [hit.title, hit.summary, hit.snippet].filter(Boolean).join(" "),
@@ -172,8 +184,14 @@ function toStory(
   const queryHits = queryIds.length;
   const bestRankPosition = Math.min(...matches.map(({ rankPosition }) => rankPosition));
   const newestPublishTime = Math.max(
-    ...matches.map(({ publishTime }) =>
-      publishTime ? parsePublishTime(publishTime, window.timezoneOffset) : window.since,
+    ...matches.map((hit) =>
+      // A day-granular publication counts as its day's start, so its freshness
+      // never exceeds an instant published anywhere inside that same day.
+      hit.publishDay
+        ? startOfCalendarDay(hit.publishDay.day, hit.publishDay.timezoneOffset)
+        : hit.publishTime
+          ? parsePublishTime(hit.publishTime, window.timezoneOffset)
+          : window.since,
     ),
   );
   const windowDuration = Math.max(1, window.until - window.since);

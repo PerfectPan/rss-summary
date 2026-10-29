@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { DeepSeekSearchClient, validateDeepSeekInput } from "./client.js";
+import { DeepSeekSearchClient, deepSeekOutgoingQuery, validateDeepSeekInput } from "./client.js";
 
 const searchUrl = "https://api.deepseek.com/v1/tools/search";
 
@@ -125,6 +125,47 @@ describe("DeepSeek search source", () => {
       message: "DeepSeek search API error network_error: fetch failed",
     });
     await expect(malformed.search(input)).rejects.toMatchObject({ code: "invalid_response" });
+  });
+});
+
+describe("deepSeekOutgoingQuery", () => {
+  it("appends the window's first calendar day as an after: operator", () => {
+    expect(deepSeekOutgoingQuery("OpenAI 发布 新模型", "2026-10-22")).toBe(
+      "OpenAI 发布 新模型 after:2026-10-22",
+    );
+  });
+
+  it("keeps the operator and truncates the keywords at the 128-character limit", () => {
+    const outgoing = deepSeekOutgoingQuery("模".repeat(200), "2026-10-22");
+    expect(outgoing.length).toBe(128);
+    expect(outgoing.endsWith(" after:2026-10-22")).toBe(true);
+    expect(outgoing.slice(0, -" after:2026-10-22".length)).toBe("模".repeat(111));
+  });
+
+  it("leaves the query alone without a day or with a caller-provided after:", () => {
+    expect(deepSeekOutgoingQuery("OpenAI 发布", undefined)).toBe("OpenAI 发布");
+    expect(deepSeekOutgoingQuery("OpenAI after:2026-10-20", "2026-10-22")).toBe(
+      "OpenAI after:2026-10-20",
+    );
+  });
+
+  it("sends the outgoing query, not the raw input", async () => {
+    const fetch = vi.fn(
+      async (_url: string | URL | Request, _init?: RequestInit) =>
+        new Response(JSON.stringify(resultPayload), { status: 200 }),
+    );
+    const client = new DeepSeekSearchClient({ apiKey: "test-key", fetch });
+    await client.search({
+      query: "OpenAI 发布 新模型",
+      count: 10,
+      day: "2026-10-22",
+      sinceDay: "2026-10-22",
+      sourcePolicy: "news",
+    });
+    expect(JSON.parse(String(fetch.mock.calls[0]![1]?.body))).toEqual({
+      query: "OpenAI 发布 新模型 after:2026-10-22",
+      count: 10,
+    });
   });
 });
 

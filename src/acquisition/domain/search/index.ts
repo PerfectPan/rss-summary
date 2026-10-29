@@ -1,6 +1,7 @@
 export { isSearchFailure, NewsSearchError, type SearchFailure } from "./errors/search-failure.js";
 export { editionRotation, selectQueryIds, shareSearchBudget } from "./policies/query-rotation.js";
 export type {
+  MergedSearchSource,
   NewsSearchInput,
   NewsSearchPage,
   NewsSearchResult,

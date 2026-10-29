@@ -59,6 +59,19 @@ describe("DeepSeek search response adapter", () => {
     });
   });
 
+  it("carries Beijing-midnight dates as day precision with the Beijing day", () => {
+    const acquired = parseDeepSeekResponse(
+      payload({}, [{ ...defaultResult(), date: "2026-08-16T16:00:00Z" }]),
+    );
+    expect(acquired.page.results[0]).toMatchObject({
+      publishTime: "2026-08-17",
+      publishDay: { day: "2026-08-17", timezoneOffset: "+08:00" },
+    });
+    expect(acquired.items[0]).toMatchObject({
+      publishedAt: { value: "2026-08-17", precision: "date" },
+    });
+  });
+
   it("keeps a stable id across tracking-parameter variants", () => {
     const first = parseDeepSeekResponse(
       payload({}, [{ ...defaultResult(), url: "https://openai.com/news/new-model" }]),
