@@ -4,15 +4,11 @@ import { describe, expect, it } from "vite-plus/test";
 
 describe("CI harness", () => {
   it("exposes one local verify command for CI and humans", () => {
-    const pkg = JSON.parse(
-      readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
-    ) as {
+    const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as {
       scripts?: Record<string, string>;
     };
 
-    expect(pkg.scripts?.verify).toBe(
-      "pnpm test:layout && pnpm check && pnpm test && pnpm build && pnpm package:check",
-    );
+    expect(pkg.scripts?.verify).toBe("pnpm test:layout && pnpm check && pnpm test && pnpm build && pnpm package:check");
     expect(pkg.scripts?.check).toBe("vp check");
     expect(pkg.scripts?.lint).toBe("vp lint");
     expect(pkg.scripts?.test).toBe("vp test run");
@@ -43,7 +39,7 @@ describe("CI harness", () => {
     expect(viteConfig).toContain("branches: 75");
     expect(viteConfig).toContain("functions: 90");
     expect(viteConfig).toContain("lines: 85");
-    expect(viteConfig).toContain('plugins: ["oxc", "typescript", "unicorn"]');
+    expect(viteConfig).toContain('import { fmt, lint } from "@perfectpan/lint-config/vite-plus"');
 
     const buildConfig = readFileSync(new URL("../../tsconfig.build.json", import.meta.url), "utf8");
     expect(buildConfig).toContain('"exclude": ["src/**/*.test.ts"]');
@@ -57,7 +53,7 @@ describe("CI harness", () => {
 
     const instructions = readFileSync(instructionsUrl, "utf8");
     expect(instructions).toContain("Do not push directly to `main`");
-    expect(instructions).toContain("`codex/...` branch");
+    expect(instructions).toContain("open a pull request");
     expect(instructions).toContain("Run `pnpm verify`");
   });
 

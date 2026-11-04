@@ -1,12 +1,7 @@
 import { Effect } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 
-import {
-  GitHubCatalog,
-  GitHubActivity,
-  RssFeed,
-  SourceCatalogStore,
-} from "../acquisition/index.js";
+import { GitHubCatalog, GitHubActivity, RssFeed, SourceCatalogStore } from "../acquisition/index.js";
 import { FeedStateStore } from "../delivery/index.js";
 import { HttpReader, readOriginal } from "../reading/index.js";
 import { AcquisitionLive, AppLive, appLiveOptions, AppLiveFromEnv, ReadingLive } from "./layers.js";
@@ -16,7 +11,7 @@ import { parseCliArgs } from "./config/argv.js";
 describe("app/layers", () => {
   it("assembles acquisition, delivery and reading services", async () => {
     const services = await Effect.runPromise(
-      Effect.provide(Effect.all([GitHubCatalog, FeedStateStore, HttpReader]), AppLive()),
+      Effect.provide(Effect.all([GitHubCatalog, FeedStateStore, HttpReader]), AppLive())
     );
     expect(services).toHaveLength(3);
   });
@@ -29,8 +24,8 @@ describe("app/layers", () => {
         GITHUB_HOME_STORAGE_STATE: ".state/home.json",
         GITHUB_HOME_BROWSER_CHANNEL: "chromium",
         NOTIFY_WEBHOOK_URL: "https://example.com/hook",
-        GLM_CODING_API_KEY: "glm",
-      }),
+        GLM_CODING_API_KEY: "glm"
+      })
     );
     const config = applyCliArgs(base, parseCliArgs([]));
     expect(appLiveOptions(config)).toMatchObject({
@@ -39,11 +34,11 @@ describe("app/layers", () => {
         githubHome: {
           storageState: ".state/home.json",
           fetchMode: "browser",
-          browserChannel: "chromium",
-        },
+          browserChannel: "chromium"
+        }
       },
       delivery: { webhookUrl: "https://example.com/hook" },
-      reading: { apiKey: "glm" },
+      reading: { apiKey: "glm" }
     });
   });
 
@@ -58,26 +53,25 @@ describe("app/layers", () => {
         glmFallback: false,
         mode: "http",
         ref: "article:1",
-        url: "https://example.com/article",
+        url: "https://example.com/article"
       }).pipe(
         Effect.provide(
           ReadingLive({
             fetch: async () =>
-              new Response(
-                `<article><h1>Useful article</h1><p>${"Grounded content. ".repeat(10)}</p></article>`,
-                { headers: { "content-type": "text/html" } },
-              ),
-            now: () => new Date("2026-08-17T01:00:00.000Z"),
-          }),
-        ),
-      ),
+              new Response(`<article><h1>Useful article</h1><p>${"Grounded content. ".repeat(10)}</p></article>`, {
+                headers: { "content-type": "text/html" }
+              }),
+            now: () => new Date("2026-08-17T01:00:00.000Z")
+          })
+        )
+      )
     );
     expect(result).toMatchObject({
       fetchedUrl: "https://example.com/article",
       method: "http",
       retrievedAt: "2026-08-17T01:00:00.000Z",
       status: "ok",
-      title: "Useful article",
+      title: "Useful article"
     });
   });
 });
@@ -95,16 +89,16 @@ describe("AcquisitionLive", () => {
             events: yield* rss.getFeedEvents({
               name: "Example",
               url: "https://example.com/feed.xml",
-              tags: [],
+              tags: []
             }),
-            feeds: yield* store.loadFeeds("/tmp/rss-summary-p2a-missing-feeds.json"),
+            feeds: yield* store.loadFeeds("/tmp/rss-summary-p2a-missing-feeds.json")
           };
         }),
-        AcquisitionLive({ fetch: fetchImpl }),
-      ),
+        AcquisitionLive({ fetch: fetchImpl })
+      )
     );
     expect(result.events.map((entry) => entry.card)).toEqual([
-      expect.objectContaining({ title: "Note", source: "rss", type: "article" }),
+      expect.objectContaining({ title: "Note", source: "rss", type: "article" })
     ]);
     expect(result.feeds).toEqual([]);
   });
@@ -117,11 +111,9 @@ describe("AcquisitionLive", () => {
             const github = yield* GitHubActivity;
             return yield* github.getHomeEvents();
           }),
-          AcquisitionLive(),
-        ),
-      ),
-    ).rejects.toThrow(
-      "GitHub Home storage state not found: . Run 'rss-summary github-home login' first.",
-    );
+          AcquisitionLive()
+        )
+      )
+    ).rejects.toThrow("GitHub Home storage state not found: . Run 'rss-summary github-home login' first.");
   });
 });

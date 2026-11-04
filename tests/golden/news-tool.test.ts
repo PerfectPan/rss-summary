@@ -5,13 +5,7 @@ import { dirname, join } from "node:path";
 import { describe, it, vi } from "vite-plus/test";
 
 import { RSS_SUMMARY_NEWS_TOOL_ID } from "../../src/app/rivus/plugin.js";
-import {
-  DEEPSEEK_URL,
-  DOUBAO_URL,
-  deepSeekPayload,
-  doubaoPayload,
-  grokStream,
-} from "./fixtures.js";
+import { DEEPSEEK_URL, DOUBAO_URL, deepSeekPayload, doubaoPayload, grokStream } from "./fixtures.js";
 import {
   errorRecord,
   executeTool,
@@ -22,7 +16,7 @@ import {
   readTree,
   registerPlugin,
   useGoldenHarness,
-  writeGrokExecutable,
+  writeGrokExecutable
 } from "./harness.js";
 import { nextUuid } from "./uuid-sequence.js";
 
@@ -38,7 +32,7 @@ describe("golden news tool", () => {
     await matchDoubao("news-doubao-noon.txt", {
       edition: "noon",
       occurrence: "2026-08-16T04:00:00.000Z",
-      publishTime: "2026-08-16T02:00:00.000Z",
+      publishTime: "2026-08-16T02:00:00.000Z"
     });
   });
 
@@ -46,7 +40,7 @@ describe("golden news tool", () => {
     await matchDoubao("news-doubao-evening.txt", {
       edition: "evening",
       occurrence: "2026-08-16T12:00:00.000Z",
-      publishTime: "2026-08-16T08:00:00.000Z",
+      publishTime: "2026-08-16T08:00:00.000Z"
     });
   });
 
@@ -55,7 +49,7 @@ describe("golden news tool", () => {
       edition: "evening",
       occurrence: "2026-08-16T12:00:00.000Z",
       publishTime: "2026-08-16T02:00:00.000Z",
-      since: "2026-08-15T12:00:00.000Z",
+      since: "2026-08-15T12:00:00.000Z"
     });
   });
 
@@ -72,13 +66,11 @@ describe("golden news tool", () => {
     const { tools } = registerPlugin();
     const result = await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, {
       edition: "noon",
-      occurrence: "2026-08-16T04:00:00.000Z",
+      occurrence: "2026-08-16T04:00:00.000Z"
     });
-    await matchSnapshot(
-      "news-doubao-budget-exhausted.txt",
-      { fetches, result, state: readTree(context.root) },
-      [context.root],
-    );
+    await matchSnapshot("news-doubao-budget-exhausted.txt", { fetches, result, state: readTree(context.root) }, [
+      context.root
+    ]);
   });
 
   it("reuses a Grok cache entry on the second identical brief", async () => {
@@ -92,8 +84,8 @@ describe("golden news tool", () => {
         author: "@OpenAI",
         publishedAt: "2026-08-16T02:00:00.000Z",
         summary: "OpenAI 正式发布新模型，并开放 API。",
-        title: "OpenAI 正式发布新模型",
-      }),
+        title: "OpenAI 正式发布新模型"
+      })
     );
     const { tools } = registerPlugin();
     const input = { edition: "noon", occurrence: "2026-08-16T04:00:00.000Z" };
@@ -105,9 +97,9 @@ describe("golden news tool", () => {
         first,
         grokInvocations: grokInvocationCount(executable),
         second,
-        state: readTree(context.root),
+        state: readTree(context.root)
       },
-      [context.root],
+      [context.root]
     );
   });
 
@@ -121,16 +113,14 @@ describe("golden news tool", () => {
     try {
       await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, {
         edition: "noon",
-        occurrence: "2026-08-16T04:00:00.000Z",
+        occurrence: "2026-08-16T04:00:00.000Z"
       });
     } catch (error) {
       thrown = error;
     }
-    await matchSnapshot(
-      "news-grok-all-failed.txt",
-      { error: errorRecord(thrown), state: readTree(context.root) },
-      [context.root],
-    );
+    await matchSnapshot("news-grok-all-failed.txt", { error: errorRecord(thrown), state: readTree(context.root) }, [
+      context.root
+    ]);
   });
 
   it("falls back to DeepSeek when Doubao answers 5xx", async () => {
@@ -140,21 +130,22 @@ describe("golden news tool", () => {
     process.env.NEWS_SEARCH_FALLBACK = "deepseek";
     process.env.DEEPSEEK_API_KEY = "golden-deepseek";
     installFetch((url) => {
-      if (url === DOUBAO_URL) return new Response("down", { status: 500 });
-      if (url === DEEPSEEK_URL)
+      if (url === DOUBAO_URL) {
+        return new Response("down", { status: 500 });
+      }
+      if (url === DEEPSEEK_URL) {
         return jsonResponse(JSON.parse(deepSeekPayload("2026-08-16T02:00:00.000Z")));
+      }
       throw new Error(`Unexpected fetch ${url}`);
     });
     const { tools } = registerPlugin();
     const result = await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, {
       edition: "noon",
-      occurrence: "2026-08-16T04:00:00.000Z",
+      occurrence: "2026-08-16T04:00:00.000Z"
     });
-    await matchSnapshot(
-      "news-deepseek-fallback-doubao-5xx.txt",
-      { result, state: readTree(context.root) },
-      [context.root],
-    );
+    await matchSnapshot("news-deepseek-fallback-doubao-5xx.txt", { result, state: readTree(context.root) }, [
+      context.root
+    ]);
   });
 
   it("falls back to DeepSeek when Grok times out", async () => {
@@ -167,19 +158,20 @@ describe("golden news tool", () => {
     process.env.DEEPSEEK_API_KEY = "golden-deepseek";
     await writeHangingGrokExecutable(executable);
     installFetch((url) => {
-      if (url === DEEPSEEK_URL)
+      if (url === DEEPSEEK_URL) {
         return jsonResponse(JSON.parse(deepSeekPayload("2026-08-16T02:00:00.000Z")));
+      }
       throw new Error(`Unexpected fetch ${url}`);
     });
     const { tools } = registerPlugin();
     const result = await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, {
       edition: "noon",
-      occurrence: "2026-08-16T04:00:00.000Z",
+      occurrence: "2026-08-16T04:00:00.000Z"
     });
     await matchSnapshot(
       "news-deepseek-fallback-grok-timeout.txt",
       { grokInvocations: grokInvocationCount(executable), result, state: readTree(context.root) },
-      [context.root],
+      [context.root]
     );
   });
 
@@ -192,19 +184,22 @@ describe("golden news tool", () => {
     process.env.NEWS_SEARCH_DAILY_LIMIT = "0";
     const fetches = { doubao: 0, deepseek: 0 };
     installFetch((url) => {
-      if (url === DEEPSEEK_URL) fetches.deepseek += 1;
-      else fetches.doubao += 1;
+      if (url === DEEPSEEK_URL) {
+        fetches.deepseek += 1;
+      } else {
+        fetches.doubao += 1;
+      }
       throw new Error("budget exhaustion must not fetch");
     });
     const { tools } = registerPlugin();
     const result = await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, {
       edition: "noon",
-      occurrence: "2026-08-16T04:00:00.000Z",
+      occurrence: "2026-08-16T04:00:00.000Z"
     });
     await matchSnapshot(
       "news-deepseek-fallback-budget-exhausted.txt",
       { fetches, result, state: readTree(context.root) },
-      [context.root],
+      [context.root]
     );
   });
 
@@ -233,14 +228,14 @@ describe("golden news tool", () => {
                 intent: "model-release",
                 subjectAny: ["OpenAI"],
                 eventAny: ["正式发布"],
-                excludedAny: ["传闻"],
-              },
-            ],
-          },
+                excludedAny: ["传闻"]
+              }
+            ]
+          }
         ],
         null,
-        2,
-      )}\n`,
+        2
+      )}\n`
     );
     process.env.NEWS_TOPICS_FILE = topicsFile;
     const deepseekFetches = { count: 0 };
@@ -256,7 +251,7 @@ describe("golden news tool", () => {
     try {
       await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, {
         edition: "noon",
-        occurrence: "2026-08-16T04:00:00.000Z",
+        occurrence: "2026-08-16T04:00:00.000Z"
       });
     } catch (error) {
       thrown = error;
@@ -266,9 +261,9 @@ describe("golden news tool", () => {
       {
         deepseekFetches: deepseekFetches.count,
         error: errorRecord(thrown),
-        state: readTree(context.root),
+        state: readTree(context.root)
       },
-      [context.root],
+      [context.root]
     );
   });
 });
@@ -284,28 +279,28 @@ async function writeHangingGrokExecutable(path: string): Promise<void> {
 
 async function matchDoubao(
   name: string,
-  input: { edition: "noon" | "evening"; occurrence: string; publishTime: string; since?: string },
+  input: { edition: "noon" | "evening"; occurrence: string; publishTime: string; since?: string }
 ): Promise<void> {
   const context = harness.context();
   process.env.NEWS_SEARCH_MODE = "doubao";
   process.env.DOUBAO_SEARCH_API_KEY = "golden-key";
   installFetch((url) => {
-    if (url === DOUBAO_URL) return jsonResponse(JSON.parse(doubaoPayload(input.publishTime)));
+    if (url === DOUBAO_URL) {
+      return jsonResponse(JSON.parse(doubaoPayload(input.publishTime)));
+    }
     throw new Error(`Unexpected fetch ${url}`);
   });
   const { tools } = registerPlugin();
   const result = await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, {
     edition: input.edition,
     occurrence: input.occurrence,
-    ...(input.since ? { since: input.since } : {}),
+    ...(input.since ? { since: input.since } : {})
   });
   await matchSnapshot(name, { result, state: readTree(context.root) }, [context.root]);
 }
 
 describe("golden news tool DeepSeek supplement", () => {
-  function deepSeekResults(
-    results: Array<{ title: string; url: string; date?: string | null }>,
-  ): string {
+  function deepSeekResults(results: Array<{ title: string; url: string; date?: string | null }>): string {
     return JSON.stringify({
       results: results.map((result, index) => ({
         rerank_score: 2.4,
@@ -318,15 +313,15 @@ describe("golden news tool DeepSeek supplement", () => {
         site_icon: null,
         date: result.date === undefined ? "2026-08-15T16:00:00Z" : result.date,
         authority: 3,
-        rank: index + 1,
-      })),
+        rank: index + 1
+      }))
     });
   }
 
   async function writeSupplementTopics(
     root: string,
     queries: Array<{ id: string; deepseek?: string[]; sourcePolicy?: string }>,
-    sourcePolicy = "news",
+    sourcePolicy = "news"
   ): Promise<void> {
     const topicsFile = join(root, "supplement-topics.json");
     await writeFile(
@@ -342,22 +337,18 @@ describe("golden news tool DeepSeek supplement", () => {
             maxItems: 2,
             queries: queries.map((query) => ({
               id: query.id,
-              text:
-                query.id === "frontier-model-release"
-                  ? "OpenAI 正式发布新模型"
-                  : "Claude Code 发布重大版本",
+              text: query.id === "frontier-model-release" ? "OpenAI 正式发布新模型" : "Claude Code 发布重大版本",
               intent: query.id === "frontier-model-release" ? "model-release" : "developer-change",
               ...(query.deepseek ? { deepseek: { queries: query.deepseek } } : {}),
-              subjectAny:
-                query.id === "frontier-model-release" ? ["OpenAI"] : ["OpenAI", "Claude Code"],
+              subjectAny: query.id === "frontier-model-release" ? ["OpenAI"] : ["OpenAI", "Claude Code"],
               eventAny: ["正式发布"],
-              excludedAny: ["传闻"],
-            })),
-          },
+              excludedAny: ["传闻"]
+            }))
+          }
         ],
         null,
-        2,
-      )}\n`,
+        2
+      )}\n`
     );
     process.env.NEWS_TOPICS_FILE = topicsFile;
   }
@@ -369,7 +360,7 @@ describe("golden news tool DeepSeek supplement", () => {
     process.env.NEWS_SEARCH_SUPPLEMENT = "deepseek";
     process.env.DEEPSEEK_API_KEY = "golden-deepseek";
     await writeSupplementTopics(context.root, [
-      { id: "frontier-model-release", deepseek: ["OpenAI 新模型", "OpenAI new model"] },
+      { id: "frontier-model-release", deepseek: ["OpenAI 新模型", "OpenAI new model"] }
     ]);
     const executable = join(context.root, "grok");
     await writeGrokExecutable(
@@ -378,18 +369,20 @@ describe("golden news tool DeepSeek supplement", () => {
         author: "@OpenAI",
         publishedAt: "2026-08-16T02:00:00.000Z",
         summary: "OpenAI 正式发布新模型，并开放 API。",
-        title: "OpenAI 正式发布新模型",
-      }),
+        title: "OpenAI 正式发布新模型"
+      })
     );
     installFetch((url) => {
-      if (url !== DEEPSEEK_URL) throw new Error(`Unexpected fetch ${url}`);
+      if (url !== DEEPSEEK_URL) {
+        throw new Error(`Unexpected fetch ${url}`);
+      }
       return jsonResponse(
         JSON.parse(
           deepSeekResults([
             { title: "OpenAI 正式发布新模型", url: "https://openai.com/news/new-model" },
-            { title: "OpenAI 正式发布新模型并开放 API", url: "https://example.com/deepseek-only" },
-          ]),
-        ),
+            { title: "OpenAI 正式发布新模型并开放 API", url: "https://example.com/deepseek-only" }
+          ])
+        )
       );
     });
     const { tools } = registerPlugin();
@@ -397,12 +390,12 @@ describe("golden news tool DeepSeek supplement", () => {
     // the Grok page alone and a single live run is deterministic.
     const result = await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, {
       edition: "noon",
-      occurrence: "2026-08-16T04:00:00.000Z",
+      occurrence: "2026-08-16T04:00:00.000Z"
     });
     await matchSnapshot(
       "news-deepseek-supplement-merged.txt",
       { grokInvocations: grokInvocationCount(executable), result, state: readTree(context.root) },
-      [context.root],
+      [context.root]
     );
   });
 
@@ -412,32 +405,25 @@ describe("golden news tool DeepSeek supplement", () => {
     process.env.NEWS_GROK_MAX_QUERIES = "1";
     process.env.NEWS_SEARCH_SUPPLEMENT = "deepseek";
     process.env.DEEPSEEK_API_KEY = "golden-deepseek";
-    await writeSupplementTopics(context.root, [
-      { id: "frontier-model-release", deepseek: ["OpenAI 新模型"] },
-    ]);
+    await writeSupplementTopics(context.root, [{ id: "frontier-model-release", deepseek: ["OpenAI 新模型"] }]);
     const executable = join(context.root, "grok");
     await writeGrokExecutable(executable, "not-json\n");
     installFetch((url) => {
-      if (url === DEEPSEEK_URL)
+      if (url === DEEPSEEK_URL) {
         return jsonResponse(
-          JSON.parse(
-            deepSeekResults([
-              { title: "OpenAI 正式发布新模型", url: "https://openai.com/news/new-model" },
-            ]),
-          ),
+          JSON.parse(deepSeekResults([{ title: "OpenAI 正式发布新模型", url: "https://openai.com/news/new-model" }]))
         );
+      }
       throw new Error(`Unexpected fetch ${url}`);
     });
     const { tools } = registerPlugin();
     const result = await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, {
       edition: "noon",
-      occurrence: "2026-08-16T04:00:00.000Z",
+      occurrence: "2026-08-16T04:00:00.000Z"
     });
-    await matchSnapshot(
-      "news-deepseek-supplement-grok-outage.txt",
-      { result, state: readTree(context.root) },
-      [context.root],
-    );
+    await matchSnapshot("news-deepseek-supplement-grok-outage.txt", { result, state: readTree(context.root) }, [
+      context.root
+    ]);
   });
 
   it("runs DeepSeek alone for queries deferred by the Grok budget", async () => {
@@ -450,7 +436,7 @@ describe("golden news tool DeepSeek supplement", () => {
     // parallel reservations at all and the audit stays deterministic.
     await writeSupplementTopics(context.root, [
       { id: "frontier-model-release" },
-      { id: "coding-agent-release", deepseek: ["Claude Code release"] },
+      { id: "coding-agent-release", deepseek: ["Claude Code release"] }
     ]);
     const executable = join(context.root, "grok");
     await writeGrokExecutable(
@@ -459,28 +445,28 @@ describe("golden news tool DeepSeek supplement", () => {
         author: "@OpenAI",
         publishedAt: "2026-08-16T02:00:00.000Z",
         summary: "OpenAI 正式发布新模型，并开放 API。",
-        title: "OpenAI 正式发布新模型",
-      }),
+        title: "OpenAI 正式发布新模型"
+      })
     );
     installFetch((url) => {
-      if (url !== DEEPSEEK_URL) throw new Error(`Unexpected fetch ${url}`);
+      if (url !== DEEPSEEK_URL) {
+        throw new Error(`Unexpected fetch ${url}`);
+      }
       return jsonResponse(
         JSON.parse(
-          deepSeekResults([
-            { title: "OpenAI 正式发布新模型并开放 API", url: "https://example.com/supplement" },
-          ]),
-        ),
+          deepSeekResults([{ title: "OpenAI 正式发布新模型并开放 API", url: "https://example.com/supplement" }])
+        )
       );
     });
     const { tools } = registerPlugin();
     const result = await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, {
       edition: "noon",
-      occurrence: "2026-08-16T04:00:00.000Z",
+      occurrence: "2026-08-16T04:00:00.000Z"
     });
     await matchSnapshot(
       "news-deepseek-supplement-deferred.txt",
       { grokInvocations: grokInvocationCount(executable), result, state: readTree(context.root) },
-      [context.root],
+      [context.root]
     );
   });
 
@@ -493,24 +479,25 @@ describe("golden news tool DeepSeek supplement", () => {
     await writeSupplementTopics(
       context.root,
       [{ id: "frontier-model-release", deepseek: ["OpenAI 新模型"] }],
-      "official",
+      "official"
     );
     const deepseekFetches = { count: 0 };
     installFetch((url) => {
-      if (url === DOUBAO_URL)
+      if (url === DOUBAO_URL) {
         return jsonResponse(JSON.parse(doubaoPayload("2026-08-16T02:00:00.000Z")));
+      }
       deepseekFetches.count += 1;
       throw new Error(`Unexpected fetch ${url}`);
     });
     const { tools } = registerPlugin();
     const result = await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, {
       edition: "noon",
-      occurrence: "2026-08-16T04:00:00.000Z",
+      occurrence: "2026-08-16T04:00:00.000Z"
     });
     await matchSnapshot(
       "news-deepseek-supplement-official-topic.txt",
       { deepseekFetches: deepseekFetches.count, result, state: readTree(context.root) },
-      [context.root],
+      [context.root]
     );
   });
 });

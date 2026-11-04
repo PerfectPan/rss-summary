@@ -5,7 +5,7 @@ import { runGithubHomeCommand, writeGithubHomeHelp } from "./github-home.js";
 
 vi.mock("../../integrations/github/index.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
-  saveLoginStorageState: vi.fn(),
+  saveLoginStorageState: vi.fn()
 }));
 
 import { saveLoginStorageState } from "../../integrations/github/index.js";
@@ -15,7 +15,7 @@ describe("github-home CLI command", () => {
     const output: string[] = [];
 
     const exitCode = await runGithubHomeCommand(["help"], {
-      stdout: { write: (chunk) => output.push(String(chunk)) },
+      stdout: { write: (chunk) => output.push(String(chunk)) }
     });
 
     expect(exitCode).toBe(0);
@@ -26,7 +26,7 @@ describe("github-home CLI command", () => {
     const output: string[] = [];
 
     const exitCode = await runGithubHomeCommand(["frobnicate"], {
-      stdout: { write: (chunk) => output.push(String(chunk)) },
+      stdout: { write: (chunk) => output.push(String(chunk)) }
     });
 
     expect(exitCode).toBe(1);
@@ -35,17 +35,12 @@ describe("github-home CLI command", () => {
   it("reports login failures on stderr without a trace", async () => {
     const output: string[] = [];
     const errors: string[] = [];
-    vi.mocked(saveLoginStorageState).mockReturnValueOnce(
-      Effect.fail(new Error("browser unavailable")) as never,
-    );
+    vi.mocked(saveLoginStorageState).mockReturnValueOnce(Effect.fail(new Error("browser unavailable")) as never);
 
-    const exitCode = await runGithubHomeCommand(
-      ["login", "--storage-state", ".state/storage.json"],
-      {
-        stdout: { write: (chunk) => output.push(String(chunk)) },
-        stderr: { write: (chunk) => errors.push(String(chunk)) },
-      },
-    );
+    const exitCode = await runGithubHomeCommand(["login", "--storage-state", ".state/storage.json"], {
+      stdout: { write: (chunk) => output.push(String(chunk)) },
+      stderr: { write: (chunk) => errors.push(String(chunk)) }
+    });
 
     expect(exitCode).toBe(1);
     expect(errors.join("")).toContain("browser unavailable");

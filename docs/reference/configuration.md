@@ -1,3 +1,11 @@
+# Runtime Configuration Reference
+
+`rss-summary` reads environment variables from a `.env` file at the repository root
+(loaded by the CLI when present) and from the process environment. Create a `.env`
+with the entries you need — copy the uncommented lines below, adjust the values,
+and keep the file out of Git (`gitignore` already excludes it). The full
+variable-by-variable reference follows.
+
 # GitHub Home exact mode is the default.
 # Run `rss-summary github-home login` once to create this storage state.
 GITHUB_FEED_SOURCE=home

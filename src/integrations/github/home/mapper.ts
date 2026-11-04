@@ -27,9 +27,7 @@ export function normalizeHomeCardSnapshot(snapshot: HomeFeedCardSnapshot): Activ
     ? { fullName: pullRequest.repo, htmlUrl: repoUrl(pullRequest.repo) }
     : findRepositoryLink(snapshot.links);
   const normalized = normalizeHomeCardType(cardType);
-  const actor = usesSyntheticActor(normalized.type)
-    ? "GitHub Home"
-    : (findActor(snapshot.links) ?? "GitHub Home");
+  const actor = usesSyntheticActor(normalized.type) ? "GitHub Home" : (findActor(snapshot.links) ?? "GitHub Home");
 
   return {
     id: snapshot.id || fallbackId(cardType, repository?.fullName, createdAt),
@@ -42,22 +40,41 @@ export function normalizeHomeCardSnapshot(snapshot: HomeFeedCardSnapshot): Activ
     prNumber: pullRequest?.number,
     htmlUrl: pullRequest?.href ?? repository?.htmlUrl,
     title: pullRequest?.title ?? repository?.fullName,
-    summary: cleanSummary(snapshot.text),
+    summary: cleanSummary(snapshot.text)
   };
 }
 
 function normalizeHomeCardType(cardType: string): { type: ActivityType; action: string } {
-  if (cardType === "MERGED_PULL_REQUEST") return { type: "pull_request", action: "merged" };
-  if (cardType === "PULL_REQUEST") return { type: "pull_request", action: "opened" };
-  if (cardType === "FORKED_REPOSITORY") return { type: "fork", action: "forked" };
-  if (cardType === "CREATED_REPOSITORY") return { type: "create", action: "created" };
-  if (cardType === "STARRED_REPOSITORY") return { type: "watch", action: "started" };
-  if (cardType === "TRENDING_REPOSITORY") return { type: "trending", action: "trending" };
-  if (cardType === "REPOSITORY_RECOMMENDATION")
+  if (cardType === "MERGED_PULL_REQUEST") {
+    return { type: "pull_request", action: "merged" };
+  }
+  if (cardType === "PULL_REQUEST") {
+    return { type: "pull_request", action: "opened" };
+  }
+  if (cardType === "FORKED_REPOSITORY") {
+    return { type: "fork", action: "forked" };
+  }
+  if (cardType === "CREATED_REPOSITORY") {
+    return { type: "create", action: "created" };
+  }
+  if (cardType === "STARRED_REPOSITORY") {
+    return { type: "watch", action: "started" };
+  }
+  if (cardType === "TRENDING_REPOSITORY") {
+    return { type: "trending", action: "trending" };
+  }
+  if (cardType === "REPOSITORY_RECOMMENDATION") {
     return { type: "recommendation", action: "recommended" };
-  if (cardType === "FOLLOWED_USER") return { type: "follow", action: "followed" };
-  if (cardType === "ANNOUNCEMENT") return { type: "announcement", action: "announced" };
-  if (cardType === "RELEASE") return { type: "release", action: "published" };
+  }
+  if (cardType === "FOLLOWED_USER") {
+    return { type: "follow", action: "followed" };
+  }
+  if (cardType === "ANNOUNCEMENT") {
+    return { type: "announcement", action: "announced" };
+  }
+  if (cardType === "RELEASE") {
+    return { type: "release", action: "published" };
+  }
   return { type: "other", action: cardType.toLowerCase() };
 }
 
@@ -71,24 +88,28 @@ function findPullRequestLink(links: HomeFeedLinkSnapshot[]):
   | undefined {
   for (const link of links) {
     const parsed = parseGithubUrl(link.href);
-    if (!parsed || parsed.kind !== "pull") continue;
+    if (!parsed || parsed.kind !== "pull") {
+      continue;
+    }
     return {
       href: link.href,
       number: parsed.number,
       repo: parsed.repo,
-      title: link.text || `#${parsed.number}`,
+      title: link.text || `#${parsed.number}`
     };
   }
   return undefined;
 }
 
-function findRepositoryLink(
-  links: HomeFeedLinkSnapshot[],
-): { fullName: string; htmlUrl: string } | undefined {
+function findRepositoryLink(links: HomeFeedLinkSnapshot[]): { fullName: string; htmlUrl: string } | undefined {
   for (const link of links) {
     const parsed = parseGithubUrl(link.href);
-    if (!parsed || parsed.kind !== "repo") continue;
-    if (link.text && !link.text.includes("/")) continue;
+    if (!parsed || parsed.kind !== "repo") {
+      continue;
+    }
+    if (link.text && !link.text.includes("/")) {
+      continue;
+    }
     return { fullName: parsed.repo, htmlUrl: link.href };
   }
   return undefined;
@@ -97,9 +118,13 @@ function findRepositoryLink(
 function findActor(links: HomeFeedLinkSnapshot[]): string | undefined {
   for (const link of links) {
     const parsed = parseGithubUrl(link.href);
-    if (!parsed || parsed.kind !== "user") continue;
+    if (!parsed || parsed.kind !== "user") {
+      continue;
+    }
     const login = link.text || parsed.login;
-    if (!login || login === "See more" || login === "people you follow") continue;
+    if (!login || login === "See more" || login === "people you follow") {
+      continue;
+    }
     return login;
   }
   return undefined;
@@ -110,7 +135,7 @@ function usesSyntheticActor(type: ActivityType): boolean {
 }
 
 function parseGithubUrl(
-  href: string,
+  href: string
 ):
   | { kind: "repo"; repo: string }
   | { kind: "pull"; repo: string; number: number }
@@ -122,14 +147,22 @@ function parseGithubUrl(
   } catch {
     return undefined;
   }
-  if (url.hostname !== "github.com") return undefined;
+  if (url.hostname !== "github.com") {
+    return undefined;
+  }
   const parts = url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
-  if (parts.length === 1) return { kind: "user", login: parts[0] ?? "" };
+  if (parts.length === 1) {
+    return { kind: "user", login: parts[0] ?? "" };
+  }
   if (parts.length >= 4 && parts[2] === "pull") {
     const number = Number(parts[3]);
-    if (Number.isInteger(number)) return { kind: "pull", repo: `${parts[0]}/${parts[1]}`, number };
+    if (Number.isInteger(number)) {
+      return { kind: "pull", repo: `${parts[0]}/${parts[1]}`, number };
+    }
   }
-  if (parts.length === 2) return { kind: "repo", repo: `${parts[0]}/${parts[1]}` };
+  if (parts.length === 2) {
+    return { kind: "repo", repo: `${parts[0]}/${parts[1]}` };
+  }
   return undefined;
 }
 

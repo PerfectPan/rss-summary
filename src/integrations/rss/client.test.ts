@@ -6,7 +6,7 @@ import { readFeedEvents } from "./client.js";
 const feed = {
   name: "Example",
   url: "https://example.com/feed.xml",
-  tags: ["mcp"],
+  tags: ["mcp"]
 };
 
 describe("RSS feed adapter", () => {
@@ -17,10 +17,10 @@ describe("RSS feed adapter", () => {
           expect(String(url)).toBe("https://example.com/feed.xml");
           return new Response(
             `<rss><channel><item><title>Useful MCP note</title><link>https://example.com/mcp</link></item></channel></rss>`,
-            { status: 200 },
+            { status: 200 }
           );
-        },
-      }),
+        }
+      })
     );
 
     expect(events).toHaveLength(1);
@@ -36,9 +36,9 @@ describe("RSS feed adapter", () => {
           fetch: async (_url, init) => {
             signal = init?.signal ?? undefined;
             return new Response("<rss><channel></channel></rss>", { status: 200 });
-          },
-        },
-      ),
+          }
+        }
+      )
     );
 
     expect(signal).toBeInstanceOf(AbortSignal);
@@ -52,9 +52,9 @@ describe("RSS feed adapter", () => {
           fetch: async () => {
             calls += 1;
             return new Response("nope", { status: 503 });
-          },
-        }),
-      ),
+          }
+        })
+      )
     ).rejects.toThrow("RSS feed Example returned 503");
     expect(calls).toBe(1);
   });

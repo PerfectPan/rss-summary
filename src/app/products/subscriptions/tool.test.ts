@@ -11,16 +11,16 @@ describe("Rivus digest Tool adapter", () => {
         username: config.username,
         sourceMode: "rss" as const,
         windowLabel: `${config.day} ${config.timezoneOffset}`,
-        candidates: [],
-      }),
+        candidates: []
+      })
     );
 
     const result = await generateRivusDigest(
       { occurrence: "2026-07-16T18:00:00.000Z", onlyNew: true, rssOnly: true },
       {
         buildDigestDocument,
-        env: { FEED_TIMEZONE_OFFSET: "+08:00", GITHUB_USERNAME: "PerfectPan" },
-      },
+        env: { FEED_TIMEZONE_OFFSET: "+08:00", GITHUB_USERNAME: "PerfectPan" }
+      }
     );
 
     expect(buildDigestDocument).toHaveBeenCalledWith(
@@ -29,15 +29,15 @@ describe("Rivus digest Tool adapter", () => {
         dryRun: true,
         onlyNew: true,
         rssOnly: true,
-        timezoneOffset: "+08:00",
-      }),
+        timezoneOffset: "+08:00"
+      })
     );
     expect(result).toEqual({
       candidateCount: 0,
       generatedAt: "2026-07-16T18:00:00.000Z",
       markdown: expect.stringMatching(/^# 我的订阅 · 2026-07-17\n/u),
       paperCandidateCount: 0,
-      windowLabel: "2026-07-17 +08:00",
+      windowLabel: "2026-07-17 +08:00"
     });
   });
 
@@ -47,25 +47,23 @@ describe("Rivus digest Tool adapter", () => {
         generatedAt: "2026-07-29T01:00:00.000Z",
         username: config.username,
         windowLabel: `${config.day} ${config.timezoneOffset}`,
-        candidates: [],
-      }),
+        candidates: []
+      })
     );
 
     const result = await generateRivusDigest(
       {
         occurrence: "2026-07-29T01:00:00.000Z",
         onlyNew: true,
-        window: "previous-calendar-day",
+        window: "previous-calendar-day"
       },
       {
         buildDigestDocument,
-        env: { FEED_TIMEZONE_OFFSET: "+08:00", GITHUB_USERNAME: "PerfectPan" },
-      },
+        env: { FEED_TIMEZONE_OFFSET: "+08:00", GITHUB_USERNAME: "PerfectPan" }
+      }
     );
 
-    expect(buildDigestDocument).toHaveBeenCalledWith(
-      expect.objectContaining({ day: "2026-07-28" }),
-    );
+    expect(buildDigestDocument).toHaveBeenCalledWith(expect.objectContaining({ day: "2026-07-28" }));
     expect(result.markdown).toMatch(/^# 我的订阅 · 2026-07-28\n/u);
   });
 
@@ -75,12 +73,12 @@ describe("Rivus digest Tool adapter", () => {
     await expect(
       generateRivusDigest(
         { day: "2026-07-17", occurrence: "2026-07-17T02:00:00.000Z" },
-        { buildDigestDocument, env: {} },
-      ),
+        { buildDigestDocument, env: {} }
+      )
     ).rejects.toThrow(/day.*occurrence/i);
-    await expect(
-      generateRivusDigest({ day: "17-07-2026" }, { buildDigestDocument, env: {} }),
-    ).rejects.toThrow(/YYYY-MM-DD/i);
+    await expect(generateRivusDigest({ day: "17-07-2026" }, { buildDigestDocument, env: {} })).rejects.toThrow(
+      /YYYY-MM-DD/i
+    );
     expect(buildDigestDocument).not.toHaveBeenCalled();
   });
 
@@ -89,21 +87,19 @@ describe("Rivus digest Tool adapter", () => {
       Effect.succeed({
         generatedAt: "2026-07-17T02:00:00.000Z",
         username: config.username,
-        candidates: [],
-      }),
+        candidates: []
+      })
     );
 
     await generateRivusDigest(
       { onlyNew: false, rssOnly: false },
       {
         buildDigestDocument,
-        env: { FEED_ONLY_NEW: "true", FEED_RSS_ONLY: "true", RSS_FEEDS: "[]" },
-      },
+        env: { FEED_ONLY_NEW: "true", FEED_RSS_ONLY: "true", RSS_FEEDS: "[]" }
+      }
     );
 
-    expect(buildDigestDocument).toHaveBeenCalledWith(
-      expect.objectContaining({ onlyNew: false, rssOnly: false }),
-    );
+    expect(buildDigestDocument).toHaveBeenCalledWith(expect.objectContaining({ onlyNew: false, rssOnly: false }));
   });
 });
 
@@ -113,16 +109,16 @@ describe("Rivus digest Tool onlyNew default", () => {
       Effect.succeed({
         generatedAt: "2026-07-16T18:00:00.000Z",
         username: config.username,
-        candidates: [],
-      }),
+        candidates: []
+      })
     );
 
     await generateRivusDigest(
       { occurrence: "2026-07-16T18:00:00.000Z" },
       {
         buildDigestDocument,
-        env: { FEED_TIMEZONE_OFFSET: "+08:00", FEED_ONLY_NEW: "false" },
-      },
+        env: { FEED_TIMEZONE_OFFSET: "+08:00", FEED_ONLY_NEW: "false" }
+      }
     );
 
     expect(buildDigestDocument).toHaveBeenCalledWith(expect.objectContaining({ onlyNew: true }));

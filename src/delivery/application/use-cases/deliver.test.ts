@@ -12,14 +12,14 @@ describe("audited delivery", () => {
       { channel: "stdout", send: (markdown) => Effect.sync(() => sends.push(markdown)) },
       deliveries,
       { dryRun: true },
-      "# Brief",
+      "# Brief"
     );
 
     expect(sends).toEqual(["# Brief"]);
     expect(deliveries[0]).toMatchObject({
       status: "dry-run",
       channel: "stdout",
-      stateStatus: "skipped",
+      stateStatus: "skipped"
     });
   });
 
@@ -30,18 +30,18 @@ describe("audited delivery", () => {
       runDeliver(
         {
           channel: "webhook",
-          send: () => Effect.fail(new Error("delivery failed")),
+          send: () => Effect.fail(new Error("delivery failed"))
         },
         deliveries,
         {},
-        "x",
-      ),
+        "x"
+      )
     ).rejects.toThrow("delivery failed");
     expect(deliveries[0]).toMatchObject({
       status: "failed",
       channel: "webhook",
       stateStatus: "skipped",
-      error: "delivery failed",
+      error: "delivery failed"
     });
   });
 
@@ -53,13 +53,13 @@ describe("audited delivery", () => {
         { channel: "stdout", send: () => Effect.void },
         deliveries,
         { afterSend: Effect.fail(new Error("state write failed")) },
-        "x",
-      ),
+        "x"
+      )
     ).rejects.toThrow("state write failed");
     expect(deliveries[0]).toMatchObject({
       status: "delivered",
       stateStatus: "failed",
-      error: "state write failed",
+      error: "state write failed"
     });
   });
 
@@ -73,7 +73,7 @@ describe("audited delivery", () => {
       { channel: "stdout", send: () => Effect.sync(() => calls.push("send")) },
       deliveries,
       { afterSend: Effect.sync(() => calls.push("afterSend")) },
-      "x",
+      "x"
     );
 
     expect(calls).toEqual(["send", "afterSend"]);
@@ -88,14 +88,12 @@ describe("audited delivery", () => {
         {
           channel: "webhook",
           send: () =>
-            Effect.sync(() => calls.push("send")).pipe(
-              Effect.andThen(Effect.fail(new Error("delivery failed"))),
-            ),
+            Effect.sync(() => calls.push("send")).pipe(Effect.andThen(Effect.fail(new Error("delivery failed"))))
         },
         deliveries,
         { afterSend: Effect.sync(() => calls.push("afterSend")) },
-        "x",
-      ),
+        "x"
+      )
     ).rejects.toThrow("delivery failed");
 
     expect(calls).toEqual(["send"]);
@@ -110,9 +108,9 @@ describe("audited delivery", () => {
       { channel: "stdout", send: () => Effect.void },
       deliveries,
       {
-        afterSend: Effect.sync(() => afterSend.push("marked")),
+        afterSend: Effect.sync(() => afterSend.push("marked"))
       },
-      "x",
+      "x"
     );
 
     expect(afterSend).toEqual(["marked"]);
@@ -127,7 +125,7 @@ function runDeliver(
   },
   deliveries: RunDelivery[],
   extra: { dryRun?: boolean; afterSend?: Effect.Effect<void, Error> },
-  output: string,
+  output: string
 ): Promise<void> {
   return Effect.runPromise(
     Effect.provide(
@@ -136,7 +134,7 @@ function runDeliver(
         audit: audit(),
         output,
         dryRun: extra.dryRun ?? false,
-        ...(extra.afterSend ? { afterSend: extra.afterSend } : {}),
+        ...(extra.afterSend ? { afterSend: extra.afterSend } : {})
       }),
       Layer.mergeAll(
         Layer.succeed(Notifier, notifier),
@@ -147,10 +145,10 @@ function runDeliver(
           },
           list: () => Effect.succeed([]),
           load: () => Effect.die(new Error("unused in this test")),
-          label: (path: string) => path,
-        }),
-      ),
-    ),
+          label: (path: string) => path
+        })
+      )
+    )
   );
 }
 
@@ -162,6 +160,6 @@ function audit(): RunAudit {
     generatedAt: "2026-08-09T01:00:00.000Z",
     sources: [],
     counts: { fetched: 0, inWindow: 0, ranked: 0, selected: 0, researchPending: 0 },
-    candidates: [],
+    candidates: []
   };
 }

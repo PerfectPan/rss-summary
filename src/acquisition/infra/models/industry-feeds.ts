@@ -9,17 +9,17 @@ const pageRecordSchema = Schema.Struct({
   name: Schema.optional(Schema.String),
   url: Schema.optional(Schema.String),
   pathPrefixes: Schema.optional(Schema.Array(Schema.String)),
-  tags: Schema.optional(Schema.Array(Schema.String)),
+  tags: Schema.optional(Schema.Array(Schema.String))
 });
 
-export const industryFeedsFileSchema = Schema.Array(
-  Schema.Union([Schema.String, feedRecordSchema, pageRecordSchema]),
-);
+export const industryFeedsFileSchema = Schema.Array(Schema.Union([Schema.String, feedRecordSchema, pageRecordSchema]));
 
 /** Same split as decodeFeedsJson: parser messages stay authoritative. */
 export function decodeIndustryJson(value: string): IndustrySource[] {
   const sources = parseIndustrySources(value);
   const decoded = Schema.decodeUnknownResult(industryFeedsFileSchema)(JSON.parse(value));
-  if (decoded._tag === "Failure") return sources;
+  if (decoded._tag === "Failure") {
+    return sources;
+  }
   return sources;
 }

@@ -8,5 +8,5 @@ export type {
   RunPresentationReasonCode,
   RunProduct,
   RunSourceResult,
-  StoredRunAudit,
+  StoredRunAudit
 } from "./value-objects/run-audit.js";

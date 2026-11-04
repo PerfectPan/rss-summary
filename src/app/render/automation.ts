@@ -12,12 +12,7 @@ type AutomationPresentationItem = {
   sources: AutomationPresentationSource[];
 };
 
-export type RssAutomationPresentationKind =
-  | "daily-ai"
-  | "generic"
-  | "industry"
-  | "news"
-  | "subscriptions";
+export type RssAutomationPresentationKind = "daily-ai" | "generic" | "industry" | "news" | "subscriptions";
 
 export type RssAutomationPresentation = {
   footnote?: string;
@@ -41,7 +36,7 @@ export type RssAutomationPresentation = {
  */
 export function automationPresentationForText(
   text: string,
-  kind: RssAutomationPresentationKind,
+  kind: RssAutomationPresentationKind
 ): RssAutomationPresentation {
   return renderAutomationPresentation(decodeViewFromMarkdown(text), kind);
 }
@@ -56,7 +51,7 @@ export function automationPresentationForText(
  */
 export function renderAutomationPresentation(
   view: ViewDocument,
-  kind: RssAutomationPresentationKind = "generic",
+  kind: RssAutomationPresentationKind = "generic"
 ): RssAutomationPresentation {
   const meta = view.meta.map((line) => bounded(line, 80));
   const items = view.sections.map((section) => section.items.map((item) => presentItem(item)));
@@ -65,7 +60,7 @@ export function renderAutomationPresentation(
     return {
       id: sectionId(heading, section.idIndex ?? index),
       items: items[index]!,
-      title: bounded(heading, 80),
+      title: bounded(heading, 80)
     };
   });
   const lastItem = items.flat().at(-1);
@@ -76,7 +71,7 @@ export function renderAutomationPresentation(
     meta,
     schemaVersion: 1,
     sections: sections.filter((section) => section.items.length > 0),
-    title: bounded(view.title, 120),
+    title: bounded(view.title, 120)
   };
 }
 
@@ -88,7 +83,7 @@ export function renderAutomationPresentation(
 function replayTrailing(
   trailing: ViewDocument["trailing"],
   meta: string[],
-  lastItem: AutomationPresentationItem | undefined,
+  lastItem: AutomationPresentationItem | undefined
 ): string | undefined {
   let footnote: string | undefined;
   let active = lastItem;
@@ -102,8 +97,11 @@ function replayTrailing(
       active.note = bounded(active.note ? `${active.note} · ${entry.text}` : entry.text, 400);
       continue;
     }
-    if (meta.length < 6) meta.push(bounded(entry.text, 80));
-    else if (footnote === undefined) footnote = bounded(entry.text, 240);
+    if (meta.length < 6) {
+      meta.push(bounded(entry.text, 80));
+    } else if (footnote === undefined) {
+      footnote = bounded(entry.text, 240);
+    }
   }
   return footnote;
 }
@@ -123,7 +121,7 @@ function presentItem(item: ViewItem): AutomationPresentationItem {
   return {
     headline,
     ...(notes.length > 0 ? { note: bounded(notes.join(" · "), 400) } : {}),
-    sources,
+    sources
   };
 }
 
@@ -134,14 +132,16 @@ function baseSources(item: ViewItem): AutomationPresentationSource[] {
   }
   return item.links.map((link) => ({
     label: linkTextSourceLabel(link.text, link.url),
-    url: link.url,
+    url: link.url
   }));
 }
 
 /** Strip the badge arrow the way the legacy parser normalized link labels. */
 function linkTextSourceLabel(text: string, url: string): string {
   const normalized = text.replace(/\s*↗(?:\s*#\d+)?$/u, "").trim();
-  if (!normalized || /^#\d+$/u.test(normalized)) return sourceLabel(url);
+  if (!normalized || /^#\d+$/u.test(normalized)) {
+    return sourceLabel(url);
+  }
   return bounded(normalized, 60);
 }
 
@@ -156,7 +156,9 @@ function compactSources(sources: AutomationPresentationSource[]): AutomationPres
   const labels = new Set<string>();
   return sources.filter((source) => {
     const key = source.label.toLocaleLowerCase("en-US");
-    if (labels.has(key)) return false;
+    if (labels.has(key)) {
+      return false;
+    }
     labels.add(key);
     return true;
   });
@@ -182,7 +184,7 @@ function sectionId(title: string, index: number): string {
     模型发布: "models",
     行业动态: "industry",
     要闻: "top-stories",
-    重点摘要: "featured",
+    重点摘要: "featured"
   };
   return `${index + 1}-${known[title] ?? "section"}`;
 }
@@ -190,8 +192,12 @@ function sectionId(title: string, index: number): string {
 function sourceLabel(url: string): string {
   try {
     const hostname = new URL(url).hostname.replace(/^www\./u, "");
-    if (hostname === "github.com") return "GitHub";
-    if (hostname === "github.blog") return "GitHub Blog";
+    if (hostname === "github.com") {
+      return "GitHub";
+    }
+    if (hostname === "github.blog") {
+      return "GitHub Blog";
+    }
     return bounded(hostname, 60);
   } catch {
     return "来源";
@@ -200,6 +206,8 @@ function sourceLabel(url: string): string {
 
 function bounded(value: string, maximum: number): string {
   const normalized = value.replace(/\s+/gu, " ").trim();
-  if (!normalized) return "未命名";
+  if (!normalized) {
+    return "未命名";
+  }
   return normalized.slice(0, maximum);
 }

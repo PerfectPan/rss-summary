@@ -14,15 +14,17 @@ export type BrowserLaunchOptions = {
 
 export async function launchChromium(
   playwright: typeof import("playwright"),
-  options: BrowserLaunchOptions,
+  options: BrowserLaunchOptions
 ): Promise<Awaited<ReturnType<(typeof import("playwright"))["chromium"]["launch"]>>> {
   try {
     return await playwright.chromium.launch({
       channel: options.browserChannel,
-      headless: options.headless,
+      headless: options.headless
     });
   } catch (error) {
-    if (!options.browserChannel) throw error;
+    if (!options.browserChannel) {
+      throw error;
+    }
     return playwright.chromium.launch({ headless: options.headless });
   }
 }
@@ -34,9 +36,9 @@ export function launchBrowser(options: BrowserLaunchOptions) {
     return yield* Effect.acquireRelease(
       Effect.tryPromise({
         try: () => launchChromium(playwright, options),
-        catch: asBrowserError,
+        catch: asBrowserError
       }),
-      (launched) => Effect.promise(() => launched.close()),
+      (launched) => Effect.promise(() => launched.close())
     );
   });
 }
@@ -46,26 +48,22 @@ function asBrowserError(cause: unknown): Error {
 }
 
 /** One page in a fresh context inside the caller's scope. */
-export function openPage(options: {
-  browserChannel?: string;
-  headless: boolean;
-  context?: Record<string, unknown>;
-}) {
+export function openPage(options: { browserChannel?: string; headless: boolean; context?: Record<string, unknown> }) {
   return Effect.gen(function* () {
     const browser = yield* launchBrowser(options);
     const context = yield* Effect.acquireRelease(
       Effect.tryPromise({
         try: () => browser.newContext(options.context ?? {}),
-        catch: asBrowserError,
+        catch: asBrowserError
       }),
-      (context) => Effect.promise(() => context.close()),
+      (context) => Effect.promise(() => context.close())
     );
     return yield* Effect.acquireRelease(
       Effect.tryPromise({
         try: () => context.newPage(),
-        catch: asBrowserError,
+        catch: asBrowserError
       }),
-      (page) => Effect.promise(() => page.close()),
+      (page) => Effect.promise(() => page.close())
     );
   });
 }
@@ -84,11 +82,11 @@ export function openRequestContext(options: {
           playwright.request.newContext({
             baseURL: options.baseURL,
             ...(options.storageState ? { storageState: options.storageState } : {}),
-            extraHTTPHeaders: options.extraHTTPHeaders ?? {},
+            extraHTTPHeaders: options.extraHTTPHeaders ?? {}
           }),
-        catch: asBrowserError,
+        catch: asBrowserError
       }),
-      (context) => Effect.promise(() => context.dispose()),
+      (context) => Effect.promise(() => context.dispose())
     );
   });
 }
@@ -112,32 +110,29 @@ export function renderPage(input: RenderPageOptions): Effect.Effect<RenderedPage
       const page = yield* openPage({
         browserChannel: input.browserChannel,
         headless: input.headless,
-        context: input.userAgent ? { userAgent: input.userAgent } : {},
+        context: input.userAgent ? { userAgent: input.userAgent } : {}
       });
       yield* Effect.tryPromise({
         try: () => page.goto(input.url, { timeout: input.timeoutMs, waitUntil: "commit" }),
-        catch: (cause) => cause,
+        catch: (cause) => cause
       });
       const selector = input.waitForSelector;
       if (selector) {
         yield* Effect.tryPromise({
-          try: () =>
-            page.waitForSelector(selector, { timeout: input.timeoutMs }).catch(() => undefined),
-          catch: (cause) => cause,
+          try: () => page.waitForSelector(selector, { timeout: input.timeoutMs }).catch(() => undefined),
+          catch: (cause) => cause
         });
       }
       yield* Effect.tryPromise({
         try: () =>
-          page
-            .waitForLoadState("networkidle", { timeout: Math.min(input.timeoutMs, 5_000) })
-            .catch(() => undefined),
-        catch: (cause) => cause,
+          page.waitForLoadState("networkidle", { timeout: Math.min(input.timeoutMs, 5_000) }).catch(() => undefined),
+        catch: (cause) => cause
       });
       const html = yield* Effect.tryPromise({
         try: () => page.content(),
-        catch: (cause) => cause,
+        catch: (cause) => cause
       });
       return { html, url: page.url() };
-    }),
+    })
   );
 }

@@ -4,7 +4,7 @@ export {
   buildNewsStoriesWithAudit,
   publicationFitsWindow,
   selectNewsStories,
-  selectNewsStoriesWithAudit,
+  selectNewsStoriesWithAudit
 } from "./policies/news-funnel.js";
 export { buildNewsAudit, summarizeNewsSources } from "./services/news-audit.js";
 export type {
@@ -15,7 +15,7 @@ export type {
   NewsQueryFailure,
   NewsQueryPage,
   NewsQuerySettlement,
-  NewsSourceStatus,
+  NewsSourceStatus
 } from "./value-objects/news-audit.js";
 export type {
   NewsBriefEdition,
@@ -32,9 +32,6 @@ export type {
   NewsStorySelectionReason,
   NewsStorySelectionResult,
   NewsTimeWindow,
-  SelectedNewsStory,
+  SelectedNewsStory
 } from "./value-objects/news.js";
-export type {
-  NewsTopic as DomainNewsTopic,
-  NewsTopicQuery as DomainNewsTopicQuery,
-} from "./value-objects/news.js";
+export type { NewsTopic as DomainNewsTopic, NewsTopicQuery as DomainNewsTopicQuery } from "./value-objects/news.js";

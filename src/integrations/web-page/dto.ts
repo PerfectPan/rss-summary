@@ -23,7 +23,7 @@ export const entrySchema = Schema.Struct({
   url: Schema.String,
   title: Schema.String,
   publishedAt: Schema.String,
-  summary: Schema.optional(Schema.String),
+  summary: Schema.optional(Schema.String)
 });
 
 /** A raw extracted entry before decoding; invalid shapes decode to nothing upstream. */
@@ -39,7 +39,9 @@ export function extractWebPageEntries(html: string, source: WebPageSubscription)
   $("a[href]").each((_, anchor) => {
     const element = $(anchor);
     const url = canonicalUrl(element.attr("href"), source.url);
-    if (!url || !isSameHost(url, source.url) || !matchesPath(url, source.pathPrefixes)) return;
+    if (!url || !isSameHost(url, source.url) || !matchesPath(url, source.pathPrefixes)) {
+      return;
+    }
 
     const current = entries.get(url) ?? { titleScore: 0 };
     const time = element.find("time").first();
@@ -48,8 +50,7 @@ export function extractWebPageEntries(html: string, source: WebPageSubscription)
       .find("h1, h2, h3, h4, [role='heading'], [class*='title'], [class*='headline']")
       .first();
     const ariaTitle = cleanTitle(element.attr("aria-label"));
-    const structuredTitle =
-      cleanTitle(titleElement.text()) ?? cleanTitle(element.find("article p").first().text());
+    const structuredTitle = cleanTitle(titleElement.text()) ?? cleanTitle(element.find("article p").first().text());
     const textTitle = cleanTitle(element.clone().find("time").remove().end().text());
     const [title, titleScore] = ariaTitle
       ? [ariaTitle, 3]
@@ -66,9 +67,7 @@ export function extractWebPageEntries(html: string, source: WebPageSubscription)
         .find("a[href]")
         .toArray()
         .map((link) => canonicalUrl($(link).attr("href"), source.url))
-        .filter(
-          (link) => link && isSameHost(link, source.url) && matchesPath(link, source.pathPrefixes),
-        ),
+        .filter((link) => link && isSameHost(link, source.url) && matchesPath(link, source.pathPrefixes))
     );
     const paragraphs = articleUrls.size === 1 ? article.find("p") : element.find("p");
     const summary = cleanText(
@@ -77,14 +76,14 @@ export function extractWebPageEntries(html: string, source: WebPageSubscription)
         .filter((paragraph) => $(paragraph).find("time").length === 0)
         .map((paragraph) => cleanText($(paragraph).text()))
         .filter((text) => text && text !== title)
-        .join(" "),
+        .join(" ")
     )?.slice(0, 4000);
 
     entries.set(url, {
       title: titleScore > current.titleScore ? title : current.title,
       titleScore: Math.max(titleScore, current.titleScore),
       publishedAt: current.publishedAt ?? publishedAt,
-      summary: betterSummary(current.summary, summary),
+      summary: betterSummary(current.summary, summary)
     });
   });
 
@@ -95,10 +94,10 @@ export function extractWebPageEntries(html: string, source: WebPageSubscription)
             url,
             title: entry.title,
             publishedAt: entry.publishedAt,
-            ...(entry.summary ? { summary: entry.summary } : {}),
-          },
+            ...(entry.summary ? { summary: entry.summary } : {})
+          }
         ]
-      : [],
+      : []
   );
 }
 
@@ -112,7 +111,9 @@ function isSameHost(value: string, sourceUrl: string): boolean {
 }
 
 function canonicalUrl(value: string | undefined, base: string): string | undefined {
-  if (!value) return undefined;
+  if (!value) {
+    return undefined;
+  }
   try {
     const url = new URL(value, base);
     url.hash = "";
@@ -133,41 +134,30 @@ function cleanText(value: string | undefined): string | undefined {
   return cleaned || undefined;
 }
 
-function betterSummary(
-  current: string | undefined,
-  candidate: string | undefined,
-): string | undefined {
-  if (!candidate) return current;
-  if (!current) return candidate;
+function betterSummary(current: string | undefined, candidate: string | undefined): string | undefined {
+  if (!candidate) {
+    return current;
+  }
+  if (!current) {
+    return candidate;
+  }
   return candidate.length > current.length ? candidate : current;
 }
 
 function normalizedDate(value: string | undefined): string | undefined {
-  if (!value) return undefined;
+  if (!value) {
+    return undefined;
+  }
   const isoDay = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(value.trim());
-  if (isoDay) return `${isoDay[1]}-${isoDay[2]}-${isoDay[3]}T12:00:00.000Z`;
-  const englishDay =
-    /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2}),\s+(\d{4})$/iu.exec(
-      value.trim(),
-    );
+  if (isoDay) {
+    return `${isoDay[1]}-${isoDay[2]}-${isoDay[3]}T12:00:00.000Z`;
+  }
+  const englishDay = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2}),\s+(\d{4})$/iu.exec(value.trim());
   if (englishDay) {
-    const month = [
-      "jan",
-      "feb",
-      "mar",
-      "apr",
-      "may",
-      "jun",
-      "jul",
-      "aug",
-      "sep",
-      "oct",
-      "nov",
-      "dec",
-    ].indexOf(englishDay[1]!.toLowerCase());
-    return new Date(
-      Date.UTC(Number(englishDay[3]), month, Number(englishDay[2]), 12),
-    ).toISOString();
+    const month = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"].indexOf(
+      englishDay[1]!.toLowerCase()
+    );
+    return new Date(Date.UTC(Number(englishDay[3]), month, Number(englishDay[2]), 12)).toISOString();
   }
   const time = Date.parse(value);
   return Number.isFinite(time) ? new Date(time).toISOString() : undefined;

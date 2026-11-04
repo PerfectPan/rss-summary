@@ -3,7 +3,7 @@ import {
   type CandidateProject,
   type PresentationDepth,
   type PresentationPolicy,
-  type PresentationReasonCode,
+  type PresentationReasonCode
 } from "../../subscription/index.js";
 import type { CandidateDecision } from "../value-objects/candidate-decision.js";
 
@@ -12,7 +12,7 @@ export function decideCandidate(
   selectedCandidates: CandidateProject[],
   reasonWhenFiltered: (candidate: CandidateProject) => string,
   identify: (candidate: CandidateProject) => string,
-  presentationPolicy: PresentationPolicy = {},
+  presentationPolicy: PresentationPolicy = {}
 ): CandidateDecision {
   const selected = selectedCandidates.includes(candidate);
   const presentation = presentationDecisionForCandidate(candidate, presentationPolicy);
@@ -33,6 +33,6 @@ export function decideCandidate(
         : depth === "summary"
           ? `selected for expanded summary: ${presentation.reasonCode}${presentation.evidence ? ` (${presentation.evidence})` : ""}`
           : "selected for one-line delivery"
-      : reasonWhenFiltered(candidate),
+      : reasonWhenFiltered(candidate)
   };
 }

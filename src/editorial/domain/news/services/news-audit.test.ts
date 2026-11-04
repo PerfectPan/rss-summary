@@ -3,12 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { DoubaoSearchError } from "../../../../integrations/doubao/index.js";
 import { buildNewsAudit, summarizeNewsSources } from "./news-audit.js";
 import type { NewsAuditRequest } from "../value-objects/news-audit.js";
-import type {
-  NewsHitDecision,
-  NewsSearchHit,
-  NewsStory,
-  NewsStoryDecision,
-} from "../value-objects/news.js";
+import type { NewsHitDecision, NewsSearchHit, NewsStory, NewsStoryDecision } from "../value-objects/news.js";
 
 describe("news audit", () => {
   it("explains query failures and every stage of the selection funnel", () => {
@@ -17,19 +12,19 @@ describe("news audit", () => {
       ...Array.from({ length: 5 }, (_, index) => ({
         hit: hit(`accepted-${index + 1}`),
         status: "accepted" as const,
-        canonicalUrl: `https://example.com/${index + 1}`,
+        canonicalUrl: `https://example.com/${index + 1}`
       })),
       {
         hit: hit("rejected"),
         status: "rejected",
-        reason: "intent-mismatch",
-      },
+        reason: "intent-mismatch"
+      }
     ];
     const storyDecisions: NewsStoryDecision[] = [
       { story: story("selected"), status: "selected" },
       { story: story("duplicate"), status: "filtered", reason: "duplicate-title" },
       { story: story("quota"), status: "filtered", reason: "topic-quota" },
-      { story: story("cap"), status: "filtered", reason: "brief-cap" },
+      { story: story("cap"), status: "filtered", reason: "brief-cap" }
     ];
     const results = [
       {
@@ -41,14 +36,14 @@ describe("news audit", () => {
             id: value.id,
             title: value.title,
             url: value.url,
-            rankPosition: value.rankPosition,
-          })),
-        },
+            rankPosition: value.rankPosition
+          }))
+        }
       },
       {
         _tag: "Rejected" as const,
-        reason: new DoubaoSearchError("10406", "search unavailable"),
-      },
+        reason: new DoubaoSearchError("10406", "search unavailable")
+      }
     ];
     const audit = buildNewsAudit(requests, results, decisions, storyDecisions, 4, 1);
 
@@ -60,14 +55,14 @@ describe("news audit", () => {
         reportedResultCount: 8,
         fetched: 6,
         accepted: 5,
-        rejected: { "intent-mismatch": 1 },
+        rejected: { "intent-mismatch": 1 }
       }),
       expect.objectContaining({
         queryId: "failed",
         status: "failed",
         errorCode: "10406",
-        error: "Doubao search API error 10406: search unavailable",
-      }),
+        error: "Doubao search API error 10406: search unavailable"
+      })
     ]);
     expect(audit.counts).toEqual({
       fetched: 6,
@@ -78,7 +73,7 @@ describe("news audit", () => {
       selectedStories: 1,
       duplicateTitleStories: 1,
       topicQuotaFilteredStories: 1,
-      briefCapFilteredStories: 1,
+      briefCapFilteredStories: 1
     });
   });
 });
@@ -91,7 +86,7 @@ function request(id: string): NewsAuditRequest {
       intent: "model-release",
       subjectAny: ["product"],
       eventAny: ["release"],
-      excludedAny: [],
+      excludedAny: []
     },
     topic: {
       id: "technology",
@@ -100,8 +95,8 @@ function request(id: string): NewsAuditRequest {
       enabled: true,
       sourcePolicy: "authoritative",
       maxItems: 2,
-      queries: [],
-    },
+      queries: []
+    }
   };
 }
 
@@ -121,7 +116,7 @@ function hit(id: string): NewsSearchHit {
     subjectAny: ["product"],
     eventAny: ["release"],
     excludedAny: [],
-    rankPosition: 1,
+    rankPosition: 1
   };
 }
 
@@ -141,7 +136,7 @@ function story(id: string): NewsStory {
     queries: ["working query"],
     queryHits: 1,
     scoreBreakdown: { rank: 16, authority: 8, freshness: 5, crossQuery: 0 },
-    score: 29,
+    score: 29
   };
 }
 
@@ -162,10 +157,10 @@ it("separates empty success, recovery, budget sampling, missing coverage and out
           reads: 0,
           warnings: [],
           sources: ["example.com"],
-          skippedSources: ["other.com"],
-        },
-      },
-    },
+          skippedSources: ["other.com"]
+        }
+      }
+    }
   ]);
   expect(recovery.sourceStatus.state).toBe("recovered");
   expect(recovery.warnings).toEqual([]);
@@ -175,16 +170,15 @@ it("separates empty success, recovery, budget sampling, missing coverage and out
       _tag: "Fulfilled",
       value: {
         ...base,
-        fallback: { reason: "10406", searched: true, reads: 0, warnings: [], incomplete: true },
-      },
-    },
+        fallback: { reason: "10406", searched: true, reads: 0, warnings: [], incomplete: true }
+      }
+    }
   ]);
   expect(partial.sourceStatus.state).toBe("partial");
   expect(partial.sourceStatus.recovered).toBe(0);
   expect(partial.warnings).toHaveLength(1);
   expect(
-    summarizeNewsSources(requests, [
-      { _tag: "Rejected", reason: new DoubaoSearchError("10406", "quota") },
-    ]).sourceStatus.state,
+    summarizeNewsSources(requests, [{ _tag: "Rejected", reason: new DoubaoSearchError("10406", "quota") }]).sourceStatus
+      .state
   ).toBe("unavailable");
 });

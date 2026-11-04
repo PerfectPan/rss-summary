@@ -23,21 +23,21 @@ describe("article research Tool", () => {
                 index: 1,
                 timestampSeconds: 59,
                 imagePath: "/generated/frame.png",
-                visualText: "画面显示 SQLite 存储初始化代码。",
-              },
-            ],
+                visualText: "画面显示 SQLite 存储初始化代码。"
+              }
+            ]
           },
           materials: {
             transcriptPath: "/generated/transcript.txt",
-            manifestPath: "/generated/research.json",
-          },
-        }),
-      },
+            manifestPath: "/generated/research.json"
+          }
+        })
+      }
     });
     expect(await execute({ ref: "video:1", url })).toMatchObject({
       tool: "article-research",
       visuals: { status: "analyzed" },
-      materials: { transcriptPath: "/generated/transcript.txt" },
+      materials: { transcriptPath: "/generated/transcript.txt" }
     });
   });
 
@@ -49,17 +49,15 @@ describe("article research Tool", () => {
       retrievedAt: "2026-08-17T01:00:00.000Z",
       status: "ok" as const,
       title: "Article title",
-      url,
+      url
     }));
     const execute = createArticleResearchExecutor({ client: { research } });
 
-    await expect(
-      execute({ ref: "article:1", url: "https://example.com/article" }),
-    ).resolves.toMatchObject({
+    await expect(execute({ ref: "article:1", url: "https://example.com/article" })).resolves.toMatchObject({
       ref: "article:1",
       status: "ok",
       title: "Article title",
-      tool: "article-research",
+      tool: "article-research"
     });
     expect(research).toHaveBeenCalledWith({ ref: "article:1", url: "https://example.com/article" });
   });
@@ -68,9 +66,7 @@ describe("article research Tool", () => {
     const research = vi.fn();
     const execute = createArticleResearchExecutor({ client: { research } });
 
-    await expect(execute({ url: "https://example.com/article" })).rejects.toThrow(
-      "Article research requires ref",
-    );
+    await expect(execute({ url: "https://example.com/article" })).rejects.toThrow("Article research requires ref");
     expect(research).not.toHaveBeenCalled();
   });
 
@@ -87,27 +83,27 @@ describe("article research Tool", () => {
         retrievedAt: "2026-10-07T15:00:00Z",
         content: "Verified captions. ".repeat(10),
         method: "captions" as const,
-        status: "ok" as const,
+        status: "ok" as const
       }));
       const execute = createArticleResearchExecutor({
         env: { RSS_ARTICLE_GLM_FALLBACK: "true" },
         browserClient: { research },
         client: { research },
         glmClient: { read },
-        videoClient: { research: video },
+        videoClient: { research: video }
       });
 
       await expect(
-        execute({ mode, ref: "video:1", url: "https://www.youtube.com/watch?v=example" }),
+        execute({ mode, ref: "video:1", url: "https://www.youtube.com/watch?v=example" })
       ).resolves.toMatchObject({
         status: "ok",
         method: "captions",
-        tool: "article-research",
+        tool: "article-research"
       });
       expect(research).not.toHaveBeenCalled();
       expect(read).not.toHaveBeenCalled();
       expect(video).toHaveBeenCalledOnce();
-    },
+    }
   );
 
   it("uses browser research first in auto mode and skips HTTP on success", async () => {
@@ -118,16 +114,16 @@ describe("article research Tool", () => {
       retrievedAt: "2026-08-17T01:00:00.000Z",
       status: "ok" as const,
       title: "Rendered title",
-      url,
+      url
     }));
     const http = vi.fn();
     const execute = createArticleResearchExecutor({
       browserClient: { research: browser },
-      client: { research: http },
+      client: { research: http }
     });
 
     await expect(
-      execute({ mode: "auto", ref: "article:1", url: "https://example.com/article" }),
+      execute({ mode: "auto", ref: "article:1", url: "https://example.com/article" })
     ).resolves.toMatchObject({ status: "ok", title: "Rendered title" });
     expect(browser).toHaveBeenCalledWith({ ref: "article:1", url: "https://example.com/article" });
     expect(http).not.toHaveBeenCalled();
@@ -139,7 +135,7 @@ describe("article research Tool", () => {
       ref: "article:1",
       retrievedAt: "2026-08-17T01:00:00.000Z",
       status: "failed" as const,
-      url: "https://example.com/article",
+      url: "https://example.com/article"
     }));
     const http = vi.fn(async ({ ref, url }: { ref: string; url: string }) => ({
       content: "HTTP fallback content with enough detail for a grounded single-item summary.",
@@ -148,15 +144,15 @@ describe("article research Tool", () => {
       retrievedAt: "2026-08-17T01:00:00.000Z",
       status: "ok" as const,
       title: "HTTP title",
-      url,
+      url
     }));
     const execute = createArticleResearchExecutor({
       browserClient: { research: browser },
-      client: { research: http },
+      client: { research: http }
     });
 
     await expect(
-      execute({ mode: "auto", ref: "article:1", url: "https://example.com/article" }),
+      execute({ mode: "auto", ref: "article:1", url: "https://example.com/article" })
     ).resolves.toMatchObject({ status: "ok", title: "HTTP title" });
     expect(http).toHaveBeenCalledWith({ ref: "article:1", url: "https://example.com/article" });
   });
@@ -168,25 +164,25 @@ it("uses opt-in GLM Reader only after browser and HTTP failures", async () => {
     ref: "article:1",
     retrievedAt: "2026-09-29T01:00:00Z",
     status: "failed" as const,
-    url: "https://example.com/article",
+    url: "https://example.com/article"
   };
   const research = vi.fn(async () => failed);
   const read = vi.fn(async () => ({
     title: "Article",
     url: failed.url,
     content: "Source content. ".repeat(10),
-    truncated: false,
+    truncated: false
   }));
   const execute = createArticleResearchExecutor({
     env: { RSS_ARTICLE_GLM_FALLBACK: "true" },
     client: { research },
     browserClient: { research },
-    glmClient: { read },
+    glmClient: { read }
   });
   expect(await execute({ ref: failed.ref, url: failed.url })).toMatchObject({
     status: "ok",
     method: "glm",
-    tool: "article-research",
+    tool: "article-research"
   });
   expect(read).toHaveBeenCalledTimes(1);
   read.mockClear();
@@ -196,7 +192,7 @@ it("uses opt-in GLM Reader only after browser and HTTP failures", async () => {
     env: {},
     client: { research },
     browserClient: { research },
-    glmClient: { read },
+    glmClient: { read }
   });
   expect(await disabled({ ref: failed.ref, url: failed.url })).toMatchObject({ status: "failed" });
   expect(read).not.toHaveBeenCalled();

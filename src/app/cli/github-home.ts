@@ -11,10 +11,7 @@ type GithubHomeCommandDeps = {
   stderr?: Writable;
 };
 
-export async function runGithubHomeCommand(
-  argv: string[],
-  deps: GithubHomeCommandDeps = {},
-): Promise<number> {
+export async function runGithubHomeCommand(argv: string[], deps: GithubHomeCommandDeps = {}): Promise<number> {
   const stdout = deps.stdout ?? process.stdout;
   const stderr = deps.stderr ?? process.stderr;
   const command = argv[0] ?? "help";
@@ -22,15 +19,13 @@ export async function runGithubHomeCommand(
 
   if (command === "login") {
     const storageState =
-      args.storageState ??
-      process.env.GITHUB_HOME_STORAGE_STATE ??
-      ".state/github-home-storage.json";
+      args.storageState ?? process.env.GITHUB_HOME_STORAGE_STATE ?? ".state/github-home-storage.json";
     try {
       await runPluginEffect(
         saveLoginStorageState({
           storageState,
-          browserChannel: args.browserChannel ?? process.env.GITHUB_HOME_BROWSER_CHANNEL,
-        }),
+          browserChannel: args.browserChannel ?? process.env.GITHUB_HOME_BROWSER_CHANNEL
+        })
       );
       stdout.write(`Saved GitHub Home storage state to ${storageState}\n`);
       return 0;
@@ -55,7 +50,9 @@ function parseArgs(argv: string[]): { storageState?: string; browserChannel?: st
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
     const value = argv[index + 1];
-    if (!value || value.startsWith("--")) continue;
+    if (!value || value.startsWith("--")) {
+      continue;
+    }
 
     if (arg === "--storage-state") {
       result.storageState = value;

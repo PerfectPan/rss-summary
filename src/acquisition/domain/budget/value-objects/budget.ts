@@ -47,7 +47,7 @@ export function cacheKeyMaterial(request: CacheRequest): string {
     request.day,
     request.sinceDay,
     request.sourcePolicy,
-    ...(request.window ? [request.window.since, request.window.until] : []),
+    ...(request.window ? [request.window.since, request.window.until] : [])
   ]);
 }
 

@@ -3,13 +3,9 @@ import type {
   NewsBriefAuditDraft,
   NewsQueryAuditDraft,
   NewsQuerySettlement,
-  NewsSourceStatus,
+  NewsSourceStatus
 } from "../value-objects/news-audit.js";
-import type {
-  NewsHitDecision,
-  NewsHitRejectionReason,
-  NewsStoryDecision,
-} from "../value-objects/news.js";
+import type { NewsHitDecision, NewsHitRejectionReason, NewsStoryDecision } from "../value-objects/news.js";
 
 export function buildNewsAudit(
   requests: NewsAuditRequest[],
@@ -17,15 +13,13 @@ export function buildNewsAudit(
   decisions: NewsHitDecision[],
   storyDecisions: NewsStoryDecision[],
   deduplicatedStories: number,
-  selectedStories: number,
+  selectedStories: number
 ): NewsBriefAuditDraft {
   const queries = requests.map(({ query, topic, input }, index): NewsQueryAuditDraft => {
     const result = settled[index]!;
     const queryDecisions = decisions.filter(({ hit }) => hit.queryId === query.id);
     if (result._tag === "Rejected") {
-      const deferred = ["query_deferred", "local_budget_exhausted"].includes(
-        result.reason.code ?? "",
-      );
+      const deferred = ["query_deferred", "local_budget_exhausted"].includes(result.reason.code ?? "");
       return {
         queryId: query.id,
         query: input?.query ?? query.text,
@@ -38,7 +32,7 @@ export function buildNewsAudit(
         rejected: {},
         ...(result.reason.code !== undefined ? { errorCode: result.reason.code } : {}),
         ...(result.reason.receipt ? { receipt: result.reason.receipt } : {}),
-        error: result.reason.message,
+        error: result.reason.message
       };
     }
     return {
@@ -58,7 +52,7 @@ export function buildNewsAudit(
       reportedResultCount: result.value.resultCount,
       fetched: result.value.results.length,
       accepted: queryDecisions.filter(({ status }) => status === "accepted").length,
-      rejected: rejectionCounts(queryDecisions),
+      rejected: rejectionCounts(queryDecisions)
     };
   });
   const acceptedHits = decisions.filter(({ status }) => status === "accepted").length;
@@ -73,33 +67,30 @@ export function buildNewsAudit(
       selectedStories,
       duplicateTitleStories: countStoryReason(storyDecisions, "duplicate-title"),
       topicQuotaFilteredStories: countStoryReason(storyDecisions, "topic-quota"),
-      briefCapFilteredStories: countStoryReason(storyDecisions, "brief-cap"),
-    },
+      briefCapFilteredStories: countStoryReason(storyDecisions, "brief-cap")
+    }
   };
 }
 
-function rejectionCounts(
-  decisions: NewsHitDecision[],
-): Partial<Record<NewsHitRejectionReason, number>> {
+function rejectionCounts(decisions: NewsHitDecision[]): Partial<Record<NewsHitRejectionReason, number>> {
   const counts: Partial<Record<NewsHitRejectionReason, number>> = {};
   for (const decision of decisions) {
-    if (decision.status !== "rejected" || !decision.reason) continue;
+    if (decision.status !== "rejected" || !decision.reason) {
+      continue;
+    }
     counts[decision.reason] = (counts[decision.reason] ?? 0) + 1;
   }
   return counts;
 }
 
-function countStoryReason(
-  decisions: NewsStoryDecision[],
-  reason: NonNullable<NewsStoryDecision["reason"]>,
-): number {
+function countStoryReason(decisions: NewsStoryDecision[], reason: NonNullable<NewsStoryDecision["reason"]>): number {
   return decisions.filter((decision) => decision.reason === reason).length;
 }
 
 export function summarizeNewsSources(
   requests: NewsAuditRequest[],
   settled: readonly NewsQuerySettlement[],
-  modelCaution?: string,
+  modelCaution?: string
 ): { sourceStatus: NewsSourceStatus; warnings: string[] } {
   const completed = settled.filter((result) => result._tag === "Fulfilled").length;
   const recovered = settled.filter(
@@ -107,7 +98,7 @@ export function summarizeNewsSources(
       result._tag === "Fulfilled" &&
       result.value.fallback?.searched &&
       !result.value.fallback.incomplete &&
-      !["no-eligible-results", "complement"].includes(result.value.fallback.reason),
+      !["no-eligible-results", "complement"].includes(result.value.fallback.reason)
   ).length;
   const incompleteTopics = [
     ...new Set(
@@ -120,56 +111,44 @@ export function summarizeNewsSources(
             result.value.searchUsage?.source === "cache"
           );
         })
-        .map(({ topic }) => topic.label),
-    ),
+        .map(({ topic }) => topic.label)
+    )
   ];
   const state =
-    completed === 0
-      ? "unavailable"
-      : incompleteTopics.length
-        ? "partial"
-        : recovered
-          ? "recovered"
-          : "healthy";
+    completed === 0 ? "unavailable" : incompleteTopics.length ? "partial" : recovered ? "recovered" : "healthy";
   const sourcePlans = settled.flatMap((result) =>
-    result._tag === "Fulfilled" && result.value.fallback ? [result.value.fallback] : [],
+    result._tag === "Fulfilled" && result.value.fallback ? [result.value.fallback] : []
   );
-  const searchedSources = sourcePlans.reduce(
-    (total, plan) => total + (plan.sources?.length ?? 0),
-    0,
-  );
-  const deferredSources = sourcePlans.reduce(
-    (total, plan) => total + (plan.skippedSources?.length ?? 0),
-    0,
-  );
+  const searchedSources = sourcePlans.reduce((total, plan) => total + (plan.sources?.length ?? 0), 0);
+  const deferredSources = sourcePlans.reduce((total, plan) => total + (plan.skippedSources?.length ?? 0), 0);
   const notes = recovered ? [`${recovered} 个查询已由备用来源完成；不代表覆盖全部新闻`] : [];
   const deferred = settled.filter(
-    (result) => result._tag === "Rejected" && result.reason.code === "query_deferred",
+    (result) => result._tag === "Rejected" && result.reason.code === "query_deferred"
   ).length;
   const limited = settled.filter(
-    (result) => result._tag === "Rejected" && result.reason.code === "local_budget_exhausted",
+    (result) => result._tag === "Rejected" && result.reason.code === "local_budget_exhausted"
   ).length;
   const cached = settled.flatMap((result) =>
     result._tag === "Fulfilled" && result.value.searchUsage?.source === "cache"
       ? [result.value.searchUsage.fetchedAt]
-      : [],
+      : []
   );
-  if (deferred)
+  if (deferred) {
     notes.push(
-      `按预算轮换查询，本轮执行至多 ${requests.length - deferred}/${requests.length} 组，其余 ${deferred} 组延后`,
+      `按预算轮换查询，本轮执行至多 ${requests.length - deferred}/${requests.length} 组，其余 ${deferred} 组延后`
     );
-  if (limited) notes.push(`搜索请求预算已用完，${limited} 组未刷新；未转用其他付费搜索`);
-  if (cached.length)
-    notes.push(
-      `复用 ${cached.length} 组搜索缓存，最早采集于 ${cached.sort()[0]}；不代表此后没有更新`,
-    );
-  if (deferredSources)
-    notes.push(
-      `本轮按预算轮换检索 ${searchedSources} 组官网查询，另 ${deferredSources} 组留待后续轮次`,
-    );
+  }
+  if (limited) {
+    notes.push(`搜索请求预算已用完，${limited} 组未刷新；未转用其他付费搜索`);
+  }
+  if (cached.length) {
+    notes.push(`复用 ${cached.length} 组搜索缓存，最早采集于 ${cached.sort()[0]}；不代表此后没有更新`);
+  }
+  if (deferredSources) {
+    notes.push(`本轮按预算轮换检索 ${searchedSources} 组官网查询，另 ${deferredSources} 组留待后续轮次`);
+  }
   const modelNotes =
-    modelCaution &&
-    settled.some((result) => result._tag === "Fulfilled" && result.value.modelCompiled)
+    modelCaution && settled.some((result) => result._tag === "Fulfilled" && result.value.modelCompiled)
       ? [modelCaution]
       : [];
   notes.push(...modelNotes);
@@ -180,18 +159,16 @@ export function summarizeNewsSources(
       completed,
       recovered,
       incompleteTopics,
-      notes,
+      notes
     },
     warnings:
       state === "unavailable"
         ? [
-            limited
-              ? "搜索预算已用完，无法判断本期是否有新增资讯"
-              : "资讯采集失败，无法判断本期是否有新增资讯",
-            ...notes,
+            limited ? "搜索预算已用完，无法判断本期是否有新增资讯" : "资讯采集失败，无法判断本期是否有新增资讯",
+            ...notes
           ]
         : state === "partial"
           ? [`采集覆盖不完整：${incompleteTopics.join("、")}；详见采集审计`, ...notes]
-          : modelNotes,
+          : modelNotes
   };
 }

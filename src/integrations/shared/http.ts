@@ -12,10 +12,10 @@ export function timeoutFetch(fetchImpl: typeof fetch, timeoutMs: number): typeof
 
 export function provideHttp<A, E, R>(
   effect: Effect.Effect<A, E, R>,
-  fetchImpl: typeof fetch,
+  fetchImpl: typeof fetch
 ): Effect.Effect<A, E, Exclude<R, HttpClient.HttpClient>> {
   return effect.pipe(
-    Effect.provide(Layer.succeed(HttpClient.HttpClient, makeFetchClient(fetchImpl))) as never,
+    Effect.provide(Layer.succeed(HttpClient.HttpClient, makeFetchClient(fetchImpl))) as never
   ) as Effect.Effect<A, E, Exclude<R, HttpClient.HttpClient>>;
 }
 
@@ -26,13 +26,13 @@ function makeFetchClient(fetchImpl: typeof fetch): HttpClient.HttpClient {
         fetchImpl(url, {
           method: request.method,
           headers: request.headers,
-          signal,
+          signal
         }),
       catch: (cause) =>
         new HttpClientError.HttpClientError({
-          reason: new HttpClientError.TransportError({ request, cause }),
-        }),
-    }).pipe(Effect.map((response) => HttpClientResponse.fromWeb(request, response))),
+          reason: new HttpClientError.TransportError({ request, cause })
+        })
+    }).pipe(Effect.map((response) => HttpClientResponse.fromWeb(request, response)))
   );
 }
 

@@ -66,9 +66,7 @@ export const ARTICLE_HTML = `<!doctype html>
 </html>
 `;
 
-export const PERSONAL_FEEDS = [
-  { name: "Example Feed", url: PERSONAL_FEED_URL, tags: ["typescript"] },
-];
+export const PERSONAL_FEEDS = [{ name: "Example Feed", url: PERSONAL_FEED_URL, tags: ["typescript"] }];
 
 export const INDUSTRY_SOURCES = [
   { name: "Industry Feed", url: INDUSTRY_FEED_URL, tags: ["typescript"] },
@@ -77,8 +75,8 @@ export const INDUSTRY_SOURCES = [
     name: "Anthropic News",
     url: INDUSTRY_PAGE_URL,
     pathPrefixes: ["/news/"],
-    tags: ["News"],
-  },
+    tags: ["News"]
+  }
 ];
 
 export const NEWS_TOPICS = [
@@ -96,10 +94,10 @@ export const NEWS_TOPICS = [
         intent: "model-release",
         subjectAny: ["OpenAI"],
         eventAny: ["正式发布"],
-        excludedAny: ["传闻"],
-      },
-    ],
-  },
+        excludedAny: ["传闻"]
+      }
+    ]
+  }
 ];
 
 export const GITHUB_WATCH_EVENT = {
@@ -108,7 +106,7 @@ export const GITHUB_WATCH_EVENT = {
   actor: { login: "alice" },
   repo: { name: "example/project" },
   created_at: "2026-08-15T02:00:00Z",
-  payload: { action: "started" },
+  payload: { action: "started" }
 };
 
 export const GITHUB_REPOSITORY = {
@@ -118,19 +116,14 @@ export const GITHUB_REPOSITORY = {
   language: "TypeScript",
   stargazers_count: 12345,
   topics: ["typescript"],
-  pushed_at: "2026-08-15T00:00:00Z",
+  pushed_at: "2026-08-15T00:00:00Z"
 };
 
 export function snowflake(iso: string): string {
   return ((BigInt(Date.parse(iso)) - 1288834974657n) << 22n).toString();
 }
 
-export function grokStream(post: {
-  author: string;
-  publishedAt: string;
-  summary: string;
-  title: string;
-}): string {
+export function grokStream(post: { author: string; publishedAt: string; summary: string; title: string }): string {
   const handle = post.author.replace(/^@/u, "");
   const id = snowflake(post.publishedAt);
   const events = [
@@ -138,13 +131,13 @@ export function grokStream(post: {
     {
       type: "tool_call",
       toolCallId: "native",
-      rawInput: { variant: "XSearch", backend: true },
+      rawInput: { variant: "XSearch", backend: true }
     },
     {
       type: "tool_call_update",
       toolCallId: "native",
       status: "completed",
-      rawOutput: { name: "x_keyword_search" },
+      rawOutput: { name: "x_keyword_search" }
     },
     {
       type: "text",
@@ -155,10 +148,10 @@ export function grokStream(post: {
             author: post.author.startsWith("@") ? post.author : `@${post.author}`,
             title: post.title,
             summary: post.summary,
-            publishedAt: post.publishedAt,
-          },
-        ],
-      }),
+            publishedAt: post.publishedAt
+          }
+        ]
+      })
     },
     {
       type: "end",
@@ -167,10 +160,10 @@ export function grokStream(post: {
         total_tokens: 200,
         input_tokens: 80,
         cache_read_input_tokens: 100,
-        output_tokens: 20,
+        output_tokens: 20
       },
-      total_cost_usd: 0.001,
-    },
+      total_cost_usd: 0.001
+    }
   ];
   return events.map((event) => JSON.stringify(event)).join("\n") + "\n";
 }
@@ -193,10 +186,10 @@ export function doubaoPayload(publishTime: string): string {
           RankScore: 0.9,
           SortId: 1,
           AuthInfoDes: "官方站点",
-          AuthInfoLevel: 1,
-        },
-      ],
-    },
+          AuthInfoLevel: 1
+        }
+      ]
+    }
   });
 }
 
@@ -213,8 +206,8 @@ export function deepSeekPayload(publishTime: string): string {
         site_name: "OpenAI",
         site_icon: null,
         date: publishTime,
-        authority: 3,
-      },
-    ],
+        authority: 3
+      }
+    ]
   });
 }

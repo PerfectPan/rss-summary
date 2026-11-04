@@ -20,7 +20,9 @@ export class GlmSearchClient {
   private readonly apiKey: string;
 
   constructor(options: Options) {
-    if (!options.apiKey.trim()) throw new Error("GLM_CODING_API_KEY is required.");
+    if (!options.apiKey.trim()) {
+      throw new Error("GLM_CODING_API_KEY is required.");
+    }
     this.apiKey = options.apiKey.trim();
     this.fetchImpl = options.fetch ?? fetch;
     this.timeoutMs = options.timeoutMs ?? 30_000;
@@ -31,7 +33,7 @@ export class GlmSearchClient {
     domains: string[],
     recency: "noLimit" | "oneDay" | "oneWeek" = "noLimit",
     observe?: (counts: { rawResults: number; domainRejected: number }) => void,
-    location: "cn" | "us" = "cn",
+    location: "cn" | "us" = "cn"
   ): Promise<ResearchSearchResult[]> {
     if (!query.trim() || query.length > 70) {
       throw new Error("Search query must contain 1 to 70 characters.");
@@ -43,7 +45,7 @@ export class GlmSearchClient {
         apiKey: this.apiKey,
         fetchImpl: this.fetchImpl,
         timeoutMs: this.timeoutMs,
-        toolFailedMessage: "GLM search tool failed.",
+        toolFailedMessage: "GLM search tool failed."
       },
       "web_search_prime",
       {
@@ -51,8 +53,8 @@ export class GlmSearchClient {
         location,
         ...(allowed.length === 1 ? { search_domain_filter: allowed[0] } : {}),
         content_size: "medium",
-        search_recency_filter: recency,
-      },
+        search_recency_filter: recency
+      }
     );
     const parsed = parseGlmSearchResults(value, allowed);
     observe?.({ rawResults: parsed.rawResults, domainRejected: parsed.domainRejected });
@@ -70,8 +72,8 @@ export class GlmSearchClient {
         title: result.title,
         url: result.url,
         snippet: result.snippet,
-        rankPosition: index + 1,
-      })),
+        rankPosition: index + 1
+      }))
     };
   }
 }
@@ -82,7 +84,7 @@ export const GlmSearchLive = (options: Options): Layer.Layer<SearchProvider> => 
     search: (input) =>
       Effect.tryPromise({
         try: () => client.searchPage(input),
-        catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
-      }),
+        catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause)))
+      })
   });
 };

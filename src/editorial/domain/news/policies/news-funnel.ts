@@ -4,7 +4,7 @@ import {
   newsPublicationDayRange,
   newsPublicationRange,
   parsePublishTime,
-  startOfCalendarDay,
+  startOfCalendarDay
 } from "../../../../kernel/index.js";
 import { isSameTitleEvent } from "../../identity/index.js";
 import type {
@@ -17,32 +17,22 @@ import type {
   NewsStorySelectionResult,
   NewsTimeWindow,
   NewsTopic,
-  SelectedNewsStory,
+  SelectedNewsStory
 } from "../value-objects/news.js";
 
 const maxNewsBriefItems = 8;
 
 /** Whether a publisher timestamp falls inside the brief window, including date precision. */
-export function publicationFitsWindow(
-  publishedAt: string | undefined,
-  window: NewsTimeWindow,
-): boolean {
+export function publicationFitsWindow(publishedAt: string | undefined, window: NewsTimeWindow): boolean {
   const publication = newsPublicationRange(publishedAt, window.timezoneOffset);
-  return (
-    publication !== undefined &&
-    publication.since >= window.since &&
-    publication.until <= window.until
-  );
+  return publication !== undefined && publication.since >= window.since && publication.until <= window.until;
 }
 
 export function buildNewsStories(hits: NewsSearchHit[], window: NewsTimeWindow): NewsStory[] {
   return buildNewsStoriesWithAudit(hits, window).stories;
 }
 
-export function buildNewsStoriesWithAudit(
-  hits: NewsSearchHit[],
-  window: NewsTimeWindow,
-): NewsStoryBuildResult {
+export function buildNewsStoriesWithAudit(hits: NewsSearchHit[], window: NewsTimeWindow): NewsStoryBuildResult {
   const groups = new Map<string, NewsSearchHit[]>();
   const decisions: NewsHitDecision[] = [];
   for (const hit of hits) {
@@ -65,37 +55,39 @@ export function buildNewsStoriesWithAudit(
   return {
     stories: [...groups.entries()]
       .map(([canonicalUrl, matches]) => toStory(canonicalUrl, matches, window))
-      .sort(
-        (left, right) =>
-          right.score - left.score || right.publishTime.localeCompare(left.publishTime),
-      ),
-    decisions,
+      .sort((left, right) => right.score - left.score || right.publishTime.localeCompare(left.publishTime)),
+    decisions
   };
 }
 
-export function selectNewsStories(
-  stories: NewsStory[],
-  topics: readonly NewsTopic[],
-): SelectedNewsStory[] {
+export function selectNewsStories(stories: NewsStory[], topics: readonly NewsTopic[]): SelectedNewsStory[] {
   return selectNewsStoriesWithAudit(stories, topics).stories;
 }
 
 export function selectNewsStoriesWithAudit(
   stories: NewsStory[],
-  topics: readonly NewsTopic[],
+  topics: readonly NewsTopic[]
 ): NewsStorySelectionResult {
   const selected: SelectedNewsStory[] = [];
   const selectedUrls = new Set<string>();
   for (const topic of topics.filter(({ enabled }) => enabled)) {
-    if (selected.length >= maxNewsBriefItems) break;
+    if (selected.length >= maxNewsBriefItems) {
+      break;
+    }
     const matches = stories.filter(
-      (story) => story.topicIds.includes(topic.id) && !selectedUrls.has(story.canonicalUrl),
+      (story) => story.topicIds.includes(topic.id) && !selectedUrls.has(story.canonicalUrl)
     );
     let count = 0;
     for (const story of matches) {
-      if (count >= topic.maxItems || selected.length >= maxNewsBriefItems) break;
-      if (selectedUrls.has(story.canonicalUrl)) continue;
-      if (selected.some((candidate) => isSameTitleEvent(candidate, story))) continue;
+      if (count >= topic.maxItems || selected.length >= maxNewsBriefItems) {
+        break;
+      }
+      if (selectedUrls.has(story.canonicalUrl)) {
+        continue;
+      }
+      if (selected.some((candidate) => isSameTitleEvent(candidate, story))) {
+        continue;
+      }
       selected.push({ ...story, selectedTopicId: topic.id });
       selectedUrls.add(story.canonicalUrl);
       count += 1;
@@ -105,7 +97,9 @@ export function selectNewsStoriesWithAudit(
   return {
     stories: selected,
     decisions: stories.map((story) => {
-      if (selectedUrls.has(story.canonicalUrl)) return { story, status: "selected" };
+      if (selectedUrls.has(story.canonicalUrl)) {
+        return { story, status: "selected" };
+      }
       if (selected.some((candidate) => isSameTitleEvent(candidate, story))) {
         return { story, status: "filtered", reason: "duplicate-title" };
       }
@@ -115,35 +109,39 @@ export function selectNewsStoriesWithAudit(
       return {
         story,
         status: "filtered",
-        reason: selected.length >= maxNewsBriefItems ? "brief-cap" : "topic-quota",
+        reason: selected.length >= maxNewsBriefItems ? "brief-cap" : "topic-quota"
       };
-    }),
+    })
   };
 }
 
-function rejectionReasonForHit(
-  hit: NewsSearchHit,
-  window: NewsTimeWindow,
-): NewsHitRejectionReason | undefined {
-  if (!hit.title.trim() || !hit.url.trim()) return "missing-fields";
-  if (window.reportedUrls?.includes(canonicalizeUrl(hit.url) ?? "")) return "already-reported";
+function rejectionReasonForHit(hit: NewsSearchHit, window: NewsTimeWindow): NewsHitRejectionReason | undefined {
+  if (!hit.title.trim() || !hit.url.trim()) {
+    return "missing-fields";
+  }
+  if (window.reportedUrls?.includes(canonicalizeUrl(hit.url) ?? "")) {
+    return "already-reported";
+  }
   const publication = hit.publishDay
     ? newsPublicationDayRange(hit.publishDay)
     : newsPublicationRange(hit.publishTime, window.timezoneOffset);
-  if (!publication) return "invalid-publish-time";
+  if (!publication) {
+    return "invalid-publish-time";
+  }
   if (publication.precision === "day") {
     // Day granularity in a known timezone cannot be placed inside the day, so
     // any overlap with the window counts; instants and zoneless dates above
     // still have to fit completely.
-    if (!(publication.since < window.until && publication.until > window.since))
+    if (!(publication.since < window.until && publication.until > window.since)) {
       return "outside-window";
+    }
   } else if (publication.since < window.since || publication.until > window.until) {
     return "outside-window";
   }
-  if (rejectsForAuthority(hit)) return "insufficient-authority";
-  const content = normalizeSearchText(
-    [hit.title, hit.summary, hit.snippet].filter(Boolean).join(" "),
-  );
+  if (rejectsForAuthority(hit)) {
+    return "insufficient-authority";
+  }
+  const content = normalizeSearchText([hit.title, hit.summary, hit.snippet].filter(Boolean).join(" "));
   const subjectContent = normalizeSearchText(`${content} ${hit.siteName ?? ""}`);
   if (hit.excludedAny.some((term) => containsSearchTerm(normalizeSearchText(hit.title), term))) {
     return "excluded-content";
@@ -158,28 +156,26 @@ function rejectionReasonForHit(
 }
 
 function rejectsForAuthority(hit: NewsSearchHit): boolean {
-  if (hit.sourcePolicy === "news") return false;
+  if (hit.sourcePolicy === "news") {
+    return false;
+  }
   const tier = hit.credibility.tier;
-  if (hit.sourcePolicy === "official") return tier !== "official";
+  if (hit.sourcePolicy === "official") {
+    return tier !== "official";
+  }
   return tier !== "official" && tier !== "authoritative";
 }
 
-function toStory(
-  canonicalUrl: string,
-  matches: NewsSearchHit[],
-  window: NewsTimeWindow,
-): NewsStory {
+function toStory(canonicalUrl: string, matches: NewsSearchHit[], window: NewsTimeWindow): NewsStory {
   const representative = [...matches].sort(
-    (left, right) =>
-      left.rankPosition - right.rankPosition || (right.rankScore ?? 0) - (left.rankScore ?? 0),
+    (left, right) => left.rankPosition - right.rankPosition || (right.rankScore ?? 0) - (left.rankScore ?? 0)
   )[0]!;
   const queryIds = [...new Set(matches.map(({ queryId }) => queryId))];
   const queries = [...new Set(matches.map(({ queryText }) => queryText))];
   const topicIds = [...new Set(matches.map(({ topicId }) => topicId))];
   const topicLabels = [...new Set(matches.map(({ topicLabel }) => topicLabel))];
   const authInfoLevel = Math.min(...matches.map(({ authorityRank }) => authorityRank));
-  const authorityTier = matches.find((hit) => hit.authorityRank === authInfoLevel)!.credibility
-    .tier;
+  const authorityTier = matches.find((hit) => hit.authorityRank === authInfoLevel)!.credibility.tier;
   const rankScore = Math.max(...matches.map(({ rankScore }) => rankScore ?? 0));
   const queryHits = queryIds.length;
   const bestRankPosition = Math.min(...matches.map(({ rankPosition }) => rankPosition));
@@ -191,17 +187,15 @@ function toStory(
         ? startOfCalendarDay(hit.publishDay.day, hit.publishDay.timezoneOffset)
         : hit.publishTime
           ? parsePublishTime(hit.publishTime, window.timezoneOffset)
-          : window.since,
-    ),
+          : window.since
+    )
   );
   const windowDuration = Math.max(1, window.until - window.since);
   const scoreBreakdown: NewsScoreBreakdown = {
     rank: Math.round(1_000 / (60 + bestRankPosition)),
     authority: authorityTier === "official" ? 12 : authorityTier === "authoritative" ? 8 : 0,
-    freshness: Math.round(
-      Math.max(0, Math.min(1, (newestPublishTime - window.since) / windowDuration)) * 8,
-    ),
-    crossQuery: Math.min(4, Math.max(0, queryHits - 1) * 2),
+    freshness: Math.round(Math.max(0, Math.min(1, (newestPublishTime - window.since) / windowDuration)) * 8),
+    crossQuery: Math.min(4, Math.max(0, queryHits - 1) * 2)
   };
   return {
     id: representative.id,
@@ -210,7 +204,7 @@ function toStory(
     summary: compactSummary(
       representative.summary ?? representative.snippet ?? "暂无可用摘要。",
       representative.title,
-      representative.siteName,
+      representative.siteName
     ),
     siteName: representative.siteName?.trim() || new URL(canonicalUrl).hostname,
     publishTime: representative.publishTime!,
@@ -223,7 +217,7 @@ function toStory(
     queries,
     queryHits,
     scoreBreakdown,
-    score: Object.values(scoreBreakdown).reduce((total, value) => total + value, 0),
+    score: Object.values(scoreBreakdown).reduce((total, value) => total + value, 0)
   };
 }
 
@@ -233,7 +227,9 @@ function normalizeSearchText(value: string): string {
 
 function containsSearchTerm(content: string, term: string): boolean {
   const normalizedTerm = normalizeSearchText(term);
-  if (!normalizedTerm) return false;
+  if (!normalizedTerm) {
+    return false;
+  }
   if (/\p{Script=Han}/u.test(normalizedTerm) || normalizedTerm.endsWith("-")) {
     return content.includes(normalizedTerm);
   }
@@ -250,7 +246,7 @@ function containsSearchTerm(content: string, term: string): boolean {
     launches: "launch",
     outages: "outage",
     deprecations: "deprecation",
-    deprecated: "deprecation",
+    deprecated: "deprecation"
   };
   const fold = (value: string) => value.replace(/\b[a-z]+\b/gu, (word) => eventForms[word] ?? word);
   content = fold(content);

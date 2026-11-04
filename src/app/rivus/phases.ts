@@ -4,12 +4,12 @@ import {
   excludeSubscriptionResearchFailures,
   validateSubscriptionResearch,
   validateSubscriptionSelectionDraft,
-  type SubscriptionEvidence,
+  type SubscriptionEvidence
 } from "../../editorial/index.js";
 import {
   applySubscriptionSelection,
   buildSubscriptionEditorial,
-  buildSubscriptionEvidence,
+  buildSubscriptionEvidence
 } from "../products/subscriptions/output.js";
 import { digestView } from "../render/layouts/digest.js";
 import { dailyAiView } from "../render/layouts/daily-ai.js";
@@ -22,7 +22,7 @@ import {
   collectRivusDigest,
   generateRivusDigest,
   type CollectedRivusDigest,
-  type RivusDigestResult,
+  type RivusDigestResult
 } from "../products/subscriptions/tool.js";
 
 export type RivusSubscriptionToolResult =
@@ -64,7 +64,7 @@ type SubscriptionToolDependencies = {
 
 /** Three-phase Tool executor: collect evidence, select worthwhile items, then render model copy. */
 export function createRivusSubscriptionExecutor(
-  dependencies: SubscriptionToolDependencies = {},
+  dependencies: SubscriptionToolDependencies = {}
 ): (value: unknown) => Promise<RivusSubscriptionToolResult | RivusDigestResult> {
   const collect = dependencies.collect ?? collectRivusDigest;
   const generate = dependencies.generate ?? generateRivusDigest;
@@ -73,7 +73,9 @@ export function createRivusSubscriptionExecutor(
 
   return async (value) => {
     const input = parseInput(value);
-    if (!input.phase) return generate(input.request);
+    if (!input.phase) {
+      return generate(input.request);
+    }
 
     const key = cacheKey(input.request);
     let collected = cache.get(key);
@@ -88,11 +90,11 @@ export function createRivusSubscriptionExecutor(
         editorialContract: {
           outputShape: "Array<{ref, summary}>",
           summaryLength: "one-to-two Chinese sentences, at most 180 characters",
-          summaryPolicy: "write summaries only for evidence with summaryPolicy=required",
+          summaryPolicy: "write summaries only for evidence with summaryPolicy=required"
         },
         evidence: buildSubscriptionEvidence(collected.document),
         generatedAt: collected.document.generatedAt,
-        phase: "collect",
+        phase: "collect"
       };
     }
 
@@ -103,14 +105,13 @@ export function createRivusSubscriptionExecutor(
         ...(collected.day ? { day: collected.day } : {}),
         editorialContract: {
           decisionShape: "Array<{ref, selected, reason}>",
-          selectionPolicy:
-            "select only items worth sending; an empty selection suppresses delivery",
+          selectionPolicy: "select only items worth sending; an empty selection suppresses delivery"
         },
         evidence: buildSubscriptionEvidence(collected.document),
         generatedAt: collected.document.generatedAt,
         phase: "select",
         selectedCount: selection.decisions.filter((item) => item.selected).length,
-        selection: selection.decisions,
+        selection: selection.decisions
       };
     }
 
@@ -122,37 +123,24 @@ export function createRivusSubscriptionExecutor(
       evidence
         .filter(
           (item) =>
-            item.summaryPolicy === "required" &&
-            selection.selectedRefs.has(item.id) &&
-            !researchedRefs.has(item.id),
+            item.summaryPolicy === "required" && selection.selectedRefs.has(item.id) && !researchedRefs.has(item.id)
         )
-        .map((item) => item.id),
+        .map((item) => item.id)
     );
     const effectiveSelection = excludeSubscriptionResearchFailures(
       selection,
-      new Set([
-        ...research.filter((item) => item.status === "failed").map((item) => item.ref),
-        ...missingResearchRefs,
-      ]),
+      new Set([...research.filter((item) => item.status === "failed").map((item) => item.ref), ...missingResearchRefs])
     );
     const selectedDocument = applySubscriptionSelection(collected.document, effectiveSelection);
     const effectiveResearch = research.filter(
-      (item) => item.status === "ok" && effectiveSelection.selectedRefs.has(item.ref),
+      (item) => item.status === "ok" && effectiveSelection.selectedRefs.has(item.ref)
     );
     const editorial = buildSubscriptionEditorial(selectedDocument, input.draft, effectiveResearch);
-    const document = collected.day
-      ? { ...selectedDocument, displayDate: collected.day }
-      : selectedDocument;
-    const paperCandidateCount = document.candidates.filter(
-      (candidate) => candidate.category === "paper",
-    ).length;
+    const document = collected.day ? { ...selectedDocument, displayDate: collected.day } : selectedDocument;
+    const paperCandidateCount = document.candidates.filter((candidate) => candidate.category === "paper").length;
     const selectedCount = document.candidates.length - paperCandidateCount;
     const audit = document.audit
-      ? applyEditorialSelectionToAudit(
-          document.audit as RunAudit,
-          effectiveSelection.decisions,
-          selectedCount,
-        )
+      ? applyEditorialSelectionToAudit(document.audit as RunAudit, effectiveSelection.decisions, selectedCount)
       : undefined;
     cache.delete(key);
     return {
@@ -164,7 +152,7 @@ export function createRivusSubscriptionExecutor(
       selectedCount,
       selection: effectiveSelection.decisions,
       ...(document.windowLabel ? { windowLabel: document.windowLabel } : {}),
-      ...(audit ? { audit } : {}),
+      ...(audit ? { audit } : {})
     };
   };
 }
@@ -193,20 +181,20 @@ function parseInput(value: unknown): {
     ...(phase ? { phase } : {}),
     ...(research === undefined ? {} : { research }),
     request,
-    ...(selection === undefined ? {} : { selection }),
+    ...(selection === undefined ? {} : { selection })
   };
 }
 
 function cacheKey(request: Record<string, unknown>): string {
   return JSON.stringify(
-    Object.fromEntries(
-      Object.entries(request).sort(([left], [right]) => left.localeCompare(right)),
-    ),
+    Object.fromEntries(Object.entries(request).sort(([left], [right]) => left.localeCompare(right)))
   );
 }
 
 function trimCache(cache: Map<string, CollectedRivusDigest>): void {
-  while (cache.size > 8) cache.delete(cache.keys().next().value!);
+  while (cache.size > 8) {
+    cache.delete(cache.keys().next().value!);
+  }
 }
 
 export type RivusDailyAiToolResult =
@@ -219,10 +207,7 @@ export type RivusDailyAiToolResult =
       warnings: string[];
       sourceAudit: {
         xAccounts: DailyAiDigestResult["sourceAudit"]["xAccounts"];
-        industry?: Pick<
-          NonNullable<DailyAiDigestResult["sourceAudit"]["industry"]>,
-          "counts" | "sources"
-        >;
+        industry?: Pick<NonNullable<DailyAiDigestResult["sourceAudit"]["industry"]>, "counts" | "sources">;
       };
       editorialContract: {
         categories: readonly string[];
@@ -231,10 +216,7 @@ export type RivusDailyAiToolResult =
         selectionPolicy: string;
       };
     }
-  | (Pick<
-      DailyAiDigestResult,
-      "day" | "windowLabel" | "generatedAt" | "warnings" | "deliveryReceipt"
-    > & {
+  | (Pick<DailyAiDigestResult, "day" | "windowLabel" | "generatedAt" | "warnings" | "deliveryReceipt"> & {
       phase: "render";
       itemCount: number;
       markdown: string;
@@ -247,7 +229,7 @@ type DailyAiExecutorDependencies = {
 };
 
 export function createRivusDailyAiDigestExecutor(
-  dependencies: DailyAiExecutorDependencies = {},
+  dependencies: DailyAiExecutorDependencies = {}
 ): (value: unknown) => Promise<RivusDailyAiToolResult> {
   const collect = dependencies.collect ?? generateDailyAiDigest;
   const saveDiagnostics = dependencies.saveDiagnostics ?? saveDailyAiDiagnostics;
@@ -276,17 +258,17 @@ export function createRivusDailyAiDigestExecutor(
             ? {
                 industry: {
                   counts: collected.sourceAudit.industry.counts,
-                  sources: collected.sourceAudit.industry.sources,
-                },
+                  sources: collected.sourceAudit.industry.sources
+                }
               }
-            : {}),
+            : {})
         },
         editorialContract: {
           categories: dailyAiCategories,
           itemTarget: "No fixed item count; select meaningful changes, never fill a quota",
           outputShape: "Array<{category, headline, refs}>",
-          selectionPolicy: dailyAiEditorialPolicy,
-        },
+          selectionPolicy: dailyAiEditorialPolicy
+        }
       };
     }
 
@@ -296,8 +278,8 @@ export function createRivusDailyAiDigestExecutor(
       ...digest,
       deliveryReceipt: createDailyAiDeliveryReceipt(
         input.occurrence,
-        digest.items.flatMap(({ refs }) => refs),
-      ),
+        digest.items.flatMap(({ refs }) => refs)
+      )
     };
     await saveDiagnostics({ occurrence: input.occurrence, phase: "render", result });
     cache.delete(input.occurrence);
@@ -316,9 +298,9 @@ export function createRivusDailyAiDigestExecutor(
           windowLabel: result.windowLabel,
           items: result.items,
           evidence: result.evidence,
-          warnings: result.warnings,
-        }),
-      ),
+          warnings: result.warnings
+        })
+      )
     };
   };
 }
@@ -328,17 +310,22 @@ function parseToolInput(value: unknown): {
   phase: "collect" | "render";
   draft?: unknown;
 } {
-  if (!value || typeof value !== "object" || Array.isArray(value))
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("Daily AI Tool input must be an object.");
+  }
   const record = value as Record<string, unknown>;
   const occurrence = record.occurrence;
-  if (typeof occurrence !== "string" || !Number.isFinite(Date.parse(occurrence)))
+  if (typeof occurrence !== "string" || !Number.isFinite(Date.parse(occurrence))) {
     throw new Error("occurrence must be a valid date-time.");
-  if (record.phase !== "collect" && record.phase !== "render")
+  }
+  if (record.phase !== "collect" && record.phase !== "render") {
     throw new Error("phase must be collect or render.");
+  }
   return { occurrence, phase: record.phase, draft: record.draft };
 }
 
 function trimDailyAiCache(cache: Map<string, DailyAiDigestResult>): void {
-  while (cache.size > 8) cache.delete(cache.keys().next().value!);
+  while (cache.size > 8) {
+    cache.delete(cache.keys().next().value!);
+  }
 }

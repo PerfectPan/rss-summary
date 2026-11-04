@@ -22,8 +22,8 @@ describe("Daily AI diagnostics", () => {
         warnings: [],
         sourceAudit: { xAccounts: [] },
         audit: { decisions: [], editorialIssues: [] },
-        deliveryReceipt: { id: "daily-ai:test", occurrence, evidenceIds: [], committed: false },
-      },
+        deliveryReceipt: { id: "daily-ai:test", occurrence, evidenceIds: [], committed: false }
+      }
     };
     try {
       await saveDailyAiDiagnostics(snapshot, env);

@@ -4,7 +4,7 @@ import {
   generateRivusNewsBrief,
   type RivusNewsBriefInput,
   type RivusNewsBriefOutput,
-  type RivusNewsBriefResult,
+  type RivusNewsBriefResult
 } from "./flow.js";
 import { newsView } from "../../render/layouts/news.js";
 import { renderViewMarkdown } from "../../render/markdown.js";
@@ -27,9 +27,9 @@ function withNewsMarkdown(result: RivusNewsBriefResult): RivusNewsBriefOutput {
         topics: result.topics,
         warnings: result.warnings,
         sourceStatus: result.sourceStatus,
-        windowLabel: result.windowLabel,
-      }),
-    ),
+        windowLabel: result.windowLabel
+      })
+    )
   };
 }
 
@@ -42,8 +42,7 @@ export const newsToolDescriptor: Pick<
   RivusToolDescriptor,
   "description" | "digest" | "idempotency" | "inputSchema" | "risk" | "version"
 > = {
-  description:
-    "Generate a read-only noon or evening Markdown news brief from bounded, configured news searches",
+  description: "Generate a read-only noon or evening Markdown news brief from bounded, configured news searches",
   digest: "sha256:rss-summary-generate-news-brief-v3",
 
   idempotency: "none",
@@ -54,23 +53,23 @@ export const newsToolDescriptor: Pick<
       since: {
         type: "string",
         format: "date-time",
-        description: "Optional catch-up start, at most 72 hours before occurrence",
+        description: "Optional catch-up start, at most 72 hours before occurrence"
       },
       reportedUrls: {
         type: "array",
         maxItems: 1000,
         items: { type: "string" },
-        description: "URLs confirmed delivered; suppress duplicates during catch-up",
+        description: "URLs confirmed delivered; suppress duplicates during catch-up"
       },
       occurrence: {
         description: "Scheduled occurrence as an ISO date-time",
         format: "date-time",
-        type: "string",
-      },
+        type: "string"
+      }
     },
     required: ["edition", "occurrence"],
-    type: "object",
+    type: "object"
   },
   risk: "observe",
-  version: "1.1.0",
+  version: "1.1.0"
 };

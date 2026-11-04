@@ -15,7 +15,7 @@ type SelectionAudit = {
 export function applyEditorialSelectionToAudit<T extends SelectionAudit>(
   audit: T,
   decisions: ReadonlyArray<EditorialSelectionDecision>,
-  selectedCount: number,
+  selectedCount: number
 ): T & {
   editorialSelection: {
     decisions: EditorialSelectionDecision[];
@@ -33,12 +33,12 @@ export function applyEditorialSelectionToAudit<T extends SelectionAudit>(
         : {
             ...candidate,
             reason: decision?.reason ?? "AI selection omitted this item",
-            status: "filtered" as const,
+            status: "filtered" as const
           };
     }),
     editorialSelection: {
       decisions: [...decisions],
-      selectedCount,
-    },
+      selectedCount
+    }
   };
 }

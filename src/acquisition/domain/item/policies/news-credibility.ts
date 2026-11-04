@@ -19,7 +19,9 @@ export function resolveNewsCredibility(input: {
 }): ResolvedNewsCredibility {
   if (input.sourceVerification) {
     const method = input.sourceVerification.method;
-    if (method === "article-read") return certified(4, method);
+    if (method === "article-read") {
+      return certified(4, method);
+    }
     let host: string;
     try {
       host = new URL(input.url).hostname;
@@ -27,7 +29,9 @@ export function resolveNewsCredibility(input: {
       return certified(4, method);
     }
     const { domain, policy } = input.sourceVerification;
-    if (host !== domain && !host.endsWith(`.${domain}`)) return certified(4, method);
+    if (host !== domain && !host.endsWith(`.${domain}`)) {
+      return certified(4, method);
+    }
     return certified(policy === "official" ? 1 : 2, method);
   }
   // Authority-score providers never reach the authInfoLevel scale; their rank
@@ -49,7 +53,11 @@ function certified(rank: number, method?: CredibilityMethod): ResolvedNewsCredib
 }
 
 function tierForRank(rank: number): { tier: CredibilityTier } {
-  if (rank === 1) return { tier: "official" };
-  if (rank === 2) return { tier: "authoritative" };
+  if (rank === 1) {
+    return { tier: "official" };
+  }
+  if (rank === 2) {
+    return { tier: "authoritative" };
+  }
   return { tier: "unrated" };
 }

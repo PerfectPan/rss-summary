@@ -9,17 +9,21 @@ import {
   type DailyAiDigest,
   type DailyAiEditorialIssue,
   type DailyAiEditorialItem,
-  type DailyAiEvidence,
+  type DailyAiEvidence
 } from "../value-objects/daily-ai.js";
 
 /** Industry rows already carry their source name on the card. The caller supplies any badge. */
 export function industryEvidence(candidates: readonly CandidateProject[]): DailyAiEvidence[] {
   return candidates.flatMap((candidate) => {
-    if (candidate.category === "paper") return [];
+    if (candidate.category === "paper") {
+      return [];
+    }
     const event = candidate.events[0];
     const title = candidate.label ?? event?.title;
     const url = candidate.url ?? event?.htmlUrl;
-    if (!event || !title || !url) return [];
+    if (!event || !title || !url) {
+      return [];
+    }
     return [
       {
         id: `official:${event.id}`,
@@ -28,16 +32,13 @@ export function industryEvidence(candidates: readonly CandidateProject[]): Daily
         publishedAt: event.createdAt,
         excerpt: candidate.description ?? event.summary ?? title,
         tier: "official" as const,
-        sourceName: event.sourceName ?? event.actor,
-      },
+        sourceName: event.sourceName ?? event.actor
+      }
     ];
   });
 }
 
-export function buildDailyAiDigest(
-  inputEvidence: DailyAiEvidence[],
-  options: { draft?: unknown } = {},
-): DailyAiDigest {
+export function buildDailyAiDigest(inputEvidence: DailyAiEvidence[], options: { draft?: unknown } = {}): DailyAiDigest {
   const evidence = normalizeEvidence(inputEvidence);
   const groups: DailyAiEvidence[][] = [];
   const decisions: DailyAiDecision[] = [];
@@ -48,7 +49,7 @@ export function buildDailyAiDigest(
       decisions.push({
         evidenceIds: [item.id],
         status: "merged",
-        reason: `merged-with:${group[0]!.id}`,
+        reason: `merged-with:${group[0]!.id}`
       });
     } else {
       groups.push([item]);
@@ -71,13 +72,13 @@ export function buildDailyAiDigest(
       decisions.push({
         evidenceIds: group.map(({ id }) => id),
         status: "selected",
-        reason: "selected-by-editorial-draft",
+        reason: "selected-by-editorial-draft"
       });
     } else if (options.draft !== undefined) {
       decisions.push({
         evidenceIds: group.map(({ id }) => id),
         status: "filtered",
-        reason: "not-selected-by-editorial-draft",
+        reason: "not-selected-by-editorial-draft"
       });
     }
   }
@@ -88,8 +89,9 @@ function normalizeEvidence(input: DailyAiEvidence[]): DailyAiEvidence[] {
   const ids = new Set<string>();
   return input.flatMap((item) => {
     const url = canonicalizeUrl(item.url);
-    if (!item.id || ids.has(item.id) || !url || !/^https?:$/u.test(new URL(url).protocol))
+    if (!item.id || ids.has(item.id) || !url || !/^https?:$/u.test(new URL(url).protocol)) {
       return [];
+    }
     ids.add(item.id);
     return [{ ...item, title: cleanText(item.title), excerpt: cleanText(item.excerpt), url }];
   });

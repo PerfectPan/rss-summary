@@ -26,8 +26,8 @@ describe("markdown digest renderer", () => {
                 actor: "fi3ework",
                 repo: "BuilderIO/skills",
                 createdAt: "2026-06-22T09:47:11Z",
-                action: "started",
-              },
+                action: "started"
+              }
             ],
             repository: {
               fullName: "BuilderIO/skills",
@@ -36,8 +36,8 @@ describe("markdown digest renderer", () => {
               language: "JavaScript",
               stargazersCount: 2389,
               topics: ["skills"],
-              pushedAt: "2026-06-22T02:55:49Z",
-            },
+              pushedAt: "2026-06-22T02:55:49Z"
+            }
           },
           {
             repo: "rss:https://deno.com/blog/v2.4",
@@ -57,15 +57,15 @@ describe("markdown digest renderer", () => {
                 repo: "rss:https://deno.com/blog/v2.4",
                 createdAt: "2026-06-22T08:00:00Z",
                 title: "Deno 2.4",
-                htmlUrl: "https://deno.com/blog/v2.4",
-              },
+                htmlUrl: "https://deno.com/blog/v2.4"
+              }
             ],
             label: "Deno 2.4",
             url: "https://deno.com/blog/v2.4",
-            description: "Runtime updates for TypeScript and JavaScript.",
-          },
-        ],
-      }),
+            description: "Runtime updates for TypeScript and JavaScript."
+          }
+        ]
+      })
     );
 
     expect(markdown).toContain("# 我的订阅 · 2026-06-22");
@@ -96,9 +96,9 @@ describe("markdown digest renderer", () => {
                 type: "pull_request" as const,
                 actor: "followee",
                 repo: `example/repo-${index}`,
-                createdAt: "2026-06-22T08:00:00Z",
-              },
-            ],
+                createdAt: "2026-06-22T08:00:00Z"
+              }
+            ]
           })),
           {
             repo: "rss:https://deno.com/blog/v2.4",
@@ -115,14 +115,14 @@ describe("markdown digest renderer", () => {
                 source: "rss",
                 actor: "Deno Blog",
                 repo: "rss:https://deno.com/blog/v2.4",
-                createdAt: "2026-06-22T08:00:00Z",
-              },
+                createdAt: "2026-06-22T08:00:00Z"
+              }
             ],
             label: "Deno 2.4",
-            url: "https://deno.com/blog/v2.4",
-          },
-        ],
-      }),
+            url: "https://deno.com/blog/v2.4"
+          }
+        ]
+      })
     );
 
     expect(markdown).toContain("**重点摘要**");
@@ -145,10 +145,10 @@ describe("markdown digest renderer", () => {
             reasons: ["matches paper abstract: agent"],
             events: [],
             label: "Unverified agent claim",
-            url: "https://arxiv.org/abs/2608.01234",
-          },
-        ],
-      }),
+            url: "https://arxiv.org/abs/2608.01234"
+          }
+        ]
+      })
     );
 
     expect(markdown).toContain("1 篇论文待研究");
@@ -178,19 +178,19 @@ describe("markdown digest renderer", () => {
               repo: "rss:https://deno.com/blog/v2.4",
               createdAt: "2026-06-22T08:00:00Z",
               title: "Deno 2.4",
-              htmlUrl: "https://deno.com/blog/v2.4",
-            },
+              htmlUrl: "https://deno.com/blog/v2.4"
+            }
           ],
           label: "Deno 2.4",
-          url: "https://deno.com/blog/v2.4",
-        },
-      ],
+          url: "https://deno.com/blog/v2.4"
+        }
+      ]
     });
 
     expect(JSON.parse(json)).toMatchObject({
       username: "PerfectPan",
       windowLabel: "2026-06-22 +08:00",
-      candidates: [{ source: "rss", label: "Deno 2.4" }],
+      candidates: [{ source: "rss", label: "Deno 2.4" }]
     });
   });
 
@@ -200,8 +200,8 @@ describe("markdown digest renderer", () => {
         generatedAt: "2026-06-22T10:00:00Z",
         username: "PerfectPan",
         windowLabel: "2026-06-22 +08:00",
-        candidates: [],
-      }),
+        candidates: []
+      })
     );
 
     expect(markdown).toContain("0 条更新 · GitHub Home + 个人博客 · 2026-06-22 +08:00");
@@ -213,8 +213,8 @@ describe("markdown digest renderer", () => {
         generatedAt: "2026-06-22T10:00:00Z",
         username: "PerfectPan",
         sourceMode: "rss",
-        candidates: [],
-      }),
+        candidates: []
+      })
     );
 
     expect(markdown).toContain("0 条更新 · 个人博客");

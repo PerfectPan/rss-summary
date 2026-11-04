@@ -23,10 +23,7 @@ export function errorAudit(error: NewsSearchError): GrokSearchAudit | undefined 
   return (error as NewsSearchError & { grok?: GrokSearchAudit }).grok;
 }
 
-export function withPageAudit(
-  page: SearchPage,
-  grok: GrokSearchAudit | undefined,
-): AuditedSearchPage {
+export function withPageAudit(page: SearchPage, grok: GrokSearchAudit | undefined): AuditedSearchPage {
   return grok ? { ...page, grok } : page;
 }
 

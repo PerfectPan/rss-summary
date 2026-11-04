@@ -29,6 +29,9 @@ export function parseCliArgs(argv: string[]): CliArgs {
   const result: Record<string, string | boolean> = {};
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
+    if (arg === undefined) {
+      continue;
+    }
     if (arg === "--dry-run") {
       result.dryRun = true;
       continue;
@@ -45,7 +48,9 @@ export function parseCliArgs(argv: string[]): CliArgs {
       result.rssOnly = true;
       continue;
     }
-    if (!arg.startsWith("--")) continue;
+    if (!arg.startsWith("--")) {
+      continue;
+    }
     const key = camelCase(arg.slice(2));
     const value = argv[index + 1];
     if (value && !value.startsWith("--")) {

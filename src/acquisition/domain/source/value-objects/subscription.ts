@@ -21,5 +21,7 @@ export type FeedSubscriptionInput = {
 };
 
 export function isWebPageSource(source: IndustrySource): source is WebPageSubscription {
-  return "type" in source && source.type === "page";
+  // Only WebPageSubscription carries the `type` discriminator; the feed parser
+  // whitelists its fields, so a feed record never grows a `type` at runtime.
+  return "type" in source;
 }

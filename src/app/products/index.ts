@@ -49,31 +49,31 @@ export const products: readonly ProductDefinition[] = [
     automations: (profileId) => [subscriptionsAutomation(profileId)],
     commands: [
       { name: "digest", run: runDigestCommand },
-      { name: "feeds", run: runFeedsCommand },
-    ],
+      { name: "feeds", run: runFeedsCommand }
+    ]
   },
   {
     id: "frontier",
     tool: { descriptor: frontierToolDescriptor },
     automations: (profileId) => [frontierAutomation(profileId)],
-    commands: [{ name: "industry", run: runIndustryCommand }],
+    commands: [{ name: "industry", run: runIndustryCommand }]
   },
   {
     id: "news",
     tool: { descriptor: newsToolDescriptor },
     automations: (profileId) => [noonNewsAutomation(profileId), eveningNewsAutomation(profileId)],
-    commands: [],
+    commands: []
   },
   {
     id: "daily-ai",
     tool: { descriptor: dailyAiToolDescriptor },
     automations: (profileId) => [dailyAiAutomation(profileId)],
-    commands: [],
+    commands: []
   },
   {
     id: "research",
     tool: { descriptor: researchToolDescriptor },
     automations: () => [],
-    commands: [{ name: "research", run: runResearchCommand }],
-  },
+    commands: [{ name: "research", run: runResearchCommand }]
+  }
 ];

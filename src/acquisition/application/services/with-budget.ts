@@ -13,22 +13,15 @@ import {
   type CacheRequest,
   type HashText,
   type PresentCache,
-  type SearchBudget,
+  type SearchBudget
 } from "../../domain/budget/index.js";
-import {
-  NewsSearchError,
-  type SearchInput,
-  type SearchPage,
-  type SearchUsage,
-} from "../../domain/search/index.js";
+import { NewsSearchError, type SearchInput, type SearchPage, type SearchUsage } from "../../domain/search/index.js";
 
 export type BudgetedSearchPage = SearchPage & { searchUsage: SearchUsage };
 
 export type BudgetedSearch = {
   (input: SearchInput): Effect.Effect<BudgetedSearchPage, unknown>;
-  cachedSearch: (
-    input: SearchInput,
-  ) => Effect.Effect<BudgetedSearchPage | undefined, NewsSearchError>;
+  cachedSearch: (input: SearchInput) => Effect.Effect<BudgetedSearchPage | undefined, NewsSearchError>;
 };
 
 export type BudgetInspection = {
@@ -52,16 +45,13 @@ export type BudgetDriver = {
   withLock: <A, E>(effect: Effect.Effect<A, E>) => Effect.Effect<A, E | NewsSearchError>;
 };
 
-export function withBudget(
-  search: (input: SearchInput) => Promise<SearchPage>,
-  driver: BudgetDriver,
-): BudgetedSearch {
+export function withBudget(search: (input: SearchInput) => Promise<SearchPage>, driver: BudgetDriver): BudgetedSearch {
   validateBudgetOptions({
     dailyLimit: driver.limits.dailyLimit,
     monthlyLimit: driver.limits.monthlyLimit,
     cacheTtlMs: driver.limits.cacheTtlMs,
     stateFile: driver.stateFile,
-    timezoneOffset: driver.limits.timezoneOffset,
+    timezoneOffset: driver.limits.timezoneOffset
   });
   const provider = driver.normalize(driver.provider);
   const present = driver.presentCache ?? presentCachedPage;
@@ -83,8 +73,8 @@ export function withBudget(
           Effect.exit(execute(input, request)).pipe(
             Effect.flatMap((exit) => Deferred.done(entry, exit)),
             Effect.ignore,
-            Effect.ensuring(Effect.sync(() => pending.delete(key))),
-          ),
+            Effect.ensuring(Effect.sync(() => pending.delete(key)))
+          )
         );
       }
       return yield* Deferred.await(deferred);
@@ -92,15 +82,10 @@ export function withBudget(
   };
 
   return Object.assign(run, {
-    cachedSearch: (
-      input: SearchInput,
-    ): Effect.Effect<BudgetedSearchPage | undefined, NewsSearchError> => {
+    cachedSearch: (input: SearchInput): Effect.Effect<BudgetedSearchPage | undefined, NewsSearchError> => {
       const request = parseCacheRequest(input, provider);
-      return Effect.map(
-        inspect(request, false),
-        (value) => value.cached as BudgetedSearchPage | undefined,
-      );
-    },
+      return Effect.map(inspect(request, false), (value) => value.cached as BudgetedSearchPage | undefined);
+    }
   });
 
   function inspect(request: CacheRequest, commit: boolean) {
@@ -112,49 +97,46 @@ export function withBudget(
           catch: (cause) =>
             cause instanceof NewsSearchError
               ? cause
-              : new NewsSearchError(
-                  "local_budget_state",
-                  cause instanceof Error ? cause.message : String(cause),
-                ),
+              : new NewsSearchError("local_budget_state", cause instanceof Error ? cause.message : String(cause))
         });
-        if (isErr(transition)) return yield* Effect.fail(transition.error);
+        if (isErr(transition)) {
+          return yield* Effect.fail(transition.error);
+        }
         if (transition.value.events.some((event) => event._tag === "Reserved")) {
           yield* driver.save(transition.value.state.persisted);
         }
         return transition.value.value;
-      }),
+      })
     );
   }
 
   function execute(input: SearchInput, request: CacheRequest) {
     return Effect.gen(function* () {
       const reservation = yield* inspect(request, true);
-      if (reservation.cached) return reservation.cached as BudgetedSearchPage;
+      if (reservation.cached) {
+        return reservation.cached as BudgetedSearchPage;
+      }
       const page = yield* Effect.tryPromise({
         try: () => search(input),
-        catch: (cause) => cause,
+        catch: (cause) => cause
       });
       const fetchedAt = driver.now().toISOString();
       if (driver.isCacheable(page)) {
         const rawPage = yield* Effect.try({
           try: () => driver.decodePage(page),
-          catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+          catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause)))
         });
         yield* driver.withLock(
           Effect.gen(function* () {
             const budget = yield* driver.load();
-            const remembered = budget.remember(
-              request,
-              rawPage,
-              fetchedAt,
-              driver.hash,
-              driver.isCacheable,
-            );
-            if (isErr(remembered)) return yield* Effect.fail(remembered.error);
+            const remembered = budget.remember(request, rawPage, fetchedAt, driver.hash, driver.isCacheable);
+            if (isErr(remembered)) {
+              return yield* Effect.fail(remembered.error);
+            }
             if (remembered.value.events.some((event) => event._tag === "CacheStored")) {
               yield* driver.save(remembered.value.state.persisted);
             }
-          }),
+          })
         );
       }
       return {
@@ -162,8 +144,8 @@ export function withBudget(
         searchUsage: {
           ...reservation.usage,
           source: "network" as const,
-          fetchedAt,
-        },
+          fetchedAt
+        }
       };
     });
   }

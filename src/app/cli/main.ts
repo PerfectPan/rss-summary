@@ -15,10 +15,7 @@ type CliDeps = {
   stderr?: Writable;
 };
 
-export async function runCliCommand(
-  argv: string[] = process.argv.slice(2),
-  deps: CliDeps = {},
-): Promise<number> {
+export async function runCliCommand(argv: string[] = process.argv.slice(2), deps: CliDeps = {}): Promise<number> {
   const stdout = deps.stdout ?? process.stdout;
   const stderr = deps.stderr ?? process.stderr;
   const command = argv[0] ?? "help";
@@ -26,7 +23,9 @@ export async function runCliCommand(
 
   for (const product of products) {
     const matched = product.commands.find((entry) => entry.name === command);
-    if (matched) return matched.run(rest, { stdout, stderr });
+    if (matched) {
+      return matched.run(rest, { stdout, stderr });
+    }
   }
 
   if (command === "github-home") {
@@ -63,7 +62,9 @@ function writeHelp(stdout: Writable): void {
 }
 
 export function isCliEntrypoint(metaUrl: string, argvPath: string | undefined): boolean {
-  if (!argvPath) return false;
+  if (!argvPath) {
+    return false;
+  }
   try {
     return realpathSync(fileURLToPath(metaUrl)) === realpathSync(argvPath);
   } catch {

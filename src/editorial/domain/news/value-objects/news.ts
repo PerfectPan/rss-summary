@@ -94,11 +94,7 @@ export type SelectedNewsStory = NewsStory & {
   selectedTopicId: string;
 };
 
-export type NewsStorySelectionReason =
-  | "duplicate-title"
-  | "topic-quota"
-  | "brief-cap"
-  | "no-enabled-topic";
+export type NewsStorySelectionReason = "duplicate-title" | "topic-quota" | "brief-cap" | "no-enabled-topic";
 
 export type NewsStoryDecision = {
   story: NewsStory;

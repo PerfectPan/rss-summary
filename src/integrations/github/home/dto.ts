@@ -19,14 +19,14 @@ const githubHomeUrl = "https://github.com/";
 
 const linkSchema = Schema.Struct({
   text: Schema.optional(Schema.Unknown),
-  href: Schema.optional(Schema.Unknown),
+  href: Schema.optional(Schema.Unknown)
 });
 
 const snapshotSchema = Schema.Struct({
   id: Schema.optional(Schema.Unknown),
   card: Schema.optional(Schema.NullOr(Schema.Unknown)),
   text: Schema.optional(Schema.Unknown),
-  links: Schema.optional(Schema.Array(linkSchema)),
+  links: Schema.optional(Schema.Array(linkSchema))
 });
 
 /** A decoded snapshot, soft-casting anything the schema rejects. */
@@ -42,9 +42,9 @@ export function homeSnapshot(input: unknown): HomeFeedCardSnapshot {
       const record = asRecord(link);
       return {
         text: typeof record.text === "string" ? record.text : "",
-        href: typeof record.href === "string" ? record.href : "",
+        href: typeof record.href === "string" ? record.href : ""
       };
-    }),
+    })
   };
 }
 
@@ -59,14 +59,14 @@ export function extractHomeFeedSnapshotsFromHtml(html: string): HomeFeedCardSnap
         .toArray()
         .map((link) => ({
           text: cleanText($(link).text()),
-          href: absoluteGithubHref($(link).attr("href") ?? ""),
+          href: absoluteGithubHref($(link).attr("href") ?? "")
         }));
 
       return homeSnapshot({
         id: element.attr("id") ?? "",
         card: parseHydroFeedCard(element.attr("data-hydro-view")),
         text: cleanText(element.text()),
-        links,
+        links
       });
     });
 }
@@ -86,7 +86,9 @@ export function absoluteGithubHref(href: string): string {
 }
 
 function parseHydroFeedCard(value: string | undefined): Record<string, unknown> | null {
-  if (!value) return null;
+  if (!value) {
+    return null;
+  }
   try {
     const parsed = JSON.parse(value) as { payload?: { feed_card?: unknown } };
     return asRecordOrNull(parsed.payload?.feed_card);
@@ -110,14 +112,18 @@ function asRecord(value: unknown): Record<string, unknown> {
 const objectCtorString = Function.prototype.toString.call(Object);
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== "object") return false;
-  if (Object.prototype.toString.call(value) !== "[object Object]") return false;
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+  if (Object.prototype.toString.call(value) !== "[object Object]") {
+    return false;
+  }
   const proto: object | null = Object.getPrototypeOf(value);
-  if (proto === null) return true;
+  if (proto === null) {
+    return true;
+  }
   const ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
   return (
-    typeof ctor === "function" &&
-    ctor instanceof ctor &&
-    Function.prototype.toString.call(ctor) === objectCtorString
+    typeof ctor === "function" && ctor instanceof ctor && Function.prototype.toString.call(ctor) === objectCtorString
   );
 }

@@ -22,8 +22,8 @@ describe("settleSearches", () => {
             await gate;
             return page("held");
           }),
-        2,
-      ),
+        2
+      )
     );
     await Promise.resolve();
     expect(started).toBe(2);
@@ -35,16 +35,12 @@ describe("settleSearches", () => {
   it("isolates a failure without dropping the other requests", async () => {
     const error = new Error("boom");
     const settled = await Effect.runPromise(
-      settleSearches(
-        ["a", "b", "c"],
-        (id) => (id === "b" ? Effect.fail(error) : Effect.succeed(page(id))),
-        1,
-      ),
+      settleSearches(["a", "b", "c"], (id) => (id === "b" ? Effect.fail(error) : Effect.succeed(page(id))), 1)
     );
     expect(settled).toEqual([
       { _tag: "Fulfilled", value: page("a") },
       { _tag: "Rejected", reason: error },
-      { _tag: "Fulfilled", value: page("c") },
+      { _tag: "Fulfilled", value: page("c") }
     ]);
   });
 });

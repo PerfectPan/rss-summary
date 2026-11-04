@@ -7,7 +7,11 @@ export type PublicationKind = "article" | "paper" | "release";
  */
 export function listingPublicationType(tags: readonly string[]): PublicationKind {
   const normalized = new Set(tags.map((tag) => tag.toLowerCase()));
-  if (normalized.has("papers") || normalized.has("academic")) return "paper";
-  if (normalized.has("releases")) return "release";
+  if (normalized.has("papers") || normalized.has("academic")) {
+    return "paper";
+  }
+  if (normalized.has("releases")) {
+    return "release";
+  }
   return "article";
 }

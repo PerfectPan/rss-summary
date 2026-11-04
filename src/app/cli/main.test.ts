@@ -13,17 +13,8 @@ describe("top-level CLI", () => {
     const output: string[] = [];
 
     const exitCode = await runCliCommand(
-      [
-        "feeds",
-        "add",
-        "--file",
-        file,
-        "--url",
-        "https://github.blog/feed",
-        "--name",
-        "GitHub Blog",
-      ],
-      { stdout: { write: (chunk) => output.push(String(chunk)) } },
+      ["feeds", "add", "--file", file, "--url", "https://github.blog/feed", "--name", "GitHub Blog"],
+      { stdout: { write: (chunk) => output.push(String(chunk)) } }
     );
 
     expect(exitCode).toBe(0);
@@ -31,8 +22,8 @@ describe("top-level CLI", () => {
       {
         name: "GitHub Blog",
         url: "https://github.blog/feed",
-        tags: [],
-      },
+        tags: []
+      }
     ]);
     expect(output.join("")).toContain("Added GitHub Blog -> https://github.blog/feed");
   });
@@ -51,7 +42,7 @@ describe("top-level CLI", () => {
     const output: string[] = [];
 
     const exitCode = await runCliCommand(["help"], {
-      stdout: { write: (chunk) => output.push(String(chunk)) },
+      stdout: { write: (chunk) => output.push(String(chunk)) }
     });
 
     expect(exitCode).toBe(0);
@@ -65,7 +56,7 @@ describe("top-level CLI", () => {
 
   it("returns an error exit code for unknown commands", async () => {
     const exitCode = await runCliCommand(["frobnicate"], {
-      stdout: { write: () => undefined },
+      stdout: { write: () => undefined }
     });
 
     expect(exitCode).toBe(1);

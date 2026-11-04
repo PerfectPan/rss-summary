@@ -4,12 +4,8 @@ import { isFailedRun, type RunSourceResult, type StoredRunAudit } from "../index
 
 describe("failed run detection", () => {
   it("marks a run failed when delivery failed, state failed, or a source failed", () => {
-    expect(isFailedRun(stored({ delivery: { status: "failed", stateStatus: "skipped" } }))).toBe(
-      true,
-    );
-    expect(isFailedRun(stored({ delivery: { status: "delivered", stateStatus: "failed" } }))).toBe(
-      true,
-    );
+    expect(isFailedRun(stored({ delivery: { status: "failed", stateStatus: "skipped" } }))).toBe(true);
+    expect(isFailedRun(stored({ delivery: { status: "delivered", stateStatus: "failed" } }))).toBe(true);
     expect(isFailedRun(stored({ sources: [source("failed")] }))).toBe(true);
   });
 
@@ -23,7 +19,7 @@ function stored(
   overrides: {
     delivery?: Partial<StoredRunAudit["delivery"]>;
     sources?: RunSourceResult[];
-  } = {},
+  } = {}
 ): StoredRunAudit {
   return {
     version: 1,
@@ -38,8 +34,8 @@ function stored(
       completedAt: "2026-08-09T01:01:00.000Z",
       channel: "stdout",
       stateStatus: "updated",
-      ...overrides.delivery,
-    },
+      ...overrides.delivery
+    }
   };
 }
 

@@ -2,12 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 import type { SearchSettlement } from "../../../acquisition/index.js";
 import type { NewsSearchHit } from "../../../editorial/index.js";
-import {
-  buildNewsAudit,
-  summarizeNewsSources,
-  type NewsAuditRequest,
-  type NewsTopic,
-} from "./output.js";
+import { buildNewsAudit, summarizeNewsSources, type NewsAuditRequest, type NewsTopic } from "./output.js";
 
 const topic: NewsTopic = {
   id: "tools",
@@ -16,7 +11,7 @@ const topic: NewsTopic = {
   enabled: true,
   maxItems: 2,
   sourcePolicy: "news",
-  queries: [],
+  queries: []
 };
 
 function request(): NewsAuditRequest {
@@ -27,10 +22,10 @@ function request(): NewsAuditRequest {
       intent: "developer-change",
       subjectAny: ["TypeScript"],
       eventAny: ["release"],
-      excludedAny: [],
+      excludedAny: []
     },
     topic,
-    input: { query: "TypeScript release" },
+    input: { query: "TypeScript release" }
   };
 }
 
@@ -45,9 +40,9 @@ function page(results: Array<Partial<NewsSearchHit>>): SearchSettlement {
         title: result.title ?? "Story",
         url: result.url ?? "https://example.com/story",
         publishTime: "2026-10-18T01:00:00Z",
-        ...result,
-      })) as never,
-    },
+        ...result
+      })) as never
+    }
   };
 }
 
@@ -57,21 +52,14 @@ describe("news output projection", () => {
       _tag: "SearchFailure",
       code: "grok_timeout",
       message: "timed out",
-      grok: { nativeTools: [], rejectedResults: 0 },
+      grok: { nativeTools: [], rejectedResults: 0 }
     } as never;
-    const audit = buildNewsAudit(
-      [request()],
-      [{ _tag: "Rejected", reason: failure }],
-      [],
-      [],
-      0,
-      0,
-    );
+    const audit = buildNewsAudit([request()], [{ _tag: "Rejected", reason: failure }], [], [], 0, 0);
     expect(audit.queries[0]).toMatchObject({
       queryId: "typescript",
       status: "failed",
       errorCode: "grok_timeout",
-      grok: { nativeTools: [], rejectedResults: 0 },
+      grok: { nativeTools: [], rejectedResults: 0 }
     });
   });
 

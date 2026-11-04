@@ -1,4 +1,5 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { readFile as readFileAsync } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -11,8 +12,9 @@ import { SourceCatalogStoreLive } from "../factories/live.js";
 const directories: string[] = [];
 
 afterEach(() => {
-  for (const directory of directories.splice(0))
+  for (const directory of directories.splice(0)) {
     rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 describe("source catalog file", () => {
@@ -29,8 +31,8 @@ describe("source catalog file", () => {
           yield* store.saveFeeds(path, feeds);
           return yield* store.loadFeeds(path);
         }),
-        SourceCatalogStoreLive,
-      ),
+        SourceCatalogStoreLive
+      )
     );
     expect(loaded).toEqual(feeds);
     expect(readFileSync(path, "utf8")).toBe(`${JSON.stringify(feeds, null, 2)}\n`);
@@ -45,14 +47,16 @@ describe("source catalog file", () => {
           Effect.gen(function* () {
             const store = yield* SourceCatalogStore;
             return yield* store.loadFeeds(directory);
-          }),
+          })
         ),
-        SourceCatalogStoreLive,
-      ),
+        SourceCatalogStoreLive
+      )
     );
     expectFileMessage(
       exit,
-      nodeMessage(() => readFileSync(directory, "utf8")),
+      await nodeMessage(async () => {
+        await readFileAsync(directory, "utf8");
+      })
     );
   });
 
@@ -65,33 +69,35 @@ describe("source catalog file", () => {
           Effect.gen(function* () {
             const store = yield* SourceCatalogStore;
             yield* store.saveFeeds(directory, []);
-          }),
+          })
         ),
-        SourceCatalogStoreLive,
-      ),
+        SourceCatalogStoreLive
+      )
     );
     expectFileMessage(
       exit,
-      nodeMessage(() => {
+      await nodeMessage(() => {
         mkdirSync(dirname(directory), { recursive: true });
         writeFileSync(directory, "unused");
-      }),
+      })
     );
   });
 });
 
 function expectFileMessage(exit: Exit.Exit<unknown, unknown>, message: string): void {
   expect(Exit.isFailure(exit)).toBe(true);
-  if (!Exit.isFailure(exit)) return;
+  if (!Exit.isFailure(exit)) {
+    return;
+  }
   expect(Cause.hasDies(exit.cause)).toBe(false);
   const error = Cause.squash(exit.cause);
   expect(error).toBeInstanceOf(Error);
   expect((error as Error).message).toBe(message);
 }
 
-function nodeMessage(readOrWrite: () => void): string {
+async function nodeMessage(readOrWrite: () => void | Promise<void>): Promise<string> {
   try {
-    readOrWrite();
+    await readOrWrite();
   } catch (error) {
     return error instanceof Error ? error.message : String(error);
   }

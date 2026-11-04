@@ -12,6 +12,6 @@ export function decodeFeedState(raw: unknown): FeedState {
   const parsed = raw as Partial<FeedState>;
   return {
     seen: parsed.seen ?? {},
-    researched: parsed.researched ?? {},
+    researched: parsed.researched ?? {}
   };
 }

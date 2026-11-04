@@ -22,9 +22,9 @@ describe("industry brief render", () => {
           events: [],
           label: "New agent release",
           url: "https://example.com/a",
-          description: "An agent framework release.",
-        },
-      ],
+          description: "An agent framework release."
+        }
+      ]
     };
 
     const markdown = renderViewMarkdown(industryView(document));
@@ -38,8 +38,8 @@ describe("industry brief render", () => {
     const markdown = renderViewMarkdown(
       industryView({
         generatedAt: "2026-08-09T01:00:00.000Z",
-        candidates: [],
-      }),
+        candidates: []
+      })
     );
 
     expect(markdown).toContain("没有新的行业前沿动态");
@@ -59,9 +59,9 @@ describe("industry brief render", () => {
           reasons: ["matches paper abstract: agent"],
           events: [],
           label: "Unverified agent claim",
-          url: "https://arxiv.org/abs/2608.01234",
-        },
-      ],
+          url: "https://arxiv.org/abs/2608.01234"
+        }
+      ]
     };
 
     const markdown = renderViewMarkdown(industryView(document));

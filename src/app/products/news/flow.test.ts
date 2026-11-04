@@ -9,7 +9,7 @@ import {
   AllNewsQueriesFailedError,
   generateRivusNewsBrief,
   resolveNewsEditionWindow,
-  type RivusNewsBriefResult,
+  type RivusNewsBriefResult
 } from "./flow.js";
 import type { NewsTopicQuery } from "./output.js";
 import { NewsSearchError, type NewsSearchInput } from "../../../acquisition/index.js";
@@ -29,9 +29,9 @@ function withNewsMarkdown(result: RivusNewsBriefResult) {
         stories: result.stories,
         topics: result.topics,
         warnings: result.warnings,
-        windowLabel: result.windowLabel,
-      }),
-    ),
+        windowLabel: result.windowLabel
+      })
+    )
   };
 }
 
@@ -39,11 +39,7 @@ describe("Rivus news brief Tool adapter", () => {
   it("rotates four of seven queries and reports deferred coverage", async () => {
     const queryIds = ["one", "two", "three", "four", "five", "six", "seven"];
     const covered = new Set<string>();
-    for (const occurrence of [
-      "2026-10-04T12:30:00+08:00",
-      "2026-10-05T12:30:00+08:00",
-      "2026-10-06T12:30:00+08:00",
-    ]) {
+    for (const occurrence of ["2026-10-04T12:30:00+08:00", "2026-10-05T12:30:00+08:00", "2026-10-06T12:30:00+08:00"]) {
       const search = vi.fn(async () => ({ resultCount: 0, results: [] }));
       const result = await Effect.runPromise(
         generateRivusNewsBrief(
@@ -51,16 +47,19 @@ describe("Rivus news brief Tool adapter", () => {
           {
             env: { NEWS_SEARCH_MODE: "doubao" },
             search,
-            topics: [newsTopic("technology", queryIds)],
-          },
-        ),
+            topics: [newsTopic("technology", queryIds)]
+          }
+        )
       );
       expect(search).toHaveBeenCalledTimes(4);
       expect(result.audit.queries.filter(({ status }) => status === "skipped")).toHaveLength(3);
       expect(result.sourceStatus?.state).toBe("partial");
       expect(result.warnings.join(" ")).toContain("4/7");
-      for (const query of result.audit.queries)
-        if (query.status === "ok") covered.add(query.queryId);
+      for (const query of result.audit.queries) {
+        if (query.status === "ok") {
+          covered.add(query.queryId);
+        }
+      }
     }
     expect([...covered].sort()).toEqual([...queryIds].sort());
   });
@@ -78,7 +77,7 @@ describe("Rivus news brief Tool adapter", () => {
             url: "https://example.com/inside",
             publishTime: new Date(until - 60_000).toISOString(),
             authInfoLevel: 1,
-            rankPosition: 1,
+            rankPosition: 1
           },
           {
             id: "boundary",
@@ -86,9 +85,9 @@ describe("Rivus news brief Tool adapter", () => {
             url: "https://example.com/boundary",
             publishTime: occurrence,
             authInfoLevel: 1,
-            rankPosition: 2,
-          },
-        ],
+            rankPosition: 2
+          }
+        ]
       }));
       const result = await Effect.runPromise(
         generateRivusNewsBrief(
@@ -99,21 +98,15 @@ describe("Rivus news brief Tool adapter", () => {
             topics: [
               {
                 ...newsTopic("technology", []),
-                queries: [
-                  newsQuery("typescript", "TypeScript release", ["TypeScript"], ["release"]),
-                ],
-              },
-            ],
-          },
-        ),
+                queries: [newsQuery("typescript", "TypeScript release", ["TypeScript"], ["release"])]
+              }
+            ]
+          }
+        )
       );
-      expect(result.stories.map(({ canonicalUrl }) => canonicalUrl)).toEqual([
-        "https://example.com/inside",
-      ]);
-      expect(search).toHaveBeenCalledWith(
-        expect.objectContaining({ sinceDay: "2026-10-03", day: "2026-10-04" }),
-      );
-    },
+      expect(result.stories.map(({ canonicalUrl }) => canonicalUrl)).toEqual(["https://example.com/inside"]);
+      expect(search).toHaveBeenCalledWith(expect.objectContaining({ sinceDay: "2026-10-03", day: "2026-10-04" }));
+    }
   );
 
   it("counts HTTP retries across invocations and explains a local cap without GLM fallback", async () => {
@@ -124,7 +117,7 @@ describe("Rivus news brief Tool adapter", () => {
       search: vi.fn(async () => []),
       read: vi.fn(async () => {
         throw new Error("unused");
-      }),
+      })
     };
     vi.stubGlobal("fetch", fetch);
     try {
@@ -133,12 +126,12 @@ describe("Rivus news brief Tool adapter", () => {
           DOUBAO_SEARCH_API_KEY: "test",
           NEWS_SEARCH_STATE_FILE: stateFile,
           NEWS_SEARCH_DAILY_LIMIT: "2",
-          NEWS_SEARCH_MODE: "hybrid",
+          NEWS_SEARCH_MODE: "hybrid"
         },
         now: () => new Date("2026-10-04T12:30:00+08:00"),
         sleep: async () => undefined,
         glm,
-        topics: [newsTopic("technology", ["one"])],
+        topics: [newsTopic("technology", ["one"])]
       };
       const input = { edition: "noon", occurrence: "2026-10-04T12:30:00+08:00" };
       const first = await Effect.runPromise(generateRivusNewsBrief(input, dependencies));
@@ -150,7 +143,7 @@ describe("Rivus news brief Tool adapter", () => {
         expect(result.sourceStatus?.state).toBe("unavailable");
         expect(result.audit.queries[0]).toMatchObject({
           status: "skipped",
-          errorCode: "local_budget_exhausted",
+          errorCode: "local_budget_exhausted"
         });
         expect(result.warnings.join(" ")).toContain("预算已用完");
       }
@@ -168,7 +161,7 @@ describe("Rivus news brief Tool adapter", () => {
       dailyUsed: 6,
       monthlyUsed: 56,
       dailyLimit: 14,
-      monthlyLimit: 420,
+      monthlyLimit: 420
     };
     const result = await Effect.runPromise(
       generateRivusNewsBrief(
@@ -176,9 +169,9 @@ describe("Rivus news brief Tool adapter", () => {
         {
           env: { NEWS_SEARCH_MODE: "doubao" },
           topics: [newsTopic("technology", ["one"])],
-          search: async () => ({ results: [], resultCount: 0, searchUsage }),
-        },
-      ),
+          search: async () => ({ results: [], resultCount: 0, searchUsage })
+        }
+      )
     );
     expect(result.audit.queries[0]?.searchUsage).toEqual(searchUsage);
     expect(result.sourceStatus?.state).toBe("partial");
@@ -192,16 +185,16 @@ describe("Rivus news brief Tool adapter", () => {
       async () =>
         new Response(
           JSON.stringify({
-            ResponseMetadata: { Error: { Code: "10406", Message: "free quota exhausted" } },
+            ResponseMetadata: { Error: { Code: "10406", Message: "free quota exhausted" } }
           }),
-          { status: 200 },
-        ),
+          { status: 200 }
+        )
     );
     const glm = {
       search: vi.fn(async () => []),
       read: vi.fn(async () => {
         throw new Error("unused");
-      }),
+      })
     };
     vi.stubGlobal("fetch", fetch);
     try {
@@ -214,7 +207,7 @@ describe("Rivus news brief Tool adapter", () => {
               DOUBAO_SEARCH_API_KEY: "test",
               NEWS_SEARCH_STATE_FILE: join(directory, "budget.json"),
               NEWS_SEARCH_DAILY_LIMIT: "1",
-              NEWS_SEARCH_MODE: "hybrid",
+              NEWS_SEARCH_MODE: "hybrid"
             },
             now: () => new Date("2026-10-04T12:30:00+08:00"),
             glm,
@@ -223,18 +216,18 @@ describe("Rivus news brief Tool adapter", () => {
                 ...topic,
                 queries: topic.queries.map((query) => ({
                   ...query,
-                  glm: { query: query.text, domains: ["example.com"] },
-                })),
-              },
-            ],
-          },
-        ),
+                  glm: { query: query.text, domains: ["example.com"] }
+                }))
+              }
+            ]
+          }
+        )
       );
       expect(fetch).toHaveBeenCalledTimes(1);
       expect(glm.search).toHaveBeenCalledTimes(1);
       expect(result.audit.queries[1]).toMatchObject({
         status: "skipped",
-        errorCode: "local_budget_exhausted",
+        errorCode: "local_budget_exhausted"
       });
     } finally {
       vi.unstubAllGlobals();
@@ -246,15 +239,13 @@ describe("Rivus news brief Tool adapter", () => {
     expect(resolveNewsEditionWindow("2026-07-29T04:30:00.000Z", "+08:00", "noon")).toMatchObject({
       day: "2026-07-29",
       since: Date.parse("2026-07-29T00:00:00+08:00"),
-      until: Date.parse("2026-07-29T12:30:00+08:00"),
+      until: Date.parse("2026-07-29T12:30:00+08:00")
     });
-    expect(resolveNewsEditionWindow("2026-07-29T11:00:00.000Z", "+08:00", "evening")).toMatchObject(
-      {
-        day: "2026-07-29",
-        since: Date.parse("2026-07-29T12:30:00+08:00"),
-        until: Date.parse("2026-07-29T19:00:00+08:00"),
-      },
-    );
+    expect(resolveNewsEditionWindow("2026-07-29T11:00:00.000Z", "+08:00", "evening")).toMatchObject({
+      day: "2026-07-29",
+      since: Date.parse("2026-07-29T12:30:00+08:00"),
+      until: Date.parse("2026-07-29T19:00:00+08:00")
+    });
   });
 
   it("searches every enabled topic query and renders one bounded mobile brief", async () => {
@@ -275,9 +266,9 @@ describe("Rivus news brief Tool adapter", () => {
             rankScore: 0.9,
             authInfoLevel: query.includes("政策") ? 1 : 2,
             authInfoDescription: query.includes("政策") ? "非常权威" : "正常权威",
-            rankPosition: 1,
-          },
-        ],
+            rankPosition: 1
+          }
+        ]
       };
     });
 
@@ -289,7 +280,7 @@ describe("Rivus news brief Tool adapter", () => {
             env: {
               NEWS_SEARCH_MODE: "doubao",
               DOUBAO_SEARCH_API_KEY: "test",
-              FEED_TIMEZONE_OFFSET: "+08:00",
+              FEED_TIMEZONE_OFFSET: "+08:00"
             },
             search,
             topics: [
@@ -300,10 +291,7 @@ describe("Rivus news brief Tool adapter", () => {
                 enabled: true,
                 sourcePolicy: "authoritative",
                 maxItems: 3,
-                queries: [
-                  newsQuery("ai-agent", "AI Agent"),
-                  newsQuery("developer-tools", "开发工具"),
-                ],
+                queries: [newsQuery("ai-agent", "AI Agent"), newsQuery("developer-tools", "开发工具")]
               },
               {
                 id: "politics",
@@ -312,33 +300,31 @@ describe("Rivus news brief Tool adapter", () => {
                 enabled: true,
                 sourcePolicy: "official",
                 maxItems: 3,
-                queries: [newsQuery("policy", "中国重要政策")],
-              },
-            ],
-          },
-        ),
-      ),
+                queries: [newsQuery("policy", "中国重要政策")]
+              }
+            ]
+          }
+        )
+      )
     );
 
     expect(search).toHaveBeenCalledTimes(3);
-    expect(search).toHaveBeenCalledWith(
-      expect.objectContaining({ day: "2026-07-29", sourcePolicy: "official" }),
-    );
+    expect(search).toHaveBeenCalledWith(expect.objectContaining({ day: "2026-07-29", sourcePolicy: "official" }));
     expect(result).toMatchObject({ edition: "noon", itemCount: 3, day: "2026-07-29" });
     expect(result.audit).toMatchObject({
       counts: { fetched: 3, acceptedHits: 3, rejectedHits: 0, selectedStories: 3 },
       queries: [
         { queryId: "ai-agent", status: "ok", fetched: 1, accepted: 1 },
         { queryId: "developer-tools", status: "ok", fetched: 1, accepted: 1 },
-        { queryId: "policy", status: "ok", fetched: 1, accepted: 1 },
-      ],
+        { queryId: "policy", status: "ok", fetched: 1, accepted: 1 }
+      ]
     });
     expect(result.markdown).toContain("# 午间热点 · 2026-07-29");
     expect(result.markdown).toContain("**💻 科技 · 2**");
     expect(result.markdown).toContain("**🌍 政治 · 1**");
     expect(result.markdown).toContain("**1. [AI Agent headline](https://example.com/AI%20Agent)**");
     expect(result.markdown).toContain(
-      "苹果集中推送系统安全更新，覆盖手机、平板和电脑等产品线。此次更新修复多项高危漏洞，用户应尽快升级设备。",
+      "苹果集中推送系统安全更新，覆盖手机、平板和电脑等产品线。此次更新修复多项高危漏洞，用户应尽快升级设备。"
     );
     expect(result.markdown).toContain("Technology News · 09:00");
     expect(result.markdown).not.toContain("发生了什么");
@@ -358,8 +344,8 @@ describe("Rivus news brief Tool adapter", () => {
         enabled: true,
         sourcePolicy: "authoritative" as const,
         maxItems: 3,
-        queries: [newsQuery("working", "working"), newsQuery("broken", "broken")],
-      },
+        queries: [newsQuery("working", "working"), newsQuery("broken", "broken")]
+      }
     ];
     const partial = await Effect.runPromise(
       generateRivusNewsBrief(
@@ -368,15 +354,17 @@ describe("Rivus news brief Tool adapter", () => {
           env: {
             NEWS_SEARCH_MODE: "doubao",
             DOUBAO_SEARCH_API_KEY: "test",
-            FEED_TIMEZONE_OFFSET: "+08:00",
+            FEED_TIMEZONE_OFFSET: "+08:00"
           },
           topics,
           search: async ({ query }) => {
-            if (query === "broken") throw new Error("temporary search failure");
+            if (query === "broken") {
+              throw new Error("temporary search failure");
+            }
             return { logId: "ok", resultCount: 0, timeCostMs: 10, results: [] };
-          },
-        },
-      ),
+          }
+        }
+      )
     );
     expect(partial.warnings).toEqual(["采集覆盖不完整：科技新闻；详见采集审计"]);
     expect(partial.audit.queries).toEqual([
@@ -384,8 +372,8 @@ describe("Rivus news brief Tool adapter", () => {
       expect.objectContaining({
         queryId: "broken",
         status: "failed",
-        error: "temporary search failure",
-      }),
+        error: "temporary search failure"
+      })
     ]);
 
     const failure = await Effect.runPromise(
@@ -396,15 +384,15 @@ describe("Rivus news brief Tool adapter", () => {
             env: {
               NEWS_SEARCH_MODE: "doubao",
               DOUBAO_SEARCH_API_KEY: "test",
-              FEED_TIMEZONE_OFFSET: "+08:00",
+              FEED_TIMEZONE_OFFSET: "+08:00"
             },
             topics,
             search: async () => {
               throw new DoubaoSearchError("10406", "free quota exhausted");
-            },
-          },
-        ),
-      ),
+            }
+          }
+        )
+      )
     );
     expect(failure).toMatchObject({
       name: AllNewsQueriesFailedError.name,
@@ -414,17 +402,17 @@ describe("Rivus news brief Tool adapter", () => {
             expect.objectContaining({
               queryId: "working",
               status: "failed",
-              errorCode: "10406",
+              errorCode: "10406"
             }),
             expect.objectContaining({
               queryId: "broken",
               status: "failed",
-              errorCode: "10406",
-            }),
-          ],
+              errorCode: "10406"
+            })
+          ]
         },
-        stories: [],
-      },
+        stories: []
+      }
     });
   });
 
@@ -441,7 +429,7 @@ describe("Rivus news brief Tool adapter", () => {
             inFlight -= 1;
             resolve({ resultCount: 0, results: [] });
           });
-        }),
+        })
     );
     const resultPromise = Effect.runPromise(
       generateRivusNewsBrief(
@@ -450,13 +438,13 @@ describe("Rivus news brief Tool adapter", () => {
           env: {
             NEWS_SEARCH_MODE: "doubao",
             DOUBAO_SEARCH_API_KEY: "test",
-            FEED_TIMEZONE_OFFSET: "+08:00",
+            FEED_TIMEZONE_OFFSET: "+08:00"
           },
           search,
           maxQueries: 5,
-          topics: [newsTopic("technology", ["one", "two", "three", "four", "five"])],
-        },
-      ),
+          topics: [newsTopic("technology", ["one", "two", "three", "four", "five"])]
+        }
+      )
     );
 
     await vi.waitFor(() => expect(search).toHaveBeenCalledTimes(2));
@@ -470,13 +458,7 @@ describe("Rivus news brief Tool adapter", () => {
 
     const result = await resultPromise;
     expect(maxInFlight).toBe(2);
-    expect(result.audit.queries.map(({ queryId }) => queryId)).toEqual([
-      "one",
-      "two",
-      "three",
-      "four",
-      "five",
-    ]);
+    expect(result.audit.queries.map(({ queryId }) => queryId)).toEqual(["one", "two", "three", "four", "five"]);
   });
 
   it("does not classify query configuration failures as provider unavailability", async () => {
@@ -488,15 +470,15 @@ describe("Rivus news brief Tool adapter", () => {
             env: {
               NEWS_SEARCH_MODE: "doubao",
               DOUBAO_SEARCH_API_KEY: "test",
-              FEED_TIMEZONE_OFFSET: "+08:00",
+              FEED_TIMEZONE_OFFSET: "+08:00"
             },
             search: async () => {
               throw new Error("invalid query configuration");
             },
-            topics: [newsTopic("technology", ["invalid"])],
-          },
-        ),
-      ),
+            topics: [newsTopic("technology", ["invalid"])]
+          }
+        )
+      )
     );
 
     expect(failure).toBeInstanceOf(AggregateError);
@@ -517,14 +499,14 @@ describe("Rivus news brief Tool adapter", () => {
           env: {
             NEWS_SEARCH_MODE: "doubao",
             DOUBAO_SEARCH_API_KEY: "test",
-            FEED_TIMEZONE_OFFSET: "+08:00",
+            FEED_TIMEZONE_OFFSET: "+08:00"
           },
           random: () => 0.5,
           search,
           sleep,
-          topics: [newsTopic("technology", ["retryable"])],
-        },
-      ),
+          topics: [newsTopic("technology", ["retryable"])]
+        }
+      )
     );
 
     expect(search).toHaveBeenCalledTimes(2);
@@ -552,14 +534,14 @@ describe("Rivus news brief Tool adapter", () => {
           env: {
             NEWS_SEARCH_MODE: "doubao",
             DOUBAO_SEARCH_API_KEY: "test",
-            FEED_TIMEZONE_OFFSET: "+08:00",
+            FEED_TIMEZONE_OFFSET: "+08:00"
           },
           random: () => 0,
           search,
           sleep,
-          topics: [newsTopic("technology", ["limited"]), newsTopic("policy", ["working"])],
-        },
-      ),
+          topics: [newsTopic("technology", ["limited"]), newsTopic("policy", ["working"])]
+        }
+      )
     );
 
     expect(search).toHaveBeenCalledTimes(4);
@@ -568,14 +550,16 @@ describe("Rivus news brief Tool adapter", () => {
     expect(result.warnings).toEqual(["采集覆盖不完整：technology；详见采集审计"]);
     expect(result.audit.queries).toEqual([
       expect.objectContaining({ queryId: "limited", status: "failed" }),
-      expect.objectContaining({ queryId: "working", status: "ok" }),
+      expect.objectContaining({ queryId: "working", status: "ok" })
     ]);
   });
 
   it("does not retry non-transient search errors", async () => {
     const sleep = vi.fn(async () => undefined);
     const search = vi.fn(async ({ query }: { query: string }) => {
-      if (query === "invalid") throw new Error("Doubao search query is invalid");
+      if (query === "invalid") {
+        throw new Error("Doubao search query is invalid");
+      }
       return { resultCount: 0, results: [] };
     });
 
@@ -586,20 +570,20 @@ describe("Rivus news brief Tool adapter", () => {
           env: {
             NEWS_SEARCH_MODE: "doubao",
             DOUBAO_SEARCH_API_KEY: "test",
-            FEED_TIMEZONE_OFFSET: "+08:00",
+            FEED_TIMEZONE_OFFSET: "+08:00"
           },
           search,
           sleep,
-          topics: [newsTopic("technology", ["invalid", "working"])],
-        },
-      ),
+          topics: [newsTopic("technology", ["invalid", "working"])]
+        }
+      )
     );
 
     expect(search).toHaveBeenCalledTimes(2);
     expect(sleep).not.toHaveBeenCalled();
     expect(result.audit.queries.map(({ queryId, status }) => ({ queryId, status }))).toEqual([
       { queryId: "invalid", status: "failed" },
-      { queryId: "working", status: "ok" },
+      { queryId: "working", status: "ok" }
     ]);
   });
 
@@ -609,8 +593,8 @@ describe("Rivus news brief Tool adapter", () => {
       .fn()
       .mockRejectedValueOnce(
         new DoubaoSearchError("rate_limit_exceeded", "rate limit exceeded", {
-          retryAfterMs: 1_500,
-        }),
+          retryAfterMs: 1_500
+        })
       )
       .mockResolvedValueOnce({ resultCount: 0, results: [] });
 
@@ -621,14 +605,14 @@ describe("Rivus news brief Tool adapter", () => {
           env: {
             NEWS_SEARCH_MODE: "doubao",
             DOUBAO_SEARCH_API_KEY: "test",
-            FEED_TIMEZONE_OFFSET: "+08:00",
+            FEED_TIMEZONE_OFFSET: "+08:00"
           },
           random: () => 0,
           search,
           sleep,
-          topics: [newsTopic("technology", ["retry-after"])],
-        },
-      ),
+          topics: [newsTopic("technology", ["retry-after"])]
+        }
+      )
     );
 
     expect(sleep).toHaveBeenCalledWith(1_500);
@@ -642,7 +626,7 @@ describe("Rivus news brief Tool adapter", () => {
           env: {
             NEWS_SEARCH_MODE: "doubao",
             DOUBAO_SEARCH_API_KEY: "test",
-            FEED_TIMEZONE_OFFSET: "+08:00",
+            FEED_TIMEZONE_OFFSET: "+08:00"
           },
           search: async () => ({
             logId: "ok",
@@ -659,7 +643,7 @@ describe("Rivus news brief Tool adapter", () => {
                 rankScore: 0.9,
                 authInfoLevel: 2,
                 authInfoDescription: "正常权威",
-                rankPosition: 1,
+                rankPosition: 1
               },
               {
                 id: "no-time",
@@ -670,9 +654,9 @@ describe("Rivus news brief Tool adapter", () => {
                 rankScore: 0.8,
                 authInfoLevel: 2,
                 authInfoDescription: "正常权威",
-                rankPosition: 2,
-              },
-            ],
+                rankPosition: 2
+              }
+            ]
           }),
           topics: [
             {
@@ -682,11 +666,11 @@ describe("Rivus news brief Tool adapter", () => {
               enabled: true,
               sourcePolicy: "authoritative",
               maxItems: 3,
-              queries: [newsQuery("ai-agent", "AI Agent", ["summary"], ["fine"])],
-            },
-          ],
-        },
-      ),
+              queries: [newsQuery("ai-agent", "AI Agent", ["summary"], ["fine"])]
+            }
+          ]
+        }
+      )
     );
 
     expect(result.warnings).toEqual([]);
@@ -695,26 +679,21 @@ describe("Rivus news brief Tool adapter", () => {
       queries: [
         {
           queryId: "ai-agent",
-          rejected: { "invalid-publish-time": 1 },
-        },
-      ],
+          rejected: { "invalid-publish-time": 1 }
+        }
+      ]
     });
   });
 });
 
-function newsQuery(
-  id: string,
-  text: string,
-  eventAny = ["安全更新"],
-  subjectAny = [text],
-): NewsTopicQuery {
+function newsQuery(id: string, text: string, eventAny = ["安全更新"], subjectAny = [text]): NewsTopicQuery {
   return {
     id,
     text,
     intent: "developer-change",
     subjectAny,
     eventAny,
-    excludedAny: ["评测"],
+    excludedAny: ["评测"]
   };
 }
 
@@ -726,7 +705,7 @@ function newsTopic(id: string, queryIds: string[]) {
     enabled: true,
     sourcePolicy: "authoritative" as const,
     maxItems: 3,
-    queries: queryIds.map((queryId) => newsQuery(queryId, queryId)),
+    queries: queryIds.map((queryId) => newsQuery(queryId, queryId))
   };
 }
 
@@ -743,9 +722,9 @@ it("runs hybrid search through the news application, merges evidence and preserv
         summary: "TypeScript released a new compiler.",
         publishTime: publishedAt,
         authInfoLevel: 1,
-        rankPosition: 1,
-      },
-    ],
+        rankPosition: 1
+      }
+    ]
   }));
   search.mockImplementationOnce(async () => ({
     resultCount: 1,
@@ -757,24 +736,22 @@ it("runs hybrid search through the news application, merges evidence and preserv
         summary: "TypeScript released a new compiler.",
         publishTime: publishedAt,
         authInfoLevel: 1,
-        rankPosition: 1,
-      },
-    ],
+        rankPosition: 1
+      }
+    ]
   }));
   search.mockImplementation(async () => {
     throw new DoubaoSearchError("10406", "quota exhausted");
   });
   const glm = {
-    search: vi.fn(async () => [
-      { title: "TypeScript released", url, snippet: "TypeScript released a compiler" },
-    ]),
+    search: vi.fn(async () => [{ title: "TypeScript released", url, snippet: "TypeScript released a compiler" }]),
     read: vi.fn(async () => ({
       title: "TypeScript released",
       url,
       content: "TypeScript released a new compiler.",
       truncated: false,
-      publishedAt,
-    })),
+      publishedAt
+    }))
   };
   const result = await Effect.runPromise(
     generateRivusNewsBrief(
@@ -798,18 +775,18 @@ it("runs hybrid search through the news application, merges evidence and preserv
               subjectAny: ["TypeScript"],
               eventAny: ["released"],
               excludedAny: [],
-              glm: { query: "TypeScript released", domains: ["devblogs.microsoft.com"] },
-            })),
-          },
-        ],
-      },
-    ),
+              glm: { query: "TypeScript released", domains: ["devblogs.microsoft.com"] }
+            }))
+          }
+        ]
+      }
+    )
   );
   expect(search).toHaveBeenCalledTimes(2);
   expect(glm.search).toHaveBeenCalledTimes(2);
   expect(glm.read).toHaveBeenCalledTimes(1);
   expect(result.itemCount).toBe(1);
-  expect(result.stories[0].queryHits).toBe(3);
+  expect(result.stories[0]!.queryHits).toBe(3);
   expect(result.audit.counts).toMatchObject({ acceptedHits: 3, canonicalDuplicates: 2 });
   expect(result.audit.queries.map(({ provider }) => provider)).toEqual(["doubao", "glm", "glm"]);
   expect(result.warnings).toEqual([]);
@@ -827,7 +804,7 @@ it("does not warn when both providers successfully return no candidates", async 
           search: async () => [],
           read: async () => {
             throw new Error("unused");
-          },
+          }
         },
         topics: [
           {
@@ -840,13 +817,13 @@ it("does not warn when both providers successfully return no candidates", async 
             queries: [
               {
                 ...newsQuery("empty", "empty", ["TypeScript"], ["release"]),
-                glm: { query: "TypeScript release", domains: ["devblogs.microsoft.com"] },
-              },
-            ],
-          },
-        ],
-      },
-    ),
+                glm: { query: "TypeScript release", domains: ["devblogs.microsoft.com"] }
+              }
+            ]
+          }
+        ]
+      }
+    )
   );
   expect(result.itemCount).toBe(0);
   expect(result.warnings).toEqual([]);
@@ -861,7 +838,7 @@ it("recovers late-indexed and date-only articles in explicit catch-up without re
     url: `https://example.com/${id}`,
     publishTime,
     authInfoLevel: 1,
-    rankPosition: 1,
+    rankPosition: 1
   });
   const calls: NewsSearchInput[] = [];
   const result = await Effect.runPromise(
@@ -870,7 +847,7 @@ it("recovers late-indexed and date-only articles in explicit catch-up without re
         edition: "evening",
         occurrence: "2026-07-29T22:00:00+08:00",
         since: "2026-07-27T18:00:00+08:00",
-        reportedUrls: ["https://example.com/delivered?utm_source=feed"],
+        reportedUrls: ["https://example.com/delivered?utm_source=feed"]
       },
       {
         env: { NEWS_SEARCH_MODE: "doubao" },
@@ -881,9 +858,9 @@ it("recovers late-indexed and date-only articles in explicit catch-up without re
               make("late", "2026-07-29T09:00:00+08:00"),
               make("date-only", "2026-07-28"),
               make("delivered", "2026-07-29T09:00:00+08:00"),
-              make("uncertain", "2026-07-29"),
+              make("uncertain", "2026-07-29")
             ],
-            resultCount: 4,
+            resultCount: 4
           };
         },
         topics: [
@@ -894,20 +871,20 @@ it("recovers late-indexed and date-only articles in explicit catch-up without re
             enabled: true,
             maxItems: 4,
             sourcePolicy: "official",
-            queries: [newsQuery("ts", "TypeScript release", ["TypeScript"], ["release"])],
-          },
-        ],
-      },
-    ),
+            queries: [newsQuery("ts", "TypeScript release", ["TypeScript"], ["release"])]
+          }
+        ]
+      }
+    )
   );
-  expect(calls[0].sinceDay).toBe("2026-07-27");
+  expect(calls[0]!.sinceDay).toBe("2026-07-27");
   expect(result.stories.map((s) => s.canonicalUrl).sort()).toEqual([
     "https://example.com/date-only",
-    "https://example.com/late",
+    "https://example.com/late"
   ]);
-  expect(result.audit.queries[0].rejected).toMatchObject({
+  expect(result.audit.queries[0]!.rejected).toMatchObject({
     "already-reported": 1,
-    "outside-window": 1,
+    "outside-window": 1
   });
 });
 
@@ -917,7 +894,7 @@ it("rotates source plans between local noon and evening, including even-sized so
     ["noon", "2026-07-29T12:30:00+08:00"],
     ["evening", "2026-07-29T18:00:00+08:00"],
     ["noon", "2026-07-30T12:30:00+08:00"],
-    ["evening", "2026-07-30T18:00:00+08:00"],
+    ["evening", "2026-07-30T18:00:00+08:00"]
   ] as const) {
     await Effect.runPromise(
       generateRivusNewsBrief(
@@ -946,15 +923,15 @@ it("rotates source plans between local noon and evening, including even-sized so
                       "a.com": "A release",
                       "b.com": "B release",
                       "c.com": "C release",
-                      "d.com": "D release",
-                    },
-                  },
-                },
-              ],
-            },
-          ],
-        },
-      ),
+                      "d.com": "D release"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      )
     );
   }
   expect(new Set(calls).size).toBe(4);
@@ -968,41 +945,35 @@ it.each([{}, { NEWS_SEARCH_MODE: "grok" }, { DOUBAO_SEARCH_API_KEY: "unused" }])
       provider: "grok",
       results: [],
       resultCount: 0,
-      grok: { nativeTools: ["x_keyword_search"], rejectedResults: 2, costUsd: 0.01 },
+      grok: { nativeTools: ["x_keyword_search"], rejectedResults: 2, costUsd: 0.01 }
     });
     try {
-      const topics = [
-        { ...newsTopic("technology", ["one", "two", "three"]), sourcePolicy: "news" as const },
-      ];
+      const topics = [{ ...newsTopic("technology", ["one", "two", "three"]), sourcePolicy: "news" as const }];
       const options = {
         env: { ...env, NEWS_SEARCH_STATE_FILE: join(directory, "budget.json") },
         maxQueries: 6,
         topics,
-        now: () => new Date("2026-10-08T04:30:00Z"),
+        now: () => new Date("2026-10-08T04:30:00Z")
       };
       const run = () =>
-        Effect.runPromise(
-          generateRivusNewsBrief({ edition: "noon", occurrence: "2026-10-08T04:30:00Z" }, options),
-        );
+        Effect.runPromise(generateRivusNewsBrief({ edition: "noon", occurrence: "2026-10-08T04:30:00Z" }, options));
       const result = await run();
       expect(grok).toHaveBeenCalledTimes(1);
       expect(result.audit.queries.filter(({ status }) => status === "skipped")).toHaveLength(2);
       expect(result.audit.queries.find(({ status }) => status === "ok")).toMatchObject({
         provider: "grok",
         grok: { rejectedResults: 2, costUsd: 0.01 },
-        searchUsage: { dailyUsed: 1, dailyLimit: 4, monthlyLimit: 120 },
+        searchUsage: { dailyUsed: 1, dailyLimit: 4, monthlyLimit: 120 }
       });
       expect(result.warnings.join(" ")).toContain("未独立核验");
       const cached = await run();
       expect(grok).toHaveBeenCalledTimes(1);
-      expect(cached.audit.queries.find(({ status }) => status === "ok")?.searchUsage?.source).toBe(
-        "cache",
-      );
+      expect(cached.audit.queries.find(({ status }) => status === "ok")?.searchUsage?.source).toBe("cache");
     } finally {
       grok.mockRestore();
       await rm(directory, { recursive: true, force: true });
     }
-  },
+  }
 );
 
 it("uses full topic text for Grok and preserves the model warning on healthy coverage", async () => {
@@ -1011,8 +982,8 @@ it("uses full topic text for Grok and preserves the model warning on healthy cov
     glm: {
       query: "source",
       domains: ["openai.com"],
-      sourceQueries: { "openai.com": "domain-specific" },
-    },
+      sourceQueries: { "openai.com": "domain-specific" }
+    }
   };
   const search = vi.fn(async () => ({ provider: "grok" as const, resultCount: 0, results: [] }));
   const result = await Effect.runPromise(
@@ -1021,40 +992,37 @@ it("uses full topic text for Grok and preserves the model warning on healthy cov
       {
         env: { NEWS_SEARCH_MODE: "grok" },
         search,
-        topics: [{ ...newsTopic("test", []), queries: [query], sourcePolicy: "news" }],
-      },
-    ),
+        topics: [{ ...newsTopic("test", []), queries: [query], sourcePolicy: "news" }]
+      }
+    )
   );
   expect(search).toHaveBeenCalledWith(expect.objectContaining({ query: "OpenAI released" }));
   expect(search).toHaveBeenCalledWith(
     expect.objectContaining({
       window: {
         since: "2026-10-07T16:00:00.000Z",
-        until: "2026-10-08T04:30:00.000Z",
-      },
-    }),
+        until: "2026-10-08T04:30:00.000Z"
+      }
+    })
   );
   expect(result.sourceStatus?.state).toBe("healthy");
   expect(result.warnings.join(" ")).toContain("未独立核验");
 });
 
-it.each([undefined, "grok"])(
-  "does not retry Grok failures or invoke fallback in mode %s",
-  async (mode) => {
-    const search = vi.fn(async () => {
-      throw new NewsSearchError("grok_cli_failed", "CLI failed");
-    });
-    await expect(
-      Effect.runPromise(
-        generateRivusNewsBrief(
-          { edition: "noon", occurrence: "2026-10-08T04:30:00Z" },
-          { env: { NEWS_SEARCH_MODE: mode }, search, topics: [newsTopic("technology", ["one"])] },
-        ),
-      ),
-    ).rejects.toThrow("新闻搜索未完成：Grok 调用失败");
-    expect(search).toHaveBeenCalledTimes(1);
-  },
-);
+it.each([undefined, "grok"])("does not retry Grok failures or invoke fallback in mode %s", async (mode) => {
+  const search = vi.fn(async () => {
+    throw new NewsSearchError("grok_cli_failed", "CLI failed");
+  });
+  await expect(
+    Effect.runPromise(
+      generateRivusNewsBrief(
+        { edition: "noon", occurrence: "2026-10-08T04:30:00Z" },
+        { env: { NEWS_SEARCH_MODE: mode }, search, topics: [newsTopic("technology", ["one"])] }
+      )
+    )
+  ).rejects.toThrow("新闻搜索未完成：Grok 调用失败");
+  expect(search).toHaveBeenCalledTimes(1);
+});
 
 it("preserves safe Grok timeout diagnostics in the failed evening brief", async () => {
   const search = vi.fn(async () => {
@@ -1063,25 +1031,25 @@ it("preserves safe Grok timeout diagnostics in the failed evening brief", async 
         nativeTools: ["x_keyword_search"],
         nativeCallCount: 1,
         elapsedMs: 120_000,
-        rejectedResults: 0,
-      },
+        rejectedResults: 0
+      }
     });
   });
   const result = await Effect.runPromise(
     Effect.result(
       generateRivusNewsBrief(
         { edition: "evening", occurrence: "2026-10-08T11:00:00Z" },
-        { env: { NEWS_SEARCH_MODE: "grok" }, search, topics: [newsTopic("technology", ["one"])] },
-      ),
-    ),
+        { env: { NEWS_SEARCH_MODE: "grok" }, search, topics: [newsTopic("technology", ["one"])] }
+      )
+    )
   );
   expect(search).toHaveBeenCalledWith(
     expect.objectContaining({
       window: {
         since: "2026-10-08T04:30:00.000Z",
-        until: "2026-10-08T11:00:00.000Z",
-      },
-    }),
+        until: "2026-10-08T11:00:00.000Z"
+      }
+    })
   );
   expect(result).toMatchObject({
     _tag: "Failure",
@@ -1096,13 +1064,13 @@ it("preserves safe Grok timeout diagnostics in the failed evening brief", async 
                 nativeTools: ["x_keyword_search"],
                 nativeCallCount: 1,
                 elapsedMs: 120_000,
-                rejectedResults: 0,
-              },
-            }),
-          ],
-        },
-      },
-    },
+                rejectedResults: 0
+              }
+            })
+          ]
+        }
+      }
+    }
   });
   expect(search).toHaveBeenCalledTimes(1);
 });
@@ -1124,14 +1092,14 @@ describe("DeepSeek news fallback", () => {
         site_name: "Microsoft DevBlogs",
         site_icon: null,
         date: publishedAt,
-        authority: 3,
-      },
-    ],
+        authority: 3
+      }
+    ]
   });
 
   async function withStubbedFetch<T>(
     respond: (url: string) => Response,
-    run: (counts: { doubao: number; deepseek: number }) => Promise<T>,
+    run: (counts: { doubao: number; deepseek: number }) => Promise<T>
   ): Promise<T> {
     const counts = { doubao: 0, deepseek: 0 };
     const fetch = vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
@@ -1159,14 +1127,14 @@ describe("DeepSeek news fallback", () => {
           {
             env: { NEWS_SEARCH_MODE: "doubao", NEWS_SEARCH_FALLBACK: "perplexity" },
             search: async () => ({ resultCount: 0, results: [] }),
-            topics: [newsTopic("technology", ["one"])],
-          },
-        ),
-      ),
+            topics: [newsTopic("technology", ["one"])]
+          }
+        )
+      )
     );
     expect(result).toMatchObject({
       _tag: "Failure",
-      failure: { message: "NEWS_SEARCH_FALLBACK must be deepseek." },
+      failure: { message: "NEWS_SEARCH_FALLBACK must be deepseek." }
     });
   });
 
@@ -1179,16 +1147,16 @@ describe("DeepSeek news fallback", () => {
             env: {
               NEWS_SEARCH_MODE: "doubao",
               NEWS_SEARCH_FALLBACK: "deepseek",
-              DOUBAO_SEARCH_API_KEY: "test",
+              DOUBAO_SEARCH_API_KEY: "test"
             },
-            topics: [newsTopic("technology", ["one"])],
-          },
-        ),
-      ),
+            topics: [newsTopic("technology", ["one"])]
+          }
+        )
+      )
     );
     expect(result).toMatchObject({
       _tag: "Failure",
-      failure: { message: "DEEPSEEK_API_KEY is required for news briefs." },
+      failure: { message: "DEEPSEEK_API_KEY is required for news briefs." }
     });
   });
 
@@ -1197,9 +1165,7 @@ describe("DeepSeek news fallback", () => {
     try {
       const outcome = await withStubbedFetch(
         (url) =>
-          url === doubaoUrl
-            ? new Response("down", { status: 500 })
-            : new Response(deepSeekPayload, { status: 200 }),
+          url === doubaoUrl ? new Response("down", { status: 500 }) : new Response(deepSeekPayload, { status: 200 }),
         async (counts) => {
           const result = await Effect.runPromise(
             generateRivusNewsBrief(
@@ -1210,35 +1176,31 @@ describe("DeepSeek news fallback", () => {
                   NEWS_SEARCH_FALLBACK: "deepseek",
                   DOUBAO_SEARCH_API_KEY: "test",
                   DEEPSEEK_API_KEY: "test",
-                  NEWS_SEARCH_STATE_FILE: join(directory, "budget.json"),
+                  NEWS_SEARCH_STATE_FILE: join(directory, "budget.json")
                 },
                 now: () => new Date(occurrence),
                 sleep: async () => undefined,
                 topics: [
                   {
                     ...newsTopic("technology", ["one"]),
-                    queries: [
-                      newsQuery("one", "TypeScript 正式发布", ["正式发布"], ["TypeScript"]),
-                    ],
-                  },
-                ],
-              },
-            ),
+                    queries: [newsQuery("one", "TypeScript 正式发布", ["正式发布"], ["TypeScript"])]
+                  }
+                ]
+              }
+            )
           );
           return { counts, result };
-        },
+        }
       );
       expect(outcome.counts).toEqual({ doubao: 1, deepseek: 1 });
       expect(outcome.result.audit.queries[0]).toMatchObject({
         status: "ok",
         provider: "deepseek",
         providerFallback: { triggeredBy: "http_500" },
-        searchUsage: { source: "network", dailyLimit: 14, monthlyLimit: 420 },
+        searchUsage: { source: "network", dailyLimit: 14, monthlyLimit: 420 }
       });
       expect(outcome.result.stories[0]).toMatchObject({ siteName: "Microsoft DevBlogs" });
-      expect(outcome.result.sourceStatus?.notes.join(" ")).toContain(
-        "1 个查询由备用来源 DeepSeek 补查",
-      );
+      expect(outcome.result.sourceStatus?.notes.join(" ")).toContain("1 个查询由备用来源 DeepSeek 补查");
       expect(outcome.result.sourceStatus?.notes.join(" ")).toContain("已按发布时间重新核对时间窗");
     } finally {
       await rm(directory, { recursive: true, force: true });
@@ -1261,7 +1223,7 @@ describe("DeepSeek news fallback", () => {
                     NEWS_SEARCH_FALLBACK: "deepseek",
                     DOUBAO_SEARCH_API_KEY: "test",
                     DEEPSEEK_API_KEY: "test",
-                    NEWS_SEARCH_STATE_FILE: join(directory, "budget.json"),
+                    NEWS_SEARCH_STATE_FILE: join(directory, "budget.json")
                   },
                   now: () => new Date(occurrence),
                   sleep: async () => undefined,
@@ -1269,15 +1231,13 @@ describe("DeepSeek news fallback", () => {
                     {
                       ...newsTopic("technology", ["one"]),
                       sourcePolicy: "official" as const,
-                      queries: [
-                        newsQuery("one", "TypeScript 正式发布", ["正式发布"], ["TypeScript"]),
-                      ],
-                    },
-                  ],
-                },
-              ),
-            ),
-          ).then((result) => ({ counts, exit: result })),
+                      queries: [newsQuery("one", "TypeScript 正式发布", ["正式发布"], ["TypeScript"])]
+                    }
+                  ]
+                }
+              )
+            )
+          ).then((result) => ({ counts, exit: result }))
       );
       expect(outcome.counts).toEqual({ doubao: 1, deepseek: 0 });
       expect(outcome.exit).toMatchObject({
@@ -1285,10 +1245,10 @@ describe("DeepSeek news fallback", () => {
         failure: {
           result: {
             audit: {
-              queries: [expect.objectContaining({ status: "failed", errorCode: "http_500" })],
-            },
-          },
-        },
+              queries: [expect.objectContaining({ status: "failed", errorCode: "http_500" })]
+            }
+          }
+        }
       });
     } finally {
       await rm(directory, { recursive: true, force: true });
@@ -1299,20 +1259,18 @@ describe("DeepSeek news fallback", () => {
     const directory = await mkdtemp(join(tmpdir(), "news-deepseek-hybrid-"));
     const url = "https://devblogs.microsoft.com/typescript/release";
     const glm = {
-      search: vi.fn(async () => [
-        { title: "TypeScript 正式发布 6.0", url, snippet: "TypeScript 6.0 was released." },
-      ]),
+      search: vi.fn(async () => [{ title: "TypeScript 正式发布 6.0", url, snippet: "TypeScript 6.0 was released." }]),
       read: vi.fn(async () => ({
         title: "TypeScript 正式发布 6.0",
         url,
         content: "TypeScript 正式发布 6.0，包含编译器改进。",
         truncated: false,
-        publishedAt,
-      })),
+        publishedAt
+      }))
     };
     try {
       const doubaoQuota = JSON.stringify({
-        ResponseMetadata: { Error: { Code: "10406", Message: "free quota exhausted" } },
+        ResponseMetadata: { Error: { Code: "10406", Message: "free quota exhausted" } }
       });
       const outcome = await withStubbedFetch(
         (urlToRespond: string) =>
@@ -1329,7 +1287,7 @@ describe("DeepSeek news fallback", () => {
                   NEWS_SEARCH_FALLBACK: "deepseek",
                   DOUBAO_SEARCH_API_KEY: "test",
                   DEEPSEEK_API_KEY: "test",
-                  NEWS_SEARCH_STATE_FILE: join(directory, "budget.json"),
+                  NEWS_SEARCH_STATE_FILE: join(directory, "budget.json")
                 },
                 now: () => new Date(occurrence),
                 sleep: async () => undefined,
@@ -1340,16 +1298,16 @@ describe("DeepSeek news fallback", () => {
                     queries: [
                       {
                         ...newsQuery("one", "TypeScript 正式发布", ["正式发布"], ["TypeScript"]),
-                        glm: { query: "TypeScript release", domains: ["devblogs.microsoft.com"] },
-                      },
-                    ],
-                  },
-                ],
-              },
-            ),
+                        glm: { query: "TypeScript release", domains: ["devblogs.microsoft.com"] }
+                      }
+                    ]
+                  }
+                ]
+              }
+            )
           );
           return { counts, result };
-        },
+        }
       );
       expect(outcome.counts).toEqual({ doubao: 1, deepseek: 1 });
       expect(glm.search).toHaveBeenCalledTimes(1);
@@ -1366,11 +1324,11 @@ describe("DeepSeek news fallback", () => {
       search: vi.fn(async () => []),
       read: vi.fn(async () => {
         throw new Error("unused");
-      }),
+      })
     };
     try {
       const doubaoQuota = JSON.stringify({
-        ResponseMetadata: { Error: { Code: "10406", Message: "free quota exhausted" } },
+        ResponseMetadata: { Error: { Code: "10406", Message: "free quota exhausted" } }
       });
       const outcome = await withStubbedFetch(
         (urlToRespond: string) =>
@@ -1387,7 +1345,7 @@ describe("DeepSeek news fallback", () => {
                   NEWS_SEARCH_FALLBACK: "deepseek",
                   DOUBAO_SEARCH_API_KEY: "test",
                   DEEPSEEK_API_KEY: "test",
-                  NEWS_SEARCH_STATE_FILE: join(directory, "budget.json"),
+                  NEWS_SEARCH_STATE_FILE: join(directory, "budget.json")
                 },
                 now: () => new Date(occurrence),
                 sleep: async () => undefined,
@@ -1398,23 +1356,23 @@ describe("DeepSeek news fallback", () => {
                     queries: [
                       {
                         ...newsQuery("one", "TypeScript 正式发布", ["正式发布"], ["TypeScript"]),
-                        glm: { query: "TypeScript release", domains: ["devblogs.microsoft.com"] },
-                      },
-                    ],
-                  },
-                ],
-              },
-            ),
+                        glm: { query: "TypeScript release", domains: ["devblogs.microsoft.com"] }
+                      }
+                    ]
+                  }
+                ]
+              }
+            )
           );
           return { counts, result };
-        },
+        }
       );
       expect(outcome.counts).toEqual({ doubao: 1, deepseek: 1 });
       expect(glm.search).not.toHaveBeenCalled();
       expect(outcome.result.audit.queries[0]).toMatchObject({
         status: "ok",
         provider: "deepseek",
-        providerFallback: { triggeredBy: "10406" },
+        providerFallback: { triggeredBy: "10406" }
       });
       expect(outcome.result.sourceStatus?.notes.join(" ")).toContain("备用来源 DeepSeek 补查");
     } finally {
@@ -1430,7 +1388,7 @@ describe("DeepSeek news supplement", () => {
   function supplementQuery(id: string, keywords: string[]): NewsTopicQuery {
     return {
       ...newsQuery(id, id, ["正式发布"], ["正式发布"]),
-      deepseek: { queries: keywords },
+      deepseek: { queries: keywords }
     };
   }
 
@@ -1445,9 +1403,9 @@ describe("DeepSeek news supplement", () => {
           summary: `${title} 正式发布，并开放 API。`,
           site_name: title,
           date: "2026-10-03T16:00:00Z",
-          authority: 3,
-        },
-      ],
+          authority: 3
+        }
+      ]
     });
   }
 
@@ -1469,10 +1427,10 @@ describe("DeepSeek news supplement", () => {
             RankScore: 0.9,
             SortId: 1,
             AuthInfoDes: "官方站点",
-            AuthInfoLevel: 1,
-          },
-        ],
-      },
+            AuthInfoLevel: 1
+          }
+        ]
+      }
     });
   }
 
@@ -1485,17 +1443,17 @@ describe("DeepSeek news supplement", () => {
             env: {
               NEWS_SEARCH_MODE: "doubao",
               NEWS_SEARCH_FALLBACK: "deepseek",
-              NEWS_SEARCH_SUPPLEMENT: "deepseek",
+              NEWS_SEARCH_SUPPLEMENT: "deepseek"
             },
             search: async () => ({ resultCount: 0, results: [] }),
-            topics: [newsTopic("technology", ["one"])],
-          },
-        ),
-      ),
+            topics: [newsTopic("technology", ["one"])]
+          }
+        )
+      )
     );
     expect(result).toMatchObject({
       _tag: "Failure",
-      failure: { message: expect.stringContaining("cannot be set together") },
+      failure: { message: expect.stringContaining("cannot be set together") }
     });
   });
 
@@ -1507,14 +1465,14 @@ describe("DeepSeek news supplement", () => {
           {
             env: { NEWS_SEARCH_MODE: "doubao", NEWS_SEARCH_SUPPLEMENT: "perplexity" },
             search: async () => ({ resultCount: 0, results: [] }),
-            topics: [newsTopic("technology", ["one"])],
-          },
-        ),
-      ),
+            topics: [newsTopic("technology", ["one"])]
+          }
+        )
+      )
     );
     expect(result).toMatchObject({
       _tag: "Failure",
-      failure: { message: "NEWS_SEARCH_SUPPLEMENT must be deepseek." },
+      failure: { message: "NEWS_SEARCH_SUPPLEMENT must be deepseek." }
     });
   });
 
@@ -1523,17 +1481,16 @@ describe("DeepSeek news supplement", () => {
     const bodies: string[] = [];
     const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString();
-      if (url === doubaoUrl)
+      if (url === doubaoUrl) {
         return new Response(doubaoBody("https://example.com/shared", "Doubao"), { status: 200 });
+      }
       bodies.push(String(init?.body));
       const query = JSON.parse(String(init?.body)).query as string;
-      if (query.startsWith("doubao-keyword"))
-        return new Response(
-          deepSeekBody("https://example.com/shared?utm_source=feed", "DeepSeek A"),
-          { status: 200 },
-        );
+      if (query.startsWith("doubao-keyword")) {
+        return new Response(deepSeekBody("https://example.com/shared?utm_source=feed", "DeepSeek A"), { status: 200 });
+      }
       return new Response(deepSeekBody("https://example.com/supplement-only", "DeepSeek B"), {
-        status: 200,
+        status: 200
       });
     });
     vi.stubGlobal("fetch", fetch);
@@ -1547,22 +1504,22 @@ describe("DeepSeek news supplement", () => {
               NEWS_SEARCH_SUPPLEMENT: "deepseek",
               DOUBAO_SEARCH_API_KEY: "test",
               DEEPSEEK_API_KEY: "test",
-              NEWS_SEARCH_STATE_FILE: join(directory, "budget.json"),
+              NEWS_SEARCH_STATE_FILE: join(directory, "budget.json")
             },
             now: () => new Date(occurrence),
             topics: [
               {
                 ...newsTopic("technology", []),
-                queries: [supplementQuery("one", ["doubao-keyword", "deepseek-keyword"])],
-              },
-            ],
-          },
-        ),
+                queries: [supplementQuery("one", ["doubao-keyword", "deepseek-keyword"])]
+              }
+            ]
+          }
+        )
       );
       expect(fetch).toHaveBeenCalledTimes(3);
       expect([...bodies].sort()).toEqual([
         expect.stringContaining("deepseek-keyword after:2026-10-04"),
-        expect.stringContaining("doubao-keyword after:2026-10-04"),
+        expect.stringContaining("doubao-keyword after:2026-10-04")
       ]);
       expect(result.audit.queries[0]).toMatchObject({
         status: "ok",
@@ -1570,12 +1527,12 @@ describe("DeepSeek news supplement", () => {
         mergedSources: [
           { source: "doubao", status: "ok", fetched: 1, contributed: 1 },
           { source: "deepseek", status: "ok", fetched: 1, contributed: 0 },
-          { source: "deepseek", status: "ok", fetched: 1, contributed: 1 },
-        ],
+          { source: "deepseek", status: "ok", fetched: 1, contributed: 1 }
+        ]
       });
       expect(result.stories.map(({ canonicalUrl }) => canonicalUrl).sort()).toEqual([
         "https://example.com/shared",
-        "https://example.com/supplement-only",
+        "https://example.com/supplement-only"
       ]);
       expect(result.sourceStatus?.state).toBe("healthy");
     } finally {
@@ -1588,8 +1545,9 @@ describe("DeepSeek news supplement", () => {
     const directory = await mkdtemp(join(tmpdir(), "news-deepseek-supplement-budget-"));
     const fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input.toString();
-      if (url === doubaoUrl)
+      if (url === doubaoUrl) {
         return new Response(doubaoBody("https://example.com/primary", "Doubao"), { status: 200 });
+      }
       throw new Error("deepseek budget must not fetch");
     });
     vi.stubGlobal("fetch", fetch);
@@ -1604,17 +1562,17 @@ describe("DeepSeek news supplement", () => {
               DOUBAO_SEARCH_API_KEY: "test",
               DEEPSEEK_API_KEY: "test",
               DEEPSEEK_SEARCH_DAILY_LIMIT: "0",
-              NEWS_SEARCH_STATE_FILE: join(directory, "budget.json"),
+              NEWS_SEARCH_STATE_FILE: join(directory, "budget.json")
             },
             now: () => new Date(occurrence),
             topics: [
               {
                 ...newsTopic("technology", []),
-                queries: [supplementQuery("one", ["unused-keyword"])],
-              },
-            ],
-          },
-        ),
+                queries: [supplementQuery("one", ["unused-keyword"])]
+              }
+            ]
+          }
+        )
       );
       expect(result.audit.queries[0]).toMatchObject({
         status: "ok",
@@ -1623,9 +1581,9 @@ describe("DeepSeek news supplement", () => {
           {
             source: "deepseek",
             status: "failed",
-            code: "local_budget_exhausted",
-          },
-        ],
+            code: "local_budget_exhausted"
+          }
+        ]
       });
       expect(result.stories).toHaveLength(1);
     } finally {
@@ -1638,15 +1596,17 @@ describe("DeepSeek news supplement", () => {
     const directory = await mkdtemp(join(tmpdir(), "news-deepseek-supplement-deferred-"));
     const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input.toString();
-      if (url === doubaoUrl)
+      if (url === doubaoUrl) {
         return new Response(doubaoBody("https://example.com/selected", "Doubao"), { status: 200 });
+      }
       const query = JSON.parse(String(init?.body)).query as string;
-      if (query.includes("selected-keyword"))
+      if (query.includes("selected-keyword")) {
         return new Response(deepSeekBody("https://example.com/selected-ds", "Selected"), {
-          status: 200,
+          status: 200
         });
+      }
       return new Response(deepSeekBody("https://example.com/deferred-only", "Deferred"), {
-        status: 200,
+        status: 200
       });
     });
     vi.stubGlobal("fetch", fetch);
@@ -1661,7 +1621,7 @@ describe("DeepSeek news supplement", () => {
               DOUBAO_SEARCH_API_KEY: "test",
               DEEPSEEK_API_KEY: "test",
               NEWS_SEARCH_STATE_FILE: join(directory, "budget.json"),
-              NEWS_SEARCH_MAX_QUERIES: "1",
+              NEWS_SEARCH_MAX_QUERIES: "1"
             },
             maxQueries: 1,
             now: () => new Date(occurrence),
@@ -1670,36 +1630,34 @@ describe("DeepSeek news supplement", () => {
                 ...newsTopic("technology", []),
                 queries: [
                   supplementQuery("selected", ["selected-keyword"]),
-                  supplementQuery("deferred", ["deferred-keyword"]),
-                ],
-              },
-            ],
-          },
-        ),
+                  supplementQuery("deferred", ["deferred-keyword"])
+                ]
+              }
+            ]
+          }
+        )
       );
       expect(result.audit.queries[0]).toMatchObject({
         queryId: "selected",
         status: "ok",
         mergedSources: [
           { source: "doubao", status: "ok", fetched: 1, contributed: 1 },
-          { source: "deepseek", status: "ok", fetched: 1, contributed: 1 },
-        ],
+          { source: "deepseek", status: "ok", fetched: 1, contributed: 1 }
+        ]
       });
-      expect(result.audit.queries[0].providerFallback).toBeUndefined();
+      expect(result.audit.queries[0]!.providerFallback).toBeUndefined();
       expect(result.audit.queries[1]).toMatchObject({
         queryId: "deferred",
         status: "ok",
         provider: "deepseek",
         providerFallback: { triggeredBy: "query_deferred" },
-        mergedSources: [{ source: "deepseek", status: "ok", fetched: 1, contributed: 1 }],
+        mergedSources: [{ source: "deepseek", status: "ok", fetched: 1, contributed: 1 }]
       });
-      expect(result.sourceStatus?.notes.join(" ")).toContain(
-        "1 个查询主来源本轮未执行，由 DeepSeek 补充采集",
-      );
+      expect(result.sourceStatus?.notes.join(" ")).toContain("1 个查询主来源本轮未执行，由 DeepSeek 补充采集");
       expect(result.stories.map(({ canonicalUrl }) => canonicalUrl).sort()).toEqual([
         "https://example.com/deferred-only",
         "https://example.com/selected",
-        "https://example.com/selected-ds",
+        "https://example.com/selected-ds"
       ]);
     } finally {
       vi.unstubAllGlobals();
@@ -1711,9 +1669,11 @@ describe("DeepSeek news supplement", () => {
     const directory = await mkdtemp(join(tmpdir(), "news-deepseek-supplement-outage-"));
     const fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input.toString();
-      if (url === doubaoUrl) return new Response("down", { status: 500 });
+      if (url === doubaoUrl) {
+        return new Response("down", { status: 500 });
+      }
       return new Response(deepSeekBody("https://example.com/deepseek-only", "DeepSeek"), {
-        status: 200,
+        status: 200
       });
     });
     vi.stubGlobal("fetch", fetch);
@@ -1727,25 +1687,25 @@ describe("DeepSeek news supplement", () => {
               NEWS_SEARCH_SUPPLEMENT: "deepseek",
               DOUBAO_SEARCH_API_KEY: "test",
               DEEPSEEK_API_KEY: "test",
-              NEWS_SEARCH_STATE_FILE: join(directory, "budget.json"),
+              NEWS_SEARCH_STATE_FILE: join(directory, "budget.json")
             },
             now: () => new Date(occurrence),
             topics: [
               {
                 ...newsTopic("technology", []),
-                queries: [supplementQuery("one", ["outage-keyword"])],
-              },
-            ],
-          },
-        ),
+                queries: [supplementQuery("one", ["outage-keyword"])]
+              }
+            ]
+          }
+        )
       );
       expect(result.audit.queries[0]).toMatchObject({
         status: "ok",
         provider: "deepseek",
-        providerFallback: { triggeredBy: "http_500" },
+        providerFallback: { triggeredBy: "http_500" }
       });
       expect(result.stories[0]).toMatchObject({
-        canonicalUrl: "https://example.com/deepseek-only",
+        canonicalUrl: "https://example.com/deepseek-only"
       });
       expect(result.sourceStatus?.notes.join(" ")).toContain("由备用来源 DeepSeek 补查");
     } finally {
@@ -1766,10 +1726,10 @@ describe("DeepSeek independent budget ledger", () => {
         queries: [
           {
             ...newsQuery("one", "OpenAI 正式发布", ["正式发布"], ["OpenAI"]),
-            deepseek: { queries: ["OpenAI 新模型"] },
-          },
-        ],
-      },
+            deepseek: { queries: ["OpenAI 新模型"] }
+          }
+        ]
+      }
     ];
   }
 
@@ -1787,9 +1747,9 @@ describe("DeepSeek independent budget ledger", () => {
           publishTime: "2026-10-04T03:00:00.000Z",
           authInfoLevel: 2,
           authInfoDescription: "正常权威",
-          rankPosition: 1,
-        },
-      ],
+          rankPosition: 1
+        }
+      ]
     });
     try {
       const result = await Effect.runPromise(
@@ -1801,24 +1761,22 @@ describe("DeepSeek independent budget ledger", () => {
               NEWS_SEARCH_SUPPLEMENT: "deepseek",
               DEEPSEEK_API_KEY: "test",
               DEEPSEEK_SEARCH_DAILY_LIMIT: "0",
-              NEWS_SEARCH_STATE_FILE: join(directory, "news-search.json"),
+              NEWS_SEARCH_STATE_FILE: join(directory, "news-search.json")
             },
             now: () => new Date(occurrence),
-            topics: supplementTopics(),
-          },
-        ),
+            topics: supplementTopics()
+          }
+        )
       );
       expect(grok).toHaveBeenCalledTimes(1);
       expect(result.audit.queries[0]).toMatchObject({
         status: "ok",
         mergedSources: [
           { source: "grok", status: "ok", fetched: 1, contributed: 1 },
-          { source: "deepseek", status: "failed", code: "local_budget_exhausted" },
-        ],
+          { source: "deepseek", status: "failed", code: "local_budget_exhausted" }
+        ]
       });
-      expect(result.stories.map(({ canonicalUrl }) => canonicalUrl)).toEqual([
-        "https://x.com/OpenAI/status/1",
-      ]);
+      expect(result.stories.map(({ canonicalUrl }) => canonicalUrl)).toEqual(["https://x.com/OpenAI/status/1"]);
       // The primary ledger carries only the Grok reservation and cache page;
       // DeepSeek's exhausted ledger never wrote a file.
       const primary = JSON.parse(await readFile(join(directory, "news-search.json"), "utf8")) as {
@@ -1826,9 +1784,7 @@ describe("DeepSeek independent budget ledger", () => {
         cache: Record<string, { request: { provider: string } }>;
       };
       expect(primary.daily).toEqual({ "2026-10-04": 1 });
-      expect(Object.values(primary.cache).map((entry) => entry.request.provider)).toEqual([
-        "grok://cli/v1/default",
-      ]);
+      expect(Object.values(primary.cache).map((entry) => entry.request.provider)).toEqual(["grok://cli/v1/default"]);
       expect(existsSync(join(directory, "deepseek-search.json"))).toBe(false);
     } finally {
       grok.mockRestore();
@@ -1851,12 +1807,12 @@ describe("DeepSeek independent budget ledger", () => {
                 summary: "OpenAI 正式发布新模型，并开放 API。",
                 site_name: "OpenAI",
                 date: "2026-10-03T16:00:00Z",
-                authority: 3,
-              },
-            ],
+                authority: 3
+              }
+            ]
           }),
-          { status: 200 },
-        ),
+          { status: 200 }
+        )
     );
     vi.stubGlobal("fetch", fetch);
     try {
@@ -1869,12 +1825,12 @@ describe("DeepSeek independent budget ledger", () => {
               NEWS_SEARCH_SUPPLEMENT: "deepseek",
               DEEPSEEK_API_KEY: "test",
               NEWS_SEARCH_DAILY_LIMIT: "0",
-              NEWS_SEARCH_STATE_FILE: join(directory, "news-search.json"),
+              NEWS_SEARCH_STATE_FILE: join(directory, "news-search.json")
             },
             now: () => new Date(occurrence),
-            topics: supplementTopics(),
-          },
-        ),
+            topics: supplementTopics()
+          }
+        )
       );
       expect(grok).not.toHaveBeenCalled();
       expect(result.audit.queries[0]).toMatchObject({
@@ -1883,18 +1839,16 @@ describe("DeepSeek independent budget ledger", () => {
         providerFallback: { triggeredBy: "local_budget_exhausted" },
         mergedSources: [
           { source: "grok", status: "failed", code: "local_budget_exhausted" },
-          { source: "deepseek", status: "ok", fetched: 1, contributed: 1 },
-        ],
+          { source: "deepseek", status: "ok", fetched: 1, contributed: 1 }
+        ]
       });
-      expect(result.stories.map(({ canonicalUrl }) => canonicalUrl)).toEqual([
-        "https://openai.com/news/new-model",
-      ]);
+      expect(result.stories.map(({ canonicalUrl }) => canonicalUrl)).toEqual(["https://openai.com/news/new-model"]);
       // The primary ledger stopped the Grok caller before any request; only
       // DeepSeek's own ledger records the supplement attempt.
       expect(existsSync(join(directory, "news-search.json"))).toBe(false);
-      const deepSeek = JSON.parse(
-        await readFile(join(directory, "deepseek-search.json"), "utf8"),
-      ) as { daily: Record<string, number> };
+      const deepSeek = JSON.parse(await readFile(join(directory, "deepseek-search.json"), "utf8")) as {
+        daily: Record<string, number>;
+      };
       expect(deepSeek.daily).toEqual({ "2026-10-04": 1 });
     } finally {
       grok.mockRestore();
@@ -1909,7 +1863,7 @@ it("runs the Grok leg after DeepSeek spending passes the primary's cap", async (
   const grok = vi.spyOn(GrokSearchClient.prototype, "search").mockResolvedValue({
     provider: "grok",
     resultCount: 0,
-    results: [],
+    results: []
   });
   const fetch = vi.fn(
     async () =>
@@ -1923,12 +1877,12 @@ it("runs the Grok leg after DeepSeek spending passes the primary's cap", async (
               summary: "OpenAI 正式发布新模型，并开放 API。",
               site_name: "OpenAI",
               date: "2026-10-03T16:00:00Z",
-              authority: 3,
-            },
-          ],
+              authority: 3
+            }
+          ]
         }),
-        { status: 200 },
-      ),
+        { status: 200 }
+      )
   );
   vi.stubGlobal("fetch", fetch);
   try {
@@ -1941,7 +1895,7 @@ it("runs the Grok leg after DeepSeek spending passes the primary's cap", async (
         // allowance is far larger.
         NEWS_SEARCH_DAILY_LIMIT: "2",
         DEEPSEEK_SEARCH_DAILY_LIMIT: "100",
-        NEWS_SEARCH_STATE_FILE: join(directory, "news-search.json"),
+        NEWS_SEARCH_STATE_FILE: join(directory, "news-search.json")
       },
       now: () => new Date("2026-10-04T12:30:00+08:00"),
       topics: [
@@ -1951,43 +1905,40 @@ it("runs the Grok leg after DeepSeek spending passes the primary's cap", async (
           queries: [
             {
               ...newsQuery("one", "OpenAI 正式发布", ["正式发布"], ["OpenAI"]),
-              deepseek: { queries: ["OpenAI 新模型", "OpenAI new model", "OpenAI model launch"] },
-            },
-          ],
-        },
-      ],
+              deepseek: { queries: ["OpenAI 新模型", "OpenAI new model", "OpenAI model launch"] }
+            }
+          ]
+        }
+      ]
     };
     // Noon: three keyword reservations already exceed the primary's cap of 2.
     const noon = await Effect.runPromise(
-      generateRivusNewsBrief({ edition: "noon", occurrence: "2026-10-04T12:30:00+08:00" }, options),
+      generateRivusNewsBrief({ edition: "noon", occurrence: "2026-10-04T12:30:00+08:00" }, options)
     );
     expect(noon.audit.queries[0]).toMatchObject({ status: "ok" });
-    expect(noon.audit.queries[0].mergedSources?.[0]).toMatchObject({
+    expect(noon.audit.queries[0]!.mergedSources?.[0]).toMatchObject({
       source: "grok",
-      status: "ok",
+      status: "ok"
     });
     // Evening, same day and state files: the Grok leg must really run on its
     // last allowed slot, not fail with local_budget_exhausted.
     const evening = await Effect.runPromise(
-      generateRivusNewsBrief(
-        { edition: "evening", occurrence: "2026-10-04T19:00:00+08:00" },
-        options,
-      ),
+      generateRivusNewsBrief({ edition: "evening", occurrence: "2026-10-04T19:00:00+08:00" }, options)
     );
     expect(grok).toHaveBeenCalledTimes(2);
     expect(evening.audit.queries[0]).toMatchObject({ status: "ok" });
-    expect(evening.audit.queries[0].mergedSources?.[0]).toMatchObject({
+    expect(evening.audit.queries[0]!.mergedSources?.[0]).toMatchObject({
       source: "grok",
       status: "ok",
       fetched: 0,
-      contributed: 0,
+      contributed: 0
     });
     const primary = JSON.parse(await readFile(join(directory, "news-search.json"), "utf8")) as {
       daily: Record<string, number>;
     };
-    const deepSeek = JSON.parse(
-      await readFile(join(directory, "deepseek-search.json"), "utf8"),
-    ) as { daily: Record<string, number> };
+    const deepSeek = JSON.parse(await readFile(join(directory, "deepseek-search.json"), "utf8")) as {
+      daily: Record<string, number>;
+    };
     expect(primary.daily).toEqual({ "2026-10-04": 2 });
     expect(deepSeek.daily).toEqual({ "2026-10-04": 6 });
   } finally {

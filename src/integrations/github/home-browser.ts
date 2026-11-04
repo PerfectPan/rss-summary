@@ -28,25 +28,22 @@ export type GithubHomeClientOptions = {
 };
 
 /** Conduit snapshots first, the rendered feed as fallback. */
-export function readHomeEvents(
-  options: GithubHomeClientOptions,
-): Effect.Effect<ActivityCardDto[], Error> {
+export function readHomeEvents(options: GithubHomeClientOptions): Effect.Effect<ActivityCardDto[], Error> {
   if (!existsSync(options.storageState)) {
     return Effect.fail(
       new Error(
-        `GitHub Home storage state not found: ${options.storageState}. Run 'rss-summary github-home login' first.`,
-      ),
+        `GitHub Home storage state not found: ${options.storageState}. Run 'rss-summary github-home login' first.`
+      )
     );
   }
   const timeoutMs = options.timeoutMs ?? 30_000;
-  const conduit =
-    options.conduitFetcher ?? (() => readConduitSnapshots(options.storageState, timeoutMs));
+  const conduit = options.conduitFetcher ?? (() => readConduitSnapshots(options.storageState, timeoutMs));
   const browser =
     options.browserFetcher ??
     (() =>
       readRenderedSnapshots(options.storageState, timeoutMs, {
         headless: options.headless ?? true,
-        browserChannel: options.browserChannel ?? "chrome",
+        browserChannel: options.browserChannel ?? "chrome"
       }));
   if (options.fetchMode === "browser") {
     return Effect.map(browser(), normalizeHomeCardSnapshots);
@@ -59,13 +56,13 @@ export function readHomeEvents(
       }
       return Effect.succeed(events);
     }),
-    () => Effect.map(browser(), normalizeHomeCardSnapshots),
+    () => Effect.map(browser(), normalizeHomeCardSnapshots)
   );
 }
 
 export function readConduitSnapshots(
   storageState: string,
-  timeoutMs: number,
+  timeoutMs: number
 ): Effect.Effect<HomeFeedCardSnapshot[], Error> {
   return Effect.scoped(
     Effect.gen(function* () {
@@ -75,61 +72,58 @@ export function readConduitSnapshots(
         extraHTTPHeaders: {
           Accept: "text/html, application/xhtml+xml",
           "Turbo-Frame": "conduit-feed-frame",
-          "User-Agent": "rss-summary",
-        },
+          "User-Agent": "rss-summary"
+        }
       });
       const response = yield* Effect.tryPromise({
         try: () => context.get(conduitFeedPath, { timeout: timeoutMs }),
-        catch: asError,
+        catch: asError
       });
       if (!response.ok()) {
         return yield* Effect.fail(new Error(`GitHub conduit feed returned ${response.status()}.`));
       }
       const html = yield* Effect.tryPromise({ try: () => response.text(), catch: asError });
       return extractHomeFeedSnapshotsFromHtml(html);
-    }),
+    })
   );
 }
 
 export function readRenderedSnapshots(
   storageState: string,
   timeoutMs: number,
-  options: { headless: boolean; browserChannel?: string },
+  options: { headless: boolean; browserChannel?: string }
 ): Effect.Effect<HomeFeedCardSnapshot[], Error> {
   return Effect.scoped(
     Effect.gen(function* () {
       const page = yield* openPage({
         browserChannel: options.browserChannel,
         headless: options.headless,
-        context: { storageState },
+        context: { storageState }
       });
       yield* Effect.tryPromise({
         try: () => page.goto(githubHomeUrl, { waitUntil: "domcontentloaded", timeout: timeoutMs }),
-        catch: asError,
+        catch: asError
       });
       if (page.url().includes("/login")) {
         return yield* Effect.fail(
-          new Error(
-            `GitHub Home login is required. Run 'rss-summary github-home login' to refresh ${storageState}.`,
-          ),
+          new Error(`GitHub Home login is required. Run 'rss-summary github-home login' to refresh ${storageState}.`)
         );
       }
       yield* Effect.tryPromise({
         try: () =>
           page.waitForSelector("#conduit-feed-frame article.js-feed-item-component", {
-            timeout: timeoutMs,
+            timeout: timeoutMs
           }),
         catch: (error) =>
-          new Error(
-            `GitHub Home feed did not render. Refresh ${storageState} with 'rss-summary github-home login'.`,
-            { cause: error },
-          ),
+          new Error(`GitHub Home feed did not render. Refresh ${storageState} with 'rss-summary github-home login'.`, {
+            cause: error
+          })
       });
       return yield* Effect.tryPromise({
         try: () => page.evaluate(extractHomeFeedSnapshots),
-        catch: asError,
+        catch: asError
       });
-    }),
+    })
   );
 }
 
@@ -142,34 +136,34 @@ export function saveLoginStorageState(options: {
     Effect.gen(function* () {
       const browser = yield* launchBrowser({
         headless: false,
-        browserChannel: options.browserChannel ?? "chrome",
+        browserChannel: options.browserChannel ?? "chrome"
       });
       const context = yield* Effect.tryPromise({
         try: () => browser.newContext(),
-        catch: asError,
+        catch: asError
       });
       const page = yield* Effect.tryPromise({ try: () => context.newPage(), catch: asError });
       yield* Effect.tryPromise({
         try: () => page.goto(githubHomeUrl, { waitUntil: "domcontentloaded" }),
-        catch: asError,
+        catch: asError
       });
       const rl = createInterface({ input: process.stdin, output: process.stdout });
       try {
         yield* Effect.promise(() =>
           rl.question(
-            `Sign in to GitHub in the opened browser, make sure https://github.com/ shows Home, then press Enter here to save ${options.storageState}.`,
-          ),
+            `Sign in to GitHub in the opened browser, make sure https://github.com/ shows Home, then press Enter here to save ${options.storageState}.`
+          )
         );
       } finally {
         rl.close();
       }
       const visible = yield* Effect.tryPromise({
         try: () => page.evaluate(hasGitHubHomeFeedDom),
-        catch: asError,
+        catch: asError
       });
       if (!visible) {
         return yield* Effect.fail(
-          new Error("GitHub Home feed is not visible; sign in before saving the storage state."),
+          new Error("GitHub Home feed is not visible; sign in before saving the storage state.")
         );
       }
       yield* Effect.sync(() => {
@@ -177,17 +171,15 @@ export function saveLoginStorageState(options: {
       });
       yield* Effect.tryPromise({
         try: () => context.storageState({ path: options.storageState }),
-        catch: asError,
+        catch: asError
       });
-    }),
+    })
   );
 }
 
 /** In-page extraction of Home card snapshots; runs inside the browser. */
 function extractHomeFeedSnapshots(): HomeFeedCardSnapshot[] {
-  return Array.from(
-    document.querySelectorAll("#conduit-feed-frame article.js-feed-item-component"),
-  ).map((article) => {
+  return Array.from(document.querySelectorAll("#conduit-feed-frame article.js-feed-item-component")).map((article) => {
     let card: Record<string, unknown> | null = null;
     try {
       const hydro = JSON.parse(article.getAttribute("data-hydro-view") || "null") as {
@@ -200,23 +192,20 @@ function extractHomeFeedSnapshots(): HomeFeedCardSnapshot[] {
 
     const links = Array.from(article.querySelectorAll("a[href]")).map((link) => ({
       text: (link.textContent || "").replace(/\s+/gu, " ").trim(),
-      href: (link as HTMLAnchorElement).href,
+      href: (link as HTMLAnchorElement).href
     }));
 
     return {
       id: article.id || "",
       card,
       text: (article.textContent || "").replace(/\s+/gu, " ").trim(),
-      links,
+      links
     };
   });
 }
 
 function hasGitHubHomeFeedDom(): boolean {
-  return (
-    document.querySelector("feed-container") !== null &&
-    document.querySelector("#conduit-feed-frame") !== null
-  );
+  return document.querySelector("feed-container") !== null && document.querySelector("#conduit-feed-frame") !== null;
 }
 /* v8 ignore stop */
 

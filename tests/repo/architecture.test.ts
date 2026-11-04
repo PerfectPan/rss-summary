@@ -4,11 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vite-plus/test";
 
-import {
-  checkBoundaries,
-  type SourceInput,
-  type Violation,
-} from "../../scripts/architecture/check.js";
+import { checkBoundaries, type SourceInput, type Violation } from "../../scripts/architecture/check.js";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 
@@ -16,7 +12,7 @@ describe("architecture boundaries", () => {
   it("keeps the whole src tree free of boundary violations", () => {
     const files = walk(join(root, "src")).map((path) => ({
       path: relative(root, path).split("\\").join("/"),
-      source: readFileSync(path, "utf8"),
+      source: readFileSync(path, "utf8")
     }));
     const violations = checkBoundaries(files);
 
@@ -36,9 +32,9 @@ describe("architecture boundaries", () => {
           'import { readFileSync } from "node:fs";',
           'import { Effect } from "effect";',
           "export const value = readFileSync;",
-          "export const effect = Effect;",
-        ].join("\n"),
-      },
+          "export const effect = Effect;"
+        ].join("\n")
+      }
     ]);
 
     expect(rulesOf(violations, file)).toEqual(["effect", "node-builtin"]);
@@ -52,20 +48,20 @@ describe("architecture boundaries", () => {
     const violations = checkBoundaries([
       {
         path: "src/app/runtime.ts",
-        source: "export const run = Effect.runPromise;\n",
+        source: "export const run = Effect.runPromise;\n"
       },
       {
         path: "src/kernel/text.test.ts",
-        source: "export const run = () => Effect.runPromise(Promise.resolve(1));\n",
+        source: "export const run = () => Effect.runPromise(Promise.resolve(1));\n"
       },
       {
         path: "src/integrations/rss/client.ts",
-        source: "export const run = () => Effect.runPromise(Promise.resolve(1));\n",
-      },
+        source: "export const run = () => Effect.runPromise(Promise.resolve(1));\n"
+      }
     ]);
 
     expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
-      "src/integrations/rss/client.ts effect-run",
+      "src/integrations/rss/client.ts effect-run"
     ]);
   });
 
@@ -78,31 +74,30 @@ describe("architecture boundaries", () => {
             source: [
               'import { collectIndustryBrief } from "../shared/industry.js";',
               'import { tool } from "./tool.js";',
-              "export const flow = [collectIndustryBrief, tool];",
-            ].join("\n"),
+              "export const flow = [collectIndustryBrief, tool];"
+            ].join("\n")
           },
           {
             path: "src/app/products/shared/industry.ts",
             source: [
               'import { candidateDecision } from "./candidate-decision.js";',
               'import { collectSources } from "../../../acquisition/index.js";',
-              "export const industry = [candidateDecision, collectSources];",
-            ].join("\n"),
+              "export const industry = [candidateDecision, collectSources];"
+            ].join("\n")
           },
           // The registry directly under products/ composes every product.
           {
             path: "src/app/products/index.ts",
             source:
-              'import { frontierToolDescriptor } from "./frontier/tool.js";\nexport const descriptor = frontierToolDescriptor;\n',
+              'import { frontierToolDescriptor } from "./frontier/tool.js";\nexport const descriptor = frontierToolDescriptor;\n'
           },
           // Sibling tests keep their exemption from product isolation.
           {
             path: "src/app/products/daily-ai/flow.test.ts",
-            source:
-              'import { generateNewsBrief } from "../news/flow.js";\nexport const spy = generateNewsBrief;\n',
-          },
-        ]),
-      ),
+            source: 'import { generateNewsBrief } from "../news/flow.js";\nexport const spy = generateNewsBrief;\n'
+          }
+        ])
+      )
     ).toEqual([]);
   });
 
@@ -111,34 +106,33 @@ describe("architecture boundaries", () => {
       {
         path: "src/app/products/daily-ai/flow.ts",
         source:
-          'import { buildIndustryDocument } from "../frontier/flow.js";\nexport const flow = buildIndustryDocument;\n',
+          'import { buildIndustryDocument } from "../frontier/flow.js";\nexport const flow = buildIndustryDocument;\n'
       },
       {
         path: "src/app/products/frontier/flow.ts",
         source:
-          'import { candidateDecision } from "../subscriptions/output.js";\nexport const flow = candidateDecision;\n',
+          'import { candidateDecision } from "../subscriptions/output.js";\nexport const flow = candidateDecision;\n'
       },
       {
         path: "src/app/products/research/cli.ts",
-        source:
-          'import { createGlmResearch } from "../news/hybrid.js";\nexport const cli = createGlmResearch;\n',
+        source: 'import { createGlmResearch } from "../news/hybrid.js";\nexport const cli = createGlmResearch;\n'
       },
       {
         path: "src/app/products/subscriptions/automation.ts",
         source:
-          'import { RSS_SUMMARY_RESEARCH_TOOL_ID } from "../research/tool.js";\nexport const automation = RSS_SUMMARY_RESEARCH_TOOL_ID;\n',
+          'import { RSS_SUMMARY_RESEARCH_TOOL_ID } from "../research/tool.js";\nexport const automation = RSS_SUMMARY_RESEARCH_TOOL_ID;\n'
       },
       {
         path: "src/app/products/daily-ai/tool.ts",
         source:
-          'import type { IndustryBriefDocument } from "../frontier/flow.js";\nexport type Doc = IndustryBriefDocument;\n',
+          'import type { IndustryBriefDocument } from "../frontier/flow.js";\nexport type Doc = IndustryBriefDocument;\n'
       },
       // shared/ must stay product-agnostic.
       {
         path: "src/app/products/shared/industry.ts",
         source:
-          'import { buildIndustryDocument } from "../frontier/tool.js";\nexport const industry = buildIndustryDocument;\n',
-      },
+          'import { buildIndustryDocument } from "../frontier/tool.js";\nexport const industry = buildIndustryDocument;\n'
+      }
     ]);
 
     expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
@@ -147,7 +141,7 @@ describe("architecture boundaries", () => {
       "src/app/products/frontier/flow.ts product-boundary",
       "src/app/products/research/cli.ts product-boundary",
       "src/app/products/shared/industry.ts product-boundary",
-      "src/app/products/subscriptions/automation.ts product-boundary",
+      "src/app/products/subscriptions/automation.ts product-boundary"
     ]);
   });
 
@@ -155,25 +149,24 @@ describe("architecture boundaries", () => {
     const violations = checkBoundaries([
       {
         path: "src/editorial/domain/news/policies/rank.ts",
-        source:
-          'import { deliver } from "../../../../delivery/index.js";\nexport const ranked = deliver;\n',
+        source: 'import { deliver } from "../../../../delivery/index.js";\nexport const ranked = deliver;\n'
       },
       {
         path: "src/kernel/text.ts",
-        source: 'import { gone } from "../../outside.js";\nexport const text = gone;\n',
+        source: 'import { gone } from "../../outside.js";\nexport const text = gone;\n'
       },
       {
         path: "src/acquisition/domain/item/value-objects/item.ts",
-        source: 'import { load } from "cheerio";\nexport const item = load;\n',
+        source: 'import { load } from "cheerio";\nexport const item = load;\n'
       },
       {
         path: "src/kernel/text.ts",
-        source: 'import { tool } from "@rivus/agent";\nexport const text = tool;\n',
+        source: 'import { tool } from "@rivus/agent";\nexport const text = tool;\n'
       },
       {
         path: "src/editorial/index.ts",
-        source: 'export const note = "github";\n',
-      },
+        source: 'export const note = "github";\n'
+      }
     ]);
 
     expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
@@ -181,7 +174,7 @@ describe("architecture boundaries", () => {
       "src/editorial/domain/news/policies/rank.ts module-dependency",
       "src/editorial/index.ts source-vocabulary",
       "src/kernel/text.ts external",
-      "src/kernel/text.ts relative-escape",
+      "src/kernel/text.ts relative-escape"
     ]);
   });
 
@@ -196,15 +189,15 @@ describe("architecture boundaries", () => {
               'import { load } from "cheerio";',
               "const webhook = process.env.NOTIFY_WEBHOOK_URL;",
               'console.error("delivery failed");',
-              "export const notifier = [appendFileSync, load, webhook];",
-            ].join("\n"),
+              "export const notifier = [appendFileSync, load, webhook];"
+            ].join("\n")
           },
           {
             path: "src/app/rivus/plugin.ts",
-            source: 'import { tool } from "@rivus/agent";\nexport const plugin = tool;\n',
-          },
-        ]),
-      ),
+            source: 'import { tool } from "@rivus/agent";\nexport const plugin = tool;\n'
+          }
+        ])
+      )
     ).toEqual([]);
   });
 
@@ -220,14 +213,14 @@ describe("architecture boundaries", () => {
           'import { budget } from "../acquisition/infra/factories/budgeted-search.js";',
           'import { suite } from "../../tests/support/suite.js";',
           'import { gone } from "../../../../outside.js";',
-          "export const value = [readFileSync, Effect, collectRssFeeds, budget, suite, gone];",
-        ].join("\n"),
-      },
+          "export const value = [readFileSync, Effect, collectRssFeeds, budget, suite, gone];"
+        ].join("\n")
+      }
     ]);
 
     expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
       "src/kernel/text.test.ts deep-import",
-      "src/kernel/text.test.ts relative-escape",
+      "src/kernel/text.test.ts relative-escape"
     ]);
   });
 
@@ -240,8 +233,8 @@ describe("architecture boundaries", () => {
           "export const now = new Date();",
           "export const label = Date.now();",
           'export const source = "github";',
-          "export const adapter = search;",
-        ].join("\n"),
+          "export const adapter = search;"
+        ].join("\n")
       },
       {
         path: "src/acquisition/application/use-cases/search.ts",
@@ -250,23 +243,23 @@ describe("architecture boundaries", () => {
           'import { readFileSync } from "node:fs";',
           "const token = process.env.TOKEN;",
           'console.error("search");',
-          "export const value = [read, readFileSync, token];",
-        ].join("\n"),
+          "export const value = [read, readFileSync, token];"
+        ].join("\n")
       },
       {
         path: "src/editorial/domain/news/policies/rank.ts",
         source:
-          'import { value } from "../../../../acquisition/domain/item/value-objects/model.js";\nexport const ranked = value;\n',
+          'import { value } from "../../../../acquisition/domain/item/value-objects/model.js";\nexport const ranked = value;\n'
       },
       {
         path: "src/app/products/news/flow.ts",
         source:
-          'import { search } from "../../../acquisition/application/use-cases/search.js";\nexport const flow = search;\n',
+          'import { search } from "../../../acquisition/application/use-cases/search.js";\nexport const flow = search;\n'
       },
       {
         path: "src/acquisition/infra/factories/live.ts",
-        source: 'import { chromium } from "playwright";\nexport const browser = chromium;\n',
-      },
+        source: 'import { chromium } from "playwright";\nexport const browser = chromium;\n'
+      }
     ]);
 
     expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
@@ -279,7 +272,7 @@ describe("architecture boundaries", () => {
       "src/acquisition/domain/item/value-objects/model.ts source-vocabulary",
       "src/acquisition/infra/factories/live.ts playwright",
       "src/app/products/news/flow.ts deep-import",
-      "src/editorial/domain/news/policies/rank.ts types-only",
+      "src/editorial/domain/news/policies/rank.ts types-only"
     ]);
   });
 
@@ -287,17 +280,17 @@ describe("architecture boundaries", () => {
     const violations = checkBoundaries([
       {
         path: "src/acquisition/domain/item/item.ts",
-        source: "export const loose = true;\n",
+        source: "export const loose = true;\n"
       },
       {
         path: "src/editorial/domain/news/projections/model.ts",
-        source: "export const nested = true;\n",
-      },
+        source: "export const nested = true;\n"
+      }
     ]);
 
     expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
       "src/acquisition/domain/item/item.ts concept-structure",
-      "src/editorial/domain/news/projections/model.ts concept-structure",
+      "src/editorial/domain/news/projections/model.ts concept-structure"
     ]);
   });
 
@@ -308,18 +301,18 @@ describe("architecture boundaries", () => {
           { path: "src/acquisition/domain/budget/index.ts", source: "export {};\n" },
           {
             path: "src/acquisition/domain/budget/aggregates/search-budget.ts",
-            source: "export const budget = true;\n",
+            source: "export const budget = true;\n"
           },
           {
             path: "src/acquisition/domain/budget/services/cached-page.ts",
-            source: "export const cachedPage = true;\n",
+            source: "export const cachedPage = true;\n"
           },
           {
             path: "src/editorial/domain/news/policies/news-funnel.test.ts",
-            source: "export const test = true;\n",
-          },
-        ]),
-      ),
+            source: "export const test = true;\n"
+          }
+        ])
+      )
     ).toEqual([]);
   });
 
@@ -327,27 +320,27 @@ describe("architecture boundaries", () => {
     const violations = checkBoundaries([
       {
         path: "src/acquisition/application/budget-defaults.ts",
-        source: "export const defaults = true;\n",
+        source: "export const defaults = true;\n"
       },
       {
         path: "src/acquisition/application/helpers/budget-defaults.ts",
-        source: "export const defaults = true;\n",
+        source: "export const defaults = true;\n"
       },
       {
         path: "src/acquisition/infra/live.ts",
-        source: "export const live = true;\n",
+        source: "export const live = true;\n"
       },
       {
         path: "src/acquisition/infra/wiring/live.ts",
-        source: "export const live = true;\n",
-      },
+        source: "export const live = true;\n"
+      }
     ]);
 
     expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
       "src/acquisition/application/budget-defaults.ts application-root",
       "src/acquisition/application/helpers/budget-defaults.ts application-root",
       "src/acquisition/infra/live.ts infra-root",
-      "src/acquisition/infra/wiring/live.ts infra-root",
+      "src/acquisition/infra/wiring/live.ts infra-root"
     ]);
   });
 
@@ -357,22 +350,22 @@ describe("architecture boundaries", () => {
         checkBoundaries([
           {
             path: "src/delivery/application/ports.ts",
-            source: "export const ports = true;\n",
+            source: "export const ports = true;\n"
           },
           {
             path: "src/delivery/application/ports.test.ts",
-            source: "export const portsTest = true;\n",
+            source: "export const portsTest = true;\n"
           },
           {
             path: "src/acquisition/infra/factories/live.ts",
-            source: "export const live = true;\n",
+            source: "export const live = true;\n"
           },
           {
             path: "src/acquisition/infra/platform/node-file-system.ts",
-            source: "export const platform = true;\n",
-          },
-        ]),
-      ),
+            source: "export const platform = true;\n"
+          }
+        ])
+      )
     ).toEqual([]);
   });
 
@@ -389,20 +382,20 @@ describe("architecture boundaries", () => {
               'import { SearchProvider } from "../../../acquisition/index.js";',
               'import { canonicalizeUrl } from "../../../kernel/text.js";',
               'import { asRecord } from "../../shared/json-record.js";',
-              "export const provider = [Layer, readFile, HttpClient, SearchProvider, canonicalizeUrl, asRecord];",
-            ].join("\n"),
+              "export const provider = [Layer, readFile, HttpClient, SearchProvider, canonicalizeUrl, asRecord];"
+            ].join("\n")
           },
           {
             path: "src/integrations/shared/http.ts",
-            source: 'import { cheerioLoad } from "cheerio";\nexport const http = cheerioLoad;\n',
+            source: 'import { cheerioLoad } from "cheerio";\nexport const http = cheerioLoad;\n'
           },
           {
             path: "src/app/layers.ts",
             source:
-              'import { GlmSearchLive } from "../integrations/glm/index.js";\nexport const live = GlmSearchLive;\n',
-          },
-        ]),
-      ),
+              'import { GlmSearchLive } from "../integrations/glm/index.js";\nexport const live = GlmSearchLive;\n'
+          }
+        ])
+      )
     ).toEqual([]);
   });
 
@@ -411,31 +404,29 @@ describe("architecture boundaries", () => {
       {
         path: "src/integrations/doubao/provider.ts",
         source:
-          'import { parseGrokStream } from "../grok/search/mapper.js";\nexport const provider = parseGrokStream;\n',
+          'import { parseGrokStream } from "../grok/search/mapper.js";\nexport const provider = parseGrokStream;\n'
       },
       {
         path: "src/integrations/shared/http.ts",
-        source:
-          'import { readConduit } from "../github/home-browser.js";\nexport const http = readConduit;\n',
+        source: 'import { readConduit } from "../github/home-browser.js";\nexport const http = readConduit;\n'
+      },
+      {
+        path: "src/integrations/glm/search/provider.ts",
+        source: 'import { runPluginEffect } from "../../../app/runtime.js";\nexport const provider = runPluginEffect;\n'
       },
       {
         path: "src/integrations/glm/search/provider.ts",
         source:
-          'import { runPluginEffect } from "../../../app/runtime.js";\nexport const provider = runPluginEffect;\n',
-      },
-      {
-        path: "src/integrations/glm/search/provider.ts",
-        source:
-          'import { parseFeedXml } from "../../../acquisition/domain/item/adapters/rss.js";\nexport const provider = parseFeedXml;\n',
+          'import { parseFeedXml } from "../../../acquisition/domain/item/adapters/rss.js";\nexport const provider = parseFeedXml;\n'
       },
       {
         path: "src/integrations/doubao/provider.ts",
-        source: 'import { chromium } from "playwright";\nexport const provider = chromium;\n',
+        source: 'import { chromium } from "playwright";\nexport const provider = chromium;\n'
       },
       {
         path: "src/integrations/loose.ts",
-        source: "export const loose = true;\n",
-      },
+        source: "export const loose = true;\n"
+      }
     ]);
 
     expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
@@ -444,7 +435,7 @@ describe("architecture boundaries", () => {
       "src/integrations/glm/search/provider.ts deep-import",
       "src/integrations/glm/search/provider.ts integration-dependency",
       "src/integrations/loose.ts integration-root",
-      "src/integrations/shared/http.ts shared-isolation",
+      "src/integrations/shared/http.ts shared-isolation"
     ]);
   });
 
@@ -452,19 +443,18 @@ describe("architecture boundaries", () => {
     const violations = checkBoundaries([
       {
         path: "src/acquisition/infra/factories/live.ts",
-        source:
-          'import { RssFeedLive } from "../../../integrations/rss/feed.js";\nexport const live = RssFeedLive;\n',
+        source: 'import { RssFeedLive } from "../../../integrations/rss/feed.js";\nexport const live = RssFeedLive;\n'
       },
       {
         path: "src/acquisition/index.ts",
         source:
-          'import { DoubaoSearchLive } from "../integrations/doubao/index.js";\nexport const live = DoubaoSearchLive;\n',
+          'import { DoubaoSearchLive } from "../integrations/doubao/index.js";\nexport const live = DoubaoSearchLive;\n'
       },
       {
         path: "src/editorial/domain/news/policies/rank.ts",
         source:
-          'import { grokAudit } from "../../../../integrations/grok/audit.js";\nexport const ranked = grokAudit;\n',
-      },
+          'import { grokAudit } from "../../../../integrations/grok/audit.js";\nexport const ranked = grokAudit;\n'
+      }
     ]);
 
     expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
@@ -473,7 +463,7 @@ describe("architecture boundaries", () => {
       "src/acquisition/infra/factories/live.ts module-dependency",
       "src/acquisition/infra/factories/live.ts source-vocabulary",
       "src/editorial/domain/news/policies/rank.ts module-dependency",
-      "src/editorial/domain/news/policies/rank.ts source-vocabulary",
+      "src/editorial/domain/news/policies/rank.ts source-vocabulary"
     ]);
   });
 
@@ -481,28 +471,27 @@ describe("architecture boundaries", () => {
     const violations = checkBoundaries([
       {
         path: "src/acquisition/application/services/budget-defaults.ts",
-        source: 'export const provider = "github";\n',
+        source: 'export const provider = "github";\n'
       },
       {
         path: "src/reading/infra/repository/notes.ts",
-        source: 'export const note = "doubao";\n',
+        source: 'export const note = "doubao";\n'
       },
       // Locked surfaces: the package's own name and the whitelisted files keep
       // their historical wording.
       {
         path: "src/acquisition/application/ports.ts",
-        source:
-          'export class RssFeed extends Context.Service<RssFeed>("rss-summary/acquisition/RssFeed/v1") {}\n',
+        source: 'export class RssFeed extends Context.Service<RssFeed>("rss-summary/acquisition/RssFeed/v1") {}\n'
       },
       {
         path: "src/acquisition/application/services/budget-defaults.ts",
-        source: "export const defaults = { grok: { dailyLimit: 4 } };\n",
-      },
+        source: "export const defaults = { grok: { dailyLimit: 4 } };\n"
+      }
     ]);
 
     expect(violations.map((violation) => `${violation.file} ${violation.rule}`)).toEqual([
       "src/acquisition/application/services/budget-defaults.ts source-vocabulary",
-      "src/reading/infra/repository/notes.ts source-vocabulary",
+      "src/reading/infra/repository/notes.ts source-vocabulary"
     ]);
   });
 
@@ -513,15 +502,15 @@ describe("architecture boundaries", () => {
           {
             path: "src/integrations/glm/search/provider.test.ts",
             source:
-              'import { parseGrokStream } from "../../grok/search/mapper.js";\nexport const suite = parseGrokStream;\n',
+              'import { parseGrokStream } from "../../grok/search/mapper.js";\nexport const suite = parseGrokStream;\n'
           },
           {
             path: "src/editorial/domain/news/policies/rank.test.ts",
             source:
-              'import { pageAudit } from "../../../../integrations/grok/audit.js";\nexport const test = pageAudit;\n',
-          },
-        ]),
-      ),
+              'import { pageAudit } from "../../../../integrations/grok/audit.js";\nexport const test = pageAudit;\n'
+          }
+        ])
+      )
     ).toEqual([]);
   });
 });
@@ -535,8 +524,8 @@ function testGraph(): SourceInput[] {
         'import { readFileSync } from "node:fs";',
         'import { Effect, Layer } from "effect";',
         'import { err } from "./result.js";',
-        "export const value = [readFileSync, Effect, Layer, err];",
-      ].join("\n"),
+        "export const value = [readFileSync, Effect, Layer, err];"
+      ].join("\n")
     },
     {
       path: "src/acquisition/domain/item/item.test.ts",
@@ -545,9 +534,9 @@ function testGraph(): SourceInput[] {
         'import { readConduit } from "../../../integrations/github/index.js";',
         'import { scoreAcquired } from "../../../editorial/index.js";',
         'import { suite } from "../../../../tests/support/search-provider-suite.js";',
-        "export const value = [Effect, readConduit, scoreAcquired, suite];",
-      ].join("\n"),
-    },
+        "export const value = [Effect, readConduit, scoreAcquired, suite];"
+      ].join("\n")
+    }
   ];
 }
 
@@ -557,43 +546,43 @@ function legalGraph(): SourceInput[] {
     {
       path: "src/acquisition/domain/item/value-objects/model.ts",
       source:
-        'import { empty } from "../../../../kernel/text.js";\nexport const created = (value: string) => new Date(value);\nexport const label = empty;\n',
+        'import { empty } from "../../../../kernel/text.js";\nexport const created = (value: string) => new Date(value);\nexport const label = empty;\n'
     },
     {
       path: "src/acquisition/application/use-cases/search.ts",
       source:
-        'import { Effect } from "effect";\nimport { created } from "../../domain/item/value-objects/model.js";\nexport const search = [Effect, created];\n',
+        'import { Effect } from "effect";\nimport { created } from "../../domain/item/value-objects/model.js";\nexport const search = [Effect, created];\n'
     },
     {
       path: "src/integrations/rss/mapper.ts",
       source:
-        'import { created } from "../../acquisition/index.js";\nimport { decodeSchema } from "../shared/decode.js";\nexport const parsed = [created, decodeSchema];\n',
+        'import { created } from "../../acquisition/index.js";\nimport { decodeSchema } from "../shared/decode.js";\nexport const parsed = [created, decodeSchema];\n'
     },
     {
       path: "src/integrations/shared/scoring-trace.ts",
       source:
-        'import type { Acquired } from "../../acquisition/index.js";\nexport const routed = (acquired: Acquired) => acquired;\n',
+        'import type { Acquired } from "../../acquisition/index.js";\nexport const routed = (acquired: Acquired) => acquired;\n'
     },
     {
       path: "src/acquisition/infra/repository/search-budget-file.ts",
       source:
-        'import { Effect } from "effect";\nimport { empty } from "../../../kernel/text.js";\nexport const file = [Effect, empty];\n',
+        'import { Effect } from "effect";\nimport { empty } from "../../../kernel/text.js";\nexport const file = [Effect, empty];\n'
     },
     {
       path: "src/editorial/domain/news/policies/rank.ts",
       source:
-        'import type { created } from "../../../../acquisition/domain/item/value-objects/model.js";\nimport { empty } from "../../../../kernel/text.js";\nexport const rank = [empty, created];\n',
+        'import type { created } from "../../../../acquisition/domain/item/value-objects/model.js";\nimport { empty } from "../../../../kernel/text.js";\nexport const rank = [empty, created];\n'
     },
     {
       path: "src/app/products/shared/industry.ts",
       source:
-        'import { collectIndustrySources } from "../../../acquisition/index.js";\nimport { refreshRouting } from "../../../integrations/shared/index.js";\nexport const industry = [collectIndustrySources, refreshRouting];\n',
+        'import { collectIndustrySources } from "../../../acquisition/index.js";\nimport { refreshRouting } from "../../../integrations/shared/index.js";\nexport const industry = [collectIndustrySources, refreshRouting];\n'
     },
     {
       path: "src/app/products/news/flow.ts",
       source:
-        'import { settleSearches } from "../../../acquisition/index.js";\nimport { empty } from "../../../kernel/index.js";\nimport { createGlmResearch } from "../../../integrations/glm/index.js";\nexport const flow = [settleSearches, empty, createGlmResearch];\n',
-    },
+        'import { settleSearches } from "../../../acquisition/index.js";\nimport { empty } from "../../../kernel/index.js";\nimport { createGlmResearch } from "../../../integrations/glm/index.js";\nexport const flow = [settleSearches, empty, createGlmResearch];\n'
+    }
   ];
 }
 
@@ -608,8 +597,11 @@ function walk(dir: string): string[] {
   const files: string[] = [];
   for (const name of readdirSync(dir)) {
     const path = join(dir, name);
-    if (statSync(path).isDirectory()) files.push(...walk(path));
-    else if (name.endsWith(".ts") && !name.endsWith(".d.ts")) files.push(path);
+    if (statSync(path).isDirectory()) {
+      files.push(...walk(path));
+    } else if (name.endsWith(".ts") && !name.endsWith(".d.ts")) {
+      files.push(path);
+    }
   }
   return files;
 }

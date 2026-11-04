@@ -18,20 +18,20 @@ it("parses a result into a page and an item whose credibility follows the author
           SiteName: "Example",
           Summary: "Summary",
           AuthInfoLevel: 1,
-          AuthInfoDes: "官方",
+          AuthInfoDes: "官方"
         },
-        { Title: "missing id" },
-      ],
-    },
+        { Title: "missing id" }
+      ]
+    }
   });
   expect(acquired.page).toMatchObject({ logId: "log-1", resultCount: 1, timeCostMs: 12 });
   expect(acquired.page.results).toEqual([
-    expect.objectContaining({ id: "1", title: "Title", authInfoLevel: 1, rankPosition: 1 }),
+    expect.objectContaining({ id: "1", title: "Title", authInfoLevel: 1, rankPosition: 1 })
   ]);
   expect(acquired.items[0]).toMatchObject({
     id: "1",
     kind: "publication",
-    credibility: { tier: "official" },
+    credibility: { tier: "official" }
   });
   expect(credibilityForAuthLevel(2)).toEqual({ tier: "authoritative" });
   expect(credibilityForAuthLevel(4)).toEqual({ tier: "unrated" });

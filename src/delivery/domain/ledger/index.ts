@@ -4,5 +4,5 @@ export {
   type FeedState,
   markDelivered,
   markResearched,
-  type ResearchRecord,
+  type ResearchRecord
 } from "./value-objects/feed-state.js";

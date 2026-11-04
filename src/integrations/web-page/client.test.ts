@@ -10,7 +10,7 @@ const source: WebPageSubscription = {
   name: "Example News",
   url: "https://example.com/news",
   pathPrefixes: ["/news/"],
-  tags: ["AI", "News"],
+  tags: ["AI", "News"]
 };
 
 const page = `<a href="/news/retry"><time datetime="2026-08-12">Aug 12</time>Retry succeeded</a>`;
@@ -20,9 +20,9 @@ describe("web page adapter", () => {
     await expect(
       Effect.runPromise(
         readWebPageEvents(source, {
-          fetch: async () => new Response(`<a href="/news/no-date">No date</a>`),
-        }),
-      ),
+          fetch: async () => new Response(`<a href="/news/no-date">No date</a>`)
+        })
+      )
     ).rejects.toThrow("returned no dated links");
   });
 
@@ -34,9 +34,11 @@ describe("web page adapter", () => {
           const fiber = yield* readWebPageEvents(source, {
             fetch: async () => {
               attempts += 1;
-              if (attempts < 3) throw new TypeError("network reset");
+              if (attempts < 3) {
+                throw new TypeError("network reset");
+              }
               return new Response(page);
-            },
+            }
           }).pipe(Effect.forkChild);
           yield* Effect.yieldNow;
           yield* TestClock.adjust("250 millis");
@@ -46,8 +48,8 @@ describe("web page adapter", () => {
           yield* TestClock.adjust("1 millis");
           return yield* Fiber.join(fiber);
         }),
-        TestClock.layer(),
-      ),
+        TestClock.layer()
+      )
     );
 
     expect(events).toEqual([expect.objectContaining({ title: "Retry succeeded", source: "web" })]);
@@ -56,9 +58,9 @@ describe("web page adapter", () => {
     await expect(
       Effect.runPromise(
         readWebPageEvents(source, {
-          fetch: async () => new Response("blocked", { status: 403 }),
-        }),
-      ),
+          fetch: async () => new Response("blocked", { status: 403 })
+        })
+      )
     ).rejects.toThrow("returned 403");
   });
 
@@ -70,9 +72,11 @@ describe("web page adapter", () => {
           const fiber = yield* readWebPageEvents(source, {
             fetch: async () => {
               attempts += 1;
-              if (attempts < 3) return new Response("unavailable", { status: 500 });
+              if (attempts < 3) {
+                return new Response("unavailable", { status: 500 });
+              }
               return new Response(page);
-            },
+            }
           }).pipe(Effect.forkChild);
           yield* Effect.yieldNow;
           expect(attempts).toBe(1);
@@ -83,8 +87,8 @@ describe("web page adapter", () => {
           yield* TestClock.adjust("1 millis");
           return yield* Fiber.join(fiber);
         }),
-        TestClock.layer(),
-      ),
+        TestClock.layer()
+      )
     );
 
     expect(events).toEqual([expect.objectContaining({ title: "Retry succeeded", source: "web" })]);
@@ -100,9 +104,9 @@ describe("web page adapter", () => {
             fetch: async () => {
               attempts += 1;
               return new Response("no", { status });
-            },
-          }),
-        ),
+            }
+          })
+        )
       ).rejects.toThrow(`returned ${status}`);
       expect(attempts).toBe(1);
     }
@@ -114,9 +118,11 @@ describe("web page adapter", () => {
           const fiber = yield* readWebPageEvents(source, {
             fetch: async () => {
               attempts += 1;
-              if (attempts === 1) return new Response("slow down", { status: 429 });
+              if (attempts === 1) {
+                return new Response("slow down", { status: 429 });
+              }
               return new Response(page);
-            },
+            }
           }).pipe(Effect.forkChild);
           yield* Effect.yieldNow;
           expect(attempts).toBe(1);
@@ -125,8 +131,8 @@ describe("web page adapter", () => {
           yield* TestClock.adjust("1 millis");
           return yield* Fiber.join(fiber);
         }),
-        TestClock.layer(),
-      ),
+        TestClock.layer()
+      )
     );
     expect(events).toEqual([expect.objectContaining({ title: "Retry succeeded", source: "web" })]);
     expect(attempts).toBe(2);

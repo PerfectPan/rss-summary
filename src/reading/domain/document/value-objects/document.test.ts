@@ -11,7 +11,7 @@ describe("document", () => {
       method: "http",
       retrievedAt: "2026-08-17T01:00:00.000Z",
       title: "Article",
-      url: "https://example.com/article",
+      url: "https://example.com/article"
     } satisfies Document;
     expect(document.method).toBe("http");
   });

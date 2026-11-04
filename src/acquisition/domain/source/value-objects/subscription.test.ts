@@ -9,7 +9,7 @@ describe("subscription kinds", () => {
       name: "Example News",
       url: "https://example.com/news",
       pathPrefixes: ["/news/"],
-      tags: [],
+      tags: []
     };
     const feed: IndustrySource = { name: "Example", url: "https://example.com/feed.xml", tags: [] };
     expect(isWebPageSource(page)).toBe(true);

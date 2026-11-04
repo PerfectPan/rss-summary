@@ -1,25 +1,16 @@
 import { RIVUS_PLUGIN_API_VERSION, type RivusPlugin, type RivusPluginRegistry } from "@rivus/agent";
 
 import { products, type PresentationAutomation } from "../products/index.js";
-import {
-  generateRivusIndustryBrief,
-  type RivusIndustryBriefResult,
-} from "../products/frontier/tool.js";
+import { generateRivusIndustryBrief, type RivusIndustryBriefResult } from "../products/frontier/tool.js";
 import { executeNewsBrief, type RivusNewsBriefOutput } from "../products/news/tool.js";
 import { RSS_SUMMARY_NEWS_TOOL_ID } from "../products/news/tool.js";
 import {
   createSubscriptionsToolExecutor,
   RSS_SUMMARY_TOOL_ID,
-  type RivusDigestResult,
+  type RivusDigestResult
 } from "../products/subscriptions/tool.js";
-import {
-  createDailyAiToolExecutor,
-  RSS_SUMMARY_DAILY_AI_TOOL_ID,
-} from "../products/daily-ai/tool.js";
-import {
-  createArticleResearchExecutor,
-  type RivusArticleResearchResult,
-} from "../products/research/tool.js";
+import { createDailyAiToolExecutor, RSS_SUMMARY_DAILY_AI_TOOL_ID } from "../products/daily-ai/tool.js";
+import { createArticleResearchExecutor, type RivusArticleResearchResult } from "../products/research/tool.js";
 import { RSS_SUMMARY_RESEARCH_TOOL_ID } from "../products/shared/tool-ids.js";
 import { RSS_SUMMARY_INDUSTRY_TOOL_ID } from "../products/frontier/tool.js";
 
@@ -35,11 +26,9 @@ type RssSummaryPluginDependencies = {
 
 type RivusDailyAiToolResult = Awaited<ReturnType<ReturnType<typeof createDailyAiToolExecutor>>>;
 
-export function createRssSummaryPlugin(
-  dependencies: RssSummaryPluginDependencies = {},
-): RivusPlugin {
+export function createRssSummaryPlugin(dependencies: RssSummaryPluginDependencies = {}): RivusPlugin {
   const executeDigest = createSubscriptionsToolExecutor({
-    ...(dependencies.generateDigest ? { generateDigest: dependencies.generateDigest } : {}),
+    ...(dependencies.generateDigest ? { generateDigest: dependencies.generateDigest } : {})
   });
   const executeNewsBriefWithDefaults = dependencies.generateNewsBrief ?? executeNewsBrief;
   const executeIndustryBrief = dependencies.generateIndustryBrief ?? generateRivusIndustryBrief;
@@ -54,13 +43,13 @@ export function createRssSummaryPlugin(
     {
       productId: "news",
       id: RSS_SUMMARY_NEWS_TOOL_ID,
-      execute: executeNewsBriefWithDefaults,
+      execute: executeNewsBriefWithDefaults
     },
     {
       productId: "frontier",
       id: RSS_SUMMARY_INDUSTRY_TOOL_ID,
-      execute: (input: unknown) => executeIndustryBrief(input),
-    },
+      execute: (input: unknown) => executeIndustryBrief(input)
+    }
   ];
   const automationOrder = ["subscriptions", "daily-ai", "news", "frontier"] as const;
 
@@ -68,16 +57,18 @@ export function createRssSummaryPlugin(
     manifest: {
       apiVersion: RIVUS_PLUGIN_API_VERSION,
       id: "rss-summary",
-      version: "1.0.0",
+      version: "1.0.0"
     },
     register(registry: RivusPluginRegistry): void {
       for (const tool of toolOrder) {
         const product = products.find((product) => product.id === tool.productId);
-        if (!product) throw new Error(`No product registered for tool ${tool.id}`);
+        if (!product) {
+          throw new Error(`No product registered for tool ${tool.id}`);
+        }
         registry.registerTool({
           createExecutor: () => ({ execute: (input) => tool.execute(input) }),
           ...product.tool.descriptor,
-          id: tool.id,
+          id: tool.id
         });
       }
       registry.registerAgentProfile({
@@ -94,18 +85,20 @@ export function createRssSummaryPlugin(
             RSS_SUMMARY_DAILY_AI_TOOL_ID,
             RSS_SUMMARY_RESEARCH_TOOL_ID,
             RSS_SUMMARY_NEWS_TOOL_ID,
-            RSS_SUMMARY_INDUSTRY_TOOL_ID,
-          ],
-        },
+            RSS_SUMMARY_INDUSTRY_TOOL_ID
+          ]
+        }
       });
       for (const id of automationOrder) {
         const product = products.find((product) => product.id === id);
-        if (!product) throw new Error(`Unknown product: ${id}`);
+        if (!product) {
+          throw new Error(`Unknown product: ${id}`);
+        }
         for (const automation of product.automations(RSS_SUMMARY_PROFILE_ID)) {
           registry.registerAutomation(presentationAutomation(automation));
         }
       }
-    },
+    }
   };
 }
 
@@ -121,13 +114,10 @@ export { RSS_SUMMARY_DAILY_AI_TOOL_ID } from "../products/daily-ai/tool.js";
 export { RSS_SUMMARY_RESEARCH_TOOL_ID } from "../products/shared/tool-ids.js";
 export {
   RSS_SUMMARY_MORNING_AUTOMATION_ID,
-  RSS_SUMMARY_AUTOMATION_SUPPRESSED,
+  RSS_SUMMARY_AUTOMATION_SUPPRESSED
 } from "../products/subscriptions/automation.js";
 export { RSS_SUMMARY_DAILY_AI_AUTOMATION_ID } from "../products/daily-ai/automation.js";
-export {
-  RSS_SUMMARY_NOON_AUTOMATION_ID,
-  RSS_SUMMARY_EVENING_AUTOMATION_ID,
-} from "../products/news/automation.js";
+export { RSS_SUMMARY_NOON_AUTOMATION_ID, RSS_SUMMARY_EVENING_AUTOMATION_ID } from "../products/news/automation.js";
 export { RSS_SUMMARY_INDUSTRY_AUTOMATION_ID } from "../products/frontier/automation.js";
 
 export default createRssSummaryPlugin();

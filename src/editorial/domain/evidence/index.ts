@@ -5,14 +5,14 @@ export {
   invalidEditorialItemMessage,
   validateSubscriptionEditorialDraft,
   validateSubscriptionResearch,
-  validateSubscriptionSelectionDraft,
+  validateSubscriptionSelectionDraft
 } from "./policies/validation.js";
 export {
   assembleSubscriptionEditorial,
   assembleSubscriptionEvidence,
   excludeSubscriptionResearchFailures,
   mergeSubscriptionResearch,
-  selectedSubscriptionCandidates,
+  selectedSubscriptionCandidates
 } from "./services/evidence.js";
 export type {
   EvidenceDocument,
@@ -23,5 +23,5 @@ export type {
   SubscriptionEvidenceKind,
   SubscriptionResearch,
   SubscriptionSelection,
-  SubscriptionSelectionDecision,
+  SubscriptionSelectionDecision
 } from "./value-objects/evidence.js";

@@ -27,7 +27,7 @@ describe("golden Rivus registration", () => {
       idempotency: tool.idempotency,
       inputSchema: tool.inputSchema,
       risk: tool.risk,
-      version: tool.version,
+      version: tool.version
     }));
     const automations = registered.automations.map((automation) => {
       const presentation = presentationOf(automation);
@@ -37,13 +37,13 @@ describe("golden Rivus registration", () => {
         id: automation.id,
         profileId: automation.profileId,
         requestedSkillIds: automation.requestedSkillIds,
-        requestedToolIds: automation.requestedToolIds,
+        requestedToolIds: automation.requestedToolIds
       };
     });
     await matchSnapshot("registration.txt", {
       automations,
       profile: registered.profile,
-      tools,
+      tools
     });
   });
 });
@@ -51,8 +51,9 @@ describe("golden Rivus registration", () => {
 function presentationOf(template: RivusAutomationTemplate): RivusAutomationTemplate & {
   createPresentation(output: { occurrence: string; text: string }): RssAutomationPresentation;
 } {
-  if (!("createPresentation" in template))
+  if (!("createPresentation" in template)) {
     throw new Error("Automation presentation adapter is missing");
+  }
   return template as RivusAutomationTemplate & {
     createPresentation(output: { occurrence: string; text: string }): RssAutomationPresentation;
   };

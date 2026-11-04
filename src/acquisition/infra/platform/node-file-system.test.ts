@@ -1,4 +1,5 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
+import { readFile as readFileAsync, writeFile as writeFileAsync } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -10,8 +11,9 @@ import { NodeFileSystemLive } from "./node-file-system.js";
 const directories: string[] = [];
 
 afterEach(() => {
-  for (const directory of directories.splice(0))
+  for (const directory of directories.splice(0)) {
     rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 describe("node file system", () => {
@@ -27,8 +29,8 @@ describe("node file system", () => {
           yield* fs.writeFileString(path, "hello\n");
           return yield* fs.readFileString(path);
         }),
-        NodeFileSystemLive,
-      ),
+        NodeFileSystemLive
+      )
     );
     expect(text).toBe("hello\n");
   });
@@ -39,7 +41,9 @@ describe("node file system", () => {
     const exit = await readExit(directory);
     expectTypedNodeCause(
       exit,
-      nodeMessage(() => readFileSync(directory, "utf8")),
+      await nodeMessage(async () => {
+        await readFileAsync(directory, "utf8");
+      })
     );
   });
 
@@ -52,15 +56,12 @@ describe("node file system", () => {
           Effect.gen(function* () {
             const fs = yield* FileSystem.FileSystem;
             yield* fs.writeFileString(directory, "nope");
-          }),
+          })
         ),
-        NodeFileSystemLive,
-      ),
+        NodeFileSystemLive
+      )
     );
-    expectTypedNodeCause(
-      exit,
-      nodeMessage(() => writeFileSync(directory, "nope")),
-    );
+    expectTypedNodeCause(exit, await nodeMessage(() => writeFileAsync(directory, "nope")));
   });
 });
 
@@ -71,27 +72,31 @@ function readExit(path: string) {
         Effect.gen(function* () {
           const fs = yield* FileSystem.FileSystem;
           return yield* fs.readFileString(path);
-        }),
+        })
       ),
-      NodeFileSystemLive,
-    ),
+      NodeFileSystemLive
+    )
   );
 }
 
 function expectTypedNodeCause(exit: Exit.Exit<unknown, unknown>, message: string): void {
   expect(Exit.isFailure(exit)).toBe(true);
-  if (!Exit.isFailure(exit)) return;
+  if (!Exit.isFailure(exit)) {
+    return;
+  }
   expect(Cause.hasDies(exit.cause)).toBe(false);
   const error = Cause.squash(exit.cause);
   expect(PlatformError.isPlatformError(error)).toBe(true);
-  if (!PlatformError.isPlatformError(error)) return;
+  if (!PlatformError.isPlatformError(error)) {
+    return;
+  }
   expect(error.reason.cause).toBeInstanceOf(Error);
   expect((error.reason.cause as Error).message).toBe(message);
 }
 
-function nodeMessage(readOrWrite: () => void): string {
+async function nodeMessage(readOrWrite: () => void | Promise<void>): Promise<string> {
   try {
-    readOrWrite();
+    await readOrWrite();
   } catch (error) {
     return error instanceof Error ? error.message : String(error);
   }

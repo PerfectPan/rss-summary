@@ -2,11 +2,15 @@ export function isSameTitleEvent(left: { title: string }, right: { title: string
   const leftFeatures = titleFeatures(left.title);
   const rightFeatures = titleFeatures(right.title);
   const smallerSize = Math.min(leftFeatures.size, rightFeatures.size);
-  if (smallerSize < 4) return false;
+  if (smallerSize < 4) {
+    return false;
+  }
 
   let shared = 0;
   for (const feature of leftFeatures) {
-    if (rightFeatures.has(feature)) shared += 1;
+    if (rightFeatures.has(feature)) {
+      shared += 1;
+    }
   }
   return shared >= 4 && shared / smallerSize >= 0.6;
 }
@@ -18,9 +22,11 @@ export function isSameHeadline(left: string, right: string): boolean {
 
 export function isSameEntityEvent(
   left: { url: string; title: string },
-  right: { url: string; title: string },
+  right: { url: string; title: string }
 ): boolean {
-  if (left.url === right.url) return true;
+  if (left.url === right.url) {
+    return true;
+  }
   return isSameHeadline(left.title, right.title);
 }
 
@@ -50,7 +56,7 @@ const genericTitleFeatures = new Set([
   "消息",
   "用户",
   "重要",
-  "注意",
+  "注意"
 ]);
 
 function titleFeatures(value: string): Set<string> {
@@ -60,12 +66,16 @@ function titleFeatures(value: string): Set<string> {
     const text = match[0];
     for (let index = 0; index < text.length - 1; index += 1) {
       const feature = text.slice(index, index + 2);
-      if (!genericTitleFeatures.has(feature)) features.add(feature);
+      if (!genericTitleFeatures.has(feature)) {
+        features.add(feature);
+      }
     }
   }
   for (const match of normalized.matchAll(/[a-z0-9]+(?:[.+-][a-z0-9]+)*/gu)) {
     const feature = match[0];
-    if (feature.length >= 2 && !genericTitleFeatures.has(feature)) features.add(feature);
+    if (feature.length >= 2 && !genericTitleFeatures.has(feature)) {
+      features.add(feature);
+    }
   }
   return features;
 }

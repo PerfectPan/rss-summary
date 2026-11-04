@@ -24,10 +24,7 @@ export function validateDoubaoInput(input: SearchInputContract): void {
   if (!Number.isInteger(input.count) || input.count < 1 || input.count > 50) {
     throw new Error("Doubao web search count must be between 1 and 50.");
   }
-  if (
-    input.sinceDay &&
-    (!/^\d{4}-\d{2}-\d{2}$/u.test(input.sinceDay) || input.sinceDay > input.day)
-  ) {
+  if (input.sinceDay && (!/^\d{4}-\d{2}-\d{2}$/u.test(input.sinceDay) || input.sinceDay > input.day)) {
     throw new Error("Invalid search start date.");
   }
   if (!/^\d{4}-\d{2}-\d{2}$/u.test(input.day)) {
@@ -42,7 +39,9 @@ export class DoubaoSearchClient {
   private readonly timeoutMs: number;
 
   constructor(options: DoubaoSearchClientOptions) {
-    if (options.apiKey.trim() === "") throw new Error("DOUBAO_SEARCH_API_KEY is required.");
+    if (options.apiKey.trim() === "") {
+      throw new Error("DOUBAO_SEARCH_API_KEY is required.");
+    }
     this.apiKey = options.apiKey;
     this.baseUrl = options.baseUrl ?? "https://open.feedcoopapi.com/search_api/web_search";
     this.fetchImpl = options.fetch ?? fetch;
@@ -52,7 +51,9 @@ export class DoubaoSearchClient {
   async search(input: SearchInput): Promise<SearchPage> {
     validateDoubaoInput(input);
     const filter: Record<string, unknown> = { NeedUrl: true };
-    if (input.sourcePolicy === "official") filter.AuthInfoLevel = 1;
+    if (input.sourcePolicy === "official") {
+      filter.AuthInfoLevel = 1;
+    }
 
     let response: Response;
     try {
@@ -60,7 +61,7 @@ export class DoubaoSearchClient {
         method: "POST",
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
-          "Content-Type": "application/json",
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           Query: input.query,
@@ -71,9 +72,9 @@ export class DoubaoSearchClient {
           // Topic queries already encode one bounded event intent. Rewriting broadens them back
           // into generic discovery queries and lowers precision.
           QueryControl: { QueryRewrite: false },
-          ContentFormats: "markdown",
+          ContentFormats: "markdown"
         }),
-        signal: AbortSignal.timeout(this.timeoutMs),
+        signal: AbortSignal.timeout(this.timeoutMs)
       });
     } catch (cause) {
       throw new DoubaoSearchError("network_error", errorText(cause));
@@ -95,10 +96,16 @@ function errorText(value: unknown): string {
 }
 
 function parseRetryAfter(value: string | null): number | undefined {
-  if (!value) return undefined;
+  if (!value) {
+    return undefined;
+  }
   const seconds = Number(value);
-  if (Number.isFinite(seconds) && seconds >= 0) return Math.round(seconds * 1_000);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.round(seconds * 1_000);
+  }
   const date = Date.parse(value);
-  if (!Number.isFinite(date)) return undefined;
+  if (!Number.isFinite(date)) {
+    return undefined;
+  }
   return Math.max(0, date - Date.now());
 }

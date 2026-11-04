@@ -10,10 +10,7 @@ import type { SearchPage } from "../../search/index.js";
  * top.
  */
 export function cacheablePage(page: SearchPage): boolean {
-  return (
-    page.fallback === undefined &&
-    page.results.every((result) => result.sourceVerification === undefined)
-  );
+  return page.fallback === undefined && page.results.every((result) => result.sourceVerification === undefined);
 }
 
 /**
@@ -25,6 +22,6 @@ export function presentCachedPage(entry: CacheEntry, usage: BudgetUsage): Search
   const page = JSON.parse(JSON.stringify(entry.page)) as SearchPage;
   return {
     ...page,
-    searchUsage: { ...usage, source: "cache", fetchedAt: entry.fetchedAt },
+    searchUsage: { ...usage, source: "cache", fetchedAt: entry.fetchedAt }
   };
 }

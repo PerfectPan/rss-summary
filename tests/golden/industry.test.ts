@@ -6,15 +6,9 @@ import {
   INDUSTRY_PAGE_HTML,
   INDUSTRY_PAGE_URL,
   WINDOW_SINCE,
-  WINDOW_UNTIL,
+  WINDOW_UNTIL
 } from "./fixtures.js";
-import {
-  installFetch,
-  matchSnapshot,
-  runCommand,
-  textResponse,
-  useGoldenHarness,
-} from "./harness.js";
+import { installFetch, matchSnapshot, runCommand, textResponse, useGoldenHarness } from "./harness.js";
 import { nextUuid } from "./uuid-sequence.js";
 
 vi.mock("node:crypto", async (importOriginal) => {
@@ -43,8 +37,12 @@ describe("golden industry", () => {
 
 function installIndustryFetch(): void {
   installFetch((url) => {
-    if (url === INDUSTRY_FEED_URL) return textResponse(INDUSTRY_ATOM, 200, "application/atom+xml");
-    if (url === INDUSTRY_PAGE_URL) return textResponse(INDUSTRY_PAGE_HTML, 200, "text/html");
+    if (url === INDUSTRY_FEED_URL) {
+      return textResponse(INDUSTRY_ATOM, 200, "application/atom+xml");
+    }
+    if (url === INDUSTRY_PAGE_URL) {
+      return textResponse(INDUSTRY_PAGE_HTML, 200, "text/html");
+    }
     throw new Error(`Unexpected fetch ${url}`);
   });
 }

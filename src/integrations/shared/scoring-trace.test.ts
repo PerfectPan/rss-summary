@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import {
-  acquireActivityCard,
-  activityGroupKey,
-  applyScoringContext,
-  refreshRouting,
-} from "./scoring-trace.js";
+import { acquireActivityCard, activityGroupKey, applyScoringContext, refreshRouting } from "./scoring-trace.js";
 import type { ActivityCardDto } from "../../acquisition/index.js";
 
 const card = (overrides: Partial<ActivityCardDto> = {}): ActivityCardDto => ({
@@ -14,20 +9,18 @@ const card = (overrides: Partial<ActivityCardDto> = {}): ActivityCardDto => ({
   actor: "ada",
   repo: "example/repo",
   createdAt: "2026-08-15T02:00:00.000Z",
-  ...overrides,
+  ...overrides
 });
 
 describe("scoring trace", () => {
   it("stamps the historical group key and channel data", () => {
-    expect(activityGroupKey(card({ type: "pull_request", prNumber: 7 }))).toBe(
-      "github-pull-request:example/repo:7",
-    );
+    expect(activityGroupKey(card({ type: "pull_request", prNumber: 7 }))).toBe("github-pull-request:example/repo:7");
     expect(activityGroupKey(card({ type: "release", htmlUrl: "https://example.com/rel" }))).toBe(
-      "github-release:https://example.com/rel",
+      "github-release:https://example.com/rel"
     );
-    expect(
-      activityGroupKey(card({ type: "article", source: "rss", htmlUrl: "https://example.com/a" })),
-    ).toBe("publication:https://example.com/a");
+    expect(activityGroupKey(card({ type: "article", source: "rss", htmlUrl: "https://example.com/a" }))).toBe(
+      "publication:https://example.com/a"
+    );
     const paper = acquireActivityCard(card({ type: "paper", title: "Notes" }));
     expect(paper.item.routing).toMatchObject({
       channel: "github",
@@ -35,7 +28,7 @@ describe("scoring trace", () => {
       contentResearch: true,
       feedPrefix: "rss",
       sitePrefix: "web",
-      catalogResearchKey: "github:example/repo",
+      catalogResearchKey: "github:example/repo"
     });
   });
 
@@ -47,11 +40,11 @@ describe("scoring trace", () => {
       language: null,
       stargazersCount: 0,
       topics: [],
-      pushedAt: "2026-08-02T04:00:00.000Z",
+      pushedAt: "2026-08-02T04:00:00.000Z"
     };
     const acquired = applyScoringContext(acquireActivityCard(card()), {
       followees: new Set([""]),
-      repositories: new Map([["example/repo", repository]]),
+      repositories: new Map([["example/repo", repository]])
     });
     expect(acquired.item.subject.name).toBe("");
     acquired.card.title = "Updated";

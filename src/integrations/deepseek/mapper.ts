@@ -1,9 +1,4 @@
-import type {
-  CredibilityTier,
-  Item,
-  SearchSourcePolicy,
-  SearchResult,
-} from "../../acquisition/index.js";
+import type { CredibilityTier, Item, SearchSourcePolicy, SearchResult } from "../../acquisition/index.js";
 import type { PublicationDay } from "../../kernel/index.js";
 import { shiftCalendarDay } from "../../kernel/index.js";
 
@@ -15,7 +10,9 @@ import { shiftCalendarDay } from "../../kernel/index.js";
 export function credibilityForAuthority(authority: number | undefined): {
   tier: CredibilityTier;
 } {
-  if (authority !== undefined && authority >= 3) return { tier: "authoritative" };
+  if (authority !== undefined && authority >= 3) {
+    return { tier: "authoritative" };
+  }
   return { tier: "unrated" };
 }
 
@@ -33,7 +30,9 @@ export const deepSeekSourcePolicies: readonly SearchSourcePolicy[] = ["news", "a
  */
 export function deepSeekPublicationDay(publishTime: string): PublicationDay | undefined {
   const match = /^(\d{4}-\d{2}-\d{2})T16:00:00(?:\.000)?Z$/u.exec(publishTime);
-  if (!match) return undefined;
+  if (!match) {
+    return undefined;
+  }
   return { day: shiftCalendarDay(match[1]!, 1), timezoneOffset: "+08:00" };
 }
 
@@ -45,28 +44,28 @@ export function itemFromDeepSeek(result: SearchResult): Item {
     subject: {
       key: result.url,
       name: result.siteName ?? result.url,
-      url: result.url,
+      url: result.url
     },
     content: {
       title: result.title,
       ...(result.summary || result.snippet ? { excerpt: result.summary ?? result.snippet } : {}),
-      url: result.url,
+      url: result.url
     },
     publishedAt: {
       value: published ?? "",
-      precision: published ? (result.publishDay ? "date" : "instant") : "date",
+      precision: published ? (result.publishDay ? "date" : "instant") : "date"
     },
     provenance: { origin: result.url },
     credibility: credibilityForAuthority(result.authority),
     signals: [],
     rank: {
       position: result.rankPosition,
-      ...(result.rankScore !== undefined ? { score: result.rankScore } : {}),
+      ...(result.rankScore !== undefined ? { score: result.rankScore } : {})
     },
     display: {
       ...(result.siteName ? { label: result.siteName } : {}),
       reference: result.url,
-      facts: [],
-    },
+      facts: []
+    }
   };
 }

@@ -1,8 +1,11 @@
+import { fmt, lint } from "@perfectpan/lint-config/vite-plus";
 import { defineConfig } from "vite-plus";
 
 /**
  * Vite+ unified config: Vitest + Oxlint (+ optional Oxfmt via `vp check` / `vp fmt`).
  * Library build remains `tsc -p tsconfig.build.json` (CLI bin + rivus-plugin exports).
+ * Lint and format rules come from @perfectpan/lint-config; only repository-specific
+ * settings live here.
  */
 export default defineConfig({
   test: {
@@ -18,47 +21,55 @@ export default defineConfig({
         statements: 85,
         branches: 75,
         functions: 90,
-        lines: 85,
-      },
-    },
+        lines: 85
+      }
+    }
   },
 
   lint: {
-    plugins: ["oxc", "typescript", "unicorn"],
+    ...lint,
     ignorePatterns: ["dist/**", "coverage/**", "node_modules/**", "scripts/**"],
-    options: {
-      typeAware: true,
-      typeCheck: true,
-    },
+    // This repository has no JSX, and this vite-plus's oxlint does not ship the react
+    // plugin, so the preset's react override cannot load here.
+    overrides: lint.overrides.filter((override) => !override.plugins?.includes("react")),
     rules: {
-      "typescript/no-explicit-any": "error",
+      ...lint.rules,
       // fetch() RequestInfo | URL is commonly stringified in adapter tests.
       "typescript/no-base-to-string": "off",
       // Mutating URLSearchParams while iterating requires a key snapshot.
       "unicorn/no-useless-spread": "off",
-      "no-unused-vars": [
+      // The CLI reports diagnostics on stderr only; info goes through the renderers.
+      "no-console": ["error", { allow: ["error", "warn"] }],
+      // Effect.catch is a typed Effect combinator, not Promise#catch; the promise
+      // plugin misreads it as a two-argument Promise.catch.
+      "promise/valid-params": "off",
+      // The typed-exit assertion helpers and the golden snapshot matchers
+      // centralize expectations; count them as assertions.
+      "vitest/expect-expect": [
         "error",
         {
-          argsIgnorePattern: "^_",
-          varsIgnorePattern: "^_",
-          caughtErrorsIgnorePattern: "^_",
-        },
+          assertFunctionNames: ["expect", "expectFileMessage", "expectTypedNodeCause", "matchSnapshot", "matchDoubao"]
+        }
       ],
-      "no-console": ["error", { allow: ["error", "warn"] }],
-      "vite-plus/prefer-vite-plus-imports": "error",
+      // TEMPORARY, mirroring rivus-agent's staged adoption of this preset: the
+      // function-declaration reorder (792 sites) is its own task. The
+      // const/let/class ordering rule stays active.
+      "no-use-before-define": ["error", { functions: false }],
+      // TEMPORARY: vi.fn/vi.mock call sites need per-site signatures (~116
+      // sites); track the mock-typing campaign separately.
+      "vitest/require-mock-type-parameters": "off",
+      "vite-plus/prefer-vite-plus-imports": "error"
     },
     jsPlugins: [
       {
         name: "vite-plus",
-        specifier: "vite-plus/oxlint-plugin",
-      },
-    ],
+        specifier: "vite-plus/oxlint-plugin"
+      }
+    ]
   },
 
   fmt: {
-    // Keep close to previous TS style; Oxfmt defaults are Prettier-compatible.
-    semi: true,
-    singleQuote: false,
+    ...fmt,
     // Docs / JSON config are edited for content, not for Oxfmt churn.
     ignorePatterns: [
       "dist/**",
@@ -71,7 +82,7 @@ export default defineConfig({
       "news-topics.json",
       "pnpm-lock.yaml",
       "package.json",
-      "scripts/**",
-    ],
-  },
+      "scripts/**"
+    ]
+  }
 });

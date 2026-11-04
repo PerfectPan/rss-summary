@@ -13,27 +13,18 @@ export function listRuns(root: string): Effect.Effect<readonly RunSummary[], Err
   return Effect.gen(function* () {
     const archive = yield* RunArchive;
     const paths = yield* archive.list(root);
-    return yield* Effect.forEach(paths, (path) =>
-      Effect.map(archive.load(path), (run) => ({ path, run })),
-    );
+    return yield* Effect.forEach(paths, (path) => Effect.map(archive.load(path), (run) => ({ path, run })));
   });
 }
 
-export function listFailedRuns(
-  root: string,
-): Effect.Effect<readonly RunSummary[], Error, RunArchive> {
+export function listFailedRuns(root: string): Effect.Effect<readonly RunSummary[], Error, RunArchive> {
   return Effect.map(listRuns(root), (runs) => runs.filter(({ run }) => isFailedRun(run)));
 }
 
 /** Resolve a run label (file name without extension) to its artifact path. */
-export function runArtifactForLabel(
-  root: string,
-  label: string,
-): Effect.Effect<string | undefined, Error, RunArchive> {
+export function runArtifactForLabel(root: string, label: string): Effect.Effect<string | undefined, Error, RunArchive> {
   return RunArchive.use((archive) =>
-    Effect.map(archive.list(root), (paths) =>
-      paths.find((candidate) => archive.label(candidate) === label),
-    ),
+    Effect.map(archive.list(root), (paths) => paths.find((candidate) => archive.label(candidate) === label))
   );
 }
 

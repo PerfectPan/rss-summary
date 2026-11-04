@@ -22,21 +22,27 @@ export function decodeViewFromMarkdown(markdown: string): ViewDocument {
   let footnote: string | undefined;
 
   const ensureSection = (): ViewSection => {
-    if (current) return current;
+    if (current) {
+      return current;
+    }
     current = { heading: "动态", style: "strong", items: [], idIndex: sections.length };
     sections.push(current);
     return current;
   };
 
   for (const [index, line] of lines.entries()) {
-    if (index <= headingIndex || !line) continue;
+    if (index <= headingIndex || !line) {
+      continue;
+    }
     if (/^数据源状态[：:]/u.test(line)) {
       footnote = line;
       activeItem = undefined;
       continue;
     }
     if (/^来源[：:]/u.test(line)) {
-      if (activeItem) activeItem.sourceLabel = line.replace(/^来源[：:]/u, "");
+      if (activeItem) {
+        activeItem.sourceLabel = line.replace(/^来源[：:]/u, "");
+      }
       continue;
     }
     const sectionTitle = readSectionTitle(line);
@@ -45,7 +51,7 @@ export function decodeViewFromMarkdown(markdown: string): ViewDocument {
         heading: sectionTitle.text,
         style: sectionTitle.style,
         items: [],
-        idIndex: sections.length,
+        idIndex: sections.length
       };
       sections.push(current);
       activeItem = undefined;
@@ -58,7 +64,7 @@ export function decodeViewFromMarkdown(markdown: string): ViewDocument {
         number: Number(newsItem[1]),
         headline: newsItem[2]!,
         links: [{ text: newsItem[2]!, url: newsItem[3]! }],
-        notes: [],
+        notes: []
       };
       ensureSection().items.push(activeItem);
       continue;
@@ -69,7 +75,7 @@ export function decodeViewFromMarkdown(markdown: string): ViewDocument {
         shape: "featured",
         headline: featured[1]!,
         links: [{ text: featured[1]!, url: featured[2]! }],
-        notes: [],
+        notes: []
       };
       ensureSection().items.push(activeItem);
       continue;
@@ -88,7 +94,9 @@ export function decodeViewFromMarkdown(markdown: string): ViewDocument {
       activeItem.notes.push(line.replace(/^来源[：:]\s*/u, ""));
       continue;
     }
-    if (footnote === undefined) footnote = line;
+    if (footnote === undefined) {
+      footnote = line;
+    }
   }
 
   return {
@@ -96,17 +104,17 @@ export function decodeViewFromMarkdown(markdown: string): ViewDocument {
     meta,
     sections: sections.filter((section) => section.items.length > 0),
     trailing: footnote === undefined ? [] : [{ kind: "status", text: footnote }],
-    variant: "brief",
+    variant: "brief"
   };
 }
 
 function readSectionTitle(line: string): { text: string; style: "strong" | "atx" } | undefined {
   const markdownHeading = /^#{2,6}\s+(.+)$/u.exec(line)?.[1];
-  if (markdownHeading) return { text: markdownHeading, style: "atx" };
+  if (markdownHeading) {
+    return { text: markdownHeading, style: "atx" };
+  }
   const strong = /^\*\*([^*]+)\*\*$/u.exec(line)?.[1];
-  return strong && !/^\d+\./u.test(strong) && !strong.startsWith("[")
-    ? { text: strong, style: "strong" }
-    : undefined;
+  return strong && !/^\d+\./u.test(strong) && !strong.startsWith("[") ? { text: strong, style: "strong" } : undefined;
 }
 
 function parseListItem(number: number | undefined, value: string): ViewItem {
@@ -116,7 +124,7 @@ function parseListItem(number: number | undefined, value: string): ViewItem {
       shape: "card",
       headline: emphasizedLink[1]!,
       links: [{ text: emphasizedLink[1]!, url: emphasizedLink[2]! }],
-      notes: [],
+      notes: []
     };
   }
   const links: ViewLink[] = [];
@@ -133,6 +141,6 @@ function parseListItem(number: number | undefined, value: string): ViewItem {
     ...(number === undefined ? {} : { number }),
     headline,
     links,
-    notes: [],
+    notes: []
   };
 }

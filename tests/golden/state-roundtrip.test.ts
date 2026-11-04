@@ -7,10 +7,7 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { saveDailyAiDiagnostics } from "../../src/delivery/index.js";
 import { saveRunArtifact, loadRunArtifact } from "../../src/delivery/index.js";
 import { loadFeedState, saveFeedState } from "../../src/delivery/index.js";
-import {
-  RSS_SUMMARY_DAILY_AI_TOOL_ID,
-  RSS_SUMMARY_NEWS_TOOL_ID,
-} from "../../src/app/rivus/plugin.js";
+import { RSS_SUMMARY_DAILY_AI_TOOL_ID, RSS_SUMMARY_NEWS_TOOL_ID } from "../../src/app/rivus/plugin.js";
 import {
   DOUBAO_URL,
   doubaoPayload,
@@ -23,7 +20,7 @@ import {
   PERSONAL_FEED_URL,
   PERSONAL_RSS,
   WINDOW_SINCE,
-  WINDOW_UNTIL,
+  WINDOW_UNTIL
 } from "./fixtures.js";
 import {
   executeTool,
@@ -34,7 +31,7 @@ import {
   runCommand,
   textResponse,
   useGoldenHarness,
-  writeGrokExecutable,
+  writeGrokExecutable
 } from "./harness.js";
 import { nextUuid } from "./uuid-sequence.js";
 
@@ -52,18 +49,22 @@ const runMarkdown = "runs/2026-08-16/subscriptions-040000-00000000.md";
 describe("state fixtures", () => {
   it("roundtrips feed state and the subscription run record", async () => {
     installFetch((url) => {
-      if (url === PERSONAL_FEED_URL) return textResponse(PERSONAL_RSS);
-      if (url.includes("/received_events")) return jsonResponse([]);
-      if (url === "https://api.github.com/repos/example/project")
+      if (url === PERSONAL_FEED_URL) {
+        return textResponse(PERSONAL_RSS);
+      }
+      if (url.includes("/received_events")) {
+        return jsonResponse([]);
+      }
+      if (url === "https://api.github.com/repos/example/project") {
         return jsonResponse(GITHUB_REPOSITORY);
-      if (url.includes("/user/following")) return jsonResponse([]);
+      }
+      if (url.includes("/user/following")) {
+        return jsonResponse([]);
+      }
       throw new Error(`Unexpected fetch ${url}`);
     });
     const context = harness.context();
-    await runCommand(
-      ["digest", "--rss-only", "--only-new", ...windowArgs, "--pages", "1"],
-      context,
-    );
+    await runCommand(["digest", "--rss-only", "--only-new", ...windowArgs, "--pages", "1"], context);
 
     expect(readGenerated(context.root, "feed-state.json")).toBe(readFixture("feed-state.json"));
     expect(readGenerated(context.root, runJson)).toBe(readFixture(runJson));
@@ -75,12 +76,7 @@ describe("state fixtures", () => {
 
     const stored = loadRunArtifact(join(fixtureRoot, runJson));
     const { delivery, ...audit } = stored;
-    const saved = saveRunArtifact(
-      join(context.root, "roundtrip-runs"),
-      audit,
-      delivery,
-      readFixture(runMarkdown),
-    );
+    const saved = saveRunArtifact(join(context.root, "roundtrip-runs"), audit, delivery, readFixture(runMarkdown));
     expect(readFileSync(saved.jsonPath, "utf8")).toBe(readFixture(runJson));
     expect(readFileSync(saved.markdownPath, "utf8")).toBe(readFixture(runMarkdown));
   });
@@ -90,9 +86,7 @@ describe("state fixtures", () => {
     const context = harness.context();
     await runCommand(["industry", "--json", "--only-new", ...windowArgs], context);
 
-    expect(readGenerated(context.root, "industry-state.json")).toBe(
-      readFixture("industry-state.json"),
-    );
+    expect(readGenerated(context.root, "industry-state.json")).toBe(readFixture("industry-state.json"));
     const copy = join(context.root, "roundtrip", "industry-state.json");
     saveFeedState(copy, loadFeedState(join(fixtureRoot, "industry-state.json")));
     expect(readFileSync(copy, "utf8")).toBe(readFixture("industry-state.json"));
@@ -103,8 +97,9 @@ describe("state fixtures", () => {
     process.env.NEWS_SEARCH_MODE = "doubao";
     process.env.DOUBAO_SEARCH_API_KEY = "golden-key";
     installFetch((url) => {
-      if (url === DOUBAO_URL)
+      if (url === DOUBAO_URL) {
         return jsonResponse(JSON.parse(doubaoPayload("2026-08-16T02:00:00.000Z")));
+      }
       throw new Error(`Unexpected fetch ${url}`);
     });
     const { tools } = registerPlugin();
@@ -125,8 +120,8 @@ describe("state fixtures", () => {
         author: "@ClaudeDevs",
         publishedAt: "2026-08-15T12:00:00.000Z",
         summary: "Claude 更新了 TypeScript 工具链的具体工作流。",
-        title: "Claude 更新了 TypeScript 工具链",
-      }),
+        title: "Claude 更新了 TypeScript 工具链"
+      })
     );
     process.env.DAILY_AI_X_HANDLES = "ClaudeDevs";
     process.env.X_ACCOUNT_POSTS_PER_FETCH = "1";
@@ -135,19 +130,17 @@ describe("state fixtures", () => {
     const { tools } = registerPlugin();
     await executeTool(tools, RSS_SUMMARY_DAILY_AI_TOOL_ID, {
       occurrence: "2026-08-16T04:00:00.000Z",
-      phase: "collect",
+      phase: "collect"
     });
 
-    const generatedPath = Object.keys(readTree(context.root)).find((path) =>
-      path.endsWith("-collect.json"),
-    );
-    if (!generatedPath) throw new Error("collect did not write a diagnostic snapshot");
+    const generatedPath = Object.keys(readTree(context.root)).find((path) => path.endsWith("-collect.json"));
+    if (!generatedPath) {
+      throw new Error("collect did not write a diagnostic snapshot");
+    }
     const fixtureName = `daily-ai/${generatedPath.split("/").at(-1)}`;
     expect(readGenerated(context.root, generatedPath)).toBe(readFixture(fixtureName));
 
-    const snapshot: Parameters<typeof saveDailyAiDiagnostics>[0] = JSON.parse(
-      readFixture(fixtureName),
-    );
+    const snapshot: Parameters<typeof saveDailyAiDiagnostics>[0] = JSON.parse(readFixture(fixtureName));
     const directory = join(context.root, "roundtrip-rivus");
     await saveDailyAiDiagnostics(snapshot, { RIVUS_DEPLOYMENT_STATE_DIR: directory });
     const written = Object.values(readTree(directory));
@@ -157,8 +150,12 @@ describe("state fixtures", () => {
 
 function installIndustryFetch(): void {
   installFetch((url) => {
-    if (url === INDUSTRY_FEED_URL) return textResponse(INDUSTRY_ATOM, 200, "application/atom+xml");
-    if (url === INDUSTRY_PAGE_URL) return textResponse(INDUSTRY_PAGE_HTML, 200, "text/html");
+    if (url === INDUSTRY_FEED_URL) {
+      return textResponse(INDUSTRY_ATOM, 200, "application/atom+xml");
+    }
+    if (url === INDUSTRY_PAGE_URL) {
+      return textResponse(INDUSTRY_PAGE_HTML, 200, "text/html");
+    }
     throw new Error(`Unexpected fetch ${url}`);
   });
 }

@@ -17,18 +17,14 @@ export type DeliveryOrder<R = never> = {
   readonly afterSend?: Effect.Effect<void, Error, R>;
 };
 
-const completedAtNow = Effect.map(Clock.currentTimeMillis, (millis) =>
-  new Date(millis).toISOString(),
-);
+const completedAtNow = Effect.map(Clock.currentTimeMillis, (millis) => new Date(millis).toISOString());
 
 /**
  * Deliver output, then record the run. Order is fixed: send first, mark state
  * only after the send succeeded, then write the run artifact. Failures are
  * recorded before being rethrown so the run log always explains the outcome.
  */
-export function deliver<R>(
-  order: DeliveryOrder<R>,
-): Effect.Effect<void, Error, Notifier | RunArchive | R> {
+export function deliver<R>(order: DeliveryOrder<R>): Effect.Effect<void, Error, Notifier | RunArchive | R> {
   return Effect.gen(function* () {
     const notifier = yield* Notifier;
     const archive = yield* RunArchive;
@@ -43,9 +39,9 @@ export function deliver<R>(
           completedAt: yield* completedAtNow,
           channel: notifier.channel,
           stateStatus: "skipped",
-          error: errorMessage(Cause.squash(sendExit.cause)),
+          error: errorMessage(Cause.squash(sendExit.cause))
         },
-        order.output,
+        order.output
       );
       return yield* Effect.failCause(sendExit.cause);
     }
@@ -62,9 +58,9 @@ export function deliver<R>(
             completedAt: yield* completedAtNow,
             channel: notifier.channel,
             stateStatus: "failed",
-            error: errorMessage(Cause.squash(stateExit.cause)),
+            error: errorMessage(Cause.squash(stateExit.cause))
           },
-          order.output,
+          order.output
         );
         return yield* Effect.failCause(stateExit.cause);
       }
@@ -77,9 +73,9 @@ export function deliver<R>(
         status: order.dryRun ? "dry-run" : "delivered",
         completedAt: yield* completedAtNow,
         channel: notifier.channel,
-        stateStatus: order.afterSend ? "updated" : "skipped",
+        stateStatus: order.afterSend ? "updated" : "skipped"
       },
-      order.output,
+      order.output
     );
   });
 }

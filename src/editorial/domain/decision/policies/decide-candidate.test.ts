@@ -14,17 +14,17 @@ describe("run audit candidate decisions", () => {
       depth: "summary",
       presentationReasonCode: "interest-match",
       presentationEvidence: "agent",
-      reason: "selected for expanded summary: interest-match (agent)",
+      reason: "selected for expanded summary: interest-match (agent)"
     });
     expect(
       decideCandidate(filtered, [selected], () => "already delivered", candidateIdentity, {
-        semanticSummaries: true,
-      }),
+        semanticSummaries: true
+      })
     ).toMatchObject({
       status: "filtered",
       depth: "summary",
       presentationReasonCode: "semantic-summary",
-      reason: "already delivered",
+      reason: "already delivered"
     });
   });
 });
@@ -39,6 +39,6 @@ function candidate(repo: string, score: number, matchedInterests: string[] = [])
     eventTypes: ["article"],
     reasons: [],
     matchedInterests,
-    events: [],
+    events: []
   };
 }

@@ -5,6 +5,11 @@ node_modules/
 dist/
 .env
 .env.*
-!.env.example
 npm-debug.log*
 .DS_Store
+
+# Tool caches and local scratch
+.codex/
+.claude/settings.local.json
+tmp/
+*.log

@@ -9,7 +9,7 @@ import { captureVideoFrames } from "./frames.js";
 
 const png = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aV8sAAAAASUVORK5CYII=",
-  "base64",
+  "base64"
 );
 const sourceUrl = "https://video.example.com/demo.mp4";
 let directory: string;
@@ -30,7 +30,7 @@ function options(run: Parameters<typeof captureVideoFrames>[0]["run"]) {
     directory,
     visionArgs: ["--cli", "codex"],
     timeoutMs: 600_000,
-    run,
+    run
   };
 }
 
@@ -38,10 +38,10 @@ async function extracted(args: string[]) {
   const output = args[args.indexOf("--slides-dir") + 1];
   const frames = await Promise.all(
     [1, 2].map(async (index) => {
-      const imagePath = join(output, `frame-${index}.png`);
+      const imagePath = join(output!, `frame-${index}.png`);
       await writeFile(imagePath, png);
       return { index, timestamp: index * 30, imagePath, ocrText: "OCR only: unverified layout" };
-    }),
+    })
   );
   return { stdout: JSON.stringify({ ok: true, slides: { slides: frames } }) };
 }
@@ -50,16 +50,18 @@ function analyzed() {
   return {
     stdout: JSON.stringify({
       summary: JSON.stringify({ status: "ok", text: "画面中有 SQLite 存储代码和三个并排的节点。" }),
-      llm: { model: "cli/codex" },
-    }),
+      llm: { model: "cli/codex" }
+    })
   };
 }
 
 describe("video frame research", () => {
   it("sends actual frame files to the vision model and preserves the full source material", async () => {
     const run = vi.fn(async (args: string[]) => {
-      if (args[0] === "slides") return extracted(args);
-      expect(await readFile(args[0])).toEqual(png);
+      if (args[0] === "slides") {
+        return extracted(args);
+      }
+      expect(await readFile(args[0]!)).toEqual(png);
       expect(args).toContain("--cli");
       return analyzed();
     });
@@ -68,13 +70,13 @@ describe("video frame research", () => {
     expect(result.visuals.status).toBe("analyzed");
     expect(result.visuals.frames).toHaveLength(2);
     expect(run).toHaveBeenCalledTimes(3);
-    expect(run.mock.calls[0][0]).toEqual(
-      expect.arrayContaining(["slides", sourceUrl, "--slides-max", "6", "--slides-ocr"]),
+    expect(run.mock.calls[0]![0]).toEqual(
+      expect.arrayContaining(["slides", sourceUrl, "--slides-max", "6", "--slides-ocr"])
     );
     expect(result.visuals.frames[0]).toMatchObject({
       timestampSeconds: 30,
       visualText: expect.stringContaining("SQLite"),
-      visionModel: "cli/codex",
+      visionModel: "cli/codex"
     });
     expect(await readFile(result.materials!.transcriptPath, "utf8")).toBe(input.transcript + "\n");
     const manifest = JSON.parse(await readFile(result.materials!.manifestPath, "utf8"));
@@ -89,13 +91,17 @@ describe("video frame research", () => {
     let modelCalls = 0;
     const result = await captureVideoFrames(
       options(async (args) => {
-        if (args[0] === "slides") return extracted(args);
-        if (++modelCalls === 1) throw new Error("model unavailable");
+        if (args[0] === "slides") {
+          return extracted(args);
+        }
+        if (++modelCalls === 1) {
+          throw new Error("model unavailable");
+        }
         return analyzed();
-      }),
+      })
     );
     expect(result.visuals.status).toBe("partial");
-    expect(result.visuals.frames[0].visualText).toBeUndefined();
+    expect(result.visuals.frames[0]!.visualText).toBeUndefined();
     expect(videoVisualEvidence(result.visuals)).toContain("部分画面分析失败");
     expect(videoVisualEvidence(result.visuals)).toContain("60.0");
     expect(videoVisualEvidence(result.visuals)).not.toContain("30.0");
@@ -107,10 +113,10 @@ describe("video frame research", () => {
     JSON.stringify({ summary: "not JSON" }),
     JSON.stringify({ summary: JSON.stringify({ status: "unavailable", text: "无法看到图片" }) }),
     JSON.stringify({ summary: JSON.stringify({ status: "ok", text: "短" }) }),
-    JSON.stringify({ summary: JSON.stringify({ status: "ok", text: "a".repeat(501) }) }),
+    JSON.stringify({ summary: JSON.stringify({ status: "ok", text: "a".repeat(501) }) })
   ])("does not mistake OCR or invalid model output for visual inspection: %s", async (stdout) => {
     const result = await captureVideoFrames(
-      options(async (args) => (args[0] === "slides" ? extracted(args) : { stdout })),
+      options(async (args) => (args[0] === "slides" ? extracted(args) : { stdout }))
     );
     expect(result.visuals.status).toBe("unavailable");
     expect(result.visuals.frames).toHaveLength(2);
@@ -122,14 +128,12 @@ describe("video frame research", () => {
     const result = await captureVideoFrames(
       options(async () => {
         throw new Error("slides failed");
-      }),
+      })
     );
     expect(result.visuals).toMatchObject({ status: "unavailable", frames: [] });
-    expect(await readFile(result.materials!.transcriptPath, "utf8")).toContain(
-      "Complete transcript",
-    );
+    expect(await readFile(result.materials!.transcriptPath, "utf8")).toContain("Complete transcript");
     expect(JSON.parse(await readFile(result.materials!.manifestPath, "utf8"))).toMatchObject({
-      visuals: { status: "unavailable" },
+      visuals: { status: "unavailable" }
     });
   });
 
@@ -144,17 +148,27 @@ describe("video frame research", () => {
           await writeFile(outside, png);
           frames[0].imagePath = outside;
         }
-        if (kind === "not-png") await writeFile(frames[0].imagePath, "private text");
-        if (kind === "oversized") await writeFile(frames[0].imagePath, Buffer.alloc(4_000_001));
-        if (kind === "duplicate") frames[1].index = 1;
-        if (kind === "negative-time") frames[0].timestamp = -1;
-        if (kind === "too-many") result.slides.slides = Array.from({ length: 7 }, () => frames[0]);
+        if (kind === "not-png") {
+          await writeFile(frames[0].imagePath, "private text");
+        }
+        if (kind === "oversized") {
+          await writeFile(frames[0].imagePath, Buffer.alloc(4_000_001));
+        }
+        if (kind === "duplicate") {
+          frames[1].index = 1;
+        }
+        if (kind === "negative-time") {
+          frames[0].timestamp = -1;
+        }
+        if (kind === "too-many") {
+          result.slides.slides = Array.from({ length: 7 }, () => frames[0]);
+        }
         return { stdout: JSON.stringify(result) };
       });
       const result = await captureVideoFrames(options(run));
       expect(result.visuals).toMatchObject({ status: "unavailable", frames: [] });
       expect(run).toHaveBeenCalledOnce();
-    },
+    }
   );
 
   it("stops model calls after the frame research deadline", async () => {

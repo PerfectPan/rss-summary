@@ -37,24 +37,25 @@ export function parseDoubaoResponse(value: unknown, retryAfterMs?: number): Doub
       logId: text(result.LogId),
       resultCount: number(result.ResultCount) ?? parsed.length,
       timeCostMs: number(result.TimeCost),
-      results: parsed.map(({ result: hit }) => hit),
+      results: parsed.map(({ result: hit }) => hit)
     },
-    items: parsed.map(({ item }) => item),
+    items: parsed.map(({ item }) => item)
   };
 }
 
 export function parseDoubaoResult(
   value: unknown,
-  fallbackRankPosition: number,
+  fallbackRankPosition: number
 ): { result: SearchResult; item: Item } | undefined {
   const record = asRecord(value);
   const id = text(record.Id);
   const title = text(record.Title);
   const url = text(record.Url);
-  if (!id || !title || !url) return undefined;
+  if (!id || !title || !url) {
+    return undefined;
+  }
   const sortId = number(record.SortId);
-  const rankPosition =
-    sortId !== undefined && Number.isInteger(sortId) && sortId > 0 ? sortId : fallbackRankPosition;
+  const rankPosition = sortId !== undefined && Number.isInteger(sortId) && sortId > 0 ? sortId : fallbackRankPosition;
   const result: SearchResult = {
     id,
     title,
@@ -66,7 +67,7 @@ export function parseDoubaoResult(
     rankScore: number(record.RankScore),
     rankPosition,
     authInfoDescription: text(record.AuthInfoDes),
-    authInfoLevel: number(record.AuthInfoLevel),
+    authInfoLevel: number(record.AuthInfoLevel)
   };
   return { result, item: itemFromDoubao(result) };
 }
@@ -78,24 +79,26 @@ function asRecord(value: unknown): Record<string, unknown> {
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== "object") return false;
-  if (Object.prototype.toString.call(value) !== "[object Object]") return false;
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+  if (Object.prototype.toString.call(value) !== "[object Object]") {
+    return false;
+  }
   const proto: object | null = Object.getPrototypeOf(value);
-  if (proto === null) return true;
+  if (proto === null) {
+    return true;
+  }
   const ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
   return (
-    typeof ctor === "function" &&
-    ctor instanceof ctor &&
-    Function.prototype.toString.call(ctor) === objectCtorString
+    typeof ctor === "function" && ctor instanceof ctor && Function.prototype.toString.call(ctor) === objectCtorString
   );
 }
 
 function text(value: unknown): string | undefined {
   if (
     typeof value === "string" ||
-    (isObjectLike(value) &&
-      !Array.isArray(value) &&
-      Object.prototype.toString.call(value) === "[object String]")
+    (isObjectLike(value) && !Array.isArray(value) && Object.prototype.toString.call(value) === "[object String]")
   ) {
     const normalized = value.toString().trim();
     return normalized === "" ? undefined : normalized;

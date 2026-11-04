@@ -9,7 +9,7 @@ const input = {
   count: 10,
   day: "2026-10-24",
   sinceDay: "2026-10-24",
-  sourcePolicy: "news" as const,
+  sourcePolicy: "news" as const
 };
 
 function result(id: string, url: string, overrides: Partial<SearchResult> = {}): SearchResult {
@@ -30,9 +30,9 @@ describe("mergeSearches", () => {
         Effect.succeed(
           page([
             result("shared", "https://example.com/shared"),
-            result("primary-only", "https://example.com/primary", { rankPosition: 2 }),
-          ]),
-        ),
+            result("primary-only", "https://example.com/primary", { rankPosition: 2 })
+          ])
+        )
     };
     const supplement: SearchSource = {
       name: "supplement",
@@ -42,11 +42,11 @@ describe("mergeSearches", () => {
             [
               // Tracking-parameter variant of the primary's first result.
               result("shared-dup", "https://example.com/shared?utm_source=feed"),
-              result("supplement-only", "https://example.com/supplement", { rankPosition: 1 }),
+              result("supplement-only", "https://example.com/supplement", { rankPosition: 1 })
             ],
-            { provider: "supplement" },
-          ),
-        ),
+            { provider: "supplement" }
+          )
+        )
     };
 
     const merged = await Effect.runPromise(mergeSearches([primary, supplement])(input));
@@ -54,11 +54,11 @@ describe("mergeSearches", () => {
     expect(merged.results.map(({ id, source }) => [id, source])).toEqual([
       ["shared", "primary"],
       ["primary-only", "primary"],
-      ["supplement-only", "supplement"],
+      ["supplement-only", "supplement"]
     ]);
     expect(merged.mergedSources).toEqual([
       { source: "primary", status: "ok", fetched: 2, contributed: 2 },
-      { source: "supplement", status: "ok", fetched: 2, contributed: 1 },
+      { source: "supplement", status: "ok", fetched: 2, contributed: 1 }
     ]);
     expect(merged.resultCount).toBe(3);
     expect(merged.provider).toBe("primary");
@@ -68,14 +68,11 @@ describe("mergeSearches", () => {
   it("succeeds through the supplement when the primary fails and records the primary code", async () => {
     const primary: SearchSource = {
       name: "primary",
-      search: () => Effect.fail(failure("http_500")),
+      search: () => Effect.fail(failure("http_500"))
     };
     const supplement: SearchSource = {
       name: "supplement",
-      search: () =>
-        Effect.succeed(
-          page([result("only", "https://example.com/only")], { provider: "supplement" }),
-        ),
+      search: () => Effect.succeed(page([result("only", "https://example.com/only")], { provider: "supplement" }))
     };
 
     const merged = await Effect.runPromise(mergeSearches([primary, supplement])(input));
@@ -84,18 +81,18 @@ describe("mergeSearches", () => {
     expect(merged.providerFallback).toEqual({ triggeredBy: "http_500" });
     expect(merged.mergedSources).toEqual([
       { source: "primary", status: "failed", fetched: 0, contributed: 0, code: "http_500" },
-      { source: "supplement", status: "ok", fetched: 1, contributed: 1 },
+      { source: "supplement", status: "ok", fetched: 1, contributed: 1 }
     ]);
   });
 
   it("keeps the primary page when only the supplement fails", async () => {
     const primary: SearchSource = {
       name: "primary",
-      search: () => Effect.succeed(page([result("only", "https://example.com/only")])),
+      search: () => Effect.succeed(page([result("only", "https://example.com/only")]))
     };
     const supplement: SearchSource = {
       name: "supplement",
-      search: () => Effect.fail(failure("local_budget_exhausted")),
+      search: () => Effect.fail(failure("local_budget_exhausted"))
     };
 
     const merged = await Effect.runPromise(mergeSearches([primary, supplement])(input));
@@ -109,19 +106,19 @@ describe("mergeSearches", () => {
         status: "failed",
         fetched: 0,
         contributed: 0,
-        code: "local_budget_exhausted",
-      },
+        code: "local_budget_exhausted"
+      }
     ]);
   });
 
   it("fails with the primary error only when every source fails", async () => {
     const primary: SearchSource = {
       name: "primary",
-      search: () => Effect.fail(failure("grok_timeout")),
+      search: () => Effect.fail(failure("grok_timeout"))
     };
     const supplement: SearchSource = {
       name: "supplement",
-      search: () => Effect.fail(failure("http_429")),
+      search: () => Effect.fail(failure("http_429"))
     };
 
     const error = await Effect.runPromise(Effect.flip(mergeSearches([primary, supplement])(input)));
@@ -139,24 +136,17 @@ describe("mergeSearches", () => {
         const gate = yield* Deferred.make<void>();
         const primary: SearchSource = {
           name: "primary",
-          search: () =>
-            Effect.as(
-              Deferred.await(gate),
-              page([result("primary", "https://example.com/primary")]),
-            ),
+          search: () => Effect.as(Deferred.await(gate), page([result("primary", "https://example.com/primary")]))
         };
         const supplement: SearchSource = {
           name: "supplement",
           // Completing the gate while the primary is still parked proves the
           // supplement started without waiting for the primary to finish.
-          search: () => Effect.as(Deferred.succeed(gate, undefined), page([])),
+          search: () => Effect.as(Deferred.succeed(gate, undefined), page([]))
         };
         const merged = yield* mergeSearches([primary, supplement])(input);
-        expect(merged.mergedSources?.map(({ source }) => source)).toEqual([
-          "primary",
-          "supplement",
-        ]);
-      }),
+        expect(merged.mergedSources?.map(({ source }) => source)).toEqual(["primary", "supplement"]);
+      })
     );
   });
 });

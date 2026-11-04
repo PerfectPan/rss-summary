@@ -20,15 +20,15 @@ describe("app/config/argv", () => {
         "--state-file",
         ".state/test.json",
         "--run-log-dir",
-        ".state/test-runs",
-      ]),
+        ".state/test-runs"
+      ])
     ).toEqual({
       dryRun: true,
       json: true,
       onlyNew: true,
       rssOnly: true,
       stateFile: ".state/test.json",
-      runLogDir: ".state/test-runs",
+      runLogDir: ".state/test-runs"
     });
   });
 
@@ -41,7 +41,7 @@ describe("app/config/argv", () => {
       ".state/test.json",
       "--run-log-dir",
       ".state/test-runs",
-      "--dry-run",
+      "--dry-run"
     ]);
 
     expect(config.outputFormat).toBe("json");
@@ -60,13 +60,7 @@ describe("app/config/argv", () => {
   });
 
   it("loads a calendar-day window from args", async () => {
-    const config = await resolveConfig({}, [
-      "--day",
-      "2026-06-27",
-      "--timezone-offset",
-      "+08:00",
-      "--dry-run",
-    ]);
+    const config = await resolveConfig({}, ["--day", "2026-06-27", "--timezone-offset", "+08:00", "--dry-run"]);
 
     expect(config.day).toBe("2026-06-27");
     expect(config.timezoneOffset).toBe("+08:00");
@@ -78,7 +72,7 @@ describe("app/config/argv", () => {
       "2026-06-27T09:00:00+08:00",
       "--until",
       "2026-06-28T09:00:00+08:00",
-      "--dry-run",
+      "--dry-run"
     ]);
 
     expect(config.since).toBe("2026-06-27T09:00:00+08:00");
@@ -87,10 +81,10 @@ describe("app/config/argv", () => {
 
   it("rejects invalid argument-driven enum values with the historical messages", async () => {
     await expect(resolveConfig({}, ["--github-feed-source", "timeline"])).rejects.toThrow(
-      "GITHUB_FEED_SOURCE must be either 'home' or 'events'.",
+      "GITHUB_FEED_SOURCE must be either 'home' or 'events'."
     );
     await expect(resolveConfig({}, ["--github-home-fetch", "proxy"])).rejects.toThrow(
-      "GITHUB_HOME_FETCH must be either 'conduit' or 'browser'.",
+      "GITHUB_HOME_FETCH must be either 'conduit' or 'browser'."
     );
   });
 });

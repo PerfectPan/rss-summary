@@ -18,33 +18,26 @@ describe("source collection", () => {
                 source: "rss" as const,
                 actor: feed.name,
                 repo: "rss:https://example.com/post",
-                createdAt: "2026-08-09T00:00:00.000Z",
-              }),
-            ]),
+                createdAt: "2026-08-09T00:00:00.000Z"
+              })
+            ])
     });
     const collection = await Effect.runPromise(
       Effect.provide(
         collectRssFeeds([
           { name: "Good", url: "https://example.com/good.xml", tags: [] },
-          { name: "Broken", url: "https://example.com/broken.xml", tags: [] },
+          { name: "Broken", url: "https://example.com/broken.xml", tags: [] }
         ]),
-        rss,
-      ),
+        rss
+      )
     );
 
     expect(collection.acquired).toHaveLength(1);
     expect(collection.sources).toEqual([
       expect.objectContaining({ name: "Good", status: "ok", itemCount: 1 }),
-      expect.objectContaining({ name: "Broken", status: "failed", error: "timeout" }),
+      expect.objectContaining({ name: "Broken", status: "failed", error: "timeout" })
     ]);
-    expect(Object.keys(collection.sources[0] ?? {})).toEqual([
-      "id",
-      "kind",
-      "name",
-      "url",
-      "status",
-      "itemCount",
-    ]);
+    expect(Object.keys(collection.sources[0] ?? {})).toEqual(["id", "kind", "name", "url", "status", "itemCount"]);
     expect(Object.keys(collection.sources[1] ?? {})).toEqual([
       "id",
       "kind",
@@ -52,7 +45,7 @@ describe("source collection", () => {
       "url",
       "status",
       "itemCount",
-      "error",
+      "error"
     ]);
   });
 
@@ -67,13 +60,13 @@ describe("source collection", () => {
               source: "rss" as const,
               actor: feed.name,
               repo: `rss:${feed.url}:1`,
-              createdAt: "2026-08-12T00:00:00Z",
-            }),
-          ]),
+              createdAt: "2026-08-12T00:00:00Z"
+            })
+          ])
       }),
       Layer.succeed(WebPage, {
-        getEvents: () => Effect.fail(new Error("blocked")),
-      }),
+        getEvents: () => Effect.fail(new Error("blocked"))
+      })
     );
     const collection = await Effect.runPromise(
       Effect.provide(
@@ -84,11 +77,11 @@ describe("source collection", () => {
             name: "Broken News",
             url: "https://vendor.example/news",
             pathPrefixes: ["/news/"],
-            tags: [],
-          },
+            tags: []
+          }
         ]),
-        layer,
-      ),
+        layer
+      )
     );
 
     expect(collection.acquired).toHaveLength(1);
@@ -98,8 +91,8 @@ describe("source collection", () => {
         name: "Broken News",
         kind: "web-page",
         status: "failed",
-        error: "blocked",
-      }),
+        error: "blocked"
+      })
     ]);
   });
 });

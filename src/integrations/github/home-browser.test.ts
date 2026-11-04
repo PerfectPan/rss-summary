@@ -8,12 +8,7 @@ import { Effect } from "effect";
 
 import { extractHomeFeedSnapshotsFromHtml, hasGitHubHomeFeedMarkup } from "./home/dto.js";
 import { normalizeHomeCardSnapshot, normalizeHomeCardSnapshots } from "./home/mapper.js";
-import {
-  readConduitSnapshots,
-  readHomeEvents,
-  readRenderedSnapshots,
-  saveLoginStorageState,
-} from "./home-browser.js";
+import { readConduitSnapshots, readHomeEvents, readRenderedSnapshots, saveLoginStorageState } from "./home-browser.js";
 
 describe("GitHub Home feed source", () => {
   it("normalizes a rendered Home merged pull request card", () => {
@@ -25,15 +20,15 @@ describe("GitHub Home feed source", () => {
         card_position: 0,
         card_sub_position: null,
         resource_type: "PULL_REQUEST",
-        gatherer: "pullrequest_for_you_feed_mysql",
+        gatherer: "pullrequest_for_you_feed_mysql"
       },
       text: "dai-shi contributed to wakujs/waku June 27, 2026 21:51 refactor: static etag #2171 Merged dai-shi merged 1 commit Motivation Static-ness was encoded as the etag value",
       links: [
         { text: "dai-shi", href: "https://github.com/dai-shi" },
         { text: "wakujs/waku", href: "https://github.com/wakujs/waku" },
         { text: "refactor: static etag #2171", href: "https://github.com/wakujs/waku/pull/2171" },
-        { text: "Read more", href: "https://github.com/wakujs/waku/pull/2171" },
-      ],
+        { text: "Read more", href: "https://github.com/wakujs/waku/pull/2171" }
+      ]
     });
 
     expect(card).toMatchObject({
@@ -46,7 +41,7 @@ describe("GitHub Home feed source", () => {
       action: "merged",
       prNumber: 2171,
       htmlUrl: "https://github.com/wakujs/waku/pull/2171",
-      title: "refactor: static etag #2171",
+      title: "refactor: static etag #2171"
     });
   });
 
@@ -60,16 +55,16 @@ describe("GitHub Home feed source", () => {
           card_position: 2,
           card_sub_position: 0,
           resource_type: "REPO",
-          gatherer: "trending_repositories",
+          gatherer: "trending_repositories"
         },
         text: "Trending repositories simplex-chat/simplex-chat SimpleX - the first messaging network operating without user identifiers",
         links: [
           { text: "See more", href: "https://github.com/trending" },
           {
             text: "simplex-chat/simplex-chat",
-            href: "https://github.com/simplex-chat/simplex-chat",
-          },
-        ],
+            href: "https://github.com/simplex-chat/simplex-chat"
+          }
+        ]
       },
       {
         id: "feed-item-0",
@@ -80,14 +75,14 @@ describe("GitHub Home feed source", () => {
           card_sub_position: null,
           resource_type: "REPO",
           resource_relationship: "FOLLOWED",
-          gatherer: "munger",
+          gatherer: "munger"
         },
         text: "Popular projects among people you follow onnx/onnx Open standard for machine learning interoperability",
         links: [
           { text: "people you follow", href: "https://github.com/PerfectPan?tab=following" },
-          { text: "onnx/onnx", href: "https://github.com/onnx/onnx" },
-        ],
-      },
+          { text: "onnx/onnx", href: "https://github.com/onnx/onnx" }
+        ]
+      }
     ]);
 
     expect(cards).toMatchObject([
@@ -96,15 +91,15 @@ describe("GitHub Home feed source", () => {
         repo: "simplex-chat/simplex-chat",
         actor: "GitHub Home",
         action: "trending",
-        title: "simplex-chat/simplex-chat",
+        title: "simplex-chat/simplex-chat"
       },
       {
         type: "recommendation",
         repo: "onnx/onnx",
         actor: "GitHub Home",
         action: "recommended",
-        title: "onnx/onnx",
-      },
+        title: "onnx/onnx"
+      }
     ]);
   });
 
@@ -117,13 +112,13 @@ describe("GitHub Home feed source", () => {
         card_position: 1,
         card_sub_position: null,
         resource_type: "REPO",
-        gatherer: "repository_mysql",
+        gatherer: "repository_mysql"
       },
       text: "magic-akari forked a repository June 27, 2026 21:24 magic-akari/dprint Starred",
       links: [
         { text: "magic-akari", href: "https://github.com/magic-akari" },
-        { text: "magic-akari/dprint", href: "https://github.com/magic-akari/dprint" },
-      ],
+        { text: "magic-akari/dprint", href: "https://github.com/magic-akari/dprint" }
+      ]
     });
 
     expect(card).toMatchObject({
@@ -131,15 +126,13 @@ describe("GitHub Home feed source", () => {
       actor: "magic-akari",
       repo: "magic-akari/dprint",
       action: "forked",
-      htmlUrl: "https://github.com/magic-akari/dprint",
+      htmlUrl: "https://github.com/magic-akari/dprint"
     });
   });
 
   it("explains how to initialize exact Home mode when storage state is missing", async () => {
     await expect(
-      Effect.runPromise(
-        readHomeEvents({ storageState: ".state/missing-github-home-storage.json" }),
-      ),
+      Effect.runPromise(readHomeEvents({ storageState: ".state/missing-github-home-storage.json" }))
     ).rejects.toThrow("Run 'rss-summary github-home login' first");
   });
 
@@ -160,27 +153,23 @@ describe("GitHub Home feed source", () => {
         card: {
           card_type: "MERGED_PULL_REQUEST",
           created_at: "2026-06-27T21:51:24.000-07:00",
-          card_position: 0,
+          card_position: 0
         },
         text: "dai-shi wakujs/waku refactor: static etag #2171",
         links: [
           { text: "dai-shi", href: "https://github.com/dai-shi" },
           { text: "wakujs/waku", href: "https://github.com/wakujs/waku" },
-          { text: "refactor: static etag #2171", href: "https://github.com/wakujs/waku/pull/2171" },
-        ],
-      },
+          { text: "refactor: static etag #2171", href: "https://github.com/wakujs/waku/pull/2171" }
+        ]
+      }
     ]);
   });
 
   it("detects whether HTML contains the logged-in GitHub Home feed surface", () => {
     expect(
-      hasGitHubHomeFeedMarkup(
-        '<feed-container><turbo-frame id="conduit-feed-frame"></turbo-frame></feed-container>',
-      ),
+      hasGitHubHomeFeedMarkup('<feed-container><turbo-frame id="conduit-feed-frame"></turbo-frame></feed-container>')
     ).toBe(true);
-    expect(
-      hasGitHubHomeFeedMarkup("<main><h1>Build and ship software on a single platform</h1></main>"),
-    ).toBe(false);
+    expect(hasGitHubHomeFeedMarkup("<main><h1>Build and ship software on a single platform</h1></main>")).toBe(false);
   });
 
   it("uses conduit snapshots before rendered browser snapshots", async () => {
@@ -195,23 +184,23 @@ describe("GitHub Home feed source", () => {
               id: "feed-item-0",
               card: {
                 card_type: "TRENDING_REPOSITORY",
-                created_at: "2026-06-27T04:08:52.000-07:00",
+                created_at: "2026-06-27T04:08:52.000-07:00"
               },
               text: "Trending repositories simplex-chat/simplex-chat",
               links: [
                 {
                   text: "simplex-chat/simplex-chat",
-                  href: "https://github.com/simplex-chat/simplex-chat",
-                },
-              ],
-            },
+                  href: "https://github.com/simplex-chat/simplex-chat"
+                }
+              ]
+            }
           ]),
         browserFetcher: () =>
           Effect.sync(() => {
             browserCalls += 1;
             return [];
-          }),
-      }),
+          })
+      })
     );
 
     expect(events[0]?.repo).toBe("simplex-chat/simplex-chat");
@@ -230,16 +219,16 @@ describe("GitHub Home feed source", () => {
               id: "feed-item-11077470689",
               card: {
                 card_type: "FORKED_REPOSITORY",
-                created_at: "2026-06-27T21:24:13.000-07:00",
+                created_at: "2026-06-27T21:24:13.000-07:00"
               },
               text: "magic-akari forked a repository magic-akari/dprint",
               links: [
                 { text: "magic-akari", href: "https://github.com/magic-akari" },
-                { text: "magic-akari/dprint", href: "https://github.com/magic-akari/dprint" },
-              ],
-            },
-          ]),
-      }),
+                { text: "magic-akari/dprint", href: "https://github.com/magic-akari/dprint" }
+              ]
+            }
+          ])
+      })
     );
 
     expect(events[0]?.repo).toBe("magic-akari/dprint");
@@ -263,13 +252,13 @@ describe("GitHub Home feed source", () => {
               id: "feed-item-0",
               card: {
                 card_type: "REPOSITORY_RECOMMENDATION",
-                created_at: "2026-06-26T17:00:00.000-07:00",
+                created_at: "2026-06-26T17:00:00.000-07:00"
               },
               text: "Popular projects among people you follow onnx/onnx",
-              links: [{ text: "onnx/onnx", href: "https://github.com/onnx/onnx" }],
-            },
-          ]),
-      }),
+              links: [{ text: "onnx/onnx", href: "https://github.com/onnx/onnx" }]
+            }
+          ])
+      })
     );
 
     expect(events[0]?.repo).toBe("onnx/onnx");

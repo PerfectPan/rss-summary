@@ -6,9 +6,9 @@
 
 Rivus 的 `morning-feed-digest` 保留稳定 automation ID，并继续推送前一北京时间自然日的“我的订阅”；source-grounded Daily AI Digest 使用独立的 `daily-ai-digest` automation，覆盖每次运行时刻往前 24 小时。Daily AI Digest 合并官方 RSS／官网与订阅 X 账号，默认接入 ClaudeDevs，不再调用宽泛新闻搜索。账号采集逻辑可供未来“我的订阅”复用，但此次不改变其 feeds.json。午、晚新闻独立按主题广搜，默认 Grok；显式豆包／GLM 配置仍有效。Agent 自主筛选、翻译/归纳并选择六个栏目，代码校验结构与证据引用，不设固定条数。X 内容标为“Grok 整理”，失败留在来源审计，RSS／官网采集继续；所有来源都没有可用证据时才整体失败。质量不足时不凑数。每个 Automation 同时产出 Markdown 兼容视图与渠道无关的展示 IR：插件决定栏目、条目和来源，Rivus Renderer 决定飞书卡片组件与视觉样式。具体时间由 Rivus manifest 分别绑定，避免两类产品互相覆盖。
 
-豆包搜索可以通过 `NEWS_SEARCH_MODE=hybrid` 启用 GLM 补查：供应商额度耗尽或查询没有合格结果时，从配置的可信来源搜索并读取原文，再通过同一时间与主题校验；详见 [混合搜索配置](docs/glm-search.md)。新闻请求另受持久的每日、每月预算和原始响应缓存约束；本地预算或状态失败不会转用 GLM，命中缓存也不补查。[搜索预算与部署说明](docs/news-search-budget.md)集中说明额度计算、配置、覆盖限制与状态恢复。
+豆包搜索可以通过 `NEWS_SEARCH_MODE=hybrid` 启用 GLM 补查：供应商额度耗尽或查询没有合格结果时，从配置的可信来源搜索并读取原文，再通过同一时间与主题校验；详见 [混合搜索配置](docs/reference/glm-search.md)。新闻请求另受持久的每日、每月预算和原始响应缓存约束；本地预算或状态失败不会转用 GLM，命中缓存也不补查。[搜索预算与部署说明](docs/reference/news-search-budget.md)集中说明额度计算、配置、覆盖限制与状态恢复。
 
-午间、晚间新闻与 Daily AI 默认使用已登录的 Grok CLI 进行原生 X 搜索，显式设置的 `NEWS_SEARCH_MODE` 优先。默认每轮最多一次调用，保留原生工具与 CLI 用量记录；结果明确标注为模型整理、未独立核验。需要豆包时设置 `NEWS_SEARCH_MODE=doubao`；Grok 失败不会自动切换提供方。[Grok X 搜索配置](docs/grok-x-search.md)包含试用步骤、查询语言与限制。
+午间、晚间新闻与 Daily AI 默认使用已登录的 Grok CLI 进行原生 X 搜索，显式设置的 `NEWS_SEARCH_MODE` 优先。默认每轮最多一次调用，保留原生工具与 CLI 用量记录；结果明确标注为模型整理、未独立核验。需要豆包时设置 `NEWS_SEARCH_MODE=doubao`；Grok 失败不会自动切换提供方。[Grok X 搜索配置](docs/reference/grok-x-search.md)包含试用步骤、查询语言与限制。
 
 ## 示例输出
 
@@ -63,7 +63,7 @@ Rivus 的 `morning-feed-digest` 保留稳定 automation ID，并继续推送前�
 ```bash
 pnpm install --frozen-lockfile && pnpm build
 pnpm link --global
-cp .env.example .env
+cp docs/reference/configuration.md .env   # 按需裁剪；模板含全部变量与默认值
 rss-summary github-home login            # 浏览器登录 GitHub 后回车，会话存到 .state/
 GITHUB_USERNAME=<your-username> FEED_DAY="$(TZ=Asia/Shanghai date +%F)" \
   rss-summary digest --dry-run           # 打印今日早报到终端
@@ -77,7 +77,7 @@ GITHUB_USERNAME=<your-username> FEED_DAY="$(TZ=Asia/Shanghai date +%F)" \
 
 ```bash
 pnpm install --frozen-lockfile && pnpm build && pnpm link --global
-cp .env.example .env
+cp docs/reference/configuration.md .env   # 按需裁剪；模板含全部变量与默认值
 rss-summary github-home login
 ```
 
@@ -142,7 +142,7 @@ rss-summary runs show <run-label>
 | `FEED_MAX_PAPERS`                | 每次进入深度调研队列的论文硬上限                                  | `8`                          |
 | `FEED_RUN_LOG_DIR`               | CLI 运行审计产物目录                                              | `.state/runs`                |
 
-完整列表与默认值见 [.env.example](.env.example)。GitHub Home 的 conduit / 浏览器回退机制见 [docs/architecture.md](docs/architecture.md)。
+完整列表与默认值见 [docs/reference/configuration.md](docs/reference/configuration.md)。GitHub Home 的 conduit / 浏览器回退机制见 [docs/architecture/architecture.md](docs/architecture/architecture.md)。
 
 ## Scheduling
 
@@ -156,14 +156,14 @@ rss-summary runs show <run-label>
 
 ## Rivus Plugin
 
-本仓库导出 `rss-summary/rivus-plugin`：一个 Agent profile（`rss-digest`）+ 五个观察型 Tool（`generate-digest` / `research-article` / `generate-daily-ai-digest` / `generate-news-brief` / `generate-industry-brief`）及对应调度模板。它们不发送消息或写业务 seen 状态；新闻采集会持久化请求预算与响应缓存。订阅和行业 Tool 携带 source/candidate audit；`research-article` 只对 Agent 选中的公开 URL 做浏览器优先、HTTP 回退的正文抓取，返回受限、可追溯的研究证据；新闻 Tool 携带逐查询召回、淘汰原因、去重和配额漏斗。Automation 的 `createPresentation` 把最终 Markdown 投影为标题、元信息、栏目、条目、说明和来源链接；它不直接构造飞书 CardKit JSON。Rivus 自己的 Renderer、trace 与投递 ledger 分别负责渠道展示和后续卡片投递证据。行业 Tool 不直接发布未研究论文，只报告待调研数量。安装、manifest 绑定、环境调用约定见 [docs/rivus-plugin.md](docs/rivus-plugin.md)。
+本仓库导出 `rss-summary/rivus-plugin`：一个 Agent profile（`rss-digest`）+ 五个观察型 Tool（`generate-digest` / `research-article` / `generate-daily-ai-digest` / `generate-news-brief` / `generate-industry-brief`）及对应调度模板。它们不发送消息或写业务 seen 状态；新闻采集会持久化请求预算与响应缓存。订阅和行业 Tool 携带 source/candidate audit；`research-article` 只对 Agent 选中的公开 URL 做浏览器优先、HTTP 回退的正文抓取，返回受限、可追溯的研究证据；新闻 Tool 携带逐查询召回、淘汰原因、去重和配额漏斗。Automation 的 `createPresentation` 把最终 Markdown 投影为标题、元信息、栏目、条目、说明和来源链接；它不直接构造飞书 CardKit JSON。Rivus 自己的 Renderer、trace 与投递 ledger 分别负责渠道展示和后续卡片投递证据。行业 Tool 不直接发布未研究论文，只报告待调研数量。安装、manifest 绑定、环境调用约定见 [docs/development/rivus-plugin.md](docs/development/rivus-plugin.md)。
 
-`industry-feeds.json` 中缺省类型仍是 RSS/Atom；`type: "page"` 只用于已验证的官方列表页，并要求同源文章路径与显式日期。不是每个网站都有 `/news`，也不会自动猜路径或绕过站点抓取政策。设计与准入条件见 [Official Web Page Sources RFC](docs/rfc-official-web-page-sources.md)。旧的 `INDUSTRY_FEEDS` / `INDUSTRY_FEEDS_FILE` 环境变量继续作为兼容别名。
+`industry-feeds.json` 中缺省类型仍是 RSS/Atom；`type: "page"` 只用于已验证的官方列表页，并要求同源文章路径与显式日期。不是每个网站都有 `/news`，也不会自动猜路径或绕过站点抓取政策。设计与准入条件见 [Official Web Page Sources RFC](docs/plans/rfc-official-web-page-sources.md)。旧的 `INDUSTRY_FEEDS` / `INDUSTRY_FEEDS_FILE` 环境变量继续作为兼容别名。
 未设置来源文件变量时始终读取 npm 包内的注册表，不依赖进程工作目录；显式配置的文件不存在时会直接报错，避免静默生成缺少官方来源的简报。
 
 ## Architecture
 
-模块化 DDD 结构：`kernel`（共享工具）+ 四个业务模块 `acquisition`（采集）/ `reading`（读原文）/ `editorial`（编辑规则，纯计算）/ `delivery`（投递与记忆），每个模块内部分 `domain → application → infra`；`app` 组装五个产品并作为唯一运行 [Effect](https://effect.website) 的层。完整数据流、审计产物和扩展点见 [docs/architecture.md](docs/architecture.md)，技术选型与取舍见 [docs/technology-decisions.md](docs/technology-decisions.md)。
+模块化 DDD 结构：`kernel`（共享工具）+ 四个业务模块 `acquisition`（采集）/ `reading`（读原文）/ `editorial`（编辑规则，纯计算）/ `delivery`（投递与记忆），每个模块内部分 `domain → application → infra`；`app` 组装五个产品并作为唯一运行 [Effect](https://effect.website) 的层。完整数据流、审计产物和扩展点见 [docs/architecture/architecture.md](docs/architecture/architecture.md)，技术选型与取舍见 [docs/architecture/technology-decisions.md](docs/architecture/technology-decisions.md)。
 
 ## Development
 

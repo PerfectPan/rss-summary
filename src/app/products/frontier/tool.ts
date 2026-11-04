@@ -34,7 +34,7 @@ type RivusIndustryBriefDependencies = {
 /** Observe-only frontier Tool: first-party sources only, never writes state or sends webhooks. */
 export async function generateRivusIndustryBrief(
   value: unknown,
-  dependencies: RivusIndustryBriefDependencies = {},
+  dependencies: RivusIndustryBriefDependencies = {}
 ): Promise<RivusIndustryBriefResult> {
   const input = parseInput(value);
   if (input.day && input.occurrence) {
@@ -43,9 +43,7 @@ export async function generateRivusIndustryBrief(
 
   const env = dependencies.env ?? process.env;
   const timezoneOffset = env.FEED_TIMEZONE_OFFSET ?? "+08:00";
-  const occurrenceDay = input.occurrence
-    ? calendarDayAtOffset(input.occurrence, timezoneOffset)
-    : undefined;
+  const occurrenceDay = input.occurrence ? calendarDayAtOffset(input.occurrence, timezoneOffset) : undefined;
   const day = input.day ?? occurrenceDay;
   if (day && !/^\d{4}-\d{2}-\d{2}$/u.test(day)) {
     throw new Error("day must use YYYY-MM-DD format.");
@@ -54,34 +52,31 @@ export async function generateRivusIndustryBrief(
   const base = await runPluginEffect(loadEnvConfig(env));
   // An explicit `onlyNew: false` falls back to the environment; anything else
   // keeps the Tool's read-only default.
-  const onlyNew =
-    input.onlyNew === false ? env.FEED_ONLY_NEW === "1" || env.FEED_ONLY_NEW === "true" : true;
+  const onlyNew = input.onlyNew === false ? env.FEED_ONLY_NEW === "1" || env.FEED_ONLY_NEW === "true" : true;
   const config: AppConfig = {
     ...base,
     timezoneOffset,
     day: day ?? base.day,
     dryRun: true,
     webhookUrl: undefined,
-    onlyNew,
+    onlyNew
   };
-  const document = await runPluginEffect(
-    (dependencies.buildIndustryDocument ?? buildIndustryDocument)(config),
-  );
-  const paperCandidateCount = document.candidates.filter(
-    (candidate) => candidate.category === "paper",
-  ).length;
+  const document = await runPluginEffect((dependencies.buildIndustryDocument ?? buildIndustryDocument)(config));
+  const paperCandidateCount = document.candidates.filter((candidate) => candidate.category === "paper").length;
   return {
     candidateCount: document.candidates.length - paperCandidateCount,
     generatedAt: document.generatedAt,
     markdown: renderViewMarkdown(industryView(day ? { ...document, displayDate: day } : document)),
     paperCandidateCount,
     ...(document.windowLabel ? { windowLabel: document.windowLabel } : {}),
-    ...(document.audit ? { audit: document.audit } : {}),
+    ...(document.audit ? { audit: document.audit } : {})
   };
 }
 
 function parseInput(value: unknown): RivusIndustryBriefInput {
-  if (value === undefined) return {};
+  if (value === undefined) {
+    return {};
+  }
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("Rivus industry brief input must be an object.");
   }
@@ -90,20 +85,27 @@ function parseInput(value: unknown): RivusIndustryBriefInput {
   return {
     day: optionalString(input.day, "day"),
     occurrence: optionalString(input.occurrence, "occurrence"),
-    onlyNew: optionalBoolean(input.onlyNew, "onlyNew"),
+    onlyNew: optionalBoolean(input.onlyNew, "onlyNew")
   };
 }
 
 function optionalString(value: unknown, name: string): string | undefined {
-  if (value === undefined) return undefined;
-  if (typeof value !== "string" || value.length === 0)
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "string" || value.length === 0) {
     throw new Error(`${name} must be a non-empty string.`);
+  }
   return value;
 }
 
 function optionalBoolean(value: unknown, name: string): boolean | undefined {
-  if (value === undefined) return undefined;
-  if (typeof value !== "boolean") throw new Error(`${name} must be a boolean.`);
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "boolean") {
+    throw new Error(`${name} must be a boolean.`);
+  }
   return value;
 }
 
@@ -122,17 +124,17 @@ export const frontierToolDescriptor: Pick<
       day: {
         description: "Explicit local calendar day in YYYY-MM-DD format",
         pattern: "^\\d{4}-\\d{2}-\\d{2}$",
-        type: "string",
+        type: "string"
       },
       occurrence: {
         description: "Scheduled occurrence as an ISO date-time",
         format: "date-time",
-        type: "string",
+        type: "string"
       },
-      onlyNew: { default: true, type: "boolean" },
+      onlyNew: { default: true, type: "boolean" }
     },
-    type: "object",
+    type: "object"
   },
   risk: "observe",
-  version: "1.1.0",
+  version: "1.1.0"
 };

@@ -1,10 +1,4 @@
-import type {
-  Acquired,
-  ActivityCardDto,
-  Item,
-  ItemRouting,
-  RepositoryMetadata,
-} from "../../acquisition/index.js";
+import type { Acquired, ActivityCardDto, Item, ItemRouting, RepositoryMetadata } from "../../acquisition/index.js";
 
 import { itemFromGitHubCard, publicationAcquired } from "./activity-card.js";
 
@@ -15,20 +9,17 @@ export type ScoringContext = {
 
 /** Group key used by candidate identity. Adapters own the spelling. */
 export function activityGroupKey(
-  card: Pick<ActivityCardDto, "id" | "type" | "source" | "repo" | "prNumber" | "htmlUrl">,
+  card: Pick<ActivityCardDto, "id" | "type" | "source" | "repo" | "prNumber" | "htmlUrl">
 ): string {
   if (card.type === "pull_request") {
     return `github-pull-request:${card.repo}:${card.prNumber ?? card.id}`;
   }
-  if (
-    card.source === "rss" ||
-    card.source === "web" ||
-    card.type === "article" ||
-    card.type === "paper"
-  ) {
+  if (card.source === "rss" || card.source === "web" || card.type === "article" || card.type === "paper") {
     return `publication:${card.htmlUrl ?? card.id}`;
   }
-  if (card.type === "release") return `github-release:${card.htmlUrl ?? card.id}`;
+  if (card.type === "release") {
+    return `github-release:${card.htmlUrl ?? card.id}`;
+  }
   return `github-repository:${card.repo}`;
 }
 
@@ -47,19 +38,19 @@ export function projectActivity(card: ActivityCardDto, context: ScoringContext):
 }
 
 export function applyScoringContext(acquired: Acquired, context: ScoringContext): Acquired {
-  const routed = acquired.item.routing
-    ? acquired
-    : { ...acquired, item: withRouting(acquired.item, acquired.card) };
+  const routed = acquired.item.routing ? acquired : { ...acquired, item: withRouting(acquired.item, acquired.card) };
   const actorName = routed.card.actor;
   const repository = context.repositories.get(routed.card.repo);
   const item: Item = {
     ...routed.item,
     provenance: {
       ...routed.item.provenance,
-      actor: { name: actorName, followed: context.followees.has(actorName) },
-    },
+      actor: { name: actorName, followed: context.followees.has(actorName) }
+    }
   };
-  if (!repository || !item.routing) return { card: routed.card, item };
+  if (!repository || !item.routing) {
+    return { card: routed.card, item };
+  }
   return {
     card: routed.card,
     item: {
@@ -71,11 +62,11 @@ export function applyScoringContext(acquired: Acquired, context: ScoringContext)
           ...(repository.description ? { description: repository.description } : {}),
           keywords: [...repository.topics, ...(repository.language ? [repository.language] : [])],
           popularity: repository.stargazersCount,
-          ...(repository.pushedAt ? { lastActiveAt: repository.pushedAt } : {}),
-        },
+          ...(repository.pushedAt ? { lastActiveAt: repository.pushedAt } : {})
+        }
       },
-      routing: { ...item.routing, record: repository },
-    },
+      routing: { ...item.routing, record: repository }
+    }
   };
 }
 
@@ -92,15 +83,11 @@ export function refreshRouting(acquired: Acquired): Acquired {
       ...next.item,
       provenance: {
         ...next.item.provenance,
-        ...(next.item.provenance.actor
-          ? { actor: { ...next.item.provenance.actor, followed } }
-          : {}),
+        ...(next.item.provenance.actor ? { actor: { ...next.item.provenance.actor, followed } } : {})
       },
-      subject: profile
-        ? { ...next.item.subject, name: acquired.item.subject.name, profile }
-        : next.item.subject,
-      ...(routing && record ? { routing: { ...routing, record } } : {}),
-    },
+      subject: profile ? { ...next.item.subject, name: acquired.item.subject.name, profile } : next.item.subject,
+      ...(routing && record ? { routing: { ...routing, record } } : {})
+    }
   };
 }
 
@@ -111,9 +98,9 @@ function withRouting(item: Item, card: ActivityCardDto): Item {
     subject: { ...item.subject, key: routing.groupKey },
     content: {
       ...item.content,
-      keywords: [...(card.tags ?? []), ...(card.sourceName ? [card.sourceName] : [])],
+      keywords: [...(card.tags ?? []), ...(card.sourceName ? [card.sourceName] : [])]
     },
-    routing,
+    routing
   };
 }
 
@@ -142,23 +129,22 @@ function routingFor(card: ActivityCardDto): ItemRouting {
     strippedRepo: card.repo.replace(/^(?:rss|web):/u, ""),
     ...(directUrl !== undefined ? { directUrl } : {}),
     ...((publication || change) && card.summary !== undefined ? { description: card.summary } : {}),
-    fallbackUrl: `https://github.com/${card.repo}`,
+    fallbackUrl: `https://github.com/${card.repo}`
   };
 }
 
 function channelFor(card: ActivityCardDto): { name: string; rank: number } {
-  if (card.source === "web") return { name: "web", rank: 3 };
-  if (card.source === "rss" || card.type === "article") return { name: "rss", rank: 2 };
+  if (card.source === "web") {
+    return { name: "web", rank: 3 };
+  }
+  if (card.source === "rss" || card.type === "article") {
+    return { name: "rss", rank: 2 };
+  }
   return { name: "github", rank: 1 };
 }
 
 function isPublication(card: ActivityCardDto): boolean {
-  return (
-    card.source === "rss" ||
-    card.source === "web" ||
-    card.type === "article" ||
-    card.type === "paper"
-  );
+  return card.source === "rss" || card.source === "web" || card.type === "article" || card.type === "paper";
 }
 
 function pullSuffix(card: ActivityCardDto): string {

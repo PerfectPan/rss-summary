@@ -16,16 +16,16 @@ const resultPayload = {
       site_name: "OpenAI",
       site_icon: null,
       date: "2026-08-16T02:00:00Z",
-      authority: 3,
-    },
-  ],
+      authority: 3
+    }
+  ]
 };
 
 describe("DeepSeek search source", () => {
   it("posts the query and count with the bearer key and a deepseek provider page", async () => {
     const fetch = vi.fn(
       async (_url: string | URL | Request, _init?: RequestInit) =>
-        new Response(JSON.stringify(resultPayload), { status: 200 }),
+        new Response(JSON.stringify(resultPayload), { status: 200 })
     );
     const client = new DeepSeekSearchClient({ apiKey: "test-key", fetch });
 
@@ -33,7 +33,7 @@ describe("DeepSeek search source", () => {
       query: "OpenAI 正式发布新模型",
       count: 10,
       day: "2026-08-16",
-      sourcePolicy: "news",
+      sourcePolicy: "news"
     });
 
     expect(fetch).toHaveBeenCalledTimes(1);
@@ -42,11 +42,11 @@ describe("DeepSeek search source", () => {
     expect(init?.method).toBe("POST");
     expect(init?.headers).toMatchObject({
       Authorization: "Bearer test-key",
-      "Content-Type": "application/json",
+      "Content-Type": "application/json"
     });
     expect(JSON.parse(String(init?.body))).toEqual({
       query: "OpenAI 正式发布新模型",
-      count: 10,
+      count: 10
     });
     expect(page).toEqual({
       provider: "deepseek",
@@ -62,16 +62,14 @@ describe("DeepSeek search source", () => {
           publishTime: "2026-08-16T02:00:00Z",
           rankScore: 2.4,
           authority: 3,
-          rankPosition: 1,
-        },
-      ],
+          rankPosition: 1
+        }
+      ]
     });
   });
 
   it("requires a non-empty key", () => {
-    expect(() => new DeepSeekSearchClient({ apiKey: "  " })).toThrow(
-      "DEEPSEEK_API_KEY is required.",
-    );
+    expect(() => new DeepSeekSearchClient({ apiKey: "  " })).toThrow("DEEPSEEK_API_KEY is required.");
   });
 
   it("rejects an oversized query before any request leaves", async () => {
@@ -82,8 +80,8 @@ describe("DeepSeek search source", () => {
         query: "x".repeat(129),
         count: 10,
         day: "2026-08-16",
-        sourcePolicy: "news",
-      }),
+        sourcePolicy: "news"
+      })
     ).rejects.toThrow(/1 to 128 characters/);
     expect(fetch).not.toHaveBeenCalled();
   });
@@ -93,36 +91,36 @@ describe("DeepSeek search source", () => {
       query: "科技新闻",
       count: 10,
       day: "2026-08-16",
-      sourcePolicy: "news" as const,
+      sourcePolicy: "news" as const
     };
     const rateLimited = new DeepSeekSearchClient({
       apiKey: "test-key",
-      fetch: async () => new Response("slow", { status: 429, headers: { "Retry-After": "2" } }),
+      fetch: async () => new Response("slow", { status: 429, headers: { "Retry-After": "2" } })
     });
     const serverError = new DeepSeekSearchClient({
       apiKey: "test-key",
-      fetch: async () => new Response(null, { status: 503 }),
+      fetch: async () => new Response(null, { status: 503 })
     });
     const offline = new DeepSeekSearchClient({
       apiKey: "test-key",
       fetch: async () => {
         throw new TypeError("fetch failed");
-      },
+      }
     });
     const malformed = new DeepSeekSearchClient({
       apiKey: "test-key",
-      fetch: async () => new Response("not json", { status: 200 }),
+      fetch: async () => new Response("not json", { status: 200 })
     });
 
     await expect(rateLimited.search(input)).rejects.toMatchObject({
       code: "http_429",
       retryAfterMs: 2_000,
-      message: "DeepSeek search API error http_429: HTTP 429",
+      message: "DeepSeek search API error http_429: HTTP 429"
     });
     await expect(serverError.search(input)).rejects.toMatchObject({ code: "http_503" });
     await expect(offline.search(input)).rejects.toMatchObject({
       code: "network_error",
-      message: "DeepSeek search API error network_error: fetch failed",
+      message: "DeepSeek search API error network_error: fetch failed"
     });
     await expect(malformed.search(input)).rejects.toMatchObject({ code: "invalid_response" });
   });
@@ -130,9 +128,7 @@ describe("DeepSeek search source", () => {
 
 describe("deepSeekOutgoingQuery", () => {
   it("appends the window's first calendar day as an after: operator", () => {
-    expect(deepSeekOutgoingQuery("OpenAI 发布 新模型", "2026-10-22")).toBe(
-      "OpenAI 发布 新模型 after:2026-10-22",
-    );
+    expect(deepSeekOutgoingQuery("OpenAI 发布 新模型", "2026-10-22")).toBe("OpenAI 发布 新模型 after:2026-10-22");
   });
 
   it("keeps the operator and truncates the keywords at the 128-character limit", () => {
@@ -144,15 +140,13 @@ describe("deepSeekOutgoingQuery", () => {
 
   it("leaves the query alone without a day or with a caller-provided after:", () => {
     expect(deepSeekOutgoingQuery("OpenAI 发布", undefined)).toBe("OpenAI 发布");
-    expect(deepSeekOutgoingQuery("OpenAI after:2026-10-20", "2026-10-22")).toBe(
-      "OpenAI after:2026-10-20",
-    );
+    expect(deepSeekOutgoingQuery("OpenAI after:2026-10-20", "2026-10-22")).toBe("OpenAI after:2026-10-20");
   });
 
   it("sends the outgoing query, not the raw input", async () => {
     const fetch = vi.fn(
       async (_url: string | URL | Request, _init?: RequestInit) =>
-        new Response(JSON.stringify(resultPayload), { status: 200 }),
+        new Response(JSON.stringify(resultPayload), { status: 200 })
     );
     const client = new DeepSeekSearchClient({ apiKey: "test-key", fetch });
     await client.search({
@@ -160,11 +154,11 @@ describe("deepSeekOutgoingQuery", () => {
       count: 10,
       day: "2026-10-22",
       sinceDay: "2026-10-22",
-      sourcePolicy: "news",
+      sourcePolicy: "news"
     });
     expect(JSON.parse(String(fetch.mock.calls[0]![1]?.body))).toEqual({
       query: "OpenAI 发布 新模型 after:2026-10-22",
-      count: 10,
+      count: 10
     });
   });
 });
@@ -179,12 +173,8 @@ describe("validateDeepSeekInput", () => {
   });
 
   it("rejects empty and oversized queries instead of truncating them", () => {
-    expect(() => validateDeepSeekInput({ ...base, query: "  " })).toThrowError(
-      /1 to 128 characters/,
-    );
-    expect(() => validateDeepSeekInput({ ...base, query: "x".repeat(129) })).toThrowError(
-      /1 to 128 characters/,
-    );
+    expect(() => validateDeepSeekInput({ ...base, query: "  " })).toThrowError(/1 to 128 characters/);
+    expect(() => validateDeepSeekInput({ ...base, query: "x".repeat(129) })).toThrowError(/1 to 128 characters/);
   });
 
   it("rejects counts outside 1..50", () => {

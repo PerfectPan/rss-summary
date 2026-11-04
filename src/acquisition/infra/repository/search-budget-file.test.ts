@@ -14,7 +14,7 @@ const limits: BudgetLimits = {
   dailyLimit: 14,
   monthlyLimit: 420,
   timezoneOffset: "+08:00",
-  cacheTtlMs: 360 * 60_000,
+  cacheTtlMs: 360 * 60_000
 };
 const request: CacheRequest = {
   provider: "https://open.feedcoopapi.com/search_api/web_search",
@@ -22,7 +22,7 @@ const request: CacheRequest = {
   count: 10,
   day: "2026-08-16",
   sinceDay: "2026-08-16",
-  sourcePolicy: "news",
+  sourcePolicy: "news"
 };
 const directories: string[] = [];
 
@@ -44,17 +44,12 @@ describe("search budget file", () => {
     const budget = await Effect.runPromise(loadSearchBudget(path, limits));
     const hit = budget.findCache(request, Date.parse("2026-08-16T04:00:00.000Z"));
     expect(hit?.page.logId).toBe("log-golden");
-    const reserved = budget.reserve(
-      request,
-      new Date("2026-08-16T04:00:00.000Z"),
-      true,
-      presentCachedPage,
-    );
+    const reserved = budget.reserve(request, new Date("2026-08-16T04:00:00.000Z"), true, presentCachedPage);
     expect(reserved._tag).toBe("Ok");
-    if (reserved._tag !== "Ok") return;
-    expect(reserved.value.events).toEqual([
-      { _tag: "CacheHit", fetchedAt: "2026-08-16T04:00:00.000Z" },
-    ]);
+    if (reserved._tag !== "Ok") {
+      return;
+    }
+    expect(reserved.value.events).toEqual([{ _tag: "CacheHit", fetchedAt: "2026-08-16T04:00:00.000Z" }]);
     expect(await readFile(path)).toEqual(original);
 
     await Effect.runPromise(saveSearchBudget(path, budget.persisted));
@@ -68,7 +63,7 @@ describe("search budget file", () => {
     await writeFile(path, "not json");
     await expect(Effect.runPromise(loadSearchBudget(path, limits))).rejects.toMatchObject({
       code: "local_budget_state",
-      message: "Local search budget state is invalid; preserve it for recovery.",
+      message: "Local search budget state is invalid; preserve it for recovery."
     });
     expect(await readFile(path, "utf8")).toBe("not json");
   });

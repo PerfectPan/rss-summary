@@ -2,7 +2,7 @@ export {
   isPrivateIpv4,
   isVideoResearchUrl,
   validateArticleResearchUrl,
-  validateResearchUrl,
+  validateResearchUrl
 } from "./policies/url-policy.js";
 export {
   documentMethods,
@@ -14,6 +14,6 @@ export {
   type ReadResult,
   type ReadSuccess,
   type VideoFrame,
-  type VideoVisuals,
+  type VideoVisuals
 } from "./value-objects/document.js";
 export type { ArticleExtract } from "./value-objects/article-extract.js";

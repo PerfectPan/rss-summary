@@ -5,7 +5,7 @@ import {
   isSearchFailure,
   type MergedSearchSource,
   type SearchPage,
-  type SearchResult,
+  type SearchResult
 } from "../../domain/search/index.js";
 import type { ProviderSearch } from "./with-fallback.js";
 
@@ -30,12 +30,14 @@ export type SearchSource = {
  * survived is disclosed through `providerFallback`, matching `withFallback`.
  */
 export function mergeSearches(sources: readonly SearchSource[]): ProviderSearch {
-  if (sources.length === 0) throw new Error("mergeSearches requires at least one source.");
+  if (sources.length === 0) {
+    throw new Error("mergeSearches requires at least one source.");
+  }
   return (input) =>
     Effect.gen(function* () {
       const outcomes = yield* Effect.all(
         sources.map(({ search }) => Effect.result(search(input))),
-        { concurrency: sources.length },
+        { concurrency: sources.length }
       );
       const records: MergedSearchSource[] = [];
       const seen = new Set<string>();
@@ -49,7 +51,7 @@ export function mergeSearches(sources: readonly SearchSource[]): ProviderSearch 
             status: "failed",
             fetched: 0,
             contributed: 0,
-            code: isSearchFailure(outcome.failure) ? outcome.failure.code : "unknown",
+            code: isSearchFailure(outcome.failure) ? outcome.failure.code : "unknown"
           });
           continue;
         }
@@ -57,7 +59,9 @@ export function mergeSearches(sources: readonly SearchSource[]): ProviderSearch 
         let contributed = 0;
         for (const result of outcome.success.results) {
           const identity = canonicalizeUrl(result.url) ?? result.url;
-          if (seen.has(identity)) continue;
+          if (seen.has(identity)) {
+            continue;
+          }
           seen.add(identity);
           contributed += 1;
           results.push(result.source === undefined ? { ...result, source: source.name } : result);
@@ -66,7 +70,7 @@ export function mergeSearches(sources: readonly SearchSource[]): ProviderSearch 
           source: source.name,
           status: "ok",
           fetched: outcome.success.results.length,
-          contributed,
+          contributed
         });
       }
       const primary = outcomes[0]!;
@@ -84,10 +88,10 @@ export function mergeSearches(sources: readonly SearchSource[]): ProviderSearch 
         ...(primaryTrigger !== undefined
           ? {
               providerFallback: {
-                triggeredBy: isSearchFailure(primaryTrigger) ? primaryTrigger.code : "unknown",
-              },
+                triggeredBy: isSearchFailure(primaryTrigger) ? primaryTrigger.code : "unknown"
+              }
             }
-          : {}),
+          : {})
       });
     });
 }

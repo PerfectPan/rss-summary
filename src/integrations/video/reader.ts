@@ -8,7 +8,7 @@ import {
   type ReadRequest,
   type ReadResult,
   validateResearchUrl,
-  type VideoVisuals,
+  type VideoVisuals
 } from "../../reading/index.js";
 import { asRecord, text } from "../shared/json-record.js";
 import { captureVideoFrames } from "./frames.js";
@@ -16,16 +16,12 @@ import { captureVideoFrames } from "./frames.js";
 type RunCommand = (
   command: string,
   args: string[],
-  options: { timeout: number; maxBuffer: number; env: NodeJS.ProcessEnv },
+  options: { timeout: number; maxBuffer: number; env: NodeJS.ProcessEnv }
 ) => Promise<{ stdout: string }>;
 
 type TranscriptMethod = "captions" | "transcription";
 
-export type VideoTranscriptFormatter = (
-  transcript: string,
-  method: TranscriptMethod,
-  maximum?: number,
-) => string;
+export type VideoTranscriptFormatter = (transcript: string, method: TranscriptMethod, maximum?: number) => string;
 
 export type VideoVisualFormatter = (visuals: VideoVisuals) => string;
 
@@ -73,7 +69,9 @@ export class VideoResearchClient {
     let workspace: string | undefined;
     try {
       const url = validateResearchUrl(request.url);
-      if (!isVideoResearchUrl(url)) throw new Error("Unsupported video URL.");
+      if (!isVideoResearchUrl(url)) {
+        throw new Error("Unsupported video URL.");
+      }
       const extension = extname(new URL(url).pathname).toLowerCase();
       const directFile = [".mp4", ".m4v", ".webm", ".mov"].includes(extension);
       let input = url;
@@ -105,12 +103,16 @@ export class VideoResearchClient {
         ) {
           throw new Error("No captions or audio transcript were available for this video.");
         }
-        if (extracted.truncated === true) throw new Error("Video transcript was incomplete.");
+        if (extracted.truncated === true) {
+          throw new Error("Video transcript was incomplete.");
+        }
         transcript = text(extracted.content) ?? "";
         title = text(extracted.title) ?? "";
         method = source === "whisper" ? "transcription" : "captions";
       }
-      if (transcript.length < 80) throw new Error("Video transcript was too short.");
+      if (transcript.length < 80) {
+        throw new Error("Video transcript was too short.");
+      }
       const visualResearch = await this.captureFrames({
         input,
         sourceUrl: url,
@@ -124,8 +126,8 @@ export class VideoResearchClient {
           this.runCommand(this.command, args, {
             timeout,
             maxBuffer: 4_000_000,
-            env: this.env,
-          }),
+            env: this.env
+          })
       });
       const visualText = this.formatVisuals(visualResearch.visuals).slice(0, 3_300);
       return {
@@ -137,7 +139,7 @@ export class VideoResearchClient {
         retrievedAt,
         status: "ok",
         title,
-        url,
+        url
       };
     } catch (error) {
       return {
@@ -148,10 +150,12 @@ export class VideoResearchClient {
         ref: request.ref,
         retrievedAt,
         status: "failed",
-        url: request.url,
+        url: request.url
       };
     } finally {
-      if (workspace) await rm(workspace, { recursive: true, force: true });
+      if (workspace) {
+        await rm(workspace, { recursive: true, force: true });
+      }
     }
   }
 
@@ -174,16 +178,18 @@ export class VideoResearchClient {
           "--metrics",
           "off",
           "--timeout",
-          `${this.timeoutMs}ms`,
+          `${this.timeoutMs}ms`
         ],
-        { timeout: this.timeoutMs, maxBuffer: 4_000_000, env: this.env },
+        { timeout: this.timeoutMs, maxBuffer: 4_000_000, env: this.env }
       );
     } catch (error) {
       // One property read; nullish receivers yield undefined.
       const code: unknown = error == null ? undefined : (error as { code?: unknown }).code;
-      if (code === "ENOENT") throw new Error("Install the Summarize CLI to research videos.");
+      if (code === "ENOENT") {
+        throw new Error("Install the Summarize CLI to research videos.");
+      }
       throw new Error(
-        "Video transcription failed or timed out; check Summarize, media access and the local Whisper model.",
+        "Video transcription failed or timed out; check Summarize, media access and the local Whisper model."
       );
     }
   }
@@ -194,12 +200,14 @@ export class VideoResearchClient {
     for (let redirects = 0; redirects <= 3; redirects++) {
       const response = await this.fetchImpl(validateResearchUrl(target), {
         redirect: "manual",
-        signal,
+        signal
       });
       if (response.status >= 300 && response.status < 400) {
         await response.body?.cancel();
         const location = response.headers.get("location");
-        if (!location) throw new Error("Video redirect has no location.");
+        if (!location) {
+          throw new Error("Video redirect has no location.");
+        }
         target = new URL(location, target).toString();
         continue;
       }
@@ -213,7 +221,9 @@ export class VideoResearchClient {
         throw new Error("Video URL did not return a media file.");
       }
       const reader = response.body?.getReader();
-      if (!reader) throw new Error("Video response was empty.");
+      if (!reader) {
+        throw new Error("Video response was empty.");
+      }
       const file = await open(path, "wx");
       let bytes = 0;
       try {
@@ -222,12 +232,18 @@ export class VideoResearchClient {
         }
         while (true) {
           const chunk = await reader.read();
-          if (chunk.done) break;
+          if (chunk.done) {
+            break;
+          }
           bytes += chunk.value.byteLength;
-          if (bytes > this.maxBytes) throw new Error("Video exceeds the download size limit.");
+          if (bytes > this.maxBytes) {
+            throw new Error("Video exceeds the download size limit.");
+          }
           await file.writeFile(chunk.value);
         }
-        if (bytes === 0) throw new Error("Video response was empty.");
+        if (bytes === 0) {
+          throw new Error("Video response was empty.");
+        }
       } finally {
         await reader.cancel();
         await file.close();

@@ -39,7 +39,7 @@ export class RunArchive extends Context.Service<
       root: string,
       audit: RunAudit,
       delivery: RunDelivery,
-      markdown: string,
+      markdown: string
     ) => Effect.Effect<SavedRunArtifact, Error>;
     readonly list: (root: string) => Effect.Effect<readonly string[], Error>;
     readonly load: (path: string) => Effect.Effect<StoredRunAudit, Error>;
@@ -80,12 +80,7 @@ export type DailyAiDiagnosticSnapshot = {
       editorialIssues: Array<{
         index: number;
         refs: string[];
-        reason:
-          | "invalid-draft"
-          | "invalid-item"
-          | "invalid-category"
-          | "invalid-headline"
-          | "unknown-reference";
+        reason: "invalid-draft" | "invalid-item" | "invalid-category" | "invalid-headline" | "unknown-reference";
         message: string;
       }>;
     };

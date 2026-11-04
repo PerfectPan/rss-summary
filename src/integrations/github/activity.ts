@@ -17,19 +17,17 @@ export const GitHubActivityLive = (options: {
     getHomeEvents: () => {
       if (!options.githubHome) {
         return Effect.fail(
-          new Error(
-            "GitHub Home storage state not found: . Run 'rss-summary github-home login' first.",
-          ),
+          new Error("GitHub Home storage state not found: . Run 'rss-summary github-home login' first.")
         );
       }
       return Effect.map(readHomeEvents(options.githubHome), (events) =>
-        events.map((card) => acquireActivityCard(card)),
+        events.map((card) => acquireActivityCard(card))
       );
     },
     getReceivedEvents: (username, pagination) =>
       Effect.map(readReceivedEvents(username, pagination, options), (events) =>
-        events.map((event) => acquireActivityCard(acquireGitHubEvent(event).card)),
-      ),
+        events.map((event) => acquireActivityCard(acquireGitHubEvent(event).card))
+      )
   });
 
 export type { GitHubRestOptions, GithubHomeClientOptions };

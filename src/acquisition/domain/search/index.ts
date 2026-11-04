@@ -12,5 +12,5 @@ export type {
   SearchResult,
   SearchSourcePolicy,
   SearchUsage,
-  SourceVerification,
+  SourceVerification
 } from "./value-objects/search.js";

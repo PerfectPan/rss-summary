@@ -11,14 +11,14 @@ function request(overrides: Partial<CacheRequest> = {}): CacheRequest {
     day: "2026-09-29",
     sinceDay: "2026-09-29",
     sourcePolicy: "news",
-    ...overrides,
+    ...overrides
   };
 }
 
 const entry: CacheEntry = {
   request: request({ sinceDay: "2026-09-25", day: "2026-09-30" }),
   fetchedAt: "2026-09-29T03:00:00.000Z",
-  page: { resultCount: 0, results: [] },
+  page: { resultCount: 0, results: [] }
 };
 
 describe("cache entry", () => {
@@ -36,9 +36,7 @@ describe("cache entry", () => {
   });
 
   it("rejects a different search call", () => {
-    expect(matchesRequest(entry, request({ provider: "https://search.example/other" }))).toBe(
-      false,
-    );
+    expect(matchesRequest(entry, request({ provider: "https://search.example/other" }))).toBe(false);
     expect(matchesRequest(entry, request({ query: "other" }))).toBe(false);
     expect(matchesRequest(entry, request({ count: 2 }))).toBe(false);
     expect(matchesRequest(entry, request({ sourcePolicy: "official" }))).toBe(false);
@@ -46,9 +44,9 @@ describe("cache entry", () => {
       matchesRequest(
         entry,
         request({
-          window: { since: "2026-09-25T00:00:00.000Z", until: "2026-09-30T00:00:00.000Z" },
-        }),
-      ),
+          window: { since: "2026-09-25T00:00:00.000Z", until: "2026-09-30T00:00:00.000Z" }
+        })
+      )
     ).toBe(false);
   });
 });

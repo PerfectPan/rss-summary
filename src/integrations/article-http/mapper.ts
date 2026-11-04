@@ -5,19 +5,17 @@ const DEFAULT_MAX_CHARS = 16_000;
 export function extractArticle(
   body: string,
   url: string,
-  maxChars = DEFAULT_MAX_CHARS,
+  maxChars = DEFAULT_MAX_CHARS
 ): { content: string; title: string } {
   const $ = load(body);
   const title = cleanText(
     $("meta[property='og:title']").attr("content") ||
       $("h1").first().text() ||
       $("title").first().text() ||
-      new URL(url).hostname,
+      new URL(url).hostname
   );
   // Clean the whole document because pages without an article root use its text as fallback.
-  $(
-    "script,style,noscript,template,svg,nav,footer,header,aside,form,button,iframe,video,audio",
-  ).remove();
+  $("script,style,noscript,template,svg,nav,footer,header,aside,form,button,iframe,video,audio").remove();
   const root = selectContentRoot($);
   const lines = root
     .find("h1,h2,h3,h4,h5,h6,p,li,blockquote,pre,td,th")
@@ -31,9 +29,7 @@ export function extractArticle(
 }
 
 function selectContentRoot($: ReturnType<typeof load>) {
-  const candidates = $(
-    "article,[itemprop='articleBody'],[data-pagefind-body],.markdown-body,.prose,main",
-  );
+  const candidates = $("article,[itemprop='articleBody'],[data-pagefind-body],.markdown-body,.prose,main");
   let best = candidates.first();
   let bestScore = Number.NEGATIVE_INFINITY;
   candidates.each((_index, element) => {
@@ -68,7 +64,9 @@ function compactLines(lines: string[]): string {
   const seen = new Set<string>();
   return lines
     .filter((line) => {
-      if (seen.has(line)) return false;
+      if (seen.has(line)) {
+        return false;
+      }
       seen.add(line);
       return true;
     })

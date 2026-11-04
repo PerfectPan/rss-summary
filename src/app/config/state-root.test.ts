@@ -6,7 +6,7 @@ import {
   defaultIndustryStateFile,
   defaultRunLogDir,
   defaultStateFile,
-  deploymentStateRoot,
+  deploymentStateRoot
 } from "./state-root.js";
 
 describe("app/config/state-root", () => {
@@ -21,9 +21,7 @@ describe("app/config/state-root", () => {
 
   it("redirects only Rivus deployment state under the override", () => {
     expect(deploymentStateRoot({ RIVUS_DEPLOYMENT_STATE_DIR: "/srv/rivus" })).toBe("/srv/rivus");
-    expect(dailyAiDiagnosticsDir({ RIVUS_DEPLOYMENT_STATE_DIR: "/srv/rivus" })).toBe(
-      "/srv/rivus/rss-summary/daily-ai",
-    );
+    expect(dailyAiDiagnosticsDir({ RIVUS_DEPLOYMENT_STATE_DIR: "/srv/rivus" })).toBe("/srv/rivus/rss-summary/daily-ai");
     expect(defaultStateFile).toBe(".state/feed-state.json");
   });
 });

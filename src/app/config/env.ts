@@ -6,7 +6,7 @@ import {
   decodeFeedsJson,
   decodeIndustryJson,
   type FeedSubscription,
-  type IndustrySource,
+  type IndustrySource
 } from "../../acquisition/index.js";
 import type { CliArgs } from "./argv.js";
 import { defaultIndustrySourcesFile } from "./assets.js";
@@ -14,7 +14,7 @@ import {
   defaultGithubHomeStorageState,
   defaultIndustryStateFile,
   defaultRunLogDir,
-  defaultStateFile,
+  defaultStateFile
 } from "./state-root.js";
 
 export type GithubFeedSource = "home" | "events";
@@ -79,23 +79,20 @@ const defaultInterests = [
   "deno",
   "testing",
   "performance",
-  "skills",
+  "skills"
 ];
 
 /** Read one variable as an optional string; missing keys resolve to undefined. */
 const envString = (name: string): Config.Config<string | undefined> =>
   Config.option(Config.String(name)).pipe(Config.map(Option.getOrUndefined));
 
-const asError = (cause: unknown): Error =>
-  cause instanceof Error ? cause : new Error(String(cause));
+const asError = (cause: unknown): Error => (cause instanceof Error ? cause : new Error(String(cause)));
 
 /**
  * Parse the environment into {@link AppConfig} through `effect/Config`.
  * Empty strings are preserved so the historical `??` chains behave identically.
  */
-export function loadEnvConfig(
-  env: NodeJS.ProcessEnv = process.env,
-): Effect.Effect<AppConfig, Error> {
+export function loadEnvConfig(env: NodeJS.ProcessEnv = process.env): Effect.Effect<AppConfig, Error> {
   const config = Effect.gen(function* () {
     // One Config pass reads every variable; empty strings are preserved.
     const value = yield* Config.all({
@@ -135,30 +132,30 @@ export function loadEnvConfig(
       articleBrowserChannel: envString("RSS_ARTICLE_BROWSER_CHANNEL"),
       articleBrowserHeadless: envString("RSS_ARTICLE_BROWSER_HEADLESS"),
       articleBrowserTimeoutMs: envString("RSS_ARTICLE_BROWSER_TIMEOUT_MS"),
-      articleGlmFallback: envString("RSS_ARTICLE_GLM_FALLBACK"),
+      articleGlmFallback: envString("RSS_ARTICLE_GLM_FALLBACK")
     });
     const username = value.githubUsername ?? value.ghUsername ?? "PerfectPan";
     const token = value.ghFeedToken ?? value.githubToken;
     const dryRun = value.dryRun === "1" || value.dryRun === "true";
     const githubFeedSource = yield* Effect.try({
       try: () => parseGithubFeedSource(value.githubFeedSource),
-      catch: asError,
+      catch: asError
     });
     const githubHomeFetch = yield* Effect.try({
       try: () => parseGithubHomeFetch(value.githubHomeFetch),
-      catch: asError,
+      catch: asError
     });
     const rssFeeds = yield* Effect.try({
       try: () => loadFeedSubscriptions(value.rssFeeds, value.rssFeedsFile),
-      catch: asError,
+      catch: asError
     });
     const industrySources = yield* Effect.try({
       try: () =>
         loadIndustrySources(
           value.industrySources ?? value.industryFeeds,
-          value.industrySourcesFile ?? value.industryFeedsFile ?? defaultIndustrySourcesFile(),
+          value.industrySourcesFile ?? value.industryFeedsFile ?? defaultIndustrySourcesFile()
         ),
-      catch: asError,
+      catch: asError
     });
     return {
       username,
@@ -194,16 +191,16 @@ export function loadEnvConfig(
         browserChannel: value.articleBrowserChannel?.trim() || "chrome",
         browserHeadless: value.articleBrowserHeadless !== "false",
         browserTimeoutMs: articleBrowserTimeoutMs(value.articleBrowserTimeoutMs),
-        glmFallback: value.articleGlmFallback === "true",
+        glmFallback: value.articleGlmFallback === "true"
       },
-      raw: env,
+      raw: env
     } satisfies AppConfig;
   });
   return Effect.provideService(
     config,
     ConfigProvider.ConfigProvider,
     // fromEnv delegates to fromEnvRecord, which ignores undefined entries.
-    ConfigProvider.fromEnv({ env: env as Record<string, string>, preserveEmptyStrings: true }),
+    ConfigProvider.fromEnv({ env: env as Record<string, string>, preserveEmptyStrings: true })
   );
 }
 
@@ -214,12 +211,8 @@ export function applyCliArgs(config: AppConfig, args: CliArgs): AppConfig {
   return {
     ...config,
     username: args.username ?? config.username,
-    githubFeedSource: args.githubFeedSource
-      ? parseGithubFeedSource(args.githubFeedSource)
-      : config.githubFeedSource,
-    githubHomeFetch: args.githubHomeFetch
-      ? parseGithubHomeFetch(args.githubHomeFetch)
-      : config.githubHomeFetch,
+    githubFeedSource: args.githubFeedSource ? parseGithubFeedSource(args.githubFeedSource) : config.githubFeedSource,
+    githubHomeFetch: args.githubHomeFetch ? parseGithubHomeFetch(args.githubHomeFetch) : config.githubHomeFetch,
     githubHomeStorageState: args.githubHomeStorageState ?? config.githubHomeStorageState,
     webhookUrl: dryRun ? undefined : env.NOTIFY_WEBHOOK_URL,
     outputFormat: args.json || config.outputFormat === "json" ? "json" : "markdown",
@@ -243,23 +236,30 @@ export function applyCliArgs(config: AppConfig, args: CliArgs): AppConfig {
         args.industryFeedsFile ??
         env.INDUSTRY_SOURCES_FILE ??
         env.INDUSTRY_FEEDS_FILE ??
-        defaultIndustrySourcesFile(),
+        defaultIndustrySourcesFile()
     ),
-    industryStateFile:
-      args.industryStateFile ?? env.INDUSTRY_STATE_FILE ?? defaultIndustryStateFile,
-    runLogDir: args.runLogDir ?? env.FEED_RUN_LOG_DIR ?? defaultRunLogDir,
+    industryStateFile: args.industryStateFile ?? env.INDUSTRY_STATE_FILE ?? defaultIndustryStateFile,
+    runLogDir: args.runLogDir ?? env.FEED_RUN_LOG_DIR ?? defaultRunLogDir
   };
 }
 
 function parseGithubFeedSource(value: string | undefined): GithubFeedSource {
-  if (!value) return "home";
-  if (value === "home" || value === "events") return value;
+  if (!value) {
+    return "home";
+  }
+  if (value === "home" || value === "events") {
+    return value;
+  }
   throw new Error("GITHUB_FEED_SOURCE must be either 'home' or 'events'.");
 }
 
 function parseGithubHomeFetch(value: string | undefined): GithubHomeFetch {
-  if (!value) return "conduit";
-  if (value === "conduit" || value === "browser") return value;
+  if (!value) {
+    return "conduit";
+  }
+  if (value === "conduit" || value === "browser") {
+    return value;
+  }
   throw new Error("GITHUB_HOME_FETCH must be either 'conduit' or 'browser'.");
 }
 
@@ -269,7 +269,9 @@ function numberFrom(value: string | undefined, fallback: number): number {
 }
 
 function parseList(value: string | undefined): string[] | undefined {
-  if (!value) return undefined;
+  if (!value) {
+    return undefined;
+  }
   return value
     .split(",")
     .map((item) => item.trim())
@@ -283,20 +285,23 @@ function articleBrowserTimeoutMs(value: string | undefined): number {
 
 function loadFeedSubscriptions(
   inlineFeeds: string | undefined,
-  configuredFile: string | undefined,
+  configuredFile: string | undefined
 ): FeedSubscription[] {
-  if (inlineFeeds) return decodeFeedsJson(inlineFeeds);
+  if (inlineFeeds) {
+    return decodeFeedsJson(inlineFeeds);
+  }
 
   const feedsFile = configuredFile ?? "feeds.json";
-  if (!existsSync(feedsFile)) return [];
+  if (!existsSync(feedsFile)) {
+    return [];
+  }
   return decodeFeedsJson(readFileSync(feedsFile, "utf8"));
 }
 
-function loadIndustrySources(
-  inlineSources: string | undefined,
-  configuredFile: string,
-): IndustrySource[] {
-  if (inlineSources) return decodeIndustryJson(inlineSources);
+function loadIndustrySources(inlineSources: string | undefined, configuredFile: string): IndustrySource[] {
+  if (inlineSources) {
+    return decodeIndustryJson(inlineSources);
+  }
   if (!existsSync(configuredFile)) {
     throw new Error(`Industry source configuration file does not exist: ${configuredFile}`);
   }

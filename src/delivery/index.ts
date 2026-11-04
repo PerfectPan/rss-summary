@@ -17,12 +17,12 @@ export {
   markDelivered,
   markResearched,
   type FeedState,
-  type ResearchRecord,
+  type ResearchRecord
 } from "./domain/ledger/index.js";
 export {
   commitDailyAiDeliveryReceipt,
   createDailyAiDeliveryReceipt,
-  type DailyAiDeliveryReceipt,
+  type DailyAiDeliveryReceipt
 } from "./domain/receipt/index.js";
 export {
   isFailedRun,
@@ -34,7 +34,7 @@ export {
   type RunPresentationReasonCode,
   type RunProduct,
   type RunSourceResult,
-  type StoredRunAudit,
+  type StoredRunAudit
 } from "./domain/run-audit/index.js";
 export {
   Notifier,
@@ -42,37 +42,27 @@ export {
   RunArchive,
   DiagnosticsStore,
   type DailyAiDiagnosticSnapshot,
-  type SavedRunArtifact,
+  type SavedRunArtifact
 } from "./application/ports.js";
 export { deliver, type DeliveryOrder } from "./application/use-cases/deliver.js";
-export {
-  recordResearch,
-  type ResearchSuggestion,
-} from "./application/use-cases/record-research.js";
+export { recordResearch, type ResearchSuggestion } from "./application/use-cases/record-research.js";
 export {
   listRuns,
   listFailedRuns,
   runArtifactForLabel,
   readRunArtifact,
-  type RunSummary,
+  type RunSummary
 } from "./application/use-cases/inspect-runs.js";
 export { NotifierLive, type NotifierOptions } from "./infra/notifier/notifier.js";
-export {
-  loadFeedState,
-  saveFeedState,
-  FeedStateFileLive,
-} from "./infra/repository/feed-state-file.js";
+export { loadFeedState, saveFeedState, FeedStateFileLive } from "./infra/repository/feed-state-file.js";
 export {
   listRunArtifacts,
   loadRunArtifact,
   runArtifactLabel,
   saveRunArtifact,
-  RunArchiveFilesLive,
+  RunArchiveFilesLive
 } from "./infra/repository/run-archive-files.js";
-export {
-  saveDailyAiDiagnostics,
-  DiagnosticsFileLive,
-} from "./infra/repository/diagnostics-file.js";
+export { saveDailyAiDiagnostics, DiagnosticsFileLive } from "./infra/repository/diagnostics-file.js";
 
 export type DeliveryOptions = NotifierOptions & {
   /** Environment used to resolve the diagnostics directory. */
@@ -81,11 +71,11 @@ export type DeliveryOptions = NotifierOptions & {
 
 /** Assembles every delivery port implementation into one layer. */
 export const DeliveryLive = (
-  options: DeliveryOptions = {},
+  options: DeliveryOptions = {}
 ): Layer.Layer<Notifier | FeedStateStore | RunArchive | DiagnosticsStore> =>
   Layer.mergeAll(
     NotifierLive(options),
     FeedStateFileLive,
     RunArchiveFilesLive,
-    DiagnosticsFileLive(options.env ?? process.env),
+    DiagnosticsFileLive(options.env ?? process.env)
   );

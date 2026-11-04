@@ -12,18 +12,16 @@ describe("article research", () => {
         calls += 1;
         return new Response("never");
       },
-      now: () => new Date("2026-08-17T01:00:00.000Z"),
+      now: () => new Date("2026-08-17T01:00:00.000Z")
     });
 
-    await expect(
-      client.research({ ref: "article:1", url: "http://127.0.0.1/admin" }),
-    ).resolves.toEqual({
+    await expect(client.research({ ref: "article:1", url: "http://127.0.0.1/admin" })).resolves.toEqual({
       error: "article URL points to a private or local host",
       method: "http",
       ref: "article:1",
       retrievedAt: "2026-08-17T01:00:00.000Z",
       status: "failed",
-      url: "http://127.0.0.1/admin",
+      url: "http://127.0.0.1/admin"
     });
     expect(calls).toBe(0);
   });
@@ -36,15 +34,13 @@ describe("article research", () => {
           `<html><head><title>Video</title><script>${"window.playerData = {};".repeat(20)}</script>
           <style>${".player { display: block; }".repeat(20)}</style></head>
           <body><nav>${"Sign in Browse Videos ".repeat(20)}</nav><video></video></body></html>`,
-          { headers: { "content-type": "text/html" } },
-        ),
+          { headers: { "content-type": "text/html" } }
+        )
     });
 
-    await expect(
-      client.research({ ref: "video:1", url: "https://example.com/player" }),
-    ).resolves.toMatchObject({
+    await expect(client.research({ ref: "video:1", url: "https://example.com/player" })).resolves.toMatchObject({
       status: "failed",
-      error: "article body was too short after extraction",
+      error: "article body was too short after extraction"
     });
   });
 
@@ -54,18 +50,18 @@ describe("article research", () => {
     "https://m.youtube.com/shorts/example",
     "https://www.youtube.com/live/example",
     "https://www.youtube-nocookie.com/embed/example",
-    "https://video.twimg.com/amplify_video/123/vid/avc1/1920x1080/example.mp4?tag=1",
+    "https://video.twimg.com/amplify_video/123/vid/avc1/1920x1080/example.mp4?tag=1"
   ])("requires transcript evidence for a known video URL: %s", async (url) => {
     const client = new ArticleResearchClient({
       extract: extractArticle,
       fetch: async () => {
         throw new Error("video URL should be rejected before fetching");
-      },
+      }
     });
 
     await expect(client.research({ ref: "video:1", url })).resolves.toMatchObject({
       status: "failed",
-      error: "video research requires captions or a transcript",
+      error: "video research requires captions or a transcript"
     });
   });
 
@@ -75,22 +71,20 @@ describe("article research", () => {
       fetch: async (url, init) => {
         expect(String(url)).toBe("https://example.com/article");
         expect(init?.signal).toBeInstanceOf(AbortSignal);
-        return new Response(
-          `<article><h1>Useful article</h1><p>${"Grounded content. ".repeat(10)}</p></article>`,
-          { headers: { "content-type": "text/html" }, status: 200 },
-        );
+        return new Response(`<article><h1>Useful article</h1><p>${"Grounded content. ".repeat(10)}</p></article>`, {
+          headers: { "content-type": "text/html" },
+          status: 200
+        });
       },
-      now: () => new Date("2026-08-17T01:00:00.000Z"),
+      now: () => new Date("2026-08-17T01:00:00.000Z")
     });
 
-    await expect(
-      client.research({ ref: "article:1", url: "https://example.com/article" }),
-    ).resolves.toMatchObject({
+    await expect(client.research({ ref: "article:1", url: "https://example.com/article" })).resolves.toMatchObject({
       fetchedUrl: "https://example.com/article",
       ref: "article:1",
       status: "ok",
       title: "Useful article",
-      url: "https://example.com/article",
+      url: "https://example.com/article"
     });
   });
 });

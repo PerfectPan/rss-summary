@@ -10,13 +10,9 @@ import {
   RssFeed,
   type Acquired,
   type ActivityCardDto,
-  type RepositoryMetadata,
+  type RepositoryMetadata
 } from "../../../acquisition/index.js";
-import {
-  scoreAcquired,
-  selectResearchCandidates,
-  type CandidateProject,
-} from "../../../editorial/index.js";
+import { scoreAcquired, selectResearchCandidates, type CandidateProject } from "../../../editorial/index.js";
 import type { DigestDocument } from "./output.js";
 import { candidateDecision } from "../shared/candidate-decision.js";
 import { errorMessage, isWithinEventWindow, resolveEventWindow } from "../../../kernel/index.js";
@@ -28,7 +24,7 @@ import {
   markDelivered,
   type FeedState,
   type RunAudit,
-  type RunSourceResult,
+  type RunSourceResult
 } from "../../../delivery/index.js";
 import type { AppConfig } from "../../config/env.js";
 import type { AppServices } from "../../layers.js";
@@ -38,7 +34,7 @@ export type { DigestDocument };
 /** Subscription digest workflow. The CLI injects `render` for the output format. */
 export function runSubscriptionFlow(
   config: AppConfig,
-  render: (document: DigestDocument, format: AppConfig["outputFormat"]) => string,
+  render: (document: DigestDocument, format: AppConfig["outputFormat"]) => string
 ): Effect.Effect<void, Error, AppServices> {
   return Effect.gen(function* () {
     const { audit, document, state } = yield* collectDigest(config);
@@ -58,61 +54,46 @@ export function runSubscriptionFlow(
             afterSend: FeedStateStore.use((store) =>
               store.save(
                 config.stateFile,
-                markDelivered(
-                  state,
-                  deliveredCandidates.flatMap(deliveredEventIds),
-                  document.generatedAt,
-                ),
-              ),
-            ),
+                markDelivered(state, deliveredCandidates.flatMap(deliveredEventIds), document.generatedAt)
+              )
+            )
           }
-        : {}),
+        : {})
     });
   });
 }
 
-export function buildDigestDocument(
-  config: AppConfig,
-): Effect.Effect<DigestDocument, Error, AppServices> {
+export function buildDigestDocument(config: AppConfig): Effect.Effect<DigestDocument, Error, AppServices> {
   return Effect.map(collectDigest(config), ({ document }) => document);
 }
 
 type DigestServices = GitHubActivity | GitHubCatalog | RssFeed | FeedStateStore;
 
 function collectDigest(
-  config: AppConfig,
-): Effect.Effect<
-  { audit: RunAudit; document: DigestDocument; state: FeedState },
-  Error,
-  DigestServices
-> {
+  config: AppConfig
+): Effect.Effect<{ audit: RunAudit; document: DigestDocument; state: FeedState }, Error, DigestServices> {
   return Effect.gen(function* () {
     const [githubResult, rssResult] = yield* Effect.all(
       [
         Effect.result(config.rssOnly ? Effect.succeed<Acquired[]>([]) : fetchGithubEvents(config)),
-        Effect.result(collectRssFeeds(config.rssFeeds)),
+        Effect.result(collectRssFeeds(config.rssFeeds))
       ] as const,
-      { concurrency: "unbounded" },
+      { concurrency: "unbounded" }
     );
     const githubEvents = githubResult._tag === "Success" ? githubResult.success : [];
-    const rssCollection =
-      rssResult._tag === "Success" ? rssResult.success : { acquired: [], sources: [] };
+    const rssCollection = rssResult._tag === "Success" ? rssResult.success : { acquired: [], sources: [] };
     const rssEvents = rssCollection.acquired;
     if (githubResult._tag === "Failure") {
-      console.error(
-        `GitHub feed unavailable; continuing with RSS events: ${errorMessage(githubResult.failure)}`,
-      );
+      console.error(`GitHub feed unavailable; continuing with RSS events: ${errorMessage(githubResult.failure)}`);
     }
     if (rssResult._tag === "Failure") {
-      console.error(
-        `RSS feeds unavailable; continuing with GitHub events: ${errorMessage(rssResult.failure)}`,
-      );
+      console.error(`RSS feeds unavailable; continuing with GitHub events: ${errorMessage(rssResult.failure)}`);
     }
 
     const followees =
       config.token && !config.rssOnly
         ? yield* Effect.map(Effect.result(fetchFollowees()), (outcome) =>
-            outcome._tag === "Success" ? outcome.success : new Set<string>(),
+            outcome._tag === "Success" ? outcome.success : new Set<string>()
           )
         : new Set<string>();
     const githubCards = githubEvents.map((entry) => entry.card);
@@ -127,21 +108,17 @@ function collectDigest(
       try: () => {
         const eventWindow = resolveEventWindow(config);
         const acquired = [...githubEvents, ...rssEvents].filter((entry) =>
-          isWithinEventWindow(entry.card, eventWindow),
+          isWithinEventWindow(entry.card, eventWindow)
         );
         const events = acquired.map((entry) => entry.card);
 
         const rankedCandidates = scoreAcquired(
-          acquired.map((entry) =>
-            applyScoringContext(refreshRouting(entry), { followees, repositories }),
-          ),
-          { interests: config.interests, now: Date.now() },
+          acquired.map((entry) => applyScoringContext(refreshRouting(entry), { followees, repositories })),
+          { interests: config.interests, now: Date.now() }
         );
         const allCandidates = selectResearchCandidates(rankedCandidates, config.maxPapers);
         const state = loadFeedState(config.stateFile);
-        const candidates = config.onlyNew
-          ? filterUndelivered(allCandidates, deliveredEventIds, state)
-          : allCandidates;
+        const candidates = config.onlyNew ? filterUndelivered(allCandidates, deliveredEventIds, state) : allCandidates;
 
         const generatedAt = new Date().toISOString();
         const document: DigestDocument = {
@@ -149,7 +126,7 @@ function collectDigest(
           username: config.username,
           sourceMode: config.rssOnly ? "rss" : "mixed",
           windowLabel: eventWindow.label,
-          candidates,
+          candidates
         };
         const githubSource: RunSourceResult = {
           id: config.githubFeedSource,
@@ -157,7 +134,7 @@ function collectDigest(
           name: config.githubFeedSource === "home" ? "GitHub Home" : "GitHub received events",
           status: config.rssOnly ? "skipped" : githubResult._tag === "Success" ? "ok" : "failed",
           itemCount: githubEvents.length,
-          ...(githubResult._tag === "Failure" ? { error: errorMessage(githubResult.failure) } : {}),
+          ...(githubResult._tag === "Failure" ? { error: errorMessage(githubResult.failure) } : {})
         };
         const selectedSet = new Set(candidates);
         const researchSet = new Set(allCandidates);
@@ -173,27 +150,29 @@ function collectDigest(
             inWindow: events.length,
             ranked: rankedCandidates.length,
             selected: candidates.filter((candidate) => candidate.category !== "paper").length,
-            researchPending: candidates.filter((candidate) => candidate.category === "paper")
-              .length,
+            researchPending: candidates.filter((candidate) => candidate.category === "paper").length
           },
           candidates: rankedCandidates.map((candidate) =>
             candidateDecision(
               candidate,
               candidates,
               (value) => {
-                if (!researchSet.has(value)) return "paper abstract did not pass interest or quota";
-                if (config.onlyNew && !selectedSet.has(value))
+                if (!researchSet.has(value)) {
+                  return "paper abstract did not pass interest or quota";
+                }
+                if (config.onlyNew && !selectedSet.has(value)) {
                   return "all events were already delivered";
+                }
                 return "not selected";
               },
-              { semanticSummaries: true },
-            ),
-          ),
+              { semanticSummaries: true }
+            )
+          )
         };
         document.audit = audit;
         return { audit, document, state };
       },
-      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause)))
     });
   });
 }
@@ -205,17 +184,19 @@ function deliveredEventIds(candidate: CandidateProject): string[] {
 function fetchGithubEvents(config: AppConfig): Effect.Effect<Acquired[], Error, GitHubActivity> {
   return Effect.gen(function* () {
     const github = yield* GitHubActivity;
-    if (config.githubFeedSource === "home") return yield* github.getHomeEvents();
+    if (config.githubFeedSource === "home") {
+      return yield* github.getHomeEvents();
+    }
     return yield* github.getReceivedEvents(config.username, {
       perPage: config.perPage,
-      pages: config.eventPages,
+      pages: config.eventPages
     });
   });
 }
 
 function fetchRepositoryMetadata(
   events: ActivityCardDto[],
-  maxRepos: number,
+  maxRepos: number
 ): Effect.Effect<Map<string, RepositoryMetadata>, Error, GitHubCatalog> {
   const names = [
     ...new Set(
@@ -223,8 +204,8 @@ function fetchRepositoryMetadata(
         .filter((event) => event.type !== "other")
         .filter((event) => event.source !== "rss")
         .map((event) => event.repo)
-        .filter(Boolean),
-    ),
+        .filter(Boolean)
+    )
   ].slice(0, maxRepos);
 
   return Effect.gen(function* () {
@@ -235,9 +216,11 @@ function fetchRepositoryMetadata(
       (name) =>
         Effect.gen(function* () {
           const result = yield* Effect.result(catalog.getRepository(name));
-          if (result._tag === "Success") repositories.set(name, result.success);
+          if (result._tag === "Success") {
+            repositories.set(name, result.success);
+          }
         }),
-      { concurrency: "unbounded" },
+      { concurrency: "unbounded" }
     );
     return repositories;
   });
@@ -252,9 +235,7 @@ function fetchFollowees(): Effect.Effect<Set<string>, Error, GitHubCatalog> {
 }
 
 function enrichPullRequests(events: ActivityCardDto[]): Effect.Effect<void, Error, GitHubCatalog> {
-  const pullRequests = events
-    .filter((event) => event.type === "pull_request" && event.prNumber)
-    .slice(0, 20);
+  const pullRequests = events.filter((event) => event.type === "pull_request" && event.prNumber).slice(0, 20);
 
   return Effect.gen(function* () {
     const catalog = yield* GitHubCatalog;
@@ -262,15 +243,17 @@ function enrichPullRequests(events: ActivityCardDto[]): Effect.Effect<void, Erro
       pullRequests,
       (event) =>
         Effect.gen(function* () {
-          const result = yield* Effect.result(
-            catalog.getPullRequest(event.repo, event.prNumber ?? 0),
-          );
-          if (result._tag === "Failure") return;
+          const result = yield* Effect.result(catalog.getPullRequest(event.repo, event.prNumber ?? 0));
+          if (result._tag === "Failure") {
+            return;
+          }
           event.title = result.success.title;
           event.htmlUrl = result.success.htmlUrl;
-          if (result.success.body) event.summary = result.success.body;
+          if (result.success.body) {
+            event.summary = result.success.body;
+          }
         }),
-      { concurrency: "unbounded" },
+      { concurrency: "unbounded" }
     );
   });
 }

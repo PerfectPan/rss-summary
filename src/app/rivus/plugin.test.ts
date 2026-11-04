@@ -7,7 +7,7 @@ import type {
   RivusAutomationTemplate,
   RivusPluginRegistry,
   RivusToolDescriptor,
-  RivusToolExecutionContext,
+  RivusToolExecutionContext
 } from "@rivus/agent";
 import { describe, expect, it, vi } from "vite-plus/test";
 
@@ -23,7 +23,7 @@ import rssSummaryPlugin, {
   RSS_SUMMARY_NOON_AUTOMATION_ID,
   RSS_SUMMARY_PROFILE_ID,
   RSS_SUMMARY_RESEARCH_TOOL_ID,
-  RSS_SUMMARY_TOOL_ID,
+  RSS_SUMMARY_TOOL_ID
 } from "./plugin.js";
 import type { RssAutomationPresentation } from "../render/automation.js";
 
@@ -43,12 +43,12 @@ describe("rss-summary Rivus Plugin", () => {
               RSS_SUMMARY_DAILY_AI_TOOL_ID,
               RSS_SUMMARY_RESEARCH_TOOL_ID,
               RSS_SUMMARY_NEWS_TOOL_ID,
-              RSS_SUMMARY_INDUSTRY_TOOL_ID,
-            ],
-          },
+              RSS_SUMMARY_INDUSTRY_TOOL_ID
+            ]
+          }
         },
-        plugin: rssSummaryPlugin,
-      }),
+        plugin: rssSummaryPlugin
+      })
     ).resolves.toMatchObject({
       pluginId: "rss-summary",
       profileId: RSS_SUMMARY_PROFILE_ID,
@@ -57,8 +57,8 @@ describe("rss-summary Rivus Plugin", () => {
         RSS_SUMMARY_INDUSTRY_TOOL_ID,
         RSS_SUMMARY_NEWS_TOOL_ID,
         RSS_SUMMARY_RESEARCH_TOOL_ID,
-        RSS_SUMMARY_TOOL_ID,
-      ].sort(),
+        RSS_SUMMARY_TOOL_ID
+      ].sort()
     });
   });
 
@@ -68,7 +68,7 @@ describe("rss-summary Rivus Plugin", () => {
       generatedAt: "2026-07-17T02:00:00.000Z",
       markdown: "# Feed Digest\n",
       paperCandidateCount: 0,
-      windowLabel: "2026-07-17 +08:00",
+      windowLabel: "2026-07-17 +08:00"
     }));
     const registrations = register(createRssSummaryPlugin({ generateDigest }));
     const tool = registrations.tools.get(RSS_SUMMARY_TOOL_ID)!;
@@ -76,7 +76,7 @@ describe("rss-summary Rivus Plugin", () => {
     const result = await tool
       .createExecutor({
         toolId: RSS_SUMMARY_TOOL_ID,
-        toolVersion: "1.0.0",
+        toolVersion: "1.0.0"
       })
       .execute({ day: "2026-07-17", onlyNew: true }, executionContext());
 
@@ -98,8 +98,8 @@ describe("rss-summary Rivus Plugin", () => {
           selectedStories: 0,
           duplicateTitleStories: 0,
           topicQuotaFilteredStories: 0,
-          briefCapFilteredStories: 0,
-        },
+          briefCapFilteredStories: 0
+        }
       },
       day: "2026-07-29",
       edition: "noon" as const,
@@ -109,7 +109,7 @@ describe("rss-summary Rivus Plugin", () => {
       warnings: [],
       windowLabel: "00:00–12:30",
       stories: [],
-      topics: [],
+      topics: []
     }));
     const registrations = register(createRssSummaryPlugin({ generateNewsBrief }));
     const tool = registrations.tools.get(RSS_SUMMARY_NEWS_TOOL_ID)!;
@@ -117,16 +117,13 @@ describe("rss-summary Rivus Plugin", () => {
     const result = await tool
       .createExecutor({
         toolId: RSS_SUMMARY_NEWS_TOOL_ID,
-        toolVersion: "1.1.0",
+        toolVersion: "1.1.0"
       })
-      .execute(
-        { edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" },
-        executionContext(RSS_SUMMARY_NEWS_TOOL_ID),
-      );
+      .execute({ edition: "noon", occurrence: "2026-07-29T04:30:00.000Z" }, executionContext(RSS_SUMMARY_NEWS_TOOL_ID));
 
     expect(generateNewsBrief).toHaveBeenCalledWith({
       edition: "noon",
-      occurrence: "2026-07-29T04:30:00.000Z",
+      occurrence: "2026-07-29T04:30:00.000Z"
     });
     expect(result).toMatchObject({ itemCount: 2, markdown: "# 午间热点 · 2026-07-29\n" });
     expect(tool.risk).toBe("observe");
@@ -141,7 +138,7 @@ describe("rss-summary Rivus Plugin", () => {
       status: "ok" as const,
       title: "Useful article",
       url: "https://example.com/article",
-      tool: "article-research" as const,
+      tool: "article-research" as const
     }));
     const registrations = register(createRssSummaryPlugin({ researchArticle }));
     const tool = registrations.tools.get(RSS_SUMMARY_RESEARCH_TOOL_ID)!;
@@ -149,16 +146,16 @@ describe("rss-summary Rivus Plugin", () => {
     const result = await tool
       .createExecutor({
         toolId: RSS_SUMMARY_RESEARCH_TOOL_ID,
-        toolVersion: "1.0.0",
+        toolVersion: "1.0.0"
       })
       .execute(
         { ref: "article:1", url: "https://example.com/article" },
-        executionContext(RSS_SUMMARY_RESEARCH_TOOL_ID),
+        executionContext(RSS_SUMMARY_RESEARCH_TOOL_ID)
       );
 
     expect(researchArticle).toHaveBeenCalledWith({
       ref: "article:1",
-      url: "https://example.com/article",
+      url: "https://example.com/article"
     });
     expect(result).toMatchObject({ ref: "article:1", status: "ok", title: "Useful article" });
     expect(tool.risk).toBe("observe");
@@ -176,8 +173,8 @@ describe("rss-summary Rivus Plugin", () => {
     const fetch = vi.fn(
       async (_url: string | URL | Request, _init?: RequestInit) =>
         new Response(JSON.stringify({ ResponseMetadata: {}, Result: { WebResults: [] } }), {
-          status: 200,
-        }),
+          status: 200
+        })
     );
     vi.stubGlobal("fetch", fetch);
 
@@ -187,17 +184,17 @@ describe("rss-summary Rivus Plugin", () => {
       const result = await tool
         .createExecutor({
           toolId: RSS_SUMMARY_NEWS_TOOL_ID,
-          toolVersion: "1.1.0",
+          toolVersion: "1.1.0"
         })
         .execute(
           { edition: "evening", occurrence: "2026-07-29T11:00:00.000Z" },
-          executionContext(RSS_SUMMARY_NEWS_TOOL_ID),
+          executionContext(RSS_SUMMARY_NEWS_TOOL_ID)
         );
 
       expect(result).toMatchObject({ edition: "evening", itemCount: 0 });
       expect(fetch).toHaveBeenCalledTimes(4);
       expect(fetch.mock.calls[0]?.[1]?.headers).toMatchObject({
-        Authorization: "Bearer runtime-key",
+        Authorization: "Bearer runtime-key"
       });
     } finally {
       vi.unstubAllEnvs();
@@ -211,7 +208,7 @@ describe("rss-summary Rivus Plugin", () => {
       candidateCount: 3,
       generatedAt: "2026-08-09T01:00:00.000Z",
       markdown: "# 行业简报 · 2026-08-09\n",
-      paperCandidateCount: 1,
+      paperCandidateCount: 1
     }));
     const registrations = register(createRssSummaryPlugin({ generateIndustryBrief }));
     const tool = registrations.tools.get(RSS_SUMMARY_INDUSTRY_TOOL_ID)!;
@@ -219,18 +216,15 @@ describe("rss-summary Rivus Plugin", () => {
     const result = await tool
       .createExecutor({
         toolId: RSS_SUMMARY_INDUSTRY_TOOL_ID,
-        toolVersion: "1.1.0",
+        toolVersion: "1.1.0"
       })
-      .execute(
-        { occurrence: "2026-08-09T01:00:00.000Z" },
-        executionContext(RSS_SUMMARY_INDUSTRY_TOOL_ID),
-      );
+      .execute({ occurrence: "2026-08-09T01:00:00.000Z" }, executionContext(RSS_SUMMARY_INDUSTRY_TOOL_ID));
 
     expect(generateIndustryBrief).toHaveBeenCalledWith({ occurrence: "2026-08-09T01:00:00.000Z" });
     expect(result).toMatchObject({
       candidateCount: 3,
       markdown: "# 行业简报 · 2026-08-09\n",
-      paperCandidateCount: 1,
+      paperCandidateCount: 1
     });
     expect(tool.risk).toBe("observe");
   });
@@ -249,7 +243,7 @@ describe("rss-summary Rivus Plugin", () => {
       RSS_SUMMARY_DAILY_AI_TOOL_ID,
       RSS_SUMMARY_RESEARCH_TOOL_ID,
       RSS_SUMMARY_NEWS_TOOL_ID,
-      RSS_SUMMARY_INDUSTRY_TOOL_ID,
+      RSS_SUMMARY_INDUSTRY_TOOL_ID
     ]);
     expect(registrations.automations).toHaveLength(5);
     expect(morning.requestedToolIds).toEqual([RSS_SUMMARY_TOOL_ID, RSS_SUMMARY_RESEARCH_TOOL_ID]);
@@ -288,11 +282,11 @@ describe("rss-summary Rivus Plugin", () => {
     expect(
       presentationTemplate(dailyAi).createPresentation({
         occurrence,
-        text: "# Daily AI Digest · 2026-07-29\n\n1 条可信动态\n\n## 模型发布\n\n1. 新模型上线 [↗ #1](https://example.test/model)",
-      }),
+        text: "# Daily AI Digest · 2026-07-29\n\n1 条可信动态\n\n## 模型发布\n\n1. 新模型上线 [↗ #1](https://example.test/model)"
+      })
     ).toMatchObject({
       schemaVersion: 1,
-      sections: [{ items: [{ headline: "新模型上线" }], title: "模型发布" }],
+      sections: [{ items: [{ headline: "新模型上线" }], title: "模型发布" }]
     });
   });
 });
@@ -300,8 +294,9 @@ describe("rss-summary Rivus Plugin", () => {
 function presentationTemplate(template: RivusAutomationTemplate): RivusAutomationTemplate & {
   createPresentation(output: { occurrence: string; text: string }): RssAutomationPresentation;
 } {
-  if (!("createPresentation" in template))
+  if (!("createPresentation" in template)) {
     throw new Error("Automation presentation adapter is missing");
+  }
   return template as RivusAutomationTemplate & {
     createPresentation(output: { occurrence: string; text: string }): RssAutomationPresentation;
   };
@@ -319,14 +314,15 @@ function register(plugin: { register(registry: RivusPluginRegistry): void }): {
     registerAgentProfile: (profile) => profiles.push(profile),
     registerAutomation: (automation) => automations.push(automation),
     registerSkill: () => undefined,
-    registerTool: (tool) => tools.push(tool),
+    registerTool: (tool) => tools.push(tool)
   });
-  if (!profiles[0] || !tools[0] || !automations[0])
+  if (!profiles[0] || !tools[0] || !automations[0]) {
     throw new Error("Plugin registration is incomplete");
+  }
   return {
     automations: new Map(automations.map((automation) => [automation.id, automation])),
     profile: profiles[0],
-    tools: new Map(tools.map((tool) => [tool.id, tool])),
+    tools: new Map(tools.map((tool) => [tool.id, tool]))
   };
 }
 
@@ -339,6 +335,6 @@ function executionContext(toolId = RSS_SUMMARY_TOOL_ID): RivusToolExecutionConte
     runId: "run-1",
     sessionKey: "local:rss-digest:test",
     toolId,
-    toolVersion: "1.0.0",
+    toolVersion: "1.0.0"
   };
 }

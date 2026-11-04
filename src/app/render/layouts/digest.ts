@@ -5,19 +5,17 @@ import { candidateBriefView } from "./candidate.js";
 /** Lay the subscription digest document out as a View IR brief. */
 export function digestView(
   document: DigestDocument,
-  options: { summaries?: ReadonlyMap<string, string> } = {},
+  options: { summaries?: ReadonlyMap<string, string> } = {}
 ): ViewDocument {
   const date = document.displayDate ?? document.generatedAt.slice(0, 10);
-  const publishableCount = document.candidates.filter(
-    (candidate) => candidate.category !== "paper",
-  ).length;
+  const publishableCount = document.candidates.filter((candidate) => candidate.category !== "paper").length;
   const pendingPapers = document.candidates.length - publishableCount;
   const sourceLabel = document.sourceMode === "rss" ? "个人博客" : "GitHub Home + 个人博客";
   const metadata = [
     `${publishableCount} 条更新`,
     pendingPapers > 0 ? `${pendingPapers} 篇论文待研究` : undefined,
     sourceLabel,
-    document.windowLabel,
+    document.windowLabel
   ]
     .filter(Boolean)
     .join(" · ");
@@ -31,7 +29,7 @@ export function digestView(
     pendingMessage: (count) => `另有 ${count} 篇论文等待原文核验，暂不直接推送。`,
     semanticSummaries: true,
     summaryLimit: 20,
-    summaries: options.summaries,
+    summaries: options.summaries
   });
 }
 

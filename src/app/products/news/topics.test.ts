@@ -6,16 +6,14 @@ import { parseNewsTopics } from "./topics.js";
 
 describe("news topics", () => {
   it("loads the curated daily brief topics within the eight-item and search budgets", () => {
-    const topics = parseNewsTopics(
-      readFileSync(new URL("../../../../news-topics.json", import.meta.url), "utf8"),
-    );
+    const topics = parseNewsTopics(readFileSync(new URL("../../../../news-topics.json", import.meta.url), "utf8"));
 
     expect(topics.map(({ id }) => id)).toEqual([
       "ai-model-releases",
       "developer-tools",
       "infrastructure-security",
       "tech-policy",
-      "capital-industry",
+      "capital-industry"
     ]);
     expect(topics.reduce((total, { maxItems }) => total + maxItems, 0)).toBe(8);
     const queries = topics.flatMap(({ queries }) => queries);
@@ -28,12 +26,12 @@ describe("news topics", () => {
     expect(
       topics
         .filter(({ id }) => ["ai-model-releases", "developer-tools", "tech-policy"].includes(id))
-        .every(({ sourcePolicy }) => sourcePolicy === "news"),
+        .every(({ sourcePolicy }) => sourcePolicy === "news")
     ).toBe(true);
     expect(
       topics
         .filter(({ id }) => ["infrastructure-security", "capital-industry"].includes(id))
-        .every(({ sourcePolicy }) => sourcePolicy === "news"),
+        .every(({ sourcePolicy }) => sourcePolicy === "news")
     ).toBe(true);
   });
 
@@ -47,7 +45,7 @@ describe("news topics", () => {
             enabled: true,
             sourcePolicy: "authoritative",
             maxItems: 3,
-            queries: [rawQuery("ai")],
+            queries: [rawQuery("ai")]
           },
           {
             id: "technology",
@@ -55,10 +53,10 @@ describe("news topics", () => {
             enabled: true,
             sourcePolicy: "official",
             maxItems: 3,
-            queries: [rawQuery("policy")],
-          },
-        ]),
-      ),
+            queries: [rawQuery("policy")]
+          }
+        ])
+      )
     ).toThrow(/duplicate.*technology/i);
 
     expect(() =>
@@ -70,10 +68,10 @@ describe("news topics", () => {
             enabled: true,
             sourcePolicy: "authoritative",
             maxItems: 3,
-            queries: [rawQuery("empty", "")],
-          },
-        ]),
-      ),
+            queries: [rawQuery("empty", "")]
+          }
+        ])
+      )
     ).toThrow(/query/i);
 
     expect(() =>
@@ -85,10 +83,10 @@ describe("news topics", () => {
             enabled: true,
             sourcePolicy: "authoritative",
             maxItems: 3,
-            queries: [rawQuery("same"), rawQuery("same")],
-          },
-        ]),
-      ),
+            queries: [rawQuery("same"), rawQuery("same")]
+          }
+        ])
+      )
     ).toThrow(/duplicate news query id/i);
 
     expect(() =>
@@ -100,10 +98,10 @@ describe("news topics", () => {
             enabled: true,
             sourcePolicy: "authoritative",
             maxItems: 3,
-            queries: [{ ...rawQuery("missing-event"), eventAny: [] }],
-          },
-        ]),
-      ),
+            queries: [{ ...rawQuery("missing-event"), eventAny: [] }]
+          }
+        ])
+      )
     ).toThrow(/eventAny.*non-empty/i);
   });
 
@@ -118,10 +116,10 @@ describe("news topics", () => {
             enabled: true,
             sourcePolicy: "authoritative",
             maxItems: 3,
-            queries,
-          },
-        ]),
-      ),
+            queries
+          }
+        ])
+      )
     ).toThrow(/at most 8 queries/i);
 
     expect(() =>
@@ -133,10 +131,10 @@ describe("news topics", () => {
             enabled: true,
             sourcePolicy: "authoritative",
             maxItems: 11,
-            queries: [rawQuery("ai")],
-          },
-        ]),
-      ),
+            queries: [rawQuery("ai")]
+          }
+        ])
+      )
     ).toThrow(/maxItems.*10/i);
 
     expect(() =>
@@ -148,10 +146,10 @@ describe("news topics", () => {
             enabled: true,
             sourcePolicy: "authoritative",
             maxItems: 3,
-            queries: [rawQuery("too-long", "a".repeat(101))],
-          },
-        ]),
-      ),
+            queries: [rawQuery("too-long", "a".repeat(101))]
+          }
+        ])
+      )
     ).toThrow(/query 1 text.*100 characters/i);
   });
 });
@@ -163,7 +161,7 @@ function rawQuery(id: string, text = "AI 正式发布") {
     intent: "model-release",
     subjectAny: ["AI"],
     eventAny: ["正式发布"],
-    excludedAny: ["评测"],
+    excludedAny: ["评测"]
   };
 }
 
@@ -183,27 +181,17 @@ it("validates optional GLM query and trusted-source configuration", () => {
         subjectAny: ["TypeScript"],
         eventAny: ["release"],
         excludedAny: [],
-        glm: { query: "TypeScript release", domains: ["devblogs.microsoft.com"] },
-      },
-    ],
+        glm: { query: "TypeScript release", domains: ["devblogs.microsoft.com"] }
+      }
+    ]
   };
-  expect(parseNewsTopics(JSON.stringify([topic]))[0].queries[0].glm?.domains).toEqual([
-    "devblogs.microsoft.com",
-  ]);
-  for (const domains of [
-    [],
-    ["https://example.com"],
-    ["example.com/path"],
-    ["host.local"],
-    ["127.0.0.1"],
-  ]) {
+  expect(parseNewsTopics(JSON.stringify([topic]))[0]!.queries[0]!.glm?.domains).toEqual(["devblogs.microsoft.com"]);
+  for (const domains of [[], ["https://example.com"], ["example.com/path"], ["host.local"], ["127.0.0.1"]]) {
     expect(() =>
       parseNewsTopics(
-        JSON.stringify([
-          { ...topic, queries: [{ ...topic.queries[0], glm: { query: "release", domains } }] },
-        ]),
-      ),
-    ).toThrow();
+        JSON.stringify([{ ...topic, queries: [{ ...topic.queries[0], glm: { query: "release", domains } }] }])
+      )
+    ).toThrow(/glm domain/);
   }
 });
 
@@ -213,7 +201,7 @@ it("rejects per-source queries that escape the configured domains or query limit
     label: "Test",
     sourcePolicy: "official",
     maxItems: 1,
-    queries: [rawQuery("release")],
+    queries: [rawQuery("release")]
   };
   for (const sourceQueries of [{ "other.com": "release" }, { "example.com": "x".repeat(71) }]) {
     expect(() =>
@@ -224,30 +212,28 @@ it("rejects per-source queries that escape the configured domains or query limit
             queries: [
               {
                 ...topic.queries[0],
-                glm: { query: "release", domains: ["example.com"], sourceQueries },
-              },
-            ],
-          },
-        ]),
-      ),
-    ).toThrow();
+                glm: { query: "release", domains: ["example.com"], sourceQueries }
+              }
+            ]
+          }
+        ])
+      )
+    ).toThrow(/source query/);
   }
 });
 
 it("parses optional DeepSeek supplement keywords with bounded length and count", () => {
   const query = {
     ...rawQuery("release"),
-    deepseek: { queries: ["TypeScript release", "Node.js 发布"] },
+    deepseek: { queries: ["TypeScript release", "Node.js 发布"] }
   };
-  expect(parseNewsTopics(JSON.stringify([{ ...topicWith(query) }]))[0].queries[0].deepseek).toEqual(
-    {
-      queries: ["TypeScript release", "Node.js 发布"],
-    },
-  );
+  expect(parseNewsTopics(JSON.stringify([{ ...topicWith(query) }]))[0]!.queries[0]!.deepseek).toEqual({
+    queries: ["TypeScript release", "Node.js 发布"]
+  });
   for (const queries of [[], ["a", "b", "c", "d", "e"], ["x".repeat(101)], ["  "]]) {
-    expect(() =>
-      parseNewsTopics(JSON.stringify([{ ...topicWith({ ...query, deepseek: { queries } }) }])),
-    ).toThrow();
+    expect(() => parseNewsTopics(JSON.stringify([{ ...topicWith({ ...query, deepseek: { queries } }) }]))).toThrow(
+      /deepseek/
+    );
   }
 });
 
@@ -259,6 +245,6 @@ function topicWith(query: ReturnType<typeof rawQuery> & { deepseek?: { queries: 
     enabled: true,
     sourcePolicy: "news",
     maxItems: 1,
-    queries: [query],
+    queries: [query]
   };
 }

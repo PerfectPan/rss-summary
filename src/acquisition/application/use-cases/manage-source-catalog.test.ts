@@ -12,8 +12,9 @@ import { SourceCatalogStoreLive } from "../../infra/factories/live.js";
 const directories: string[] = [];
 
 afterEach(() => {
-  for (const directory of directories.splice(0))
+  for (const directory of directories.splice(0)) {
     rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 describe("manage source catalog", () => {
@@ -30,16 +31,16 @@ describe("manage source catalog", () => {
         addCatalogFeed(path, {
           url: "https://example.com/feed.xml",
           name: "Example",
-          tags: ["ai"],
-        }),
-      ),
+          tags: ["ai"]
+        })
+      )
     ).toEqual([{ name: "Example", url: "https://example.com/feed.xml", tags: ["ai"] }]);
-    await expect(
-      run(addCatalogFeed(path, { url: "https://example.com/feed.xml" })),
-    ).rejects.toThrow("RSS feed already exists: https://example.com/feed.xml");
+    await expect(run(addCatalogFeed(path, { url: "https://example.com/feed.xml" }))).rejects.toThrow(
+      "RSS feed already exists: https://example.com/feed.xml"
+    );
     expect(await run(removeCatalogFeed(path, "https://example.com/feed.xml"))).toEqual([]);
     await expect(run(removeCatalogFeed(path, "https://example.com/feed.xml"))).rejects.toThrow(
-      "RSS feed not found: https://example.com/feed.xml",
+      "RSS feed not found: https://example.com/feed.xml"
     );
   });
 });

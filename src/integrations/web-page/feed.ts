@@ -7,6 +7,5 @@ import { readWebPageEvents, type WebPageOptions } from "./client.js";
 
 export const WebPageLive = (options: WebPageOptions = {}): Layer.Layer<WebPage> =>
   Layer.succeed(WebPage, {
-    getEvents: (source) =>
-      Effect.map(readWebPageEvents(source, options), (cards) => cards.map(acquireActivityCard)),
+    getEvents: (source) => Effect.map(readWebPageEvents(source, options), (cards) => cards.map(acquireActivityCard))
   });

@@ -22,18 +22,26 @@ export function renderViewMarkdown(view: ViewDocument): string {
   const lines: string[] = [`# ${view.title}`, "", ...view.meta, ""];
   for (const section of view.sections) {
     lines.push(section.style === "atx" ? `## ${section.heading}` : `**${section.heading}**`, "");
-    for (const item of section.items) lines.push(...itemLines(item));
+    for (const item of section.items) {
+      lines.push(...itemLines(item));
+    }
     const last = section.items.at(-1)?.shape;
-    if (last === "bullet" || last === "numbered") lines.push("");
+    if (last === "bullet" || last === "numbered") {
+      lines.push("");
+    }
   }
   for (const entry of view.trailing) {
     if (view.variant === "brief") {
       lines.push(entry.text);
       continue;
     }
-    if (view.variant === "daily-ai" && entry.kind === "status") lines.push("");
+    if (view.variant === "daily-ai" && entry.kind === "status") {
+      lines.push("");
+    }
     lines.push(entry.text);
-    if (view.variant !== "daily-ai" || entry.kind !== "status") lines.push("");
+    if (view.variant !== "daily-ai" || entry.kind !== "status") {
+      lines.push("");
+    }
   }
   const joined = lines.join("\n").trim();
   return view.variant === "daily-ai" ? joined : `${joined}\n`;
@@ -46,13 +54,15 @@ function itemLines(item: ViewItem): string[] {
       `**[${item.headline}](${primary?.url ?? ""})**`,
       ...item.notes,
       ...(item.sourceLabel === undefined ? [] : [`来源：${item.sourceLabel}`]),
-      "",
+      ""
     ];
   }
   if (item.shape === "card") {
     return [`**${item.number}. [${item.headline}](${primary?.url ?? ""})**`, ...item.notes, ""];
   }
   const badges = item.links.map((link) => `[${link.text}](${link.url})`).join(" ");
-  if (item.shape === "bullet") return [`- ${item.headline}${badges}`];
+  if (item.shape === "bullet") {
+    return [`- ${item.headline}${badges}`];
+  }
   return [`${item.number}. ${item.headline}${badges ? ` ${badges}` : ""}`];
 }

@@ -12,5 +12,5 @@ export {
   type DailyAiEditorialItem,
   type DailyAiEditorialValidation,
   type DailyAiEvidence,
-  type DailyAiSourceTier,
+  type DailyAiSourceTier
 } from "./value-objects/daily-ai.js";

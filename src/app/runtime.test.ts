@@ -10,8 +10,8 @@ describe("app/runtime", () => {
       stderr: {
         write(chunk: string) {
           writes.push(chunk);
-        },
-      },
+        }
+      }
     });
 
     expect(code).toBe(0);
@@ -24,8 +24,8 @@ describe("app/runtime", () => {
       stderr: {
         write(chunk: string) {
           writes.push(chunk);
-        },
-      },
+        }
+      }
     });
 
     expect(code).toBe(1);

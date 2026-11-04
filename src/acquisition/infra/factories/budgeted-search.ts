@@ -2,24 +2,11 @@ import { resolve } from "node:path";
 import { Schema } from "effect";
 
 import { withBudget, type BudgetedSearch } from "../../application/services/with-budget.js";
-import {
-  cacheablePage,
-  normalizeHttpProvider,
-  presentCachedPage,
-} from "../../domain/budget/index.js";
-import {
-  validateBudgetOptions,
-  type BudgetLimits,
-  type CachedPage,
-} from "../../domain/budget/index.js";
+import { cacheablePage, normalizeHttpProvider, presentCachedPage } from "../../domain/budget/index.js";
+import { validateBudgetOptions, type BudgetLimits, type CachedPage } from "../../domain/budget/index.js";
 import type { SearchInput, SearchPage } from "../../domain/search/index.js";
 import { pageRepresentable, rawPageSchema } from "../models/news-search.js";
-import {
-  loadSearchBudget,
-  saveSearchBudget,
-  sha256,
-  withSearchBudgetLock,
-} from "../repository/search-budget-file.js";
+import { loadSearchBudget, saveSearchBudget, sha256, withSearchBudgetLock } from "../repository/search-budget-file.js";
 
 export type BudgetOptions = {
   stateFile: string;
@@ -42,14 +29,14 @@ export function createBudgetedNewsSearch(options: BudgetOptions): BudgetedSearch
     monthlyLimit: options.monthlyLimit,
     cacheTtlMs: options.cacheTtlMs,
     stateFile: options.stateFile,
-    timezoneOffset: options.timezoneOffset,
+    timezoneOffset: options.timezoneOffset
   });
   const stateFile = resolve(options.stateFile);
   const limits: BudgetLimits = {
     dailyLimit: options.dailyLimit,
     monthlyLimit: options.monthlyLimit,
     timezoneOffset: options.timezoneOffset,
-    cacheTtlMs: options.cacheTtlMs,
+    cacheTtlMs: options.cacheTtlMs
   };
   return withBudget(options.search, {
     stateFile,
@@ -58,12 +45,11 @@ export function createBudgetedNewsSearch(options: BudgetOptions): BudgetedSearch
     now: options.now ?? (() => new Date()),
     hash: sha256,
     normalize: options.normalize ?? normalizeHttpProvider,
-    isCacheable: (page) =>
-      (options.cacheable ?? true) && pageRepresentable(page) && cacheablePage(page),
+    isCacheable: (page) => (options.cacheable ?? true) && pageRepresentable(page) && cacheablePage(page),
     presentCache: presentCachedPage,
     decodePage: (page) => Schema.decodeUnknownSync(rawPageSchema)(page) as CachedPage,
     load: () => loadSearchBudget(stateFile, limits),
     save: (state) => saveSearchBudget(stateFile, state),
-    withLock: (effect) => withSearchBudgetLock(stateFile, effect),
+    withLock: (effect) => withSearchBudgetLock(stateFile, effect)
   });
 }

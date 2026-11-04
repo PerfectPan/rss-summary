@@ -3,23 +3,19 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   presentationDecisionForCandidate,
   presentationDepthForCandidate,
-  type CandidateProject,
+  type CandidateProject
 } from "../../../index.js";
 
 describe("candidate presentation depth", () => {
   it("keeps ordinary trusted-source updates compact", () => {
-    expect(
-      presentationDepthForCandidate(
-        presented({ category: "release", eventTypes: ["release"], score: 30 }),
-      ),
-    ).toBe("link");
+    expect(presentationDepthForCandidate(presented({ category: "release", eventTypes: ["release"], score: 30 }))).toBe(
+      "link"
+    );
   });
 
   it("expands RSS publications and pull requests only for the subscription policy", () => {
     expect(presentationDepthForCandidate(presented({ score: 30 }))).toBe("link");
-    expect(
-      presentationDepthForCandidate(presented({ score: 30 }), { semanticSummaries: true }),
-    ).toBe("summary");
+    expect(presentationDepthForCandidate(presented({ score: 30 }), { semanticSummaries: true })).toBe("summary");
     expect(
       presentationDepthForCandidate(
         presented({
@@ -27,36 +23,26 @@ describe("candidate presentation depth", () => {
           source: "github",
           category: "activity",
           eventTypes: ["pull_request"],
-          score: 20,
+          score: 20
         }),
-        { semanticSummaries: true },
-      ),
+        { semanticSummaries: true }
+      )
     ).toBe("summary");
   });
 
   it("expands explainable importance matches and routes papers to research", () => {
+    expect(presentationDepthForCandidate(presented({ score: 50, matchedInterests: ["agent"] }))).toBe("summary");
     expect(
-      presentationDepthForCandidate(presented({ score: 50, matchedInterests: ["agent"] })),
+      presentationDepthForCandidate(presented({ category: "release", score: 20, matchedInterests: ["agent"] }))
     ).toBe("summary");
-    expect(
-      presentationDepthForCandidate(
-        presented({ category: "release", score: 20, matchedInterests: ["agent"] }),
-      ),
-    ).toBe("summary");
-    expect(presentationDepthForCandidate(presented({ category: "paper", score: 80 }))).toBe(
-      "research",
-    );
+    expect(presentationDepthForCandidate(presented({ category: "paper", score: 80 }))).toBe("research");
   });
 
   it("does not expand an item from score alone", () => {
-    expect(
-      presentationDepthForCandidate(
-        presented({ category: "release", eventTypes: ["release"], score: 100 }),
-      ),
-    ).toBe("link");
-    expect(presentationDepthForCandidate(presented({ category: "release", score: 85 }))).toBe(
-      "link",
+    expect(presentationDepthForCandidate(presented({ category: "release", eventTypes: ["release"], score: 100 }))).toBe(
+      "link"
     );
+    expect(presentationDepthForCandidate(presented({ category: "release", score: 85 }))).toBe("link");
   });
 
   it("uses repeated mentions only for ranking, not for summary expansion", () => {
@@ -66,9 +52,9 @@ describe("candidate presentation depth", () => {
           category: "release",
           eventTypes: ["release"],
           score: 120,
-          reasons: ["multiple followed mentions"],
-        }),
-      ),
+          reasons: ["multiple followed mentions"]
+        })
+      )
     ).toBe("link");
     expect(
       presentationDepthForCandidate(
@@ -76,9 +62,9 @@ describe("candidate presentation depth", () => {
           category: "release",
           eventTypes: ["release"],
           score: 65,
-          reasons: ["GitHub Home announcement"],
-        }),
-      ),
+          reasons: ["GitHub Home announcement"]
+        })
+      )
     ).toBe("link");
     expect(
       presentationDepthForCandidate(
@@ -86,9 +72,9 @@ describe("candidate presentation depth", () => {
           category: "release",
           eventTypes: ["release"],
           score: 55,
-          reasons: ["pull request merged"],
-        }),
-      ),
+          reasons: ["pull request merged"]
+        })
+      )
     ).toBe("link");
   });
 
@@ -98,18 +84,16 @@ describe("candidate presentation depth", () => {
         category: "release",
         score: 40,
         label: "Runtime security update",
-        description: "Fixes CVE-2026-12345 and a critical vulnerability.",
-      }),
+        description: "Fixes CVE-2026-12345 and a critical vulnerability."
+      })
     );
     expect(security).toMatchObject({
       depth: "summary",
       reasonCode: "security-event",
-      evidence: "security update",
+      evidence: "security update"
     });
     expect(
-      presentationDepthForCandidate(
-        presented({ score: 40, label: "API 弃用公告", description: "包含破坏性变更。" }),
-      ),
+      presentationDepthForCandidate(presented({ score: 40, label: "API 弃用公告", description: "包含破坏性变更。" }))
     ).toBe("summary");
   });
 
@@ -146,7 +130,7 @@ describe("candidate presentation depth", () => {
     ["general availability", "major-release"],
     ["generally available", "major-release"],
     ["public preview", "major-release"],
-    ["major release", "major-release"],
+    ["major release", "major-release"]
   ] as const)("classifies %s as %s", (keyword, reasonCode) => {
     expect(
       presentationDecisionForCandidate(
@@ -155,9 +139,9 @@ describe("candidate presentation depth", () => {
           eventTypes: ["release"],
           score: 10,
           label: keyword,
-          description: "ordinary wording",
-        }),
-      ),
+          description: "ordinary wording"
+        })
+      )
     ).toEqual({ depth: "summary", reasonCode, evidence: keyword });
   });
 
@@ -165,7 +149,7 @@ describe("candidate presentation depth", () => {
     const article = presented({
       score: 10,
       label: "Ordinary note",
-      description: "No impact phrase.",
+      description: "No impact phrase."
     });
     const pullRequest = presented({
       score: 10,
@@ -174,30 +158,30 @@ describe("candidate presentation depth", () => {
       eventTypes: ["pull_request"],
       repo: "example/project",
       label: "Ordinary change",
-      description: "No impact phrase.",
+      description: "No impact phrase."
     });
     const release = presented({
       score: 10,
       category: "release",
       eventTypes: ["release"],
       label: "Ordinary release",
-      description: "No impact phrase.",
+      description: "No impact phrase."
     });
     expect(presentationDecisionForCandidate(article, { semanticSummaries: true })).toEqual({
       depth: "summary",
-      reasonCode: "semantic-summary",
+      reasonCode: "semantic-summary"
     });
     expect(presentationDecisionForCandidate(article)).toEqual({
       depth: "link",
-      reasonCode: "ordinary-update",
+      reasonCode: "ordinary-update"
     });
     expect(presentationDecisionForCandidate(pullRequest, { semanticSummaries: true })).toEqual({
       depth: "summary",
-      reasonCode: "semantic-summary",
+      reasonCode: "semantic-summary"
     });
     expect(presentationDecisionForCandidate(release, { semanticSummaries: true })).toEqual({
       depth: "link",
-      reasonCode: "ordinary-update",
+      reasonCode: "ordinary-update"
     });
   });
 
@@ -207,16 +191,14 @@ describe("candidate presentation depth", () => {
         presented({
           score: 50,
           reasons: ["arbitrary display copy"],
-          matchedInterests: ["agent"],
-        }),
-      ),
+          matchedInterests: ["agent"]
+        })
+      )
     ).toEqual({ depth: "summary", reasonCode: "interest-match", evidence: "agent" });
   });
 });
 
-function presented(
-  overrides: Partial<CandidateProject> & Pick<CandidateProject, "score">,
-): CandidateProject {
+function presented(overrides: Partial<CandidateProject> & Pick<CandidateProject, "score">): CandidateProject {
   return {
     repo: "rss:https://example.com/post",
     source: "rss",
@@ -225,6 +207,6 @@ function presented(
     eventTypes: ["article"],
     reasons: [],
     events: [],
-    ...overrides,
+    ...overrides
   };
 }

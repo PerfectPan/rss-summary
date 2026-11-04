@@ -11,9 +11,7 @@ import type { AuditedSearchPage as NewsSearchPage } from "./audit.js";
 
 const directories: string[] = [];
 afterEach(async () => {
-  await Promise.all(
-    directories.splice(0).map((path) => rm(path, { recursive: true, force: true })),
-  );
+  await Promise.all(directories.splice(0).map((path) => rm(path, { recursive: true, force: true })));
 });
 const since = "2026-10-13T01:00:00.000Z";
 const until = "2026-10-14T01:00:00.000Z";
@@ -31,9 +29,9 @@ const page: NewsSearchPage = {
       url: "https://x.com/claudedevs/status/123",
       publishTime: since,
       rankPosition: 1,
-      authInfoLevel: 4,
-    },
-  ],
+      authInfoLevel: 4
+    }
+  ]
 };
 async function fixture() {
   const directory = await mkdtemp(join(tmpdir(), "x-accounts-test-"));
@@ -41,7 +39,7 @@ async function fixture() {
   const env = {
     NEWS_SEARCH_STATE_FILE: join(directory, "budget.json"),
     NEWS_SEARCH_DAILY_LIMIT: "4",
-    NEWS_SEARCH_MONTHLY_LIMIT: "120",
+    NEWS_SEARCH_MONTHLY_LIMIT: "120"
   };
   const search = vi.fn<GrokXClient["search"]>().mockResolvedValue(page);
   return { env, search, dependencies: { env, now, client: { search } } };
@@ -51,7 +49,7 @@ describe("X account subscriptions", () => {
   it("collects original and quote commentary once per normalized account without news filtering", async () => {
     const { search, dependencies } = await fixture();
     const result = await Effect.runPromise(
-      collectXAccountPosts({ ...input, handles: ["@ClaudeDevs", "claudedevs"] }, dependencies),
+      collectXAccountPosts({ ...input, handles: ["@ClaudeDevs", "claudedevs"] }, dependencies)
     );
     expect(search).toHaveBeenCalledTimes(1);
     expect(search.mock.calls[0]?.[0]).toMatchObject({ handle: "claudedevs", since, until });
@@ -62,7 +60,7 @@ describe("X account subscriptions", () => {
       status: "ok",
       acceptedCount: 1,
       limitReached: false,
-      searchUsage: { source: "network", dailyUsed: 1 },
+      searchUsage: { source: "network", dailyUsed: 1 }
     });
   });
 
@@ -72,9 +70,7 @@ describe("X account subscriptions", () => {
     const replay = await Effect.runPromise(collectXAccountPosts(input, dependencies));
     expect(search).toHaveBeenCalledTimes(1);
     expect(replay.audit[0]?.searchUsage).toMatchObject({ source: "cache", dailyUsed: 1 });
-    await Effect.runPromise(
-      collectXAccountPosts({ ...input, until: "2026-10-14T01:01:00.000Z" }, dependencies),
-    );
+    await Effect.runPromise(collectXAccountPosts({ ...input, until: "2026-10-14T01:01:00.000Z" }, dependencies));
     expect(search).toHaveBeenCalledTimes(2);
   });
 
@@ -89,11 +85,9 @@ describe("X account subscriptions", () => {
       monthlyLimit: 120,
       timezoneOffset: "+08:00",
       cacheTtlMs: 60_000,
-      now,
+      now
     });
-    await Effect.runPromise(
-      news({ query: "AI announcements", count: 10, day: "2026-10-14", sourcePolicy: "news" }),
-    );
+    await Effect.runPromise(news({ query: "AI announcements", count: 10, day: "2026-10-14", sourcePolicy: "news" }));
     const result = await Effect.runPromise(collectXAccountPosts(input, dependencies));
     expect(search).not.toHaveBeenCalled();
     expect(result).toEqual({
@@ -103,9 +97,9 @@ describe("X account subscriptions", () => {
           handle: "claudedevs",
           status: "failed",
           acceptedCount: 0,
-          errorCode: "local_budget_exhausted",
-        },
-      ],
+          errorCode: "local_budget_exhausted"
+        }
+      ]
     });
   });
 
@@ -113,14 +107,12 @@ describe("X account subscriptions", () => {
     const { env, search, dependencies } = await fixture();
     search.mockRejectedValueOnce(new NewsSearchError("grok_cli_failed", "private output"));
     const result = await Effect.runPromise(
-      collectXAccountPosts({ ...input, handles: ["ClaudeDevs", "OpenAI"] }, dependencies),
+      collectXAccountPosts({ ...input, handles: ["ClaudeDevs", "OpenAI"] }, dependencies)
     );
     expect(search).toHaveBeenCalledTimes(2);
     expect(result.audit.map(({ status }) => status)).toEqual(["failed", "ok"]);
     expect(JSON.stringify(result)).not.toContain("private output");
-    expect(JSON.parse(await readFile(env.NEWS_SEARCH_STATE_FILE, "utf8")).daily["2026-10-14"]).toBe(
-      2,
-    );
+    expect(JSON.parse(await readFile(env.NEWS_SEARCH_STATE_FILE, "utf8")).daily["2026-10-14"]).toBe(2);
   });
 
   it("reports a saturated retrieval rather than claiming a complete timeline", async () => {
@@ -133,23 +125,21 @@ describe("X account subscriptions", () => {
   it("does not require Grok configuration when disabled", async () => {
     expect(
       await Effect.runPromise(
-        collectXAccountPosts(
-          { ...input, handles: [] },
-          { env: { NEWS_GROK_MODEL: "invalid/model" } },
-        ),
-      ),
+        collectXAccountPosts({ ...input, handles: [] }, { env: { NEWS_GROK_MODEL: "invalid/model" } })
+      )
     ).toEqual({ posts: [], audit: [] });
   });
 
-  it.each([{ handles: ["ClaudeDevs OR OpenAI"] }, { since: until }, { until: "invalid" }])(
-    "rejects invalid subscription input before consuming budget",
-    async (change) => {
-      const { env, search, dependencies } = await fixture();
-      await expect(
-        Effect.runPromise(collectXAccountPosts({ ...input, ...change }, dependencies)),
-      ).rejects.toThrow();
-      expect(search).not.toHaveBeenCalled();
-      await expect(readFile(env.NEWS_SEARCH_STATE_FILE)).rejects.toMatchObject({ code: "ENOENT" });
-    },
-  );
+  it.each([
+    [{ handles: ["ClaudeDevs OR OpenAI"] }, /Expected a string matching/],
+    [{ since: until }, /non-empty time window/],
+    [{ until: "invalid" }, /Expected <filter>/]
+  ])("rejects invalid subscription input before consuming budget", async (change, message) => {
+    const { env, search, dependencies } = await fixture();
+    await expect(Effect.runPromise(collectXAccountPosts({ ...input, ...change }, dependencies))).rejects.toThrow(
+      message
+    );
+    expect(search).not.toHaveBeenCalled();
+    await expect(readFile(env.NEWS_SEARCH_STATE_FILE)).rejects.toMatchObject({ code: "ENOENT" });
+  });
 });

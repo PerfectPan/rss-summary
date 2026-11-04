@@ -24,7 +24,7 @@ export function projectNewsHit(
     eventAny: readonly string[];
     excludedAny: readonly string[];
   },
-  credibility: NewsCredibility,
+  credibility: NewsCredibility
 ): NewsSearchHit {
   return {
     id: result.id,
@@ -36,12 +36,10 @@ export function projectNewsHit(
     ...(result.publishTime !== undefined ? { publishTime: result.publishTime } : {}),
     ...(result.publishDay !== undefined ? { publishDay: result.publishDay } : {}),
     ...(result.rankScore !== undefined ? { rankScore: result.rankScore } : {}),
-    ...(result.authInfoDescription !== undefined
-      ? { authInfoDescription: result.authInfoDescription }
-      : {}),
+    ...(result.authInfoDescription !== undefined ? { authInfoDescription: result.authInfoDescription } : {}),
     credibility: {
       tier: credibility.tier,
-      ...(credibility.method ? { method: credibility.method } : {}),
+      ...(credibility.method ? { method: credibility.method } : {})
     },
     authorityRank: credibility.rank,
     topicId: binding.topicId,
@@ -52,6 +50,6 @@ export function projectNewsHit(
     subjectAny: [...binding.subjectAny],
     eventAny: [...binding.eventAny],
     excludedAny: [...binding.excludedAny],
-    rankPosition: result.rankPosition,
+    rankPosition: result.rankPosition
   };
 }

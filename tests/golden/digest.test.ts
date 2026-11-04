@@ -6,16 +6,9 @@ import {
   PERSONAL_FEED_URL,
   PERSONAL_RSS,
   WINDOW_SINCE,
-  WINDOW_UNTIL,
+  WINDOW_UNTIL
 } from "./fixtures.js";
-import {
-  installFetch,
-  jsonResponse,
-  matchSnapshot,
-  runCommand,
-  textResponse,
-  useGoldenHarness,
-} from "./harness.js";
+import { installFetch, jsonResponse, matchSnapshot, runCommand, textResponse, useGoldenHarness } from "./harness.js";
 import { nextUuid } from "./uuid-sequence.js";
 
 vi.mock("node:crypto", async (importOriginal) => {
@@ -60,24 +53,26 @@ describe("golden digest", () => {
   it("does not write seen state on --dry-run", async () => {
     installDigestFetch();
     const context = harness.context();
-    const capture = await runCommand(
-      ["digest", "--rss-only", "--only-new", "--dry-run", ...windowArgs],
-      context,
-    );
+    const capture = await runCommand(["digest", "--rss-only", "--only-new", "--dry-run", ...windowArgs], context);
     await matchSnapshot("digest-dry-run.txt", capture, [context.root]);
   });
 });
 
 function installDigestFetch(): void {
   installFetch((url) => {
-    if (url === PERSONAL_FEED_URL) return textResponse(PERSONAL_RSS);
+    if (url === PERSONAL_FEED_URL) {
+      return textResponse(PERSONAL_RSS);
+    }
     if (url.includes("/received_events")) {
       const page = new URL(url).searchParams.get("page");
       return jsonResponse(page === "1" ? [GITHUB_WATCH_EVENT] : []);
     }
-    if (url === "https://api.github.com/repos/example/project")
+    if (url === "https://api.github.com/repos/example/project") {
       return jsonResponse(GITHUB_REPOSITORY);
-    if (url.includes("/user/following")) return jsonResponse([]);
+    }
+    if (url.includes("/user/following")) {
+      return jsonResponse([]);
+    }
     throw new Error(`Unexpected fetch ${url}`);
   });
 }

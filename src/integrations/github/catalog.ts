@@ -10,23 +10,18 @@ export const GitHubCatalogLive = (options: GitHubRestOptions = {}): Layer.Layer<
     getRepository: (fullName) =>
       Effect.map(readJson(`/repos/${fullName}`, options), (page) => repositoryMetadata(page)),
     getPullRequest: (fullName, number) =>
-      Effect.map(readJson(`/repos/${fullName}/pulls/${number}`, options), (page) =>
-        pullRequestDetails(page),
-      ),
+      Effect.map(readJson(`/repos/${fullName}/pulls/${number}`, options), (page) => pullRequestDetails(page)),
     getFollowing: (pagination?: PaginationOptions) =>
       Effect.map(
         Effect.forEach(
           Array.from({ length: pagination?.pages ?? 3 }, (_, index) => index + 1),
           (page) =>
             Effect.map(
-              readJson(
-                `/user/following?per_page=${pagination?.perPage ?? 100}&page=${page}`,
-                options,
-              ),
-              followingLogins,
+              readJson(`/user/following?per_page=${pagination?.perPage ?? 100}&page=${page}`, options),
+              followingLogins
             ),
-          { concurrency: "unbounded" },
+          { concurrency: "unbounded" }
         ),
-        (pages) => new Set(pages.flatMap((logins) => [...logins])),
-      ),
+        (pages) => new Set(pages.flatMap((logins) => [...logins]))
+      )
   });

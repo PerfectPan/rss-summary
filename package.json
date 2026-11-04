@@ -10,12 +10,12 @@
   },
   "files": [
     "dist",
-    "docs/rivus-plugin.md",
-    "docs/glm-search.md",
-    "docs/glm-search-review.md",
-    "docs/news-search-best-practices.md",
-    "docs/news-search-budget.md",
-    "docs/grok-x-search.md",
+    "docs/development/rivus-plugin.md",
+    "docs/reference/glm-search.md",
+    "docs/reference/glm-search-review.md",
+    "docs/reference/news-search-best-practices.md",
+    "docs/reference/news-search-budget.md",
+    "docs/reference/grok-x-search.md",
     "industry-feeds.json",
     "news-topics.json",
     "README.md"
@@ -54,7 +54,8 @@
     "typescript": "^5.8.0",
     "vite": "catalog:",
     "vite-plus": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@perfectpan/lint-config": "github:PerfectPan/lint-config#v0.6.0"
   },
   "dependencies": {
     "@effect/platform-node": "4.0.0",

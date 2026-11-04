@@ -98,13 +98,13 @@ function checkStructure(path: string): Violation[] {
     }
     return [];
   }
-  if (!(layeredModules as readonly string[]).includes(module)) return [];
+  if (module === undefined || !(layeredModules as readonly string[]).includes(module)) return [];
   const rest = parts.slice(3);
   if (layer === "domain") {
     const [concept, child] = rest;
-    if (!concept || rest.length < 2) return [];
+    if (!concept || !child || rest.length < 2) return [];
     if (rest.length === 2) {
-      const allowed = child === "index.ts" || child?.endsWith(".test.ts");
+      const allowed = child === "index.ts" || child.endsWith(".test.ts");
       if (!allowed) {
         return [
           violation(

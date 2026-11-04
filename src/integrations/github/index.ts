@@ -7,13 +7,13 @@ export {
   hasGitHubHomeFeedMarkup,
   homeSnapshot,
   type HomeFeedCardSnapshot,
-  type HomeFeedLinkSnapshot,
+  type HomeFeedLinkSnapshot
 } from "./home/dto.js";
 export {
   acquireHomeCard,
   acquireHomeCards,
   normalizeHomeCardSnapshot,
-  normalizeHomeCardSnapshots,
+  normalizeHomeCardSnapshots
 } from "./home/mapper.js";
 export { acquireFollowing, acquirePullRequest, acquireRepository } from "./repository/mapper.js";
 export { followingLogins, pullRequestDetails, repositoryMetadata } from "./repository/dto.js";
@@ -24,6 +24,6 @@ export {
   saveLoginStorageState,
   type GithubHomeClientOptions,
   type GithubHomeFetchMode,
-  type HomeFeedSnapshotReader,
+  type HomeFeedSnapshotReader
 } from "./home-browser.js";
 export { GitHubActivityLive } from "./activity.js";

@@ -18,11 +18,7 @@ export function acquireRepository(input: unknown): RepositoryAcquired {
   return { metadata, item: repositoryItem(metadata) };
 }
 
-export function acquirePullRequest(
-  input: unknown,
-  fullName: string,
-  number: number,
-): PullRequestAcquired {
+export function acquirePullRequest(input: unknown, fullName: string, number: number): PullRequestAcquired {
   const details = pullRequestDetails(input);
   return { details, item: pullRequestItem(details, fullName, number) };
 }
@@ -45,12 +41,12 @@ function repositoryItem(metadata: RepositoryMetadata): Item {
         ...(metadata.description ? { description: metadata.description } : {}),
         keywords,
         popularity: metadata.stargazersCount,
-        ...(metadata.pushedAt ? { lastActiveAt: metadata.pushedAt } : {}),
-      },
+        ...(metadata.pushedAt ? { lastActiveAt: metadata.pushedAt } : {})
+      }
     },
     content: {
       ...(metadata.description ? { excerpt: metadata.description } : {}),
-      ...(metadata.htmlUrl ? { url: metadata.htmlUrl } : {}),
+      ...(metadata.htmlUrl ? { url: metadata.htmlUrl } : {})
     },
     publishedAt: { value: metadata.pushedAt ?? "", precision: "instant" },
     provenance: { origin: metadata.htmlUrl || metadata.fullName },
@@ -59,8 +55,8 @@ function repositoryItem(metadata: RepositoryMetadata): Item {
     display: {
       ...(metadata.fullName ? { label: metadata.fullName } : {}),
       ...(metadata.htmlUrl ? { reference: metadata.htmlUrl } : {}),
-      facts: [`⭐ ${formatCompactCount(metadata.stargazersCount)}`],
-    },
+      facts: [`⭐ ${formatCompactCount(metadata.stargazersCount)}`]
+    }
   };
 }
 
@@ -71,12 +67,12 @@ function pullRequestItem(details: PullRequestDetails, fullName: string, number: 
     subject: {
       key: `github-pull-request:${fullName}:${number}`,
       name: fullName,
-      ...(details.htmlUrl ? { url: details.htmlUrl } : {}),
+      ...(details.htmlUrl ? { url: details.htmlUrl } : {})
     },
     content: {
       ...(details.title ? { title: details.title } : {}),
       ...(details.body ? { excerpt: details.body } : {}),
-      ...(details.htmlUrl ? { url: details.htmlUrl } : {}),
+      ...(details.htmlUrl ? { url: details.htmlUrl } : {})
     },
     publishedAt: { value: "", precision: "instant" },
     provenance: { origin: details.htmlUrl || fullName },
@@ -85,8 +81,8 @@ function pullRequestItem(details: PullRequestDetails, fullName: string, number: 
     display: {
       label: `${fullName} #${number}${details.title ? ` · ${details.title}` : ""}`,
       ...(details.htmlUrl ? { reference: details.htmlUrl } : {}),
-      facts: [],
-    },
+      facts: []
+    }
   };
 }
 
@@ -101,6 +97,6 @@ function followedAccount(login: string): Item {
     provenance: { origin: url, actor: { name: login, followed: true } },
     credibility: { tier: "unrated" },
     signals: [{ type: "relationship", label: "follow relationship from GitHub Home" }],
-    display: { label: login, reference: url, facts: [] },
+    display: { label: login, reference: url, facts: [] }
   };
 }

@@ -16,39 +16,32 @@ import {
   saveRunArtifact,
   type RunAudit,
   type RunDelivery,
-  type RunSourceResult,
+  type RunSourceResult
 } from "../../index.js";
 
 const roots: string[] = [];
 
 afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { force: true, recursive: true });
+  for (const root of roots.splice(0)) {
+    rmSync(root, { force: true, recursive: true });
+  }
 });
 
 describe("inspect runs", () => {
   it("lists runs newest first and keeps only failed ones for failures", async () => {
     const root = mkdtempSync(join(tmpdir(), "rss-summary-inspect-runs-"));
     roots.push(root);
-    const failed = saveRunArtifact(
-      root,
-      audit("1", "2026-08-09T12:34:56.000Z"),
-      failedDelivery(),
-      "# a",
-    );
+    const failed = saveRunArtifact(root, audit("1", "2026-08-09T12:34:56.000Z"), failedDelivery(), "# a");
     const ok = saveRunArtifact(root, audit("2", "2026-08-09T13:34:56.000Z"), okDelivery(), "# b");
     const sourceFailure = saveRunArtifact(
       root,
       { ...audit("3", "2026-08-09T14:34:56.000Z"), sources: [sourceResult("failed")] },
       okDelivery(),
-      "# c",
+      "# c"
     );
 
     const runs = await run(listRuns(root));
-    expect(runs.map(({ path }) => path)).toEqual([
-      sourceFailure.jsonPath,
-      ok.jsonPath,
-      failed.jsonPath,
-    ]);
+    expect(runs.map(({ path }) => path)).toEqual([sourceFailure.jsonPath, ok.jsonPath, failed.jsonPath]);
 
     const failedRuns = await run(listFailedRuns(root));
     expect(failedRuns.map(({ path }) => path)).toEqual([sourceFailure.jsonPath, failed.jsonPath]);
@@ -72,7 +65,7 @@ function audit(suffix: string, generatedAt: string): RunAudit {
     generatedAt,
     sources: [],
     counts: { fetched: 0, inWindow: 0, ranked: 0, selected: 0, researchPending: 0 },
-    candidates: [],
+    candidates: []
   };
 }
 
@@ -86,7 +79,7 @@ function failedDelivery(): RunDelivery {
     completedAt: "2026-08-09T12:35:00.000Z",
     channel: "stdout",
     stateStatus: "skipped",
-    error: "boom",
+    error: "boom"
   };
 }
 
@@ -95,6 +88,6 @@ function okDelivery(): RunDelivery {
     status: "delivered",
     completedAt: "2026-08-09T12:35:00.000Z",
     channel: "stdout",
-    stateStatus: "updated",
+    stateStatus: "updated"
   };
 }
