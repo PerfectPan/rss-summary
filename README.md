@@ -63,7 +63,6 @@ Rivus 的 `morning-feed-digest` 保留稳定 automation ID，并继续推送前�
 ```bash
 pnpm install --frozen-lockfile && pnpm build
 pnpm link --global
-cp docs/reference/configuration.md .env   # 按需裁剪；模板含全部变量与默认值
 rss-summary github-home login            # 浏览器登录 GitHub 后回车，会话存到 .state/
 GITHUB_USERNAME=<your-username> FEED_DAY="$(TZ=Asia/Shanghai date +%F)" \
   rss-summary digest --dry-run           # 打印今日早报到终端
@@ -75,9 +74,16 @@ GITHUB_USERNAME=<your-username> FEED_DAY="$(TZ=Asia/Shanghai date +%F)" \
 
 ## Setup
 
+CLI 只读取进程环境变量，不会自动加载 `.env`。上面的快速开始使用命令行内联变量；如需 `.env`，从[配置参考](docs/reference/configuration.md)的 `dotenv` 代码块中选取所需变量创建文件，不要直接复制 Markdown 文档。每次运行都需要显式加载，例如在仓库根目录完成构建后：
+
+```bash
+node --env-file=.env ./dist/app/cli/main.js digest --dry-run
+```
+
+其他命令同理：将 `rss-summary` 替换为 `node --env-file=.env ./dist/app/cli/main.js`，后面的子命令和参数保持不变。也可以通过 shell 或进程管理器提供环境变量，再直接运行 `rss-summary`。
+
 ```bash
 pnpm install --frozen-lockfile && pnpm build && pnpm link --global
-cp docs/reference/configuration.md .env   # 按需裁剪；模板含全部变量与默认值
 rss-summary github-home login
 ```
 

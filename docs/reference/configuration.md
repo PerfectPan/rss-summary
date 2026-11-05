@@ -1,11 +1,26 @@
 # Runtime Configuration Reference
 
-`rss-summary` reads environment variables from a `.env` file at the repository root
-(loaded by the CLI when present) and from the process environment. Create a `.env`
-with the entries you need — copy the uncommented lines below, adjust the values,
-and keep the file out of Git (`gitignore` already excludes it). The full
-variable-by-variable reference follows.
+`rss-summary` reads the process environment. The CLI does not automatically load
+`.env` files. Set variables in your shell or process manager, or create a local
+`.env` using only the entries you need from the `dotenv` code block below.
+Do not copy this Markdown document directly into `.env`. Adjust the values and
+keep the file out of Git (`gitignore` already excludes it).
 
+To load that file explicitly with the supported Node 24 runtime, run from the
+repository root after `pnpm build`:
+
+```bash
+node --env-file=.env ./dist/app/cli/main.js digest --dry-run
+```
+
+For other commands, replace `rss-summary` with
+`node --env-file=.env ./dist/app/cli/main.js` and keep the subcommand and arguments.
+The file path is relative to the current working directory. Variables already set
+in the process environment take precedence over values in the file. When the
+environment is supplied by your shell or process manager, use `rss-summary`
+directly. The variable reference follows.
+
+```dotenv
 # GitHub Home exact mode is the default.
 # Run `rss-summary github-home login` once to create this storage state.
 GITHUB_FEED_SOURCE=home
@@ -90,7 +105,7 @@ GLM_CODING_API_KEY=
 # RSS_ARTICLE_GLM_FALLBACK=true
 
 # Default: native X search with an already installed/authenticated Grok CLI.
-# NEWS_SEARCH_MODE applies only to noon/evening news; see docs/grok-x-search.md.
+# NEWS_SEARCH_MODE applies only to noon/evening news; see docs/reference/grok-x-search.md.
 # NEWS_SEARCH_MODE=grok
 # NEWS_GROK_EXECUTABLE=grok
 # NEWS_GROK_MODEL=your-model-id # Omit to use the CLI default.
@@ -113,3 +128,4 @@ GLM_CODING_API_KEY=
 # RSS_VIDEO_VISION_MODEL=provider/model
 # Full transcripts, key frames, OCR and visual observations stay outside Git.
 # RSS_VIDEO_RESEARCH_DIR=.state/video-research
+```
