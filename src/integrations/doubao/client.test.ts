@@ -7,7 +7,7 @@ const input = {
   query: "release",
   count: 5,
   day: "2026-08-16",
-  sourcePolicy: "news",
+  sourcePolicy: "news"
 };
 
 describe("Doubao search source", () => {
@@ -32,13 +32,13 @@ describe("Doubao search source", () => {
                   PublishTime: "2026-07-29T09:30:00+08:00",
                   RankScore: 0.95,
                   AuthInfoDes: "正常权威",
-                  AuthInfoLevel: 2,
-                },
-              ],
-            },
+                  AuthInfoLevel: 2
+                }
+              ]
+            }
           }),
-          { status: 200 },
-        ),
+          { status: 200 }
+        )
     );
     const client = new DoubaoSearchClient({ apiKey: "test-key", fetch });
 
@@ -46,7 +46,7 @@ describe("Doubao search source", () => {
       query: "AI Agent 大模型重要发布",
       count: 10,
       day: "2026-07-29",
-      sourcePolicy: "authoritative",
+      sourcePolicy: "authoritative"
     });
 
     expect(fetch).toHaveBeenCalledTimes(1);
@@ -60,7 +60,7 @@ describe("Doubao search source", () => {
       Filter: { NeedUrl: true },
       TimeRange: "2026-07-29..2026-07-29",
       QueryControl: { QueryRewrite: false },
-      ContentFormats: "markdown",
+      ContentFormats: "markdown"
     });
     expect(page).toMatchObject({ logId: "log-1", resultCount: 1, timeCostMs: 42 });
     expect(page.results[0]).toMatchObject({ id: "result-1", authInfoLevel: 2, rankPosition: 1 });
@@ -70,8 +70,8 @@ describe("Doubao search source", () => {
     const fetch = vi.fn(
       async (_url: string | URL | Request, _init?: RequestInit) =>
         new Response(JSON.stringify({ ResponseMetadata: {}, Result: { WebResults: [] } }), {
-          status: 200,
-        }),
+          status: 200
+        })
     );
     const client = new DoubaoSearchClient({ apiKey: "test-key", fetch });
 
@@ -79,11 +79,11 @@ describe("Doubao search source", () => {
       query: "中国重要政策与政治新闻",
       count: 10,
       day: "2026-07-29",
-      sourcePolicy: "official",
+      sourcePolicy: "official"
     });
 
     expect(JSON.parse(String(fetch.mock.calls[0]?.[1]?.body))).toMatchObject({
-      Filter: { AuthInfoLevel: 1, NeedUrl: true },
+      Filter: { AuthInfoLevel: 1, NeedUrl: true }
     });
   });
 
@@ -94,10 +94,10 @@ describe("Doubao search source", () => {
         new Response(
           JSON.stringify({
             ResponseMetadata: { Error: { Code: "10406", Message: "quota exhausted" } },
-            Result: null,
+            Result: null
           }),
-          { status: 200 },
-        ),
+          { status: 200 }
+        )
     });
 
     await expect(
@@ -105,16 +105,16 @@ describe("Doubao search source", () => {
         query: "科技新闻",
         count: 10,
         day: "2026-07-29",
-        sourcePolicy: "authoritative",
-      }),
+        sourcePolicy: "authoritative"
+      })
     ).rejects.toThrow(/10406.*quota exhausted/i);
     await expect(
       client.search({
         query: "科技新闻",
         count: 10,
         day: "2026-07-29",
-        sourcePolicy: "authoritative",
-      }),
+        sourcePolicy: "authoritative"
+      })
     ).rejects.not.toThrow(/secret-key/i);
   });
 
@@ -125,11 +125,11 @@ describe("Doubao search source", () => {
         new Response(
           JSON.stringify({
             ResponseMetadata: {
-              Error: { Code: "rate_limit_exceeded", Message: "rate limit exceeded" },
-            },
+              Error: { Code: "rate_limit_exceeded", Message: "rate limit exceeded" }
+            }
           }),
-          { headers: { "Retry-After": "2" }, status: 200 },
-        ),
+          { headers: { "Retry-After": "2" }, status: 200 }
+        )
     });
 
     const error = await client
@@ -137,7 +137,7 @@ describe("Doubao search source", () => {
         query: "科技新闻",
         count: 10,
         day: "2026-07-29",
-        sourcePolicy: "authoritative",
+        sourcePolicy: "authoritative"
       })
       .catch((cause: unknown) => cause);
 
@@ -150,38 +150,36 @@ describe("Doubao search source", () => {
       query: "科技新闻",
       count: 10,
       day: "2026-07-29",
-      sourcePolicy: "authoritative" as const,
+      sourcePolicy: "authoritative" as const
     };
     const networkClient = new DoubaoSearchClient({
       apiKey: "test-key",
       fetch: async () => {
         throw new TypeError("fetch failed");
-      },
+      }
     });
     const httpClient = new DoubaoSearchClient({
       apiKey: "test-key",
-      fetch: async () => new Response(null, { status: 503 }),
+      fetch: async () => new Response(null, { status: 503 })
     });
 
     await expect(networkClient.search(input)).rejects.toMatchObject({
       code: "network_error",
-      message: "Doubao search API error network_error: fetch failed",
+      message: "Doubao search API error network_error: fetch failed"
     });
     await expect(httpClient.search(input)).rejects.toMatchObject({
       code: "http_503",
-      message: "Doubao search API error http_503: HTTP 503",
+      message: "Doubao search API error http_503: HTTP 503"
     });
   });
 
   it("keeps provider error codes and rejects an empty query", () => {
-    expect(() =>
-      parseDoubaoResponse({ ResponseMetadata: { Error: { Code: "10406", Message: "quota" } } }),
-    ).toThrow("Doubao search API error 10406: quota");
+    expect(() => parseDoubaoResponse({ ResponseMetadata: { Error: { Code: "10406", Message: "quota" } } })).toThrow(
+      "Doubao search API error 10406: quota"
+    );
     expect(() => validateDoubaoInput({ ...input, query: " " })).toThrow(
-      "Doubao search query must contain 1 to 100 characters.",
+      "Doubao search query must contain 1 to 100 characters."
     );
-    expect(() => validateDoubaoInput({ ...input, sinceDay: "2026-08-17" })).toThrow(
-      "Invalid search start date.",
-    );
+    expect(() => validateDoubaoInput({ ...input, sinceDay: "2026-08-17" })).toThrow("Invalid search start date.");
   });
 });

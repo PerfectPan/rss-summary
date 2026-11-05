@@ -17,7 +17,7 @@ export type FeedState = {
 export function createEmptyFeedState(): FeedState {
   return {
     seen: {},
-    researched: {},
+    researched: {}
   };
 }
 
@@ -29,7 +29,9 @@ export function createEmptyFeedState(): FeedState {
 export function markDelivered(state: FeedState, ids: readonly string[], at: string): FeedState {
   const seen = { ...state.seen };
   for (const id of ids) {
-    if (id) seen[id] = at;
+    if (id) {
+      seen[id] = at;
+    }
   }
   return { ...state, seen };
 }

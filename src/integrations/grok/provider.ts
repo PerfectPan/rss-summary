@@ -2,7 +2,7 @@ import { Effect, Layer } from "effect";
 
 import { GrokProcess, type GrokProcessRequest, SearchProvider } from "../../acquisition/index.js";
 
-import { GrokOptions, GrokSearchClient, GrokSearchOptions, GrokXClient } from "./cli.js";
+import { type GrokOptions, GrokSearchClient, type GrokSearchOptions, GrokXClient } from "./cli.js";
 
 export const GrokProcessLive = (options: GrokOptions = {}): Layer.Layer<GrokProcess> =>
   Layer.succeed(GrokProcess, {
@@ -12,10 +12,10 @@ export const GrokProcessLive = (options: GrokOptions = {}): Layer.Layer<GrokProc
           new GrokXClient({
             executable: request.executable ?? options.executable,
             model: request.model ?? options.model,
-            timeoutMs: request.timeoutMs ?? options.timeoutMs,
+            timeoutMs: request.timeoutMs ?? options.timeoutMs
           }).search(request),
-        catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
-      }),
+        catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause)))
+      })
   });
 
 export const GrokSearchLive = (options: GrokSearchOptions): Layer.Layer<SearchProvider> => {
@@ -24,7 +24,7 @@ export const GrokSearchLive = (options: GrokSearchOptions): Layer.Layer<SearchPr
     search: (input) =>
       Effect.tryPromise({
         try: () => client.search(input),
-        catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
-      }),
+        catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause)))
+      })
   });
 };

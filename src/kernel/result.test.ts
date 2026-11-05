@@ -13,7 +13,11 @@ describe("kernel/result", () => {
     expect(isErr(success)).toBe(false);
     expect(isOk(failure)).toBe(false);
     expect(isErr(failure)).toBe(true);
-    if (isOk(success)) expect(success.value).toBe(1);
-    if (isErr(failure)) expect(failure.error).toBe("nope");
+    if (isOk(success)) {
+      expect(success.value).toBe(1);
+    }
+    if (isErr(failure)) {
+      expect(failure.error).toBe("nope");
+    }
   });
 });

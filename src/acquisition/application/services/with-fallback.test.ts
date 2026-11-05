@@ -6,7 +6,7 @@ import {
   shouldFallbackOnSourceOutage,
   withFallback,
   type FallbackSearchProvider,
-  type ProviderSearch,
+  type ProviderSearch
 } from "./with-fallback.js";
 import { NewsSearchError, type SearchInput, type SearchPage } from "../../domain/search/index.js";
 
@@ -14,26 +14,26 @@ const input: SearchInput = {
   query: "OpenAI 新模型",
   count: 10,
   day: "2026-08-16",
-  sourcePolicy: "news",
+  sourcePolicy: "news"
 };
 
 const page: SearchPage = { provider: "deepseek", resultCount: 0, results: [] };
 
 function fallbackProvider(
-  sourcePolicies: readonly SearchInput["sourcePolicy"][] = ["news", "authoritative"],
+  sourcePolicies: readonly SearchInput["sourcePolicy"][] = ["news", "authoritative"]
 ): FallbackSearchProvider & { search: ReturnType<typeof vi.fn> } {
   return {
     search: vi.fn(() => Effect.succeed(page)),
-    sourcePolicies,
+    sourcePolicies
   };
 }
 
 async function settle(
-  effect: Effect.Effect<SearchPage, unknown>,
+  effect: Effect.Effect<SearchPage, unknown>
 ): Promise<{ ok: true; page: SearchPage } | { ok: false; error: unknown }> {
   return Effect.runPromise(effect).then(
     (page) => ({ ok: true as const, page }),
-    (error: unknown) => ({ ok: false as const, error }),
+    (error: unknown) => ({ ok: false as const, error })
   );
 }
 
@@ -43,7 +43,7 @@ describe("withFallback", () => {
     const wrapped = withFallback(
       () => Effect.fail(new NewsSearchError("http_500", "HTTP 500")),
       fallback,
-      shouldFallbackOnSourceOutage,
+      shouldFallbackOnSourceOutage
     );
 
     const outcome = await settle(wrapped(input));
@@ -60,19 +60,21 @@ describe("withFallback", () => {
     ["local_budget_state"],
     ["query_deferred"],
     ["rate_limit_exceeded"],
-    ["http_402"],
+    ["http_402"]
   ])("never falls back on %s", async (code) => {
     const fallback = fallbackProvider();
     const wrapped = withFallback(
       () => Effect.fail(new NewsSearchError(code, "primary failed")),
       fallback,
-      shouldFallbackOnSourceOutage,
+      shouldFallbackOnSourceOutage
     );
 
     const outcome = await settle(wrapped(input));
 
     expect(outcome.ok).toBe(false);
-    if (!outcome.ok) expect((outcome.error as NewsSearchError).code).toBe(code);
+    if (!outcome.ok) {
+      expect((outcome.error as NewsSearchError).code).toBe(code);
+    }
     expect(fallback.search).not.toHaveBeenCalled();
   });
 
@@ -81,7 +83,7 @@ describe("withFallback", () => {
     const wrapped = withFallback(
       () => Effect.fail(new Error("programming error")),
       fallback,
-      shouldFallbackOnSourceOutage,
+      shouldFallbackOnSourceOutage
     );
 
     const outcome = await settle(wrapped(input));
@@ -95,46 +97,48 @@ describe("withFallback", () => {
     const wrapped = withFallback(
       () => Effect.fail(new NewsSearchError("http_500", "HTTP 500")),
       fallback,
-      shouldFallbackOnSourceOutage,
+      shouldFallbackOnSourceOutage
     );
 
     const outcome = await settle(wrapped({ ...input, sourcePolicy: "official" }));
 
     expect(outcome.ok).toBe(false);
-    if (!outcome.ok) expect((outcome.error as NewsSearchError).code).toBe("http_500");
+    if (!outcome.ok) {
+      expect((outcome.error as NewsSearchError).code).toBe("http_500");
+    }
     expect(fallback.search).not.toHaveBeenCalled();
   });
 
   it("reports the primary failure when the fallback fails too", async () => {
     const fallback: FallbackSearchProvider = {
       sourcePolicies: ["news", "authoritative"],
-      search: () => Effect.fail(new NewsSearchError("network_error", "deepseek down")),
+      search: () => Effect.fail(new NewsSearchError("network_error", "deepseek down"))
     };
     const wrapped = withFallback(
       () => Effect.fail(new NewsSearchError("http_503", "HTTP 503")),
       fallback,
-      shouldFallbackOnSourceOutage,
+      shouldFallbackOnSourceOutage
     );
 
     const outcome = await settle(wrapped(input));
 
     expect(outcome.ok).toBe(false);
-    if (!outcome.ok) expect((outcome.error as NewsSearchError).code).toBe("http_503");
+    if (!outcome.ok) {
+      expect((outcome.error as NewsSearchError).code).toBe("http_503");
+    }
   });
 
   it("returns the primary page untouched on success", async () => {
     const fallback = fallbackProvider();
     const primaryPage: SearchPage = { resultCount: 1, results: [] };
-    const wrapped = withFallback(
-      () => Effect.succeed(primaryPage),
-      fallback,
-      shouldFallbackOnSourceOutage,
-    );
+    const wrapped = withFallback(() => Effect.succeed(primaryPage), fallback, shouldFallbackOnSourceOutage);
 
     const outcome = await settle(wrapped(input));
 
     expect(outcome.ok).toBe(true);
-    if (outcome.ok) expect(outcome.page).toBe(primaryPage);
+    if (outcome.ok) {
+      expect(outcome.page).toBe(primaryPage);
+    }
     expect(fallback.search).not.toHaveBeenCalled();
   });
 });
@@ -152,7 +156,7 @@ describe("shouldFallbackOnSourceOutage", () => {
       "grok_cli_failed",
       "grok_invalid_response",
       "grok_source_policy",
-      "10406",
+      "10406"
     ]) {
       expect(shouldFallbackOnSourceOutage(new NewsSearchError(code, "x"))).toBe(true);
     }
@@ -170,7 +174,7 @@ describe("shouldFallbackOnSourceOutage", () => {
       "local_budget_state",
       "query_deferred",
       "10407",
-      "",
+      ""
     ]) {
       expect(shouldFallbackOnSourceOutage(new NewsSearchError(code, "x"))).toBe(false);
     }
@@ -189,6 +193,6 @@ describe("shouldFallbackOnSourceOutage", () => {
 const typeCheck: ProviderSearch = withFallback(
   () => Effect.succeed(page),
   { search: () => Effect.succeed(page), sourcePolicies: ["news"] },
-  shouldFallbackOnSourceOutage,
+  shouldFallbackOnSourceOutage
 );
 void typeCheck;

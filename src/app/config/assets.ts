@@ -11,7 +11,9 @@ import { fileURLToPath } from "node:url";
 export function packageAsset(name: string): string {
   let directory = dirname(fileURLToPath(import.meta.url));
   while (true) {
-    if (existsSync(join(directory, "package.json"))) return join(directory, name);
+    if (existsSync(join(directory, "package.json"))) {
+      return join(directory, name);
+    }
     const parent = dirname(directory);
     if (parent === directory) {
       throw new Error(`Unable to locate the package root for ${name}.`);

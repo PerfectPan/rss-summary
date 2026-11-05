@@ -20,7 +20,7 @@ const baseScoreBySignal: Record<SignalType, number> = {
   "change-merged": 55,
   "change-opened": 35,
   "change-closed": 20,
-  "change-other": 5,
+  "change-other": 5
 };
 
 describe("item signals", () => {
@@ -39,7 +39,7 @@ describe("item signals", () => {
       "change-merged": 55,
       "change-opened": 35,
       "change-closed": 20,
-      "change-other": 5,
+      "change-other": 5
     });
     expect("other" in baseScoreBySignal).toBe(false);
   });

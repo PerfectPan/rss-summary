@@ -7,7 +7,7 @@ export type {
   ItemRouting,
   SignalType,
   SubjectKey,
-  TimePrecision,
+  TimePrecision
 } from "./value-objects/item.js";
 export type {
   Acquired,
@@ -15,5 +15,5 @@ export type {
   ActivitySource,
   ActivityType,
   PullRequestDetails,
-  RepositoryMetadata,
+  RepositoryMetadata
 } from "./value-objects/activity-card.js";

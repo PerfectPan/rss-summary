@@ -4,7 +4,7 @@ import {
   isSearchFailure,
   type SearchInput,
   type SearchPage,
-  type SearchSourcePolicy,
+  type SearchSourcePolicy
 } from "../../domain/search/index.js";
 
 /** A provider's search entry, matching the SearchProvider port. */
@@ -50,7 +50,7 @@ export const fallbackTriggerCodes: readonly string[] = [
   "grok_cli_failed",
   "grok_invalid_response",
   "grok_source_policy",
-  "10406",
+  "10406"
 ];
 
 /** Whether a primary failure is a source outage a fallback may recover from. */
@@ -60,8 +60,7 @@ export function shouldFallbackOnSourceOutage(error: unknown): boolean {
 
 function isTriggerCode(code: string): boolean {
   return (
-    fallbackTriggerCodes.includes(code) ||
-    (/^http_5\d{2}$/u.test(code) && fallbackTriggerCodes.includes("http_5"))
+    fallbackTriggerCodes.includes(code) || (/^http_5\d{2}$/u.test(code) && fallbackTriggerCodes.includes("http_5"))
   );
 }
 
@@ -77,19 +76,23 @@ function isTriggerCode(code: string): boolean {
 export function withFallback(
   primary: ProviderSearch,
   fallback: FallbackSearchProvider,
-  shouldFallback: (error: unknown) => boolean,
+  shouldFallback: (error: unknown) => boolean
 ): ProviderSearch {
   return (input) =>
     Effect.catch(primary(input), (error: unknown) => {
-      if (!shouldFallback(error)) return Effect.fail(error);
-      if (!fallback.sourcePolicies.includes(input.sourcePolicy)) return Effect.fail(error);
+      if (!shouldFallback(error)) {
+        return Effect.fail(error);
+      }
+      if (!fallback.sourcePolicies.includes(input.sourcePolicy)) {
+        return Effect.fail(error);
+      }
       const triggeredBy = isSearchFailure(error) ? error.code : "unknown";
       return Effect.catch(
         Effect.map(fallback.search(input), (page) => ({
           ...page,
-          providerFallback: { triggeredBy },
+          providerFallback: { triggeredBy }
         })),
-        () => Effect.fail(error),
+        () => Effect.fail(error)
       );
     });
 }

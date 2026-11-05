@@ -9,9 +9,8 @@ import type { NewsSearchPage } from "../../domain/search/index.js";
 
 function budgetOf(run: (value: { query: string }) => Promise<NewsSearchPage>): BudgetedSearch {
   return Object.assign(
-    (value: { query: string }) =>
-      Effect.tryPromise({ try: () => run(value), catch: (reason) => reason }),
-    { cachedSearch: () => Effect.succeed(undefined) },
+    (value: { query: string }) => Effect.tryPromise({ try: () => run(value), catch: (reason) => reason }),
+    { cachedSearch: () => Effect.succeed(undefined) }
   ) as BudgetedSearch;
 }
 
@@ -23,7 +22,7 @@ const usage = {
   dailyUsed: 1,
   monthlyUsed: 1,
   dailyLimit: 4,
-  monthlyLimit: 120,
+  monthlyLimit: 120
 };
 
 describe("collectXAccountPosts", () => {
@@ -33,11 +32,8 @@ describe("collectXAccountPosts", () => {
     };
     await expect(
       Effect.runPromise(
-        collectXAccountPosts(
-          { handles: [], since, until },
-          { env: { NEWS_GROK_MODEL: "invalid/model" }, openBudget },
-        ),
-      ),
+        collectXAccountPosts({ handles: [], since, until }, { env: { NEWS_GROK_MODEL: "invalid/model" }, openBudget })
+      )
     ).resolves.toEqual({ posts: [], audit: [] });
   });
 
@@ -47,7 +43,7 @@ describe("collectXAccountPosts", () => {
       opened.push(options);
       return budgetOf(async () => {
         throw new NewsSearchError("grok_timeout", "timed out", {
-          grok: { nativeTools: [], rejectedResults: 0 },
+          grok: { nativeTools: [], rejectedResults: 0 }
         });
       });
     };
@@ -57,9 +53,9 @@ describe("collectXAccountPosts", () => {
         {
           env: {},
           openBudget,
-          client: { search: async () => ({ resultCount: 0, results: [] }) },
-        },
-      ),
+          client: { search: async () => ({ resultCount: 0, results: [] }) }
+        }
+      )
     );
     expect(opened).toHaveLength(1);
     expect(opened[0]).toMatchObject({
@@ -67,7 +63,7 @@ describe("collectXAccountPosts", () => {
       stateFile: searchBudgetDefaults.stateFile,
       dailyLimit: searchBudgetDefaults.grok.dailyLimit,
       monthlyLimit: searchBudgetDefaults.grok.monthlyLimit,
-      cacheTtlMs: searchBudgetDefaults.cacheTtlMinutes * 60_000,
+      cacheTtlMs: searchBudgetDefaults.cacheTtlMinutes * 60_000
     });
     expect(result).toEqual({
       posts: [],
@@ -76,9 +72,9 @@ describe("collectXAccountPosts", () => {
           handle: "claudedevs",
           status: "failed",
           errorCode: "grok_timeout",
-          acceptedCount: 0,
-        }),
-      ],
+          acceptedCount: 0
+        })
+      ]
     });
     const search = opened[0]?.search;
     await expect(search?.()).resolves.toEqual({ resultCount: 0, results: [] });
@@ -111,14 +107,14 @@ describe("collectXAccountPosts", () => {
                     url: "https://x.com/claudedevs/status/1",
                     summary: "摘要",
                     publishTime: since,
-                    rankPosition: 1,
-                  },
-                ],
+                    rankPosition: 1
+                  }
+                ]
               };
-            },
-          },
-        },
-      ),
+            }
+          }
+        }
+      )
     );
     expect(instruction).toContain("from:claudedevs");
     expect(instruction).toContain("opinions, research and tutorials");
@@ -130,8 +126,8 @@ describe("collectXAccountPosts", () => {
         url: "https://x.com/claudedevs/status/1",
         title: "帖子",
         summary: "摘要",
-        publishedAt: since,
-      },
+        publishedAt: since
+      }
     ]);
     expect(result.audit[0]).toMatchObject({ status: "ok", acceptedCount: 1, limitReached: false });
   });
@@ -144,9 +140,9 @@ describe("collectXAccountPosts", () => {
       Effect.runPromise(
         collectXAccountPosts(
           { handles: ["someone"], since, until },
-          { env: { NEWS_GROK_MODEL: "invalid/model" }, openBudget },
-        ),
-      ),
+          { env: { NEWS_GROK_MODEL: "invalid/model" }, openBudget }
+        )
+      )
     ).rejects.toThrow("Invalid NEWS_GROK_MODEL.");
     await expect(
       Effect.runPromise(
@@ -155,10 +151,10 @@ describe("collectXAccountPosts", () => {
           {
             env: { X_ACCOUNT_POSTS_PER_FETCH: "0" },
             openBudget,
-            client: { search: async () => ({ resultCount: 0, results: [] }) },
-          },
-        ),
-      ),
+            client: { search: async () => ({ resultCount: 0, results: [] }) }
+          }
+        )
+      )
     ).rejects.toThrow("Numeric configuration must be an integer between 1 and 50.");
     await expect(
       Effect.runPromise(
@@ -167,10 +163,10 @@ describe("collectXAccountPosts", () => {
           {
             env: {},
             openBudget: () => budgetOf(async () => Promise.reject(new Error("client exploded"))),
-            client: { search: async () => ({ resultCount: 0, results: [] }) },
-          },
-        ),
-      ),
+            client: { search: async () => ({ resultCount: 0, results: [] }) }
+          }
+        )
+      )
     ).rejects.toThrow("client exploded");
   });
 });
@@ -187,10 +183,10 @@ describe("X_ACCOUNT_POSTS_PER_FETCH", () => {
             openBudget: () => {
               throw new Error("budget opened");
             },
-            client: { search: async () => ({ resultCount: 0, results: [] }) },
-          },
-        ),
-      ),
+            client: { search: async () => ({ resultCount: 0, results: [] }) }
+          }
+        )
+      )
     ).rejects.toThrow("Numeric configuration must be an integer between 1 and 50.");
   });
 });

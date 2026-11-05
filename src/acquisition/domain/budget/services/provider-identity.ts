@@ -7,6 +7,8 @@
  */
 export function normalizeHttpProvider(value: string): string {
   const url = new URL(value);
-  if (url.protocol !== "https:" && url.protocol !== "http:") return value;
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
+    return value;
+  }
   return `${url.origin}${url.pathname.replace(/\/+$/u, "")}`;
 }

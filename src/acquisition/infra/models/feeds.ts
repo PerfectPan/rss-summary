@@ -8,7 +8,7 @@ export const feedRecordSchema = Schema.Struct({
   name: Schema.optional(Schema.String),
   url: Schema.optional(Schema.String),
   tags: Schema.optional(Schema.Array(Schema.String)),
-  type: Schema.optional(Schema.String),
+  type: Schema.optional(Schema.String)
 });
 
 export const feedsFileSchema = Schema.Array(Schema.Union([Schema.String, feedRecordSchema]));
@@ -21,6 +21,8 @@ export const feedsFileSchema = Schema.Array(Schema.Union([Schema.String, feedRec
 export function decodeFeedsJson(value: string): FeedSubscription[] {
   const feeds = parseFeedSubscriptions(value);
   const decoded = Schema.decodeUnknownResult(feedsFileSchema)(JSON.parse(value));
-  if (decoded._tag === "Failure") return feeds;
+  if (decoded._tag === "Failure") {
+    return feeds;
+  }
   return feeds;
 }

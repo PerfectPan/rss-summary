@@ -4,13 +4,10 @@ import { describe, expect, it } from "vite-plus/test";
 
 describe("research contract documentation", () => {
   it("requires starred repo research to inspect code architecture and quality", () => {
-    const skill = readFileSync(
-      new URL("../../skills/feed-research-digest/SKILL.md", import.meta.url),
-      "utf8",
-    );
+    const skill = readFileSync(new URL("../../skills/feed-research-digest/SKILL.md", import.meta.url), "utf8");
     const researchDoc = readFileSync(
-      new URL("../../docs/digest-delivery-research.md", import.meta.url),
-      "utf8",
+      new URL("../../docs/reference/digest-delivery-research.md", import.meta.url),
+      "utf8"
     );
 
     expect(skill).toContain("Code architecture and quality checks");
@@ -33,10 +30,7 @@ describe("research contract documentation", () => {
     const promptUrl = new URL("../../prompts/feed-research.md", import.meta.url);
     expect(existsSync(promptUrl)).toBe(true);
 
-    const skill = readFileSync(
-      new URL("../../skills/feed-research-digest/SKILL.md", import.meta.url),
-      "utf8",
-    );
+    const skill = readFileSync(new URL("../../skills/feed-research-digest/SKILL.md", import.meta.url), "utf8");
     const prompt = readFileSync(promptUrl, "utf8");
 
     expect(skill).toContain("prompts/feed-research.md");

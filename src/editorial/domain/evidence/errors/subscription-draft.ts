@@ -10,7 +10,7 @@ export class SubscriptionDraftValidationError extends Error {
     super(
       `SUBSCRIPTION_SUMMARY_VALIDATION_FAILED: ${issues
         .map(({ message, ref }) => `${ref}: ${message}`)
-        .join("; ")}. Regenerate the invalid summaries and call render again.`,
+        .join("; ")}. Regenerate the invalid summaries and call render again.`
     );
     this.name = "SubscriptionDraftValidationError";
   }

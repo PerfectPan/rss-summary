@@ -8,7 +8,7 @@ import {
   SearchBudgetRepository,
   SearchProvider,
   SourceCatalogStore,
-  WebPage,
+  WebPage
 } from "./ports.js";
 
 describe("acquisition ports", () => {

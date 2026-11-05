@@ -10,14 +10,11 @@ import type { EvidenceDocument } from "../value-objects/evidence.js";
 // combination so they stay inside editorial's boundary.
 const evidenceIdentity = {
   identify: candidateIdentity,
-  fallbackUrl: candidateEvidenceUrl,
+  fallbackUrl: candidateEvidenceUrl
 };
 
-const buildSubscriptionEditorial = (
-  document: EvidenceDocument,
-  draft?: unknown,
-  research?: unknown,
-) => assembleSubscriptionEditorial(document, evidenceIdentity, draft, research);
+const buildSubscriptionEditorial = (document: EvidenceDocument, draft?: unknown, research?: unknown) =>
+  assembleSubscriptionEditorial(document, evidenceIdentity, draft, research);
 
 describe("subscription editorial contract", () => {
   it("returns a retryable error when a draft item is invalid", () => {
@@ -25,21 +22,21 @@ describe("subscription editorial contract", () => {
       buildSubscriptionEditorial(document(), [
         {
           ref: "github-pull-request:example/project:41",
-          summary: "为上传流程增加断点续传。网络中断后可从检查点继续。",
+          summary: "为上传流程增加断点续传。网络中断后可从检查点继续。"
         },
         {
           ref: "publication:https://deno.com/blog/v2.4",
-          summary: "文章声称包含 99 项来源中不存在的变化。",
-        },
-      ]),
+          summary: "文章声称包含 99 项来源中不存在的变化。"
+        }
+      ])
     ).toThrow(SubscriptionDraftValidationError);
 
     try {
       buildSubscriptionEditorial(document(), [
         {
           ref: "publication:https://deno.com/blog/v2.4",
-          summary: "文章声称包含 99 项来源中不存在的变化。",
-        },
+          summary: "文章声称包含 99 项来源中不存在的变化。"
+        }
       ]);
       throw new Error("expected validation error");
     } catch (error) {
@@ -48,9 +45,9 @@ describe("subscription editorial contract", () => {
         expect.arrayContaining([
           expect.objectContaining({
             message: expect.stringContaining("numeric claim 99"),
-            ref: "publication:https://deno.com/blog/v2.4",
-          }),
-        ]),
+            ref: "publication:https://deno.com/blog/v2.4"
+          })
+        ])
       );
     }
   });
@@ -80,8 +77,8 @@ function document(): Document {
             type: "watch",
             actor: "alice",
             repo: "example/project",
-            createdAt: "2026-08-15T09:00:00Z",
-          },
+            createdAt: "2026-08-15T09:00:00Z"
+          }
         ],
         repository: {
           fullName: "example/project",
@@ -90,8 +87,8 @@ function document(): Document {
           language: "TypeScript",
           stargazersCount: 12_345,
           topics: [],
-          pushedAt: "2026-08-15T00:00:00Z",
-        },
+          pushedAt: "2026-08-15T00:00:00Z"
+        }
       },
       {
         repo: "example/project",
@@ -111,12 +108,12 @@ function document(): Document {
             prNumber: 41,
             title: "Add resumable uploads",
             summary: "Adds checkpointed upload state so interrupted transfers can resume.",
-            htmlUrl: "https://github.com/example/project/pull/41",
-          },
+            htmlUrl: "https://github.com/example/project/pull/41"
+          }
         ],
         label: "example/project #41 · Add resumable uploads",
         url: "https://github.com/example/project/pull/41",
-        description: "Adds checkpointed upload state so interrupted transfers can resume.",
+        description: "Adds checkpointed upload state so interrupted transfers can resume."
       },
       {
         repo: "rss:https://deno.com/blog/v2.4",
@@ -136,13 +133,13 @@ function document(): Document {
             createdAt: "2026-08-15T11:00:00Z",
             title: "Deno 2.4",
             summary: "Runtime updates for TypeScript and JavaScript.",
-            htmlUrl: "https://deno.com/blog/v2.4",
-          },
+            htmlUrl: "https://deno.com/blog/v2.4"
+          }
         ],
         label: "Deno 2.4",
         url: "https://deno.com/blog/v2.4",
-        description: "Runtime updates for TypeScript and JavaScript.",
-      },
-    ],
+        description: "Runtime updates for TypeScript and JavaScript."
+      }
+    ]
   };
 }

@@ -2,7 +2,7 @@ export type {
   ActivityCardDto as ActivityCard,
   ActivitySource,
   ActivityType,
-  RepositoryMetadata,
+  RepositoryMetadata
 } from "../acquisition/index.js";
 export type { CandidateDecision } from "./domain/decision/index.js";
 export {
@@ -11,7 +11,7 @@ export {
   DailyAiDraftValidationError,
   dailyAiCategories,
   industryEvidence,
-  validateEditorialDraft,
+  validateEditorialDraft
 } from "./domain/daily-ai/index.js";
 export type {
   DailyAiCategory,
@@ -22,7 +22,7 @@ export type {
   DailyAiEditorialItem,
   DailyAiEditorialValidation,
   DailyAiEvidence,
-  DailyAiSourceTier,
+  DailyAiSourceTier
 } from "./domain/daily-ai/index.js";
 export {
   excludeSubscriptionResearchFailures,
@@ -30,7 +30,7 @@ export {
   SubscriptionDraftValidationError,
   validateSubscriptionEditorialDraft,
   validateSubscriptionResearch,
-  validateSubscriptionSelectionDraft,
+  validateSubscriptionSelectionDraft
 } from "./domain/evidence/index.js";
 export type {
   SubscriptionDraftValidationIssue,
@@ -40,7 +40,7 @@ export type {
   SubscriptionEvidenceKind,
   SubscriptionResearch,
   SubscriptionSelection,
-  SubscriptionSelectionDecision,
+  SubscriptionSelectionDecision
 } from "./domain/evidence/index.js";
 export { isSameEntityEvent, isSameHeadline, isSameTitleEvent } from "./domain/identity/index.js";
 export {
@@ -52,7 +52,7 @@ export {
   repositoryFactsForCandidate,
   scoreAcquired,
   selectCandidatePresentationSections,
-  selectResearchCandidates,
+  selectResearchCandidates
 } from "./domain/subscription/index.js";
 export type {
   CandidatePresentationSections,
@@ -62,12 +62,12 @@ export type {
   PresentationDepth,
   PresentationPolicy,
   PresentationReasonCode,
-  ScoreOptions,
+  ScoreOptions
 } from "./domain/subscription/index.js";
 export {
   assembleSubscriptionEditorial,
   assembleSubscriptionEvidence,
-  selectedSubscriptionCandidates,
+  selectedSubscriptionCandidates
 } from "./domain/evidence/index.js";
 export { decideCandidate } from "./domain/decision/index.js";
 export type {
@@ -85,7 +85,7 @@ export type {
   NewsStorySelectionReason,
   NewsStorySelectionResult,
   NewsTimeWindow,
-  SelectedNewsStory,
+  SelectedNewsStory
 } from "./domain/news/index.js";
 export {
   buildNewsStories,
@@ -93,7 +93,7 @@ export {
   projectNewsHit,
   publicationFitsWindow,
   selectNewsStories,
-  selectNewsStoriesWithAudit,
+  selectNewsStoriesWithAudit
 } from "./domain/news/index.js";
 export type { DomainNewsTopic, DomainNewsTopicQuery } from "./domain/news/index.js";
 export type { NewsAuditRequest, NewsSourceStatus } from "./domain/news/index.js";
@@ -104,5 +104,5 @@ export type {
   NewsQueryAuditDraft,
   NewsQueryFailure,
   NewsQueryPage,
-  NewsQuerySettlement,
+  NewsQuerySettlement
 } from "./domain/news/index.js";

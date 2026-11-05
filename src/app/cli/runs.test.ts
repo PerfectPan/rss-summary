@@ -20,15 +20,15 @@ describe("runs CLI", () => {
           completedAt: "2026-08-09T12:35:00.000Z",
           channel: "webhook",
           stateStatus: "skipped",
-          error: "boom",
+          error: "boom"
         },
-        "# 行业前沿",
+        "# 行业前沿"
       );
 
       expect(
         await runRunsCommand(["failures", "--dir", root], {
-          stdout: { write: (chunk) => output.push(chunk) },
-        }),
+          stdout: { write: (chunk) => output.push(chunk) }
+        })
       ).toBe(0);
       expect(output.join("")).toContain("frontier  failed");
     } finally {
@@ -42,8 +42,8 @@ describe("runs CLI", () => {
     try {
       expect(
         await runRunsCommand(["list", "--dir", root], {
-          stdout: { write: (chunk) => output.push(chunk) },
-        }),
+          stdout: { write: (chunk) => output.push(chunk) }
+        })
       ).toBe(0);
       expect(output.pop()).toBe("No run artifacts.\n");
 
@@ -54,14 +54,14 @@ describe("runs CLI", () => {
           status: "delivered",
           completedAt: "2026-08-09T12:35:00.000Z",
           channel: "stdout",
-          stateStatus: "updated",
+          stateStatus: "updated"
         },
-        "# 行业前沿",
+        "# 行业前沿"
       );
       expect(
         await runRunsCommand(["show", runArtifactLabel(saved.jsonPath), "--dir", root], {
-          stdout: { write: (chunk) => output.push(chunk) },
-        }),
+          stdout: { write: (chunk) => output.push(chunk) }
+        })
       ).toBe(0);
       expect(output.join("")).toContain('"product": "frontier"');
     } finally {
@@ -78,6 +78,6 @@ function audit(): RunAudit {
     generatedAt: "2026-08-09T12:34:56.000Z",
     sources: [],
     counts: { fetched: 1, inWindow: 1, ranked: 1, selected: 1, researchPending: 0 },
-    candidates: [],
+    candidates: []
   };
 }

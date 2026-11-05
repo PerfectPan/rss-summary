@@ -11,18 +11,28 @@ function buildCandidateProjects(
     followees: Set<string>;
     interests: string[];
     repositories: Map<string, RepositoryMetadata>;
-  },
+  }
 ): CandidateProject[] {
   return scoreAcquired(
     events.map((event) =>
       projectActivity(event, {
         followees: context.followees,
-        repositories: context.repositories,
-      }),
+        repositories: context.repositories
+      })
     ),
-    { interests: context.interests, now: Date.now() },
+    { interests: context.interests, now: Date.now() }
   );
 }
+
+const emptyRepository = {
+  fullName: "example/repo",
+  htmlUrl: "https://github.com/example/repo",
+  description: null as string | null,
+  language: null as string | null,
+  stargazersCount: 1,
+  topics: [] as string[],
+  pushedAt: null as string | null
+};
 
 describe("github feed domain", () => {
   it("normalizes a merged pull request event into an activity card", () => {
@@ -36,9 +46,9 @@ describe("github feed domain", () => {
         action: "merged",
         number: 35406,
         pull_request: {
-          url: "https://api.github.com/repos/denoland/deno/pulls/35406",
-        },
-      },
+          url: "https://api.github.com/repos/denoland/deno/pulls/35406"
+        }
+      }
     });
 
     expect(card).toEqual({
@@ -49,7 +59,7 @@ describe("github feed domain", () => {
       createdAt: "2026-06-22T09:48:29Z",
       action: "merged",
       prNumber: 35406,
-      detailUrl: "https://api.github.com/repos/denoland/deno/pulls/35406",
+      detailUrl: "https://api.github.com/repos/denoland/deno/pulls/35406"
     });
   });
 
@@ -62,7 +72,7 @@ describe("github feed domain", () => {
           actor: "fi3ework",
           repo: "BuilderIO/skills",
           createdAt: "2026-06-22T09:47:11Z",
-          action: "started",
+          action: "started"
         },
         {
           id: "pr-1",
@@ -71,8 +81,8 @@ describe("github feed domain", () => {
           repo: "example/noisy",
           createdAt: "2026-06-22T09:40:00Z",
           action: "labeled",
-          prNumber: 1,
-        },
+          prNumber: 1
+        }
       ],
       {
         followees: new Set(["fi3ework"]),
@@ -87,11 +97,11 @@ describe("github feed domain", () => {
               language: "JavaScript",
               stargazersCount: 2389,
               topics: ["skills"],
-              pushedAt: "2026-06-22T02:55:49Z",
-            },
-          ],
-        ]),
-      },
+              pushedAt: "2026-06-22T02:55:49Z"
+            }
+          ]
+        ])
+      }
     );
 
     expect(candidates[0]?.repo).toBe("BuilderIO/skills");
@@ -108,7 +118,7 @@ describe("github feed domain", () => {
           type: "watch",
           actor: "alice",
           repo: "example/project",
-          createdAt: "2026-08-15T09:00:00Z",
+          createdAt: "2026-08-15T09:00:00Z"
         },
         {
           id: "pr-41",
@@ -120,7 +130,7 @@ describe("github feed domain", () => {
           prNumber: 41,
           title: "Add resumable uploads",
           summary: "Adds checkpointed upload state so interrupted transfers can resume.",
-          htmlUrl: "https://github.com/example/project/pull/41",
+          htmlUrl: "https://github.com/example/project/pull/41"
         },
         {
           id: "pr-42",
@@ -132,22 +142,18 @@ describe("github feed domain", () => {
           prNumber: 42,
           title: "Bound retry backoff",
           summary: "Caps retry delays and reports the final failure reason.",
-          htmlUrl: "https://github.com/example/project/pull/42",
-        },
+          htmlUrl: "https://github.com/example/project/pull/42"
+        }
       ],
-      { followees: new Set(), interests: [], repositories: new Map() },
+      { followees: new Set(), interests: [], repositories: new Map() }
     );
 
     expect(candidates).toHaveLength(3);
-    expect(candidates.map(({ category }) => category).sort()).toEqual([
-      "activity",
-      "activity",
-      "discovery",
-    ]);
+    expect(candidates.map(({ category }) => category).sort()).toEqual(["activity", "activity", "discovery"]);
     expect(candidates.find(({ label }) => label?.includes("#41"))).toMatchObject({
       label: "example/project #41 · Add resumable uploads",
       url: "https://github.com/example/project/pull/41",
-      description: "Adds checkpointed upload state so interrupted transfers can resume.",
+      description: "Adds checkpointed upload state so interrupted transfers can resume."
     });
   });
 
@@ -161,7 +167,7 @@ describe("github feed domain", () => {
           actor: "Example Feed",
           repo: "rss:https://example.com/feed.xml",
           createdAt: "2026-08-15T10:00:00Z",
-          title: "First",
+          title: "First"
         },
         {
           id: "feed-item-2",
@@ -170,16 +176,13 @@ describe("github feed domain", () => {
           actor: "Example Feed",
           repo: "rss:https://example.com/feed.xml",
           createdAt: "2026-08-15T11:00:00Z",
-          title: "Second",
-        },
+          title: "Second"
+        }
       ],
-      { followees: new Set(), interests: [], repositories: new Map() },
+      { followees: new Set(), interests: [], repositories: new Map() }
     );
 
-    expect(candidates.map(candidateIdentity)).toEqual([
-      "publication:feed-item-1",
-      "publication:feed-item-2",
-    ]);
+    expect(candidates.map(candidateIdentity)).toEqual(["publication:feed-item-1", "publication:feed-item-2"]);
   });
 
   it("does not treat branch creation as project discovery", () => {
@@ -191,8 +194,8 @@ describe("github feed domain", () => {
       created_at: "2026-06-22T09:48:29Z",
       payload: {
         ref_type: "branch",
-        ref: "feature-branch",
-      },
+        ref: "feature-branch"
+      }
     });
 
     expect(card.type).toBe("other");
@@ -206,8 +209,8 @@ describe("github feed domain", () => {
           type: "fork",
           actor: "bartlomieju",
           repo: "tailwindlabs/headlessui",
-          createdAt: "2026-06-22T09:47:11Z",
-        },
+          createdAt: "2026-06-22T09:47:11Z"
+        }
       ],
       {
         followees: new Set(["bartlomieju"]),
@@ -222,11 +225,11 @@ describe("github feed domain", () => {
               language: "TypeScript",
               stargazersCount: 29000,
               topics: [],
-              pushedAt: "2026-06-22T02:55:49Z",
-            },
-          ],
-        ]),
-      },
+              pushedAt: "2026-06-22T02:55:49Z"
+            }
+          ]
+        ])
+      }
     );
 
     expect(candidates[0]?.reasons).not.toContain("matches interest: ai");
@@ -248,14 +251,14 @@ describe("github feed domain", () => {
           summary: "Runtime updates for TypeScript and JavaScript.",
           sourceName: "Deno Blog",
           sourceUrl: "https://deno.com/feed",
-          tags: ["deno", "runtime"],
-        },
+          tags: ["deno", "runtime"]
+        }
       ],
       {
         followees: new Set(),
         interests: ["deno", "runtime"],
-        repositories: new Map(),
-      },
+        repositories: new Map()
+      }
     );
 
     expect(candidates[0]).toMatchObject({
@@ -263,7 +266,7 @@ describe("github feed domain", () => {
       category: "article",
       label: "Deno 2.4",
       url: "https://deno.com/blog/v2.4",
-      description: "Runtime updates for TypeScript and JavaScript.",
+      description: "Runtime updates for TypeScript and JavaScript."
     });
     expect(candidates[0]?.reasons).toContain("rss feed: Deno Blog");
     expect(candidates[0]?.reasons).toContain("matches interest: deno");
@@ -283,16 +286,16 @@ describe("github feed domain", () => {
           htmlUrl: "https://example.com/news/agent-mode",
           title: "Agent Mode",
           sourceName: "Example News",
-          sourceUrl: "https://example.com/news",
-        },
+          sourceUrl: "https://example.com/news"
+        }
       ],
-      { followees: new Set(), interests: [], repositories: new Map() },
+      { followees: new Set(), interests: [], repositories: new Map() }
     );
 
     expect(candidates[0]).toMatchObject({
       source: "web",
       category: "article",
-      label: "Agent Mode",
+      label: "Agent Mode"
     });
     expect(candidates[0]?.reasons).toContain("website source: Example News");
   });
@@ -309,17 +312,17 @@ describe("github feed domain", () => {
           createdAt: "2026-08-09T00:00:00.000Z",
           title: "Version 1.0",
           htmlUrl: "https://example.com/releases/1.0",
-          summary: "A major release.",
-        },
+          summary: "A major release."
+        }
       ],
-      { followees: new Set(), interests: [], repositories: new Map() },
+      { followees: new Set(), interests: [], repositories: new Map() }
     );
 
     expect(candidates[0]).toMatchObject({
       category: "release",
       label: "Version 1.0",
       url: "https://example.com/releases/1.0",
-      description: "A major release.",
+      description: "A major release."
     });
   });
 
@@ -335,14 +338,14 @@ describe("github feed domain", () => {
           createdAt: "2026-06-22T08:00:00Z",
           title: "Untitled note",
           sourceName: "Example Feed",
-          sourceUrl: "https://example.com/feed.xml",
-        },
+          sourceUrl: "https://example.com/feed.xml"
+        }
       ],
       {
         followees: new Set(),
         interests: [],
-        repositories: new Map(),
-      },
+        repositories: new Map()
+      }
     );
 
     expect(candidates[0]?.url).toBe("https://example.com/feed.xml");
@@ -361,19 +364,19 @@ describe("github feed domain", () => {
       summary,
       sourceName: "arXiv cs.AI",
       sourceUrl: "https://rss.arxiv.org/rss/cs.AI",
-      tags: ["Papers", "Academic"],
+      tags: ["Papers", "Academic"]
     });
     const candidates = buildCandidateProjects(
       [
         paper(1, "A coding agent learns to use tools in long-running tasks."),
         paper(2, "An agent benchmark evaluates reliable tool use."),
-        paper(3, "A chemistry method for molecular simulation."),
+        paper(3, "A chemistry method for molecular simulation.")
       ],
       {
         followees: new Set(),
         interests: ["agent"],
-        repositories: new Map(),
-      },
+        repositories: new Map()
+      }
     );
 
     const selected = selectResearchCandidates(candidates, 1);
@@ -395,7 +398,7 @@ describe("github feed domain", () => {
           actor: "GitHub Home",
           repo: "simplex-chat/simplex-chat",
           createdAt: "2026-06-27T11:08:52Z",
-          action: "trending",
+          action: "trending"
         },
         {
           id: "home-rec-1",
@@ -404,21 +407,21 @@ describe("github feed domain", () => {
           actor: "GitHub Home",
           repo: "onnx/onnx",
           createdAt: "2026-06-27T00:00:00Z",
-          action: "recommended",
-        },
+          action: "recommended"
+        }
       ],
       {
         followees: new Set(),
         interests: [],
-        repositories: new Map(),
-      },
+        repositories: new Map()
+      }
     );
 
-    expect(
-      candidates.find((candidate) => candidate.repo === "simplex-chat/simplex-chat")?.reasons,
-    ).toContain("GitHub Home trending repository");
+    expect(candidates.find((candidate) => candidate.repo === "simplex-chat/simplex-chat")?.reasons).toContain(
+      "GitHub Home trending repository"
+    );
     expect(candidates.find((candidate) => candidate.repo === "onnx/onnx")?.reasons).toContain(
-      "GitHub Home recommendation",
+      "GitHub Home recommendation"
     );
   });
 
@@ -430,14 +433,14 @@ describe("github feed domain", () => {
           type: "watch",
           actor: "alice",
           repo: "example/project",
-          createdAt: "2026-08-09T08:00:00Z",
+          createdAt: "2026-08-09T08:00:00Z"
         },
         {
           id: "star-2",
           type: "watch",
           actor: "bob",
           repo: "example/project",
-          createdAt: "2026-08-09T09:00:00Z",
+          createdAt: "2026-08-09T09:00:00Z"
         },
         {
           id: "pr-1",
@@ -445,21 +448,17 @@ describe("github feed domain", () => {
           actor: "alice",
           repo: "example/project",
           createdAt: "2026-08-09T10:00:00Z",
-          action: "merged",
-        },
+          action: "merged"
+        }
       ],
-      { followees: new Set(["alice", "bob"]), interests: [], repositories: new Map() },
+      { followees: new Set(["alice", "bob"]), interests: [], repositories: new Map() }
     );
 
     const repository = candidates.find((candidate) => candidate.category === "discovery");
-    const pullRequest = candidates.find((candidate) =>
-      candidate.eventTypes.includes("pull_request"),
-    );
+    const pullRequest = candidates.find((candidate) => candidate.eventTypes.includes("pull_request"));
     expect(repository?.reasons).toContain("multiple followed mentions");
     expect(pullRequest?.reasons).toContain("pull request merged");
-    expect(candidates.flatMap(({ reasons }) => reasons).join(" ")).not.toMatch(
-      /important|signal/iu,
-    );
+    expect(candidates.flatMap(({ reasons }) => reasons).join(" ")).not.toMatch(/important|signal/iu);
   });
 
   it.each([
@@ -472,7 +471,7 @@ describe("github feed domain", () => {
     { type: "create" as const, score: 35, reason: "new repository created" },
     { type: "follow" as const, score: 25, reason: "follow relationship from GitHub Home" },
     { type: "article" as const, score: 30, reason: "rss feed: someone" },
-    { type: "paper" as const, score: 35, reason: "research paper: someone" },
+    { type: "paper" as const, score: 35, reason: "research paper: someone" }
   ])("base score for $type is $score", ({ type, score, reason }) => {
     const candidate = scoreEvents([{ type }]);
     expect(candidate.score).toBe(score);
@@ -483,7 +482,7 @@ describe("github feed domain", () => {
     { action: "merged", score: 55, reason: "pull request merged" },
     { action: "opened", score: 35, reason: undefined },
     { action: "closed", score: 20, reason: undefined },
-    { action: "labeled", score: 5, reason: undefined },
+    { action: "labeled", score: 5, reason: undefined }
   ])("base score for a $action pull request is $score", ({ action, score, reason }) => {
     const candidate = scoreEvents([{ type: "pull_request", action, prNumber: 1 }]);
     expect(candidate.score).toBe(score);
@@ -493,7 +492,7 @@ describe("github feed domain", () => {
   it("adds 30 points for each followed actor", () => {
     const stranger = scoreEvents([{ type: "watch", actor: "dave" }]);
     const followee = scoreEvents([{ type: "watch", actor: "alice" }], {
-      followees: new Set(["alice"]),
+      followees: new Set(["alice"])
     });
     expect(followee.score - stranger.score).toBe(30);
     expect(followee.reasons).toContain("followed actor: alice");
@@ -504,12 +503,12 @@ describe("github feed domain", () => {
     const solo = scoreEvents([{ type: "watch", actor: "alice" }]);
     const duo = scoreEvents([
       { type: "watch", actor: "alice" },
-      { type: "watch", actor: "bob", id: "2" },
+      { type: "watch", actor: "bob", id: "2" }
     ]);
     const trio = scoreEvents([
       { type: "watch", actor: "alice" },
       { type: "watch", actor: "bob", id: "2" },
-      { type: "watch", actor: "carol", id: "3" },
+      { type: "watch", actor: "carol", id: "3" }
     ]);
     expect(duo.score - solo.score * 2).toBe(30);
     expect(trio.score - solo.score * 3).toBe(35);
@@ -521,23 +520,20 @@ describe("github feed domain", () => {
     const plain = scoreEvents([{ type: "watch" }]);
     const byLanguage = scoreEvents([{ type: "watch" }], {
       interests: ["rustlang"],
-      repository: { ...emptyRepository, language: "RustLang" },
+      repository: { ...emptyRepository, language: "RustLang" }
     });
     const byTopics = scoreEvents([{ type: "watch" }], {
       interests: ["topicword"],
-      repository: { ...emptyRepository, topics: ["topicword"] },
+      repository: { ...emptyRepository, topics: ["topicword"] }
     });
     const byDescription = scoreEvents([{ type: "watch" }], {
       interests: ["descword"],
-      repository: { ...emptyRepository, description: "A descword project" },
+      repository: { ...emptyRepository, description: "A descword project" }
     });
-    const byEvent = scoreEvents(
-      [{ type: "article", title: "Compiler notes", summary: "No other overlap." }],
-      { interests: ["compiler"] },
-    );
-    const plainArticle = scoreEvents([
-      { type: "article", title: "Weekly notes", summary: "No other overlap." },
-    ]);
+    const byEvent = scoreEvents([{ type: "article", title: "Compiler notes", summary: "No other overlap." }], {
+      interests: ["compiler"]
+    });
+    const plainArticle = scoreEvents([{ type: "article", title: "Weekly notes", summary: "No other overlap." }]);
     expect(byLanguage.score - plain.score).toBe(15);
     expect(byTopics.score - plain.score).toBe(15);
     expect(byDescription.score - plain.score).toBe(15);
@@ -551,26 +547,22 @@ describe("github feed domain", () => {
   it("matches a paper interest only in the abstract", () => {
     const abstract = scoreEvents(
       [{ type: "paper", title: "Unrelated title", summary: "The abstract covers abstractterm." }],
-      { interests: ["abstractterm"] },
+      { interests: ["abstractterm"] }
     );
     const titleOnly = scoreEvents(
       [{ type: "paper", title: "Notes on abstractterm", summary: "Nothing relevant in the body." }],
-      { interests: ["abstractterm"] },
+      { interests: ["abstractterm"] }
     );
     expect(abstract.score - titleOnly.score).toBe(20);
     expect(abstract.reasons).toContain("matches paper abstract: abstractterm");
-    expect(titleOnly.reasons.some((reason) => reason.startsWith("matches paper abstract:"))).toBe(
-      false,
-    );
-    expect(selectResearchCandidates([titleOnly, abstract], 8).map((item) => item.score)).toEqual([
-      abstract.score,
-    ]);
+    expect(titleOnly.reasons.some((reason) => reason.startsWith("matches paper abstract:"))).toBe(false);
+    expect(selectResearchCandidates([titleOnly, abstract], 8).map((item) => item.score)).toEqual([abstract.score]);
   });
 
   it("adds a log10 star bonus capped at 25", () => {
     const at = (stars: number) =>
       scoreEvents([{ type: "watch" }], {
-        repository: { ...emptyRepository, stargazersCount: stars },
+        repository: { ...emptyRepository, stargazersCount: stars }
       }).score;
     expect(at(1_000) - at(1)).toBe(18);
     expect(at(100_000_000) - at(1)).toBe(25);
@@ -581,10 +573,10 @@ describe("github feed domain", () => {
     vi.setSystemTime(new Date("2026-08-16T04:00:00.000Z"));
     try {
       const recent = scoreEvents([{ type: "watch" }], {
-        repository: { ...emptyRepository, pushedAt: "2026-08-02T04:00:00.000Z" },
+        repository: { ...emptyRepository, pushedAt: "2026-08-02T04:00:00.000Z" }
       });
       const stale = scoreEvents([{ type: "watch" }], {
-        repository: { ...emptyRepository, pushedAt: "2026-08-02T03:59:59.000Z" },
+        repository: { ...emptyRepository, pushedAt: "2026-08-02T03:59:59.000Z" }
       });
       expect(recent.score - stale.score).toBe(8);
       expect(recent.reasons).toContain("recently active repository");
@@ -594,16 +586,6 @@ describe("github feed domain", () => {
     }
   });
 });
-
-const emptyRepository = {
-  fullName: "example/repo",
-  htmlUrl: "https://github.com/example/repo",
-  description: null as string | null,
-  language: null as string | null,
-  stargazersCount: 1,
-  topics: [] as string[],
-  pushedAt: null as string | null,
-};
 
 function scoreEvents(
   events: Array<{
@@ -630,7 +612,7 @@ function scoreEvents(
     followees?: Set<string>;
     interests?: string[];
     repository?: typeof emptyRepository;
-  } = {},
+  } = {}
 ) {
   const [candidate] = buildCandidateProjects(
     events.map((event, index) => ({
@@ -644,15 +626,16 @@ function scoreEvents(
       ...(event.title ? { title: event.title } : {}),
       ...(event.summary ? { summary: event.summary } : {}),
       source: event.type === "article" || event.type === "paper" ? ("rss" as const) : undefined,
-      sourceName:
-        event.type === "article" || event.type === "paper" ? (event.actor ?? "someone") : undefined,
+      sourceName: event.type === "article" || event.type === "paper" ? (event.actor ?? "someone") : undefined
     })),
     {
       followees: options.followees ?? new Set<string>(),
       interests: options.interests ?? [],
-      repositories: new Map(options.repository ? [["example/repo", options.repository]] : []),
-    },
+      repositories: new Map(options.repository ? [["example/repo", options.repository]] : [])
+    }
   );
-  if (!candidate) throw new Error("expected a scored candidate");
+  if (!candidate) {
+    throw new Error("expected a scored candidate");
+  }
   return candidate;
 }

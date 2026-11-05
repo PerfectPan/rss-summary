@@ -3,7 +3,7 @@ import {
   NewsSearchError,
   resolveNewsCredibility,
   shareSearchBudget,
-  type NewsSearchInput,
+  type NewsSearchInput
 } from "../../../acquisition/index.js";
 import type { AuditedSearchPage as NewsSearchPage } from "../../../integrations/grok/index.js";
 import { canonicalizeUrl } from "../../../kernel/index.js";
@@ -12,14 +12,10 @@ import {
   projectNewsHit,
   publicationFitsWindow,
   type NewsSearchHit,
-  type NewsTimeWindow,
+  type NewsTimeWindow
 } from "../../../editorial/index.js";
 import type { NewsTopic, NewsTopicQuery } from "./output.js";
-import type {
-  GlmResearch,
-  ResearchPage,
-  ResearchSearchResult,
-} from "../../../integrations/glm/index.js";
+import type { GlmResearch, ResearchPage, ResearchSearchResult } from "../../../integrations/glm/index.js";
 
 export type NewsSearchRequest = {
   input: NewsSearchInput;
@@ -47,8 +43,7 @@ export function createHybridNewsSearch(options: Options) {
   let reads = 0;
   const pages = new Map<string, Promise<ResearchPage>>();
   const rotation = Math.max(0, options.rotation ?? 0);
-  const share = (budget: number, id: string) =>
-    shareSearchBudget(budget, id, options.queryIds, rotation);
+  const share = (budget: number, id: string) => shareSearchBudget(budget, id, options.queryIds, rotation);
 
   return async (request: NewsSearchRequest): Promise<NewsSearchPage> => {
     let primary: NewsSearchPage | undefined;
@@ -56,25 +51,37 @@ export function createHybridNewsSearch(options: Options) {
     try {
       if (quotaExhausted) {
         primary = await options.cachedSearch?.(request.input);
-        if (!primary) throw new NewsSearchError("10406", "Free quota exhausted in this brief run.");
+        if (!primary) {
+          throw new NewsSearchError("10406", "Free quota exhausted in this brief run.");
+        }
       } else {
         primary = await options.search(request.input);
       }
     } catch (error) {
-      if (!isSearchFailure(error)) throw error;
+      if (!isSearchFailure(error)) {
+        throw error;
+      }
       // A local spending boundary must not silently spend another provider's quota.
-      if (error.code.startsWith("local_budget_")) throw error;
+      if (error.code.startsWith("local_budget_")) {
+        throw error;
+      }
       primaryError = error;
-      if (error.code === "10406") quotaExhausted = true;
+      if (error.code === "10406") {
+        quotaExhausted = true;
+      }
     }
     const baseline = primary?.results ?? [];
     const accepted = buildNewsStoriesWithAudit(
       baseline.map((result) => toHit(result, request)),
-      options.window,
+      options.window
     ).stories;
-    if ((accepted.length > 0 && !options.combine) || primary?.searchUsage?.source === "cache")
-      // The primary keeps its own provider label; a fallback page stays deepseek.
+    if (
+      (accepted.length > 0 && !options.combine) ||
+      primary?.searchUsage?.source === "cache"
+    ) // The primary keeps its own provider label; a fallback page stays deepseek.
+    {
       return { ...primary!, provider: primary!.provider ?? "doubao" };
+    }
 
     const fallback = {
       reason: primaryError?.code ?? (accepted.length ? "complement" : "no-eligible-results"),
@@ -87,26 +94,25 @@ export function createHybridNewsSearch(options: Options) {
       warnings: [] as string[],
       rawResults: 0,
       domainRejected: 0,
-      invalidLinks: 0,
+      invalidLinks: 0
     };
     const result: NewsSearchPage = {
       ...primary,
       provider: primary ? "mixed" : "glm",
       fallback,
       resultCount: baseline.length,
-      results: [...baseline],
+      results: [...baseline]
     };
     const config = request.query.glm;
     if (!config) {
-      if (primaryError) throw primaryError;
+      if (primaryError) {
+        throw primaryError;
+      }
       fallback.incomplete = true;
       fallback.warnings.push("未配置 GLM 可信来源");
       return result;
     }
-    const searchLimit = Math.min(
-      share(options.maxSearches, request.query.id),
-      options.maxSearches - searches,
-    );
+    const searchLimit = Math.min(share(options.maxSearches, request.query.id), options.maxSearches - searches);
     const readLimit = share(options.maxReads, request.query.id);
     const offset = rotation % config.domains.length;
     const domains = [...config.domains.slice(offset), ...config.domains.slice(0, offset)];
@@ -116,8 +122,9 @@ export function createHybridNewsSearch(options: Options) {
       fallback.incomplete = targets.length === 0;
       fallback.warnings.push("GLM 搜索预算已用完");
     }
-    if (!targets.length && primaryError)
+    if (!targets.length && primaryError) {
       throw new NewsSearchError("search_budget", "Fallback search budget unavailable.");
+    }
     let completed = 0;
     const sourceResults: ResearchSearchResult[][] = [];
     // Each call has one source constraint; rotate sources within the reserved query budget.
@@ -135,7 +142,7 @@ export function createHybridNewsSearch(options: Options) {
             fallback.rawResults += counts.rawResults;
             fallback.domainRejected += counts.domainRejected;
           },
-          domain.endsWith(".cn") ? "cn" : "us",
+          domain.endsWith(".cn") ? "cn" : "us"
         );
         sourceResults.push(found);
         completed++;
@@ -144,23 +151,21 @@ export function createHybridNewsSearch(options: Options) {
         fallback.warnings.push("GLM 搜索不可用，保留原搜索结果");
       }
     }
-    if (!completed && primaryError)
-      throw new NewsSearchError(
-        "hybrid_unavailable",
-        `Primary ${primaryError.code}; GLM search unavailable.`,
-      );
+    if (!completed && primaryError) {
+      throw new NewsSearchError("hybrid_unavailable", `Primary ${primaryError.code}; GLM search unavailable.`);
+    }
     const seen = new Set<string>();
     const candidates = Array.from({ length: request.input.count }, (_, rank) =>
-      sourceResults.flatMap((items) => (items[rank] ? [items[rank]!] : [])),
+      sourceResults.flatMap((items) => (items[rank] ? [items[rank]!] : []))
     ).flat();
     for (const candidate of candidates.slice(0, request.input.count)) {
       const url = canonicalizeUrl(candidate.url);
-      if (!url || seen.has(url)) continue;
+      if (!url || seen.has(url)) {
+        continue;
+      }
       seen.add(url);
       const parsed = new URL(url);
-      const domain = config.domains.find(
-        (host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`),
-      );
+      const domain = config.domains.find((host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`));
       if (
         (!domain && request.topic.sourcePolicy !== "news") ||
         !["https:", "http:"].includes(parsed.protocol) ||
@@ -215,11 +220,9 @@ export function createHybridNewsSearch(options: Options) {
         sourceVerification: {
           method: domain ? "configured-domain" : "article-read",
           domain: domain ?? parsed.hostname,
-          policy: domain ? "official" : "news",
+          policy: domain ? "official" : "news"
         },
-        authInfoDescription: domain
-          ? "优先参考来源 · 原文发布时间已校验"
-          : "原文已读取 · 来源可信度未评级",
+        authInfoDescription: domain ? "优先参考来源 · 原文发布时间已校验" : "原文已读取 · 来源可信度未评级"
       });
     }
     if (
@@ -235,10 +238,7 @@ export function createHybridNewsSearch(options: Options) {
   };
 }
 
-function toHit(
-  result: NewsSearchPage["results"][number],
-  { query, topic }: NewsSearchRequest,
-): NewsSearchHit {
+function toHit(result: NewsSearchPage["results"][number], { query, topic }: NewsSearchRequest): NewsSearchHit {
   return projectNewsHit(
     result,
     {
@@ -249,8 +249,8 @@ function toHit(
       queryText: query.text,
       subjectAny: query.subjectAny,
       eventAny: query.eventAny,
-      excludedAny: query.excludedAny,
+      excludedAny: query.excludedAny
     },
-    resolveNewsCredibility(result),
+    resolveNewsCredibility(result)
   );
 }

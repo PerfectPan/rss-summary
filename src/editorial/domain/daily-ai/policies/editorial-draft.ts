@@ -1,7 +1,4 @@
-import {
-  invalidEditorialCollectionMessage,
-  invalidEditorialItemMessage,
-} from "../../evidence/index.js";
+import { invalidEditorialCollectionMessage, invalidEditorialItemMessage } from "../../evidence/index.js";
 import { isSameHeadline } from "../../identity/index.js";
 import {
   dailyAiCategories,
@@ -9,18 +6,15 @@ import {
   type DailyAiEditorialItem,
   type DailyAiEditorialIssue,
   type DailyAiEditorialValidation,
-  type DailyAiEvidence,
+  type DailyAiEvidence
 } from "../value-objects/daily-ai.js";
 
-export function validateEditorialDraft(
-  value: unknown,
-  evidence: DailyAiEvidence[],
-): DailyAiEditorialValidation {
+export function validateEditorialDraft(value: unknown, evidence: DailyAiEvidence[]): DailyAiEditorialValidation {
   const invalidCollection = invalidEditorialCollectionMessage(value);
   if (invalidCollection) {
     return {
       items: [],
-      issues: [{ index: -1, refs: [], reason: "invalid-draft", message: invalidCollection }],
+      issues: [{ index: -1, refs: [], reason: "invalid-draft", message: invalidCollection }]
     };
   }
   const known = new Set(evidence.map(({ id }) => id));
@@ -35,9 +29,7 @@ export function validateEditorialDraft(
     const record = entry as Record<string, unknown>;
     const category = record.category;
     const headline = typeof record.headline === "string" ? record.headline.trim() : "";
-    const refs = Array.isArray(record.refs)
-      ? record.refs.filter((ref): ref is string => typeof ref === "string")
-      : [];
+    const refs = Array.isArray(record.refs) ? record.refs.filter((ref): ref is string => typeof ref === "string") : [];
     if (!dailyAiCategories.includes(category as DailyAiCategory)) {
       issues.push({ index, refs, reason: "invalid-category", message: "invalid category" });
       continue;
@@ -47,7 +39,7 @@ export function validateEditorialDraft(
         index,
         refs,
         reason: "invalid-headline",
-        message: !headline ? "headline is required" : "headline is too long",
+        message: !headline ? "headline is required" : "headline is too long"
       });
       continue;
     }
@@ -59,8 +51,9 @@ export function validateEditorialDraft(
   }
   const unique: DailyAiEditorialItem[] = [];
   for (const item of items) {
-    if (!unique.some((existing) => isSameHeadline(existing.headline, item.headline)))
+    if (!unique.some((existing) => isSameHeadline(existing.headline, item.headline))) {
       unique.push(item);
+    }
   }
   return { items: unique, issues };
 }

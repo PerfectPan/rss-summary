@@ -43,19 +43,17 @@ export type CollectedRivusDigest = {
 
 export async function generateRivusDigest(
   value: unknown,
-  dependencies: RivusDigestDependencies = {},
+  dependencies: RivusDigestDependencies = {}
 ): Promise<RivusDigestResult> {
   const { day, document } = await collectRivusDigest(value, dependencies);
-  const paperCandidateCount = document.candidates.filter(
-    (candidate) => candidate.category === "paper",
-  ).length;
+  const paperCandidateCount = document.candidates.filter((candidate) => candidate.category === "paper").length;
   return {
     candidateCount: document.candidates.length - paperCandidateCount,
     generatedAt: document.generatedAt,
     markdown: renderViewMarkdown(digestView(day ? { ...document, displayDate: day } : document)),
     paperCandidateCount,
     ...(document.windowLabel ? { windowLabel: document.windowLabel } : {}),
-    ...(document.audit ? { audit: document.audit } : {}),
+    ...(document.audit ? { audit: document.audit } : {})
   };
 }
 
@@ -66,7 +64,7 @@ export async function generateRivusDigest(
  */
 export async function collectRivusDigest(
   value: unknown,
-  dependencies: RivusDigestDependencies = {},
+  dependencies: RivusDigestDependencies = {}
 ): Promise<CollectedRivusDigest> {
   const input = parseInput(value);
   if (input.day && input.occurrence) {
@@ -78,14 +76,10 @@ export async function collectRivusDigest(
   if (input.window && !input.occurrence) {
     throw new Error("window requires occurrence.");
   }
-  const occurrenceDay = input.occurrence
-    ? calendarDayAtOffset(input.occurrence, timezoneOffset)
-    : undefined;
+  const occurrenceDay = input.occurrence ? calendarDayAtOffset(input.occurrence, timezoneOffset) : undefined;
   const day =
     input.day ??
-    (input.window === "previous-calendar-day" && occurrenceDay
-      ? shiftCalendarDay(occurrenceDay, -1)
-      : occurrenceDay);
+    (input.window === "previous-calendar-day" && occurrenceDay ? shiftCalendarDay(occurrenceDay, -1) : occurrenceDay);
   if (day && !/^\d{4}-\d{2}-\d{2}$/u.test(day)) {
     throw new Error("day must use YYYY-MM-DD format.");
   }
@@ -100,19 +94,19 @@ export async function collectRivusDigest(
     dryRun: true,
     webhookUrl: undefined,
     onlyNew,
-    ...(input.rssOnly !== undefined || rssOnly ? { rssOnly } : { rssOnly: false }),
+    ...(input.rssOnly !== undefined || rssOnly ? { rssOnly } : { rssOnly: false })
   };
-  const document = await runPluginEffect(
-    (dependencies.buildDigestDocument ?? buildDigestDocument)(config),
-  );
+  const document = await runPluginEffect((dependencies.buildDigestDocument ?? buildDigestDocument)(config));
   return {
     ...(day ? { day } : {}),
-    document,
+    document
   };
 }
 
 function parseInput(value: unknown): RivusDigestInput {
-  if (value === undefined) return {};
+  if (value === undefined) {
+    return {};
+  }
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("Rivus digest input must be an object.");
   }
@@ -123,26 +117,37 @@ function parseInput(value: unknown): RivusDigestInput {
     occurrence: optionalString(input.occurrence, "occurrence"),
     onlyNew: optionalBoolean(input.onlyNew, "onlyNew"),
     rssOnly: optionalBoolean(input.rssOnly, "rssOnly"),
-    window: optionalWindow(input.window),
+    window: optionalWindow(input.window)
   };
 }
 
 function optionalString(value: unknown, name: string): string | undefined {
-  if (value === undefined) return undefined;
-  if (typeof value !== "string" || value.length === 0)
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "string" || value.length === 0) {
     throw new Error(`${name} must be a non-empty string.`);
+  }
   return value;
 }
 
 function optionalBoolean(value: unknown, name: string): boolean | undefined {
-  if (value === undefined) return undefined;
-  if (typeof value !== "boolean") throw new Error(`${name} must be a boolean.`);
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "boolean") {
+    throw new Error(`${name} must be a boolean.`);
+  }
   return value;
 }
 
 function optionalWindow(value: unknown): "previous-calendar-day" | undefined {
-  if (value === undefined) return undefined;
-  if (value !== "previous-calendar-day") throw new Error("window must be previous-calendar-day.");
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value !== "previous-calendar-day") {
+    throw new Error("window must be previous-calendar-day.");
+  }
   return value;
 }
 
@@ -150,8 +155,7 @@ export const subscriptionsToolDescriptor: Pick<
   RivusToolDescriptor,
   "description" | "digest" | "idempotency" | "inputSchema" | "risk" | "version"
 > = {
-  description:
-    "Generate a read-only subscription brief from the user's GitHub Home and personal RSS sources",
+  description: "Generate a read-only subscription brief from the user's GitHub Home and personal RSS sources",
   digest: "sha256:rss-summary-generate-digest-v2",
 
   idempotency: "none",
@@ -159,18 +163,17 @@ export const subscriptionsToolDescriptor: Pick<
     additionalProperties: false,
     properties: {
       draft: {
-        description:
-          "Grounded Array<{ref, summary}> produced only from selected evidence; required for render",
+        description: "Grounded Array<{ref, summary}> produced only from selected evidence; required for render",
         items: {
           additionalProperties: false,
           properties: {
             ref: { minLength: 1, type: "string" },
-            summary: { maxLength: 180, minLength: 8, type: "string" },
+            summary: { maxLength: 180, minLength: 8, type: "string" }
           },
           required: ["ref", "summary"],
-          type: "object",
+          type: "object"
         },
-        type: "array",
+        type: "array"
       },
       research: {
         description: "Article research results returned by rss-summary/research-article",
@@ -182,16 +185,16 @@ export const subscriptionsToolDescriptor: Pick<
             fetchedUrl: { format: "uri", type: "string" },
             method: {
               enum: ["browser", "http", "glm", "captions", "transcription"],
-              type: "string",
+              type: "string"
             },
             materials: {
               type: "object",
               additionalProperties: false,
               properties: {
                 transcriptPath: { type: "string" },
-                manifestPath: { type: "string" },
+                manifestPath: { type: "string" }
               },
-              required: ["transcriptPath", "manifestPath"],
+              required: ["transcriptPath", "manifestPath"]
             },
             visuals: {
               type: "object",
@@ -211,35 +214,35 @@ export const subscriptionsToolDescriptor: Pick<
                       imagePath: { type: "string" },
                       ocrText: { type: "string", maxLength: 1000 },
                       visualText: { type: "string", maxLength: 500 },
-                      visionModel: { type: "string", maxLength: 120 },
+                      visionModel: { type: "string", maxLength: 120 }
                     },
-                    required: ["index", "timestampSeconds", "imagePath"],
-                  },
-                },
+                    required: ["index", "timestampSeconds", "imagePath"]
+                  }
+                }
               },
-              required: ["status", "frames"],
+              required: ["status", "frames"]
             },
             ref: { minLength: 1, type: "string" },
             retrievedAt: { format: "date-time", type: "string" },
             status: { enum: ["failed", "ok"], type: "string" },
             title: { type: "string" },
             tool: { const: "article-research", type: "string" },
-            url: { format: "uri", type: "string" },
+            url: { format: "uri", type: "string" }
           },
           required: ["ref", "status", "url"],
-          type: "object",
+          type: "object"
         },
-        type: "array",
+        type: "array"
       },
       day: {
         description: "Local calendar day in YYYY-MM-DD format",
         pattern: "^\\d{4}-\\d{2}-\\d{2}$",
-        type: "string",
+        type: "string"
       },
       occurrence: {
         description: "Scheduled occurrence as an ISO date-time",
         format: "date-time",
-        type: "string",
+        type: "string"
       },
       onlyNew: { default: true, type: "boolean" },
       phase: { enum: ["collect", "select", "render"], type: "string" },
@@ -252,26 +255,24 @@ export const subscriptionsToolDescriptor: Pick<
           properties: {
             reason: { maxLength: 240, minLength: 4, type: "string" },
             ref: { minLength: 1, type: "string" },
-            selected: { type: "boolean" },
+            selected: { type: "boolean" }
           },
           required: ["ref", "selected", "reason"],
-          type: "object",
+          type: "object"
         },
-        type: "array",
+        type: "array"
       },
-      window: { enum: ["previous-calendar-day"], type: "string" },
+      window: { enum: ["previous-calendar-day"], type: "string" }
     },
-    type: "object",
+    type: "object"
   },
   risk: "observe",
-  version: "1.1.0",
+  version: "1.1.0"
 };
 
 /** Default executor: the three-phase protocol over collect/generate. */
 export function createSubscriptionsToolExecutor(
-  dependencies: { generateDigest?: (input: unknown) => Promise<RivusDigestResult> } = {},
+  dependencies: { generateDigest?: (input: unknown) => Promise<RivusDigestResult> } = {}
 ) {
-  return createRivusSubscriptionExecutor(
-    dependencies.generateDigest ? { generate: dependencies.generateDigest } : {},
-  );
+  return createRivusSubscriptionExecutor(dependencies.generateDigest ? { generate: dependencies.generateDigest } : {});
 }

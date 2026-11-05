@@ -1,5 +1,5 @@
 export {
   commitDailyAiDeliveryReceipt,
   createDailyAiDeliveryReceipt,
-  type DailyAiDeliveryReceipt,
+  type DailyAiDeliveryReceipt
 } from "./value-objects/daily-ai-receipt.js";

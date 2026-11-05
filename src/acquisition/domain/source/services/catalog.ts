@@ -2,7 +2,7 @@ import type { FeedSubscription, FeedSubscriptionInput, IndustrySource } from "..
 
 export function addFeedSubscription(
   feeds: readonly FeedSubscription[],
-  input: FeedSubscriptionInput,
+  input: FeedSubscriptionInput
 ): FeedSubscription[] {
   const next = normalizeFeedSubscription(input);
   if (feeds.some((feed) => feed.url === next.url)) {
@@ -11,10 +11,7 @@ export function addFeedSubscription(
   return [...feeds, next];
 }
 
-export function removeFeedSubscription(
-  feeds: readonly FeedSubscription[],
-  url: string,
-): FeedSubscription[] {
+export function removeFeedSubscription(feeds: readonly FeedSubscription[], url: string): FeedSubscription[] {
   const normalizedUrl = url.trim();
   const next = feeds.filter((feed) => feed.url !== normalizedUrl);
   if (next.length === feeds.length) {
@@ -38,7 +35,7 @@ export function parseFeedSubscriptions(value: string): FeedSubscription[] {
       return {
         name: hostnameOf(item),
         url: item,
-        tags: [],
+        tags: []
       };
     }
 
@@ -65,7 +62,7 @@ export function parseIndustrySources(value: string): IndustrySource[] {
       return {
         name: hostnameOf(item),
         url: item,
-        tags: [],
+        tags: []
       };
     }
     if (!item || typeof item !== "object") {
@@ -92,19 +89,21 @@ export function parseIndustrySources(value: string): IndustrySource[] {
       name: optionalName(record.name, url),
       url,
       pathPrefixes,
-      tags: parseStringArray(record.tags, "Web page source tags", false),
+      tags: parseStringArray(record.tags, "Web page source tags", false)
     };
   });
 }
 
 function normalizeFeedSubscription(input: FeedSubscriptionInput): FeedSubscription {
   const url = input.url.trim();
-  if (!url) throw new Error("RSS feed url is required.");
+  if (!url) {
+    throw new Error("RSS feed url is required.");
+  }
 
   return {
     name: input.name?.trim() || hostnameOf(url),
     url,
-    tags: [...new Set((input.tags ?? []).map((tag) => tag.trim()).filter(Boolean))],
+    tags: [...new Set((input.tags ?? []).map((tag) => tag.trim()).filter(Boolean))]
   };
 }
 
@@ -114,7 +113,7 @@ function parseFeedSubscriptionRecord(record: Record<string, unknown>): FeedSubsc
   return {
     name: optionalName(record.name, url),
     url,
-    tags: parseStringArray(record.tags, "RSS feed tags", false),
+    tags: parseStringArray(record.tags, "RSS feed tags", false)
   };
 }
 
@@ -123,7 +122,9 @@ function optionalName(value: unknown, url: string): string {
 }
 
 function parseStringArray(value: unknown, label: string, required = true): string[] {
-  if (value === undefined && !required) return [];
+  if (value === undefined && !required) {
+    return [];
+  }
   if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
     throw new Error(`${label} must be an array of strings.`);
   }

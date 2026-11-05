@@ -45,9 +45,9 @@ export async function captureVideoFrames(options: {
           "none",
           "--json",
           "--timeout",
-          `${options.timeoutMs}ms`,
+          `${options.timeoutMs}ms`
         ],
-        options.timeoutMs,
+        options.timeoutMs
       );
       const result = asRecord(JSON.parse(stdout));
       const slides = asRecord(result.slides).slides;
@@ -75,23 +75,29 @@ export async function captureVideoFrames(options: {
         indices.add(frame.index);
         const imagePath = await realpath(frame.imagePath);
         const relation = relative(realDirectory, imagePath);
-        if (!relation || relation.startsWith("..") || isAbsolute(relation))
+        if (!relation || relation.startsWith("..") || isAbsolute(relation)) {
           throw new Error("Frame path escaped its artifact directory.");
+        }
         const metadata = await stat(imagePath);
-        if (!metadata.isFile() || metadata.size > 4_000_000) throw new Error("Invalid frame size.");
+        if (!metadata.isFile() || metadata.size > 4_000_000) {
+          throw new Error("Invalid frame size.");
+        }
         const bytes = await readFile(imagePath);
-        if (!bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])))
+        if (!bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) {
           throw new Error("Frame is not a PNG.");
+        }
         frames.push({
           index: frame.index,
           timestampSeconds: frame.timestamp,
           imagePath,
-          ...(text(frame.ocrText) ? { ocrText: text(frame.ocrText)!.slice(0, 1_000) } : {}),
+          ...(text(frame.ocrText) ? { ocrText: text(frame.ocrText)!.slice(0, 1_000) } : {})
         });
       }
       for (const frame of frames) {
         const timeout = Math.min(120_000, deadline - Date.now());
-        if (timeout <= 0) break;
+        if (timeout <= 0) {
+          break;
+        }
         try {
           const { stdout } = await options.run(
             [
@@ -103,50 +109,44 @@ export async function captureVideoFrames(options: {
               "--metrics",
               "off",
               "--timeout",
-              `${timeout}ms`,
+              `${timeout}ms`
             ],
-            timeout,
+            timeout
           );
           const output = asRecord(JSON.parse(stdout));
-          if (typeof output.summary !== "string") throw new Error("Missing visual analysis.");
+          if (typeof output.summary !== "string") {
+            throw new Error("Missing visual analysis.");
+          }
           const analysis = asRecord(JSON.parse(output.summary));
           const description = text(analysis.text);
-          if (
-            analysis.status !== "ok" ||
-            !description ||
-            description.length < 8 ||
-            description.length > 500
-          ) {
+          if (analysis.status !== "ok" || !description || description.length < 8 || description.length > 500) {
             throw new Error("No usable visual evidence.");
           }
           frame.visualText = description;
           const model = text(asRecord(output.llm).model);
-          if (model) frame.visionModel = model.slice(0, 120);
+          if (model) {
+            frame.visionModel = model.slice(0, 120);
+          }
         } catch {
           // OCR alone cannot establish that the vision model inspected the pixels.
         }
       }
       const analyzedCount = frames.filter((frame) => frame.visualText).length;
       visuals = {
-        status:
-          analyzedCount === frames.length
-            ? "analyzed"
-            : analyzedCount > 0
-              ? "partial"
-              : "unavailable",
+        status: analyzedCount === frames.length ? "analyzed" : analyzedCount > 0 ? "partial" : "unavailable",
         frames,
         ...(analyzedCount < frames.length
           ? {
               reason:
-                "Some frame images could not be analyzed; only visualText entries are verified visual observations.",
+                "Some frame images could not be analyzed; only visualText entries are verified visual observations."
             }
-          : {}),
+          : {})
       };
     } catch {
       visuals = {
         status: "unavailable",
         frames: [],
-        reason: "Key-frame extraction failed; visual content has not been inspected.",
+        reason: "Key-frame extraction failed; visual content has not been inspected."
       };
     }
     await writeFile(
@@ -156,12 +156,12 @@ export async function captureVideoFrames(options: {
           sourceUrl: options.sourceUrl,
           retrievedAt: new Date().toISOString(),
           transcriptPath,
-          visuals,
+          visuals
         },
         null,
-        2,
+        2
       ) + "\n",
-      { mode: 0o600 },
+      { mode: 0o600 }
     );
     return { visuals, materials: { transcriptPath, manifestPath } };
   } catch {
@@ -169,9 +169,8 @@ export async function captureVideoFrames(options: {
       visuals: {
         status: "unavailable",
         frames: [],
-        reason:
-          "Video research materials could not be saved; visual content has not been inspected.",
-      },
+        reason: "Video research materials could not be saved; visual content has not been inspected."
+      }
     };
   }
 }

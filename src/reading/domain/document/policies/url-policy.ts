@@ -1,6 +1,8 @@
 export function validateArticleResearchUrl(value: string): string {
   const url = validateResearchUrl(value);
-  if (isVideoResearchUrl(url)) throw new Error("video research requires captions or a transcript");
+  if (isVideoResearchUrl(url)) {
+    throw new Error("video research requires captions or a transcript");
+  }
   return url;
 }
 
@@ -9,7 +11,9 @@ export function validateResearchUrl(value: string): string {
   if (url.protocol !== "https:" && url.protocol !== "http:") {
     throw new Error("article URL must use http or https");
   }
-  if (url.username || url.password) throw new Error("article URL must not contain credentials");
+  if (url.username || url.password) {
+    throw new Error("article URL must not contain credentials");
+  }
   const hostname = url.hostname.toLowerCase();
   if (
     hostname === "localhost" ||
@@ -45,13 +49,14 @@ export function isVideoResearchUrl(value: string): boolean {
 
 export function isPrivateIpv4(hostname: string): boolean {
   const octets = hostname.split(".").map(Number);
-  if (
-    octets.length !== 4 ||
-    octets.some((value) => !Number.isInteger(value) || value < 0 || value > 255)
-  ) {
+  if (octets.length !== 4 || octets.some((value) => !Number.isInteger(value) || value < 0 || value > 255)) {
     return false;
   }
-  const [first, second] = octets;
+  const first = octets[0];
+  const second = octets[1];
+  if (first === undefined || second === undefined) {
+    return false;
+  }
   return (
     first === 10 ||
     first === 127 ||

@@ -4,7 +4,7 @@ export {
   repositoryFactsForCandidate,
   selectCandidatePresentationSections,
   DEFAULT_LINK_SECTION_LIMIT,
-  DEFAULT_SUMMARY_SECTION_LIMIT,
+  DEFAULT_SUMMARY_SECTION_LIMIT
 } from "./policies/presentation.js";
 export { scoreAcquired, selectResearchCandidates } from "./policies/scoring.js";
 export { applyEditorialSelectionToAudit } from "./services/editorial-audit.js";
@@ -17,5 +17,5 @@ export type {
   PresentationDepth,
   PresentationPolicy,
   PresentationReasonCode,
-  ScoreOptions,
+  ScoreOptions
 } from "./value-objects/candidate.js";

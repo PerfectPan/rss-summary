@@ -20,7 +20,7 @@ export function parseGrokStream(
   count: number,
   since: number,
   until: number,
-  allowedHandle?: string,
+  allowedHandle?: string
 ): GrokAcquired {
   try {
     const calls = new Set<string>();
@@ -29,15 +29,25 @@ export function parseGrokStream(
     let end: Record<string, unknown> | undefined;
     for (const line of stream.split(/\r?\n/u).filter((line) => line.trim())) {
       const event: unknown = JSON.parse(line);
-      if (!isRecord(event)) throw new Error("Invalid event");
-      if (end) throw new Error("Events after completion");
-      if (isNativeCall(event)) calls.add(event.toolCallId);
+      if (!isRecord(event)) {
+        throw new Error("Invalid event");
+      }
+      if (end) {
+        throw new Error("Events after completion");
+      }
+      if (isNativeCall(event)) {
+        calls.add(event.toolCallId);
+      }
       if (isNativeReceipt(event, calls)) {
         nativeTools.add(event.rawOutput.name);
         finalText = "";
       }
-      if (event.type === "text" && typeof event.data === "string") finalText += event.data;
-      if (event.type === "end") end = event;
+      if (event.type === "text" && typeof event.data === "string") {
+        finalText += event.data;
+      }
+      if (event.type === "end") {
+        end = event;
+      }
     }
     if (!end || end.stopReason !== "end_turn" || !nativeTools.size) {
       throw new Error("Missing native search receipt or completion");
@@ -92,7 +102,7 @@ export function parseGrokStream(
           publishTime: new Date(instant).toISOString(),
           rankPosition: results.length + 1,
           authInfoLevel: 4,
-          authInfoDescription: badge,
+          authInfoDescription: badge
         });
       } catch {
         rejectedResults += 1;
@@ -111,15 +121,17 @@ export function parseGrokStream(
         totalTokens: nonNegativeNumber(usage.total_tokens),
         inputTokens: nonNegativeNumber(usage.input_tokens),
         cachedInputTokens: nonNegativeNumber(usage.cache_read_input_tokens),
-        outputTokens: nonNegativeNumber(usage.output_tokens),
-      },
+        outputTokens: nonNegativeNumber(usage.output_tokens)
+      }
     };
     return { page, items: page.results.map(itemFromGrok) };
   } catch (cause) {
-    if (cause instanceof NewsSearchError) throw cause;
+    if (cause instanceof NewsSearchError) {
+      throw cause;
+    }
     throw new NewsSearchError(
       "grok_invalid_response",
-      "Grok response lacks a completed native X search receipt, valid completion or structured results.",
+      "Grok response lacks a completed native X search receipt, valid completion or structured results."
     );
   }
 }
@@ -131,17 +143,17 @@ function itemFromGrok(result: SearchResult): Item {
     subject: {
       key: result.url,
       name: result.siteName ?? result.url,
-      url: result.url,
+      url: result.url
     },
     content: {
       title: result.title,
       ...(result.summary ? { excerpt: result.summary } : {}),
-      url: result.url,
+      url: result.url
     },
     publishedAt: { value: result.publishTime ?? "", precision: "instant" },
     provenance: {
       origin: result.url,
-      note: badge,
+      note: badge
     },
     credibility: { tier: "unrated" },
     signals: [],
@@ -149,8 +161,8 @@ function itemFromGrok(result: SearchResult): Item {
     display: {
       label: result.siteName,
       reference: result.url,
-      facts: [],
-    },
+      facts: []
+    }
   };
 }
 
@@ -161,14 +173,18 @@ function nonNegativeNumber(value: unknown): number | undefined {
 const objectCtorString = Function.prototype.toString.call(Object);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== "object") return false;
-  if (Object.prototype.toString.call(value) !== "[object Object]") return false;
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+  if (Object.prototype.toString.call(value) !== "[object Object]") {
+    return false;
+  }
   const proto: object | null = Object.getPrototypeOf(value);
-  if (proto === null) return true;
+  if (proto === null) {
+    return true;
+  }
   const ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
   return (
-    typeof ctor === "function" &&
-    ctor instanceof ctor &&
-    Function.prototype.toString.call(ctor) === objectCtorString
+    typeof ctor === "function" && ctor instanceof ctor && Function.prototype.toString.call(ctor) === objectCtorString
   );
 }

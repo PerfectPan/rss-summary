@@ -2,7 +2,7 @@ import type {
   MergedSearchSource,
   ProviderFallback,
   SearchFallback,
-  SearchUsage,
+  SearchUsage
 } from "../../../../acquisition/domain/search/index.js";
 import type { NewsHitRejectionReason, NewsQueryIntent, NewsTopic, NewsTopicQuery } from "./news.js";
 

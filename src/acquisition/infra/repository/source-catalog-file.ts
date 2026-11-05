@@ -14,21 +14,20 @@ export const SourceCatalogFileLive = Layer.effect(
     const loadFeeds = (path: string): Effect.Effect<FeedSubscription[], Error> =>
       Effect.gen(function* () {
         const exists = yield* fs.exists(path);
-        if (!exists) return [];
+        if (!exists) {
+          return [];
+        }
         return decodeFeedsJson(yield* fs.readFileString(path));
       }).pipe(Effect.mapError(asFileError));
-    const saveFeeds = (
-      path: string,
-      feeds: readonly FeedSubscription[],
-    ): Effect.Effect<void, Error> =>
+    const saveFeeds = (path: string, feeds: readonly FeedSubscription[]): Effect.Effect<void, Error> =>
       Effect.uninterruptible(
         Effect.gen(function* () {
           yield* fs.makeDirectory(dirname(path), { recursive: true });
           yield* fs.writeFileString(path, formatFeedSubscriptions(feeds));
-        }),
+        })
       ).pipe(Effect.mapError(asFileError));
     return { loadFeeds, saveFeeds };
-  }),
+  })
 );
 
 /** The feeds CLI prints `error.message`. Keep Node's own message for that text. */

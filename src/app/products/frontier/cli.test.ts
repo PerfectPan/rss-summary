@@ -16,14 +16,12 @@ describe("frontier industry CLI", () => {
       const previous = process.env.INDUSTRY_SOURCES_FILE;
       process.env.INDUSTRY_SOURCES_FILE = missingIndustry;
       const code = await runIndustryCommand([], {
-        stderr: { write: (chunk) => stderr.push(String(chunk)) },
+        stderr: { write: (chunk) => stderr.push(String(chunk)) }
       });
       process.env.INDUSTRY_SOURCES_FILE = previous;
 
       expect(code).toBe(1);
-      expect(stderr.join("")).toContain(
-        `Industry source configuration file does not exist: ${missingIndustry}`,
-      );
+      expect(stderr.join("")).toContain(`Industry source configuration file does not exist: ${missingIndustry}`);
     } finally {
       rmSync(temporaryDirectory, { force: true, recursive: true });
     }

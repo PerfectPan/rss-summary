@@ -9,7 +9,7 @@ import { asError, provideHttp, timeoutFetch } from "../shared/http.js";
 
 export const webHeaders = {
   accept: "text/html, application/xhtml+xml;q=0.9, */*;q=0.8",
-  "user-agent": "rss-summary/0.1",
+  "user-agent": "rss-summary/0.1"
 } as const;
 
 export type WebPageOptions = {
@@ -21,7 +21,7 @@ export type WebPageOptions = {
 /** Fetch one listing page and map its dated links into activity cards. */
 export function readWebPageEvents(
   source: WebPageSubscription,
-  options: WebPageOptions = {},
+  options: WebPageOptions = {}
 ): Effect.Effect<ActivityCardDto[], Error> {
   const fetchImpl = timeoutFetch(options.fetch ?? fetch, options.timeoutMs ?? 12_000);
   const maxAttempts = options.maxAttempts ?? 3;
@@ -30,17 +30,14 @@ export function readWebPageEvents(
     const entries = extractWebPageEntries(html, source);
     if (entries.length === 0) {
       return yield* Effect.fail(
-        new Error(`Web page ${source.name} returned no dated links matching its path prefixes`),
+        new Error(`Web page ${source.name} returned no dated links matching its path prefixes`)
       );
     }
     return entries.map((entry) => normalizeWebPageEntry(entry, source));
   }).pipe((effect) => provideHttp(effect, fetchImpl));
 }
 
-function fetchHtml(
-  url: string,
-  maxAttempts: number,
-): Effect.Effect<string, Error, HttpClient.HttpClient> {
+function fetchHtml(url: string, maxAttempts: number): Effect.Effect<string, Error, HttpClient.HttpClient> {
   return Effect.gen(function* () {
     let lastError: unknown;
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
@@ -48,8 +45,9 @@ function fetchHtml(
       if (attempted._tag === "Failure") {
         const error = asError(attempted.failure);
         lastError = error;
-        if (!isRetryableFetchError(error) || attempt === maxAttempts)
+        if (!isRetryableFetchError(error) || attempt === maxAttempts) {
           return yield* Effect.fail(error);
+        }
       } else if (attempted.success.status < 200 || attempted.success.status >= 300) {
         const error = new Error(`Web page ${url} returned ${attempted.success.status}`);
         if (!isRetryableStatus(attempted.success.status) || attempt === maxAttempts) {
@@ -61,9 +59,7 @@ function fetchHtml(
       }
       yield* Effect.sleep(250 * 2 ** (attempt - 1));
     }
-    return yield* Effect.fail(
-      lastError instanceof Error ? lastError : new Error(`Web page ${url} failed`),
-    );
+    return yield* Effect.fail(lastError instanceof Error ? lastError : new Error(`Web page ${url} failed`));
   });
 }
 

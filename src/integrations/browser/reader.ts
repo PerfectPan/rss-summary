@@ -4,7 +4,7 @@ import {
   validateArticleResearchUrl,
   type ArticleExtract,
   type ReadRequest,
-  type ReadResult,
+  type ReadResult
 } from "../../reading/index.js";
 import { renderPage } from "../shared/browser.js";
 
@@ -24,8 +24,7 @@ export type BrowserPageFetcher = (input: {
   url: string;
 }) => Effect.Effect<{ html: string; url: string }, unknown>;
 
-const articleRootSelector =
-  "article,main,[itemprop='articleBody'],[data-pagefind-body],.markdown-body,.prose";
+const articleRootSelector = "article,main,[itemprop='articleBody'],[data-pagefind-body],.markdown-body,.prose";
 const readerUserAgent = "rss-summary/0.1 article-research-browser";
 
 const DEFAULT_MAX_CHARS = 16_000;
@@ -37,7 +36,7 @@ const DEFAULT_TIMEOUT_MS = 30_000;
  * rejected effect, matching the historical client contract.
  */
 export function browserArticleResearch(
-  options: BrowserReaderOptions,
+  options: BrowserReaderOptions
 ): (request: ReadRequest) => Effect.Effect<ReadResult> {
   const fetchPage = options.fetchPage ?? fetchRenderedPage;
   const maxChars = options.maxChars ?? DEFAULT_MAX_CHARS;
@@ -50,21 +49,21 @@ export function browserArticleResearch(
       // catch below reports it like the historical Promise-based client did.
       const url = yield* Effect.try({
         try: () => validateArticleResearchUrl(request.url),
-        catch: (cause) => cause,
+        catch: (cause) => cause
       });
       const rendered = yield* fetchPage({
         browserChannel: options.browserChannel,
         headless,
         timeoutMs,
-        url,
+        url
       });
       const fetchedUrl = yield* Effect.try({
         try: () => validateArticleResearchUrl(rendered.url || url),
-        catch: (cause) => cause,
+        catch: (cause) => cause
       });
       const extracted = yield* Effect.try({
         try: () => options.extract(rendered.html, fetchedUrl, maxChars),
-        catch: (cause) => cause,
+        catch: (cause) => cause
       });
       if (extracted.content.length < 80) {
         return yield* Effect.fail(new Error("article body was too short after browser extraction"));
@@ -77,7 +76,7 @@ export function browserArticleResearch(
         retrievedAt,
         status: "ok",
         title: extracted.title,
-        url,
+        url
       } satisfies ReadResult;
     }).pipe(
       Effect.catch((error: unknown) =>
@@ -87,9 +86,9 @@ export function browserArticleResearch(
           ref: request.ref,
           retrievedAt,
           status: "failed",
-          url: request.url,
-        } satisfies ReadResult),
-      ),
+          url: request.url
+        } satisfies ReadResult)
+      )
     );
   };
 }
@@ -107,7 +106,7 @@ function fetchRenderedPage(input: {
     timeoutMs: input.timeoutMs,
     url: input.url,
     userAgent: readerUserAgent,
-    waitForSelector: articleRootSelector,
+    waitForSelector: articleRootSelector
   });
 }
 /* v8 ignore stop */

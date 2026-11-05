@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import {
-  isDailyAiPaperSource,
-  parseFeed,
-  parseFeedXml as parseFeedXmlAt,
-  rssPublicationType,
-} from "./mapper.js";
+import { isDailyAiPaperSource, parseFeed, parseFeedXml as parseFeedXmlAt, rssPublicationType } from "./mapper.js";
 import type { FeedSubscription } from "../../acquisition/index.js";
 
 const now = new Date("2026-08-10T00:00:00.000Z");
@@ -15,7 +10,7 @@ describe("RSS source", () => {
   it("removes navigation and subscription boilerplate from summaries", () => {
     const [event] = parseFeedXml(
       `<rss><channel><item><title>2026-08-10日刊</title><link>https://example.com/daily</link><pubDate>Mon, 10 Aug 2026 01:00:00 GMT</pubDate><description><![CDATA[AI资讯日报 | 每日早读 | 访问网页版 | 进群交流 | OpenAI 发布新模型并开放 API。订阅我们获得更多内容。]]></description></item></channel></rss>`,
-      { name: "AI 日报", url: "https://example.com/feed", tags: ["ai"] },
+      { name: "AI 日报", url: "https://example.com/feed", tags: ["ai"] }
     );
     expect(event?.summary).toBe("OpenAI 发布新模型并开放 API。");
   });
@@ -28,7 +23,7 @@ describe("RSS source", () => {
         <description><![CDATA[## AI资讯日报 2026/8/16 | 每日早读 | 全网数据聚合 | ## 今日摘要]]></description>
         <content:encoded><![CDATA[<h2>AI资讯日报 2026/8/16</h2><blockquote>每日早读 | 全网数据聚合</blockquote><h2>今日摘要</h2><pre><code>李飞飞团队发布机器人仿真引擎，皮卡推出四款全新音频生成模型</code></pre><h3>产品与功能更新</h3><p><strong>机器人仿真引擎首发。</strong>系统支持一小时无人干预运行。</p><hr/><h2>AI资讯日报多渠道</h2>]]></content:encoded>
       </item></channel></rss>`,
-      { name: "AI 日报", url: "https://example.com/feed", tags: ["ai"] },
+      { name: "AI 日报", url: "https://example.com/feed", tags: ["ai"] }
     );
 
     expect(event?.summary).toContain("李飞飞团队发布机器人仿真引擎");
@@ -53,8 +48,8 @@ describe("RSS source", () => {
       {
         name: "Deno Blog",
         url: "https://deno.com/feed",
-        tags: ["deno", "runtime"],
-      },
+        tags: ["deno", "runtime"]
+      }
     );
 
     expect(events).toEqual([
@@ -71,8 +66,8 @@ describe("RSS source", () => {
         summary: "Runtime updates for TypeScript and JavaScript.",
         sourceName: "Deno Blog",
         sourceUrl: "https://deno.com/feed",
-        tags: ["deno", "runtime"],
-      },
+        tags: ["deno", "runtime"]
+      }
     ]);
   });
 
@@ -86,8 +81,8 @@ describe("RSS source", () => {
       {
         name: "Example",
         url: "https://example.com/feed",
-        tags: ["agent"],
-      },
+        tags: ["agent"]
+      }
     );
 
     expect(events[0]?.summary).toBe("Build useful agents. The post appeared first.");
@@ -109,8 +104,8 @@ describe("RSS source", () => {
       {
         name: "OpenAI News",
         url: "https://openai.com/news/rss.xml",
-        tags: ["agent"],
-      },
+        tags: ["agent"]
+      }
     );
 
     expect(events[0]).toMatchObject({
@@ -122,7 +117,7 @@ describe("RSS source", () => {
       htmlUrl: "https://openai.com/news/agents",
       title: "New agent tooling",
       summary: "Better tools for coding agents.",
-      tags: ["agent"],
+      tags: ["agent"]
     });
   });
 
@@ -136,8 +131,8 @@ describe("RSS source", () => {
       {
         name: "arXiv cs.AI",
         url: "https://rss.arxiv.org/rss/cs.AI",
-        tags: ["Papers", "Academic"],
-      },
+        tags: ["Papers", "Academic"]
+      }
     );
     const taggedEvents = parseFeedXml(
       `<rss><channel><item>
@@ -147,13 +142,13 @@ describe("RSS source", () => {
       {
         name: "University Research",
         url: "https://example.edu/feed.xml",
-        tags: ["Academic"],
-      },
+        tags: ["Academic"]
+      }
     );
 
     expect(arxivEvents[0]).toMatchObject({
       type: "paper",
-      summary: "A benchmark for agent tool use.",
+      summary: "A benchmark for agent tool use."
     });
     expect(taggedEvents[0]?.type).toBe("paper");
   });
@@ -168,8 +163,8 @@ describe("RSS source", () => {
       {
         name: "Example Releases",
         url: "https://example.com/releases.atom",
-        tags: ["Releases"],
-      },
+        tags: ["Releases"]
+      }
     );
 
     expect(events[0]).toMatchObject({ type: "release", title: "Version 1.0" });
@@ -191,8 +186,8 @@ describe("RSS source", () => {
       {
         name: "明天的乌云",
         url: "https://blog.xlab.app/atom.xml",
-        tags: ["ai"],
-      },
+        tags: ["ai"]
+      }
     );
 
     expect(events[0]?.createdAt).toBe("2026-03-26T12:30:02.000Z");
@@ -202,20 +197,20 @@ describe("RSS source", () => {
     const [acquired] = parseFeed(
       `<rss><channel><item><title>Deno 2.4</title><link>https://deno.com/blog/v2.4</link><guid>deno-2.4</guid><pubDate>Mon, 22 Jun 2026 08:00:00 GMT</pubDate><description>Runtime updates.</description></item></channel></rss>`,
       { name: "Deno Blog", url: "https://deno.com/feed", tags: ["deno"] },
-      now,
+      now
     );
     expect(acquired?.card).toMatchObject({
       id: "rss:https://deno.com/feed:deno-2.4",
       type: "article",
       source: "rss",
-      createdAt: "2026-06-22T08:00:00.000Z",
+      createdAt: "2026-06-22T08:00:00.000Z"
     });
     expect(acquired?.item).toMatchObject({
       id: "rss:https://deno.com/feed:deno-2.4",
       kind: "publication",
       subject: { key: "publication:https://deno.com/blog/v2.4", name: "Deno Blog" },
       signals: [{ type: "published-article", label: "rss feed: Deno Blog" }],
-      publishedAt: { value: "2026-06-22T08:00:00.000Z", precision: "instant" },
+      publishedAt: { value: "2026-06-22T08:00:00.000Z", precision: "instant" }
     });
   });
 });
@@ -223,21 +218,15 @@ describe("RSS source", () => {
 describe("publication classification", () => {
   it("keeps the three call-site rules separate", () => {
     const feed = { url: "https://example.com/feed.xml", tags: [] as string[] };
-    expect(rssPublicationType("https://example.com/post", { ...feed, tags: ["Papers"] })).toBe(
-      "paper",
-    );
-    expect(rssPublicationType("https://example.com/post", { ...feed, tags: ["academic"] })).toBe(
-      "paper",
-    );
-    expect(rssPublicationType("https://arxiv.org/abs/1", { ...feed, tags: ["releases"] })).toBe(
-      "release",
-    );
+    expect(rssPublicationType("https://example.com/post", { ...feed, tags: ["Papers"] })).toBe("paper");
+    expect(rssPublicationType("https://example.com/post", { ...feed, tags: ["academic"] })).toBe("paper");
+    expect(rssPublicationType("https://arxiv.org/abs/1", { ...feed, tags: ["releases"] })).toBe("release");
     expect(rssPublicationType("https://ARXIV.org/abs/1", feed)).toBe("paper");
     expect(
       rssPublicationType("https://example.com/post", {
         url: "https://export.arxiv.org/rss",
-        tags: [],
-      }),
+        tags: []
+      })
     ).toBe("paper");
     expect(rssPublicationType("https://example.com/post", feed)).toBe("article");
     expect(rssPublicationType("not a url", feed)).toBe("article");
@@ -247,12 +236,8 @@ describe("publication classification", () => {
     // The URL parser lowercases hostnames, so an uppercase host matches without an extra toLowerCase.
     expect(isDailyAiPaperSource({ url: "https://ARXIV.org/list", tags: [] })).toBe(true);
     expect(isDailyAiPaperSource({ url: "https://example.com/feed", tags: ["papers"] })).toBe(true);
-    expect(isDailyAiPaperSource({ url: "https://example.com/feed", tags: ["Academic"] })).toBe(
-      true,
-    );
-    expect(isDailyAiPaperSource({ url: "https://example.com/feed", tags: ["releases"] })).toBe(
-      false,
-    );
+    expect(isDailyAiPaperSource({ url: "https://example.com/feed", tags: ["Academic"] })).toBe(true);
+    expect(isDailyAiPaperSource({ url: "https://example.com/feed", tags: ["releases"] })).toBe(false);
     expect(() => isDailyAiPaperSource({ url: "not a url", tags: [] })).toThrow(TypeError);
   });
 });

@@ -11,7 +11,7 @@ const evidence = (overrides: Partial<DailyAiEvidence> = {}): DailyAiEvidence => 
   tier: "official",
   sourceName: "OpenAI",
   topicId: "developer-tools",
-  ...overrides,
+  ...overrides
 });
 
 describe("Daily AI editorial domain", () => {
@@ -21,15 +21,15 @@ describe("Daily AI editorial domain", () => {
         {
           category: "行业动态",
           headline: "梅卡曼德在港交所主板挂牌上市",
-          refs: ["source-1"],
+          refs: ["source-1"]
         },
         {
           category: "模型发布",
           headline: "Astra 全面可用，默认要求采用更严格的安全措施",
-          refs: ["source-1"],
-        },
+          refs: ["source-1"]
+        }
       ],
-      [evidence()],
+      [evidence()]
     );
 
     expect(result).toMatchObject({ issues: [], items: expect.any(Array) });
@@ -42,23 +42,23 @@ describe("Daily AI editorial domain", () => {
         {
           category: "模型发布",
           headline: "OpenAI 公布 Astra",
-          refs: ["source-1"],
+          refs: ["source-1"]
         },
         {
           category: "模型发布",
           headline: "OpenAI 公布 Astra",
-          refs: ["source-1"],
+          refs: ["source-1"]
         },
         { category: "unknown", headline: "错误栏目", refs: ["source-1"] },
-        { category: "模型发布", headline: "", refs: ["source-1"] },
+        { category: "模型发布", headline: "", refs: ["source-1"] }
       ],
-      [evidence()],
+      [evidence()]
     );
 
     expect(result.items).toHaveLength(1);
     expect(result.issues).toEqual([
       expect.objectContaining({ index: 2, reason: "invalid-category" }),
-      expect.objectContaining({ index: 3, reason: "invalid-headline" }),
+      expect.objectContaining({ index: 3, reason: "invalid-headline" })
     ]);
   });
 });

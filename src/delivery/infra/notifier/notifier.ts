@@ -8,8 +8,7 @@ export type NotifierOptions = {
   stdout?: Pick<typeof process.stdout, "write">;
 };
 
-const toError = (error: unknown): Error =>
-  error instanceof Error ? error : new Error(String(error));
+const toError = (error: unknown): Error => (error instanceof Error ? error : new Error(String(error)));
 
 /**
  * Always writes the markdown to stdout; when a webhook is configured the same
@@ -26,23 +25,25 @@ export const NotifierLive = (options: NotifierOptions = {}): Layer.Layer<Notifie
       Effect.tryPromise({
         try: async () => {
           stdout.write(markdown);
-          if (!markdown.endsWith("\n")) stdout.write("\n");
+          if (!markdown.endsWith("\n")) {
+            stdout.write("\n");
+          }
 
-          if (!webhookUrl) return;
+          if (!webhookUrl) {
+            return;
+          }
 
           const response = await fetchImpl(webhookUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: markdown }),
+            body: JSON.stringify({ text: markdown })
           });
 
           if (!response.ok) {
-            throw new Error(
-              `Webhook notification failed: ${response.status} ${await response.text()}`,
-            );
+            throw new Error(`Webhook notification failed: ${response.status} ${await response.text()}`);
           }
         },
-        catch: toError,
-      }),
+        catch: toError
+      })
   });
 };

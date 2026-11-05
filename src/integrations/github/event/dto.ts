@@ -12,7 +12,7 @@ const rawEventSchema = Schema.Struct({
   actor: Schema.optional(nullable),
   repo: Schema.optional(nullable),
   created_at: Schema.optional(nullable),
-  payload: Schema.optional(nullable),
+  payload: Schema.optional(nullable)
 });
 
 type RawEvent = {
@@ -28,14 +28,18 @@ export type DecodedEvent = ActivityCardDto;
 
 export function decodeEventCard(input: unknown): Result<DecodedEvent, DecodeFailure> {
   const decoded = decodeSchema(rawEventSchema, input);
-  if (decoded._tag === "Err") return decoded;
+  if (decoded._tag === "Err") {
+    return decoded;
+  }
   return ok(cardFromRaw(decoded.value));
 }
 
 /** Preserves the historical soft cast: a payload that fails decoding becomes an empty card. */
 export function normalizeEvent(input: unknown): ActivityCardDto {
   const decoded = decodeEventCard(input);
-  if (decoded._tag === "Err") return cardFromRaw({});
+  if (decoded._tag === "Err") {
+    return cardFromRaw({});
+  }
   return decoded.value;
 }
 
@@ -48,7 +52,7 @@ export function cardFromRaw(raw: RawEvent): ActivityCardDto {
     actor: asString(asRecord(raw.actor).login),
     repo,
     createdAt: asString(raw.created_at),
-    action: optionalString(payload.action),
+    action: optionalString(payload.action)
   };
 
   if (githubType === "WatchEvent") {
@@ -64,7 +68,7 @@ export function cardFromRaw(raw: RawEvent): ActivityCardDto {
       detailUrl: optionalString(pullRequest.url),
       htmlUrl: optionalString(pullRequest.html_url),
       title: optionalString(pullRequest.title),
-      summary: optionalString(pullRequest.body),
+      summary: optionalString(pullRequest.body)
     };
   }
 
@@ -76,7 +80,7 @@ export function cardFromRaw(raw: RawEvent): ActivityCardDto {
       detailUrl: optionalString(release.url),
       htmlUrl: optionalString(release.html_url),
       title: optionalString(release.name) ?? optionalString(release.tag_name),
-      summary: optionalString(release.body),
+      summary: optionalString(release.body)
     };
   }
 
@@ -101,20 +105,26 @@ function asRecord(value: unknown): Record<string, unknown> {
 const objectCtorString = Function.prototype.toString.call(Object);
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== "object") return false;
-  if (Object.prototype.toString.call(value) !== "[object Object]") return false;
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+  if (Object.prototype.toString.call(value) !== "[object Object]") {
+    return false;
+  }
   const proto: object | null = Object.getPrototypeOf(value);
-  if (proto === null) return true;
+  if (proto === null) {
+    return true;
+  }
   const ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
   return (
-    typeof ctor === "function" &&
-    ctor instanceof ctor &&
-    Function.prototype.toString.call(ctor) === objectCtorString
+    typeof ctor === "function" && ctor instanceof ctor && Function.prototype.toString.call(ctor) === objectCtorString
   );
 }
 
 function asString(value: unknown): string {
-  if (typeof value !== "string") return "";
+  if (typeof value !== "string") {
+    return "";
+  }
   return value;
 }
 

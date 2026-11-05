@@ -1,4 +1,5 @@
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { readFile as readFileAsync } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -18,14 +19,12 @@ describe("subscriptions digest CLI", () => {
       const previous = process.env.INDUSTRY_SOURCES_FILE;
       process.env.INDUSTRY_SOURCES_FILE = missingIndustry;
       const code = await runDigestCommand([], {
-        stderr: { write: (chunk) => stderr.push(String(chunk)) },
+        stderr: { write: (chunk) => stderr.push(String(chunk)) }
       });
       process.env.INDUSTRY_SOURCES_FILE = previous;
 
       expect(code).toBe(1);
-      expect(stderr.join("")).toContain(
-        `Industry source configuration file does not exist: ${missingIndustry}`,
-      );
+      expect(stderr.join("")).toContain(`Industry source configuration file does not exist: ${missingIndustry}`);
     } finally {
       rmSync(temporaryDirectory, { force: true, recursive: true });
     }
@@ -38,18 +37,8 @@ describe("feeds CLI", () => {
     const output: string[] = [];
 
     const exitCode = await runFeedsCommand(
-      [
-        "add",
-        "--file",
-        file,
-        "--name",
-        "GitHub Blog",
-        "--url",
-        "https://github.blog/feed",
-        "--tags",
-        "github,ai",
-      ],
-      { stdout: { write: (chunk) => output.push(String(chunk)) } },
+      ["add", "--file", file, "--name", "GitHub Blog", "--url", "https://github.blog/feed", "--tags", "github,ai"],
+      { stdout: { write: (chunk) => output.push(String(chunk)) } }
     );
 
     expect(exitCode).toBe(0);
@@ -57,13 +46,13 @@ describe("feeds CLI", () => {
       {
         name: "GitHub Blog",
         url: "https://github.blog/feed",
-        tags: ["github", "ai"],
-      },
+        tags: ["github", "ai"]
+      }
     ]);
 
     output.length = 0;
     await runFeedsCommand(["list", "--file", file], {
-      stdout: { write: (chunk) => output.push(String(chunk)) },
+      stdout: { write: (chunk) => output.push(String(chunk)) }
     });
 
     expect(output.join("")).toContain("GitHub Blog\thttps://github.blog/feed\tgithub, ai");
@@ -71,12 +60,9 @@ describe("feeds CLI", () => {
 
   it("tests configured feeds without mutating the file", async () => {
     const file = join(mkdtempSync(join(tmpdir(), "rss-summary-feeds-")), "feeds.json");
-    await runFeedsCommand(
-      ["add", "--file", file, "--name", "GitHub Blog", "--url", "https://github.blog/feed"],
-      {
-        stdout: { write: () => undefined },
-      },
-    );
+    await runFeedsCommand(["add", "--file", file, "--name", "GitHub Blog", "--url", "https://github.blog/feed"], {
+      stdout: { write: () => undefined }
+    });
     const before = readFileSync(file, "utf8");
     const output: string[] = [];
 
@@ -89,10 +75,10 @@ describe("feeds CLI", () => {
           source: "rss",
           actor: "GitHub Blog",
           repo: "rss:https://github.blog/post",
-          createdAt: "2026-06-27T00:00:00.000Z",
+          createdAt: "2026-06-27T00:00:00.000Z"
         };
         return [publicationAcquired(card)];
-      },
+      }
     });
 
     expect(exitCode).toBe(0);
@@ -106,30 +92,24 @@ describe("feeds CLI", () => {
 
     await runFeedsCommand(
       ["add", "--file", file, "--name", "GitHub Blog", "--url", "https://github.blog/feed"],
-      silent,
+      silent
     );
-    await runFeedsCommand(
-      ["add", "--file", file, "--name", "Deno Blog", "--url", "https://deno.com/feed"],
-      silent,
-    );
+    await runFeedsCommand(["add", "--file", file, "--name", "Deno Blog", "--url", "https://deno.com/feed"], silent);
 
     const removeExitCode = await runFeedsCommand(
       ["remove", "--file", file, "--url", "https://github.blog/feed"],
-      silent,
+      silent
     );
     expect(removeExitCode).toBe(0);
     expect(JSON.parse(readFileSync(file, "utf8"))).toEqual([
       {
         name: "Deno Blog",
         url: "https://deno.com/feed",
-        tags: [],
-      },
+        tags: []
+      }
     ]);
 
-    const deleteExitCode = await runFeedsCommand(
-      ["delete", "--file", file, "--url", "https://deno.com/feed"],
-      silent,
-    );
+    const deleteExitCode = await runFeedsCommand(["delete", "--file", file, "--url", "https://deno.com/feed"], silent);
     expect(deleteExitCode).toBe(0);
     expect(JSON.parse(readFileSync(file, "utf8"))).toEqual([]);
   });
@@ -138,11 +118,15 @@ describe("feeds CLI", () => {
     const directory = mkdtempSync(join(tmpdir(), "rss-summary-feeds-"));
     const stderr: string[] = [];
     const exitCode = await runFeedsCommand(["list", "--file", directory], {
-      stderr: { write: (chunk) => stderr.push(String(chunk)) },
+      stderr: { write: (chunk) => stderr.push(String(chunk)) }
     });
 
     expect(exitCode).toBe(1);
-    expect(stderr.join("")).toBe(`${nodeMessage(() => readFileSync(directory, "utf8"))}\n`);
+    expect(stderr.join("")).toBe(
+      `${await nodeMessage(async () => {
+        await readFileAsync(directory, "utf8");
+      })}\n`
+    );
   });
 
   it("prints the Node write error and exits 1 when the feeds file cannot be written", async () => {
@@ -153,26 +137,26 @@ describe("feeds CLI", () => {
     try {
       const exitCode = await runFeedsCommand(
         ["add", "--file", file, "--name", "Example", "--url", "https://example.com/feed.xml"],
-        { stderr: { write: (chunk) => stderr.push(String(chunk)) } },
+        { stderr: { write: (chunk) => stderr.push(String(chunk)) } }
       );
       expect(exitCode).toBe(1);
-      expect(stderr.join("")).toBe(`${historicalSaveMessage(file)}\n`);
+      expect(stderr.join("")).toBe(`${await historicalSaveMessage(file)}\n`);
     } finally {
       chmodSync(directory, 0o755);
     }
   });
 });
 
-function historicalSaveMessage(path: string): string {
+async function historicalSaveMessage(path: string): Promise<string> {
   return nodeMessage(() => {
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, "unused");
   });
 }
 
-function nodeMessage(readOrWrite: () => void): string {
+async function nodeMessage(readOrWrite: () => void | Promise<void>): Promise<string> {
   try {
-    readOrWrite();
+    await readOrWrite();
   } catch (error) {
     return error instanceof Error ? error.message : String(error);
   }

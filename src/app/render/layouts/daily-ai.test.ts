@@ -13,8 +13,8 @@ describe("Daily AI digest renderer", () => {
           {
             category: "开发生态",
             headline: "OpenAI 发布 Codex 2.0，工具调用延迟降低 30%",
-            refs: ["s1"],
-          },
+            refs: ["s1"]
+          }
         ],
         evidence: [
           {
@@ -25,11 +25,11 @@ describe("Daily AI digest renderer", () => {
             excerpt: "release",
             tier: "official",
             sourceName: "OpenAI",
-            topicId: "developer-tools",
-          },
+            topicId: "developer-tools"
+          }
         ],
-        warnings: [],
-      }),
+        warnings: []
+      })
     );
     expect(markdown).toMatchInlineSnapshot(`
       "# Daily AI Digest · 2026-08-10
@@ -43,20 +43,13 @@ describe("Daily AI digest renderer", () => {
   });
 
   it("keeps a full six-section briefing scannable with global source numbering", () => {
-    const categories = [
-      "概览/要闻",
-      "模型发布",
-      "开发生态",
-      "产品应用",
-      "行业动态",
-      "技术与洞察",
-    ] as const;
+    const categories = ["概览/要闻", "模型发布", "开发生态", "产品应用", "行业动态", "技术与洞察"] as const;
     const items = categories.flatMap((category, categoryIndex) =>
       [0, 1].map((itemIndex) => ({
         category,
         headline: `OpenAI 发布第 ${categoryIndex * 2 + itemIndex + 1} 项可信 AI 更新`,
-        refs: [`s${categoryIndex * 2 + itemIndex + 1}`],
-      })),
+        refs: [`s${categoryIndex * 2 + itemIndex + 1}`]
+      }))
     );
     const evidence = items.map((item, index) => ({
       id: item.refs[0]!,
@@ -65,7 +58,7 @@ describe("Daily AI digest renderer", () => {
       publishedAt: "2026-08-10T03:00:00Z",
       excerpt: item.headline,
       tier: "official" as const,
-      sourceName: "OpenAI",
+      sourceName: "OpenAI"
     }));
 
     const markdown = renderViewMarkdown(
@@ -74,8 +67,8 @@ describe("Daily AI digest renderer", () => {
         windowLabel: "2026-08-09 09:00–2026-08-10 09:00 +08:00",
         items,
         evidence,
-        warnings: [],
-      }),
+        warnings: []
+      })
     );
 
     expect(markdown).toContain("12 条 AI 动态");
@@ -100,10 +93,10 @@ describe("Daily AI digest renderer", () => {
             publishedAt: "2026-10-14T01:00:00Z",
             excerpt: "作者的经验",
             tier: "unverified",
-            sourceName: "@claudedevs · X（Grok 整理）",
-          },
-        ],
-      }),
+            sourceName: "@claudedevs · X（Grok 整理）"
+          }
+        ]
+      })
     );
     expect(markdown).toContain("[↗ #1 · X（Grok 整理）]");
     expect(markdown).not.toContain("条可信动态");
@@ -116,8 +109,8 @@ describe("Daily AI digest renderer", () => {
         windowLabel: "2026-08-09 09:00–2026-08-10 09:00 +08:00",
         items: [],
         evidence: [],
-        warnings: ["Doubao 搜索暂不可用：本期仅使用官方来源"],
-      }),
+        warnings: ["Doubao 搜索暂不可用：本期仅使用官方来源"]
+      })
     );
 
     expect(markdown).toContain("数据源状态：Doubao 搜索暂不可用：本期仅使用官方来源");

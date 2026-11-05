@@ -6,14 +6,10 @@ import { describe, expect, it } from "vite-plus/test";
 
 describe("package CLI metadata", () => {
   it("exposes a built rss-summary bin entry", () => {
-    const buildConfig = JSON.parse(
-      readFileSync(new URL("../../tsconfig.build.json", import.meta.url), "utf8"),
-    ) as {
+    const buildConfig = JSON.parse(readFileSync(new URL("../../tsconfig.build.json", import.meta.url), "utf8")) as {
       compilerOptions?: { declaration?: boolean };
     };
-    const pkg = JSON.parse(
-      readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
-    ) as {
+    const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as {
       bin?: Record<string, string>;
       devDependencies?: Record<string, string>;
       engines?: Record<string, string>;
@@ -27,40 +23,35 @@ describe("package CLI metadata", () => {
     expect(pkg.exports?.["./rivus-plugin"]).toEqual({
       import: "./dist/app/rivus/plugin.js",
       types: "./dist/app/rivus/plugin.d.ts",
-      default: "./dist/app/rivus/plugin.js",
+      default: "./dist/app/rivus/plugin.js"
     });
     expect(pkg.peerDependencies?.["@rivus/agent"]).toBe("*");
     expect(pkg.devDependencies?.["@rivus/agent"]).toBe("0.18.0");
     expect(pkg.engines?.node).toBe("^24.11.0");
     expect(pkg.files).toEqual([
       "dist",
-      "docs/rivus-plugin.md",
-      "docs/glm-search.md",
-      "docs/glm-search-review.md",
-      "docs/news-search-best-practices.md",
-      "docs/news-search-budget.md",
-      "docs/grok-x-search.md",
+      "docs/development/rivus-plugin.md",
+      "docs/reference/glm-search.md",
+      "docs/reference/glm-search-review.md",
+      "docs/reference/news-search-best-practices.md",
+      "docs/reference/news-search-budget.md",
+      "docs/reference/grok-x-search.md",
       "industry-feeds.json",
       "news-topics.json",
-      "README.md",
+      "README.md"
     ]);
     expect(pkg.scripts?.build).toBe("tsc -p tsconfig.build.json");
     expect(pkg.scripts?.["package:check"]).toBe("node scripts/check-package.mjs");
-    expect(pkg.scripts?.verify).toBe(
-      "pnpm test:layout && pnpm check && pnpm test && pnpm build && pnpm package:check",
-    );
+    expect(pkg.scripts?.verify).toBe("pnpm test:layout && pnpm check && pnpm test && pnpm build && pnpm package:check");
     expect(buildConfig.compilerOptions?.declaration).toBe(true);
   });
 
-  it.each(["", "invalid-sha256"])(
-    "rejects a local Core archive with missing or malformed digest (%j)",
-    (digest) => {
-      const result = checkLocalArchive(digest);
-      expect(result.status).toBe(1);
-      expect(result.stdout).toBe("");
-      expect(result.stderr).toContain("RIVUS_CORE_PACKAGE_SHA256 must be a 64-character");
-    },
-  );
+  it.each(["", "invalid-sha256"])("rejects a local Core archive with missing or malformed digest (%j)", (digest) => {
+    const result = checkLocalArchive(digest);
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("RIVUS_CORE_PACKAGE_SHA256 must be a 64-character");
+  });
 
   it("rejects a local Core archive whose bytes do not match its digest", () => {
     const result = checkLocalArchive("0".repeat(64));
@@ -71,17 +62,13 @@ describe("package CLI metadata", () => {
 });
 
 function checkLocalArchive(digest: string) {
-  return spawnSync(
-    process.execPath,
-    [fileURLToPath(new URL("../../scripts/check-package.mjs", import.meta.url))],
-    {
-      cwd: fileURLToPath(new URL("../../", import.meta.url)),
-      encoding: "utf8",
-      env: {
-        ...process.env,
-        RIVUS_CORE_PACKAGE_TGZ: fileURLToPath(new URL("../../package.json", import.meta.url)),
-        RIVUS_CORE_PACKAGE_SHA256: digest,
-      },
-    },
-  );
+  return spawnSync(process.execPath, [fileURLToPath(new URL("../../scripts/check-package.mjs", import.meta.url))], {
+    cwd: fileURLToPath(new URL("../../", import.meta.url)),
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      RIVUS_CORE_PACKAGE_TGZ: fileURLToPath(new URL("../../package.json", import.meta.url)),
+      RIVUS_CORE_PACKAGE_SHA256: digest
+    }
+  });
 }

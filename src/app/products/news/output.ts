@@ -8,7 +8,7 @@ import {
   type NewsQueryAuditDraft,
   type NewsQueryFailure,
   type NewsQueryPage,
-  type NewsQuerySettlement,
+  type NewsQuerySettlement
 } from "../../../editorial/index.js";
 export type { NewsAuditRequest } from "../../../editorial/index.js";
 export type { NewsSourceStatus } from "../../../editorial/index.js";
@@ -18,7 +18,7 @@ import type {
   DomainNewsTopic,
   DomainNewsTopicQuery,
   NewsHitDecision,
-  NewsStoryDecision,
+  NewsStoryDecision
 } from "../../../editorial/index.js";
 
 /**
@@ -49,8 +49,7 @@ export type NewsBriefAudit = Omit<NewsBriefAuditDraft, "queries"> & {
   queries: NewsQueryAudit[];
 };
 
-const modelSearchCaution =
-  "X 资讯经 Grok 原生搜索和模型整理，未独立核验原文、作者或事实；搜索结果不代表完整时间线";
+const modelSearchCaution = "X 资讯经 Grok 原生搜索和模型整理，未独立核验原文、作者或事实；搜索结果不代表完整时间线";
 
 export function buildNewsAudit(
   requests: readonly NewsAuditRequest[],
@@ -58,7 +57,7 @@ export function buildNewsAudit(
   decisions: NewsHitDecision[],
   storyDecisions: NewsStoryDecision[],
   deduplicatedStories: number,
-  selectedStories: number,
+  selectedStories: number
 ): NewsBriefAudit {
   const draft = buildNewsAuditDraft(
     [...requests],
@@ -66,44 +65,41 @@ export function buildNewsAudit(
     decisions,
     storyDecisions,
     deduplicatedStories,
-    selectedStories,
+    selectedStories
   );
   return { ...draft, queries: draft.queries.map(publishQueryAudit) };
 }
 
 export function summarizeNewsSources(
   requests: readonly NewsAuditRequest[],
-  settled: readonly SearchSettlement[],
+  settled: readonly SearchSettlement[]
 ): { sourceStatus: NewsSourceStatus; warnings: string[] } {
   const { sourceStatus, warnings } = summarizeNewsSourcesDraft(
     [...requests],
     settled.map(normalizeSettlement),
-    modelSearchCaution,
+    modelSearchCaution
   );
   // The fallback provider has no time-range filter; the exact-window re-check
   // every result already passes is the disclosure that matters here.
   const outageBackedUp = settled.filter((result) => {
-    if (result._tag !== "Fulfilled") return false;
+    if (result._tag !== "Fulfilled") {
+      return false;
+    }
     const triggeredBy = result.value.providerFallback?.triggeredBy;
     return triggeredBy !== undefined && triggeredBy !== "query_deferred";
   }).length;
   if (outageBackedUp) {
     sourceStatus.notes = [
       ...sourceStatus.notes,
-      `${outageBackedUp} 个查询由备用来源 DeepSeek 补查；DeepSeek 结果无时间范围过滤，已按发布时间重新核对时间窗`,
+      `${outageBackedUp} 个查询由备用来源 DeepSeek 补查；DeepSeek 结果无时间范围过滤，已按发布时间重新核对时间窗`
     ];
   }
   // Deferred queries the primary never executed; the supplement covered them.
   const deferredBackedUp = settled.filter(
-    (result) =>
-      result._tag === "Fulfilled" &&
-      result.value.providerFallback?.triggeredBy === "query_deferred",
+    (result) => result._tag === "Fulfilled" && result.value.providerFallback?.triggeredBy === "query_deferred"
   ).length;
   if (deferredBackedUp) {
-    sourceStatus.notes = [
-      ...sourceStatus.notes,
-      `${deferredBackedUp} 个查询主来源本轮未执行，由 DeepSeek 补充采集`,
-    ];
+    sourceStatus.notes = [...sourceStatus.notes, `${deferredBackedUp} 个查询主来源本轮未执行，由 DeepSeek 补充采集`];
   }
   return { sourceStatus, warnings };
 }
@@ -123,7 +119,7 @@ function publishQueryAudit(query: NewsQueryAuditDraft): NewsQueryAudit {
       rejected: query.rejected,
       ...(query.errorCode !== undefined ? { errorCode: query.errorCode } : {}),
       ...(receipt ? { grok: receipt } : {}),
-      ...(query.error !== undefined ? { error: query.error } : {}),
+      ...(query.error !== undefined ? { error: query.error } : {})
     };
   }
   return {
@@ -143,7 +139,7 @@ function publishQueryAudit(query: NewsQueryAuditDraft): NewsQueryAudit {
     reportedResultCount: rest.reportedResultCount,
     fetched: rest.fetched,
     accepted: rest.accepted,
-    rejected: rest.rejected,
+    rejected: rest.rejected
   };
 }
 
@@ -161,7 +157,7 @@ function normalizeSettlement(settlement: SearchSettlement): NewsQuerySettlement 
       resultCount: page.resultCount,
       results: page.results,
       ...(receipt ? { receipt } : {}),
-      ...(page.provider === "grok" ? { modelCompiled: true } : {}),
+      ...(page.provider === "grok" ? { modelCompiled: true } : {})
     };
     return { _tag: "Fulfilled", value };
   }
@@ -170,13 +166,15 @@ function normalizeSettlement(settlement: SearchSettlement): NewsQuerySettlement 
   const failure: NewsQueryFailure = {
     ...(tagged ? { code: reason.code } : {}),
     message: errorText(reason),
-    ...(tagged && reason.grok ? { receipt: reason.grok } : {}),
+    ...(tagged && reason.grok ? { receipt: reason.grok } : {})
   };
   return { _tag: "Rejected", reason: failure };
 }
 
 function isTaggedFailure(value: unknown): value is { code: string; grok?: NewsNativeReceipt } {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
   const failure = value as { _tag?: unknown; code?: unknown };
   return failure._tag === "SearchFailure" && typeof failure.code === "string";
 }

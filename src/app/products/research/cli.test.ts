@@ -20,19 +20,19 @@ describe("research CLI", () => {
       {
         key: "github:owner/useful-tool",
         decision: "track",
-        reason: "agent tooling worth watching",
+        reason: "agent tooling worth watching"
       },
       {
         key: "rss:https://example.com/post",
         decision: "read",
-        reason: "covers MCP internals",
-      },
+        reason: "covers MCP internals"
+      }
     ]);
   });
 
   it("accepts suggestions without a reason", () => {
     expect(parseResearchSuggestions("- github:owner/repo - decision=ignore")).toEqual([
-      { key: "github:owner/repo", decision: "ignore", reason: undefined },
+      { key: "github:owner/repo", decision: "ignore", reason: undefined }
     ]);
   });
 
@@ -47,14 +47,14 @@ describe("research CLI", () => {
 
     const exitCode = await runResearchCommand(["add", "--state-file", stateFile], {
       stdout: { write: (chunk) => output.push(String(chunk)) },
-      stdin: stdin(),
+      stdin: stdin()
     });
 
     expect(exitCode).toBe(0);
     const state = JSON.parse(readFileSync(stateFile, "utf8"));
     expect(state.researched["github:owner/repo"]).toMatchObject({
       decision: "track",
-      reason: "good",
+      reason: "good"
     });
     expect(output.join("")).toContain("Marked 1 research decision");
   });
@@ -66,10 +66,9 @@ describe("research CLI", () => {
     writeFileSync(suggestionFile, "- rss:https://example.com/a - decision=read\n");
     const output: string[] = [];
 
-    const exitCode = await runResearchCommand(
-      ["add", "--file", suggestionFile, "--state-file", stateFile],
-      { stdout: { write: (chunk) => output.push(String(chunk)) } },
-    );
+    const exitCode = await runResearchCommand(["add", "--file", suggestionFile, "--state-file", stateFile], {
+      stdout: { write: (chunk) => output.push(String(chunk)) }
+    });
 
     expect(exitCode).toBe(0);
     const state = JSON.parse(readFileSync(stateFile, "utf8"));
@@ -87,7 +86,7 @@ describe("research CLI", () => {
 
     const exitCode = await runResearchCommand(["add", "--state-file", stateFile], {
       stderr: { write: (chunk) => stderr.push(String(chunk)) },
-      stdin: stdin(),
+      stdin: stdin()
     });
 
     expect(exitCode).toBe(1);
@@ -98,21 +97,18 @@ describe("research CLI", () => {
 it("searches configured domains and returns research JSON without changing state", async () => {
   const output: string[] = [];
   const calls: unknown[] = [];
-  const code = await runResearchCommand(
-    ["search", "--query", "TypeScript", "--domains", "devblogs.microsoft.com"],
-    {
-      glmClient: {
-        search: async (query, domains) => {
-          calls.push({ query, domains });
-          return [];
-        },
-        read: async () => {
-          throw new Error("unexpected read");
-        },
+  const code = await runResearchCommand(["search", "--query", "TypeScript", "--domains", "devblogs.microsoft.com"], {
+    glmClient: {
+      search: async (query, domains) => {
+        calls.push({ query, domains });
+        return [];
       },
-      stdout: { write: (chunk) => output.push(chunk) },
+      read: async () => {
+        throw new Error("unexpected read");
+      }
     },
-  );
+    stdout: { write: (chunk) => output.push(chunk) }
+  });
   expect(code).toBe(0);
   expect(calls).toEqual([{ query: "TypeScript", domains: ["devblogs.microsoft.com"] }]);
   expect(JSON.parse(output.join(""))).toMatchObject({ source: "glm-coding-plan-mcp", data: [] });
@@ -124,7 +120,7 @@ it("requires explicit research arguments and credentials", async () => {
   const deps = {
     env: {},
     stdout: { write: (s: string) => output.push(s) },
-    stderr: { write: (s: string) => errors.push(s) },
+    stderr: { write: (s: string) => errors.push(s) }
   };
   expect(await runResearchCommand(["search", "--query", "TypeScript"], deps)).toBe(1);
   expect(errors.join("")).toContain("--domains");

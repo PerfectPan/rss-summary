@@ -16,7 +16,7 @@ export type SearchSettlement =
 export function settleSearches<T>(
   requests: readonly T[],
   execute: (request: T) => Effect.Effect<SearchPage, unknown>,
-  concurrency: number,
+  concurrency: number
 ): Effect.Effect<SearchSettlement[]> {
   return Effect.gen(function* () {
     const settled: SearchSettlement[] = Array.from({ length: requests.length });
@@ -33,10 +33,12 @@ export function settleSearches<T>(
       }
     });
     const workers = Math.min(Math.max(concurrency, 0), requests.length);
-    if (workers === 0) return settled;
+    if (workers === 0) {
+      return settled;
+    }
     yield* Effect.all(
       Array.from({ length: workers }, () => worker),
-      { concurrency: "unbounded" },
+      { concurrency: "unbounded" }
     );
     return settled;
   });

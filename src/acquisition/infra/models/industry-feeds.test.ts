@@ -14,10 +14,10 @@ describe("industry-feeds.json", () => {
             url: "https://example.com/news",
             pathPrefixes: ["/news/"],
             tags: ["AI"],
-            extra: true,
-          },
-        ]),
-      ),
+            extra: true
+          }
+        ])
+      )
     ).toEqual([
       { name: "example.com", url: "https://example.com/feed.xml", tags: [] },
       {
@@ -25,14 +25,12 @@ describe("industry-feeds.json", () => {
         name: "Example News",
         url: "https://example.com/news",
         pathPrefixes: ["/news/"],
-        tags: ["AI"],
-      },
+        tags: ["AI"]
+      }
     ]);
-    expect(() => decodeIndustryJson("{}")).toThrow(
-      "Industry source configuration must be a JSON array.",
+    expect(() => decodeIndustryJson("{}")).toThrow("Industry source configuration must be a JSON array.");
+    expect(() => decodeIndustryJson('[{"type":"atom","url":"https://example.com/feed.xml"}]')).toThrow(
+      "Industry source type must be either 'rss' or 'page'."
     );
-    expect(() =>
-      decodeIndustryJson('[{"type":"atom","url":"https://example.com/feed.xml"}]'),
-    ).toThrow("Industry source type must be either 'rss' or 'page'.");
   });
 });

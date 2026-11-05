@@ -4,7 +4,7 @@ import {
   isVideoResearchUrl,
   type DocumentMethod,
   type ReadResult,
-  validateResearchUrl,
+  validateResearchUrl
 } from "../../domain/document/index.js";
 import { BrowserReader, GlmReader, HttpReader, VideoReader } from "../ports.js";
 
@@ -25,7 +25,7 @@ export type ReadOriginalResult =
   | (Omit<Extract<ReadResult, { status: "failed" }>, "method"> & { method?: ReadMethod });
 
 export function readOriginal(
-  request: ReadOriginalRequest,
+  request: ReadOriginalRequest
 ): Effect.Effect<ReadOriginalResult, never, HttpReader | BrowserReader | VideoReader | GlmReader> {
   return Effect.gen(function* () {
     try {
@@ -36,7 +36,7 @@ export function readOriginal(
         ref: request.ref,
         retrievedAt: new Date(yield* Clock.currentTimeMillis).toISOString(),
         status: "failed" as const,
-        url: request.url,
+        url: request.url
       };
     }
     const target = { ref: request.ref, url: request.url };
@@ -55,14 +55,18 @@ export function readOriginal(
 
     const browser = yield* BrowserReader;
     const browserResult = yield* browser.research(target);
-    if (browserResult.status === "ok") return browserResult;
+    if (browserResult.status === "ok") {
+      return browserResult;
+    }
     const http = yield* HttpReader;
     const httpResult = yield* http.research(target);
-    if (httpResult.status === "ok") return httpResult;
+    if (httpResult.status === "ok") {
+      return httpResult;
+    }
     if (!request.glmFallback) {
       return {
         ...httpResult,
-        error: `browser: ${browserResult.error}; http: ${httpResult.error}`,
+        error: `browser: ${browserResult.error}; http: ${httpResult.error}`
       };
     }
 
@@ -81,14 +85,14 @@ export function readOriginal(
           retrievedAt: new Date(yield* Clock.currentTimeMillis).toISOString(),
           status: "ok" as const,
           title: page.title,
-          url: request.url,
+          url: request.url
         };
       }),
       () =>
         Effect.succeed({
           ...httpResult,
-          error: "Browser, HTTP and GLM Reader unavailable.",
-        }),
+          error: "Browser, HTTP and GLM Reader unavailable."
+        })
     );
   });
 }

@@ -1,12 +1,7 @@
 import { Schema } from "effect";
 
 import { canonicalizeUrl } from "../../kernel/text.js";
-import {
-  NewsSearchError,
-  type Item,
-  type SearchPage,
-  type SearchResult,
-} from "../../acquisition/index.js";
+import { NewsSearchError, type Item, type SearchPage, type SearchResult } from "../../acquisition/index.js";
 
 import { deepSeekPublicationDay, itemFromDeepSeek } from "./mapper.js";
 
@@ -28,7 +23,7 @@ export type DeepSeekAcquired = {
  * drops that record instead of the whole page.
  */
 const responseSchema = Schema.Struct({
-  results: Schema.Array(Schema.Unknown),
+  results: Schema.Array(Schema.Unknown)
 });
 
 const resultSchema = Schema.Struct({
@@ -39,7 +34,7 @@ const resultSchema = Schema.Struct({
   site_name: Schema.optional(Schema.NullOr(Schema.String)),
   date: Schema.optional(Schema.NullOr(Schema.String)),
   authority: Schema.optional(Schema.Int.check(Schema.isBetween({ minimum: -1, maximum: 4 }))),
-  rerank_score: Schema.optional(Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 3 }))),
+  rerank_score: Schema.optional(Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 3 })))
 });
 
 export function parseDeepSeekResponse(value: unknown, retryAfterMs?: number): DeepSeekAcquired {
@@ -62,9 +57,9 @@ export function parseDeepSeekResponse(value: unknown, retryAfterMs?: number): De
     page: {
       provider: "deepseek",
       resultCount: parsed.length,
-      results: parsed.map(({ result }) => result),
+      results: parsed.map(({ result }) => result)
     },
-    items: parsed.map(({ item }) => item),
+    items: parsed.map(({ item }) => item)
   };
 }
 
@@ -84,7 +79,7 @@ function deepSeekResult(hit: typeof resultSchema.Type, rankPosition: number): Se
     ...(publishDay !== undefined ? { publishDay } : {}),
     ...(hit.rerank_score !== undefined ? { rankScore: hit.rerank_score } : {}),
     ...(hit.authority !== undefined ? { authority: hit.authority } : {}),
-    rankPosition,
+    rankPosition
   };
 }
 

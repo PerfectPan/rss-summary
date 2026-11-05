@@ -8,7 +8,9 @@ import { listRunArtifacts, loadRunArtifact, saveRunArtifact, type RunAudit } fro
 const roots: string[] = [];
 
 afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { force: true, recursive: true });
+  for (const root of roots.splice(0)) {
+    rmSync(root, { force: true, recursive: true });
+  }
 });
 
 describe("run artifact store", () => {
@@ -22,7 +24,7 @@ describe("run artifact store", () => {
       generatedAt: "2026-08-09T12:34:56.000Z",
       sources: [],
       counts: { fetched: 2, inWindow: 2, ranked: 2, selected: 1, researchPending: 0 },
-      candidates: [],
+      candidates: []
     };
 
     const saved = saveRunArtifact(
@@ -32,9 +34,9 @@ describe("run artifact store", () => {
         status: "delivered",
         completedAt: "2026-08-09T12:35:00.000Z",
         channel: "webhook",
-        stateStatus: "updated",
+        stateStatus: "updated"
       },
-      "# 我的订阅",
+      "# 我的订阅"
     );
 
     expect(listRunArtifacts(root)).toEqual([saved.jsonPath]);

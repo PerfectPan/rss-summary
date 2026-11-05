@@ -10,15 +10,12 @@ export type DailyAiDeliveryReceipt = {
   committed: boolean;
 };
 
-export function createDailyAiDeliveryReceipt(
-  occurrence: string,
-  evidenceIds: string[],
-): DailyAiDeliveryReceipt {
+export function createDailyAiDeliveryReceipt(occurrence: string, evidenceIds: string[]): DailyAiDeliveryReceipt {
   return {
     id: `daily-ai:${occurrence}`,
     occurrence,
     evidenceIds: [...new Set(evidenceIds)],
-    committed: false,
+    committed: false
   };
 }
 
@@ -29,9 +26,11 @@ export function createDailyAiDeliveryReceipt(
  */
 export async function commitDailyAiDeliveryReceipt(
   receipt: DailyAiDeliveryReceipt,
-  options: { delivered: boolean; save: (receipt: DailyAiDeliveryReceipt) => Promise<void> },
+  options: { delivered: boolean; save: (receipt: DailyAiDeliveryReceipt) => Promise<void> }
 ): Promise<DailyAiDeliveryReceipt | undefined> {
-  if (!options.delivered || receipt.committed) return undefined;
+  if (!options.delivered || receipt.committed) {
+    return undefined;
+  }
   const committed = { ...receipt, committed: true };
   await options.save(committed);
   return committed;

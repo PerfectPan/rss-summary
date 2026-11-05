@@ -6,7 +6,7 @@ import {
   type GlmPage,
   type ReadOriginalResult,
   type ReadRequest,
-  type ReadResult,
+  type ReadResult
 } from "../../../reading/index.js";
 import { ReadingLive } from "../../layers.js";
 import { loadEnvConfig } from "../../config/env.js";
@@ -32,7 +32,7 @@ export type ArticleResearchMode = "auto" | "browser" | "http";
 
 /** Agent-facing, read-only research Tool for one selected source URL. */
 export function createArticleResearchExecutor(
-  dependencies: ArticleResearchToolDependencies = {},
+  dependencies: ArticleResearchToolDependencies = {}
 ): (value: unknown) => Promise<RivusArticleResearchResult> {
   return async (value) => {
     const request = parseInput(value);
@@ -42,24 +42,22 @@ export function createArticleResearchExecutor(
     const layer = ReadingLive({
       apiKey: base.glmCodingApiKey,
       browserChannel: base.articleResearch.browserChannel,
-      browserResearch: browserInjection
-        ? (request) => Effect.promise(() => browserInjection(request))
-        : undefined,
+      browserResearch: browserInjection ? (request) => Effect.promise(() => browserInjection(request)) : undefined,
       browserTimeoutMs: base.articleResearch.browserTimeoutMs,
       glmRead: dependencies.glmClient?.read,
       headless: base.articleResearch.browserHeadless,
       httpResearch: dependencies.client?.research,
       videoEnv: env,
-      videoResearch: dependencies.videoClient?.research,
+      videoResearch: dependencies.videoClient?.research
     });
     const result = await runPluginEffect(
       readOriginal({
         glmFallback: base.articleResearch.glmFallback,
         mode: request.mode,
         ref: request.ref,
-        url: request.url,
+        url: request.url
       }),
-      { layer },
+      { layer }
     );
     return { ...result, tool: "article-research" };
   };
@@ -73,8 +71,12 @@ function parseInput(value: unknown): { mode: ArticleResearchMode; ref: string; u
   const ref = typeof record.ref === "string" ? record.ref.trim() : "";
   const url = typeof record.url === "string" ? record.url.trim() : "";
   const mode = record.mode === undefined ? "auto" : record.mode;
-  if (!ref) throw new Error("Article research requires ref.");
-  if (!url) throw new Error("Article research requires url.");
+  if (!ref) {
+    throw new Error("Article research requires ref.");
+  }
+  if (!url) {
+    throw new Error("Article research requires url.");
+  }
   if (mode !== "auto" && mode !== "browser" && mode !== "http") {
     throw new Error("Article research mode must be auto, browser, or http.");
   }
@@ -95,11 +97,11 @@ export const researchToolDescriptor: Pick<
     properties: {
       mode: { default: "auto", enum: ["auto", "browser", "http"], type: "string" },
       ref: { minLength: 1, type: "string" },
-      url: { format: "uri", type: "string" },
+      url: { format: "uri", type: "string" }
     },
     required: ["ref", "url"],
-    type: "object",
+    type: "object"
   },
   risk: "observe",
-  version: "1.2.0",
+  version: "1.2.0"
 };

@@ -14,7 +14,9 @@ export type GlmReadOptions = {
 };
 
 export async function readGlmPage(input: string, options: GlmReadOptions): Promise<GlmPage> {
-  if (!options.apiKey.trim()) throw new Error("GLM_CODING_API_KEY is required.");
+  if (!options.apiKey.trim()) {
+    throw new Error("GLM_CODING_API_KEY is required.");
+  }
   const apiKey = options.apiKey.trim();
   const fetchImpl = options.fetch ?? fetch;
   const timeoutMs = options.timeoutMs ?? 30_000;
@@ -25,17 +27,16 @@ export async function readGlmPage(input: string, options: GlmReadOptions): Promi
       apiKey,
       fetchImpl,
       timeoutMs,
-      toolFailedMessage: "GLM read tool failed.",
+      toolFailedMessage: "GLM read tool failed."
     },
     "webReader",
     {
       url: url.href,
       return_format: "text",
       retain_images: false,
-      timeout: Math.max(1, Math.min(20, Math.floor(timeoutMs / 1000))),
-    },
+      timeout: Math.max(1, Math.min(20, Math.floor(timeoutMs / 1000)))
+    }
   );
-  const resolved =
-    typeof readerPayload(value).url === "string" ? publicUrl(text(readerPayload(value).url)) : url;
+  const resolved = typeof readerPayload(value).url === "string" ? publicUrl(text(readerPayload(value).url)) : url;
   return pageFromPayload(value, url, resolved);
 }

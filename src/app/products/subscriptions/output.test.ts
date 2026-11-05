@@ -5,7 +5,7 @@ import {
   candidateIdentity,
   markCandidateResearched,
   subscriptionEvidenceId,
-  type DigestDocument,
+  type DigestDocument
 } from "./output.js";
 
 function document(): DigestDocument {
@@ -29,11 +29,11 @@ function document(): DigestDocument {
             source: "github",
             actor: "someone",
             repo: "owner/repo",
-            createdAt: "2026-08-16T00:00:00Z",
-          },
-        ],
-      },
-    ],
+            createdAt: "2026-08-16T00:00:00Z"
+          }
+        ]
+      }
+    ]
   };
 }
 
@@ -49,7 +49,7 @@ describe("subscriptions output projection", () => {
     const state = { researched: {} };
     markCandidateResearched(state, candidate, { at: "2026-08-16T04:00:00Z", decision: "track" });
     expect(state.researched).toEqual({
-      "github:owner/repo": { at: "2026-08-16T04:00:00Z", decision: "track" },
+      "github:owner/repo": { at: "2026-08-16T04:00:00Z", decision: "track" }
     });
     expect(candidateIdentity(candidate)).toBe("github-repository:owner/repo");
   });

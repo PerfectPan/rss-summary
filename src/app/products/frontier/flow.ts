@@ -1,18 +1,14 @@
 import { Effect } from "effect";
 
 import { deliver, FeedStateStore, markDelivered } from "../../../delivery/index.js";
-import {
-  collectIndustryBrief,
-  industryEventIds,
-  type IndustryBriefDocument,
-} from "../shared/industry.js";
+import { collectIndustryBrief, industryEventIds, type IndustryBriefDocument } from "../shared/industry.js";
 import type { AppConfig } from "../../config/env.js";
 import type { AppServices } from "../../layers.js";
 
 /** Full frontier workflow for the CLI. */
 export function runIndustryFlow(
   config: AppConfig,
-  render: (document: IndustryBriefDocument, format: AppConfig["outputFormat"]) => string,
+  render: (document: IndustryBriefDocument, format: AppConfig["outputFormat"]) => string
 ): Effect.Effect<void, Error, AppServices> {
   return Effect.gen(function* () {
     const { audit, document, state } = yield* collectIndustryBrief(config);
@@ -32,15 +28,11 @@ export function runIndustryFlow(
             afterSend: FeedStateStore.use((store) =>
               store.save(
                 config.industryStateFile,
-                markDelivered(
-                  state,
-                  deliveredCandidates.flatMap(industryEventIds),
-                  document.generatedAt,
-                ),
-              ),
-            ),
+                markDelivered(state, deliveredCandidates.flatMap(industryEventIds), document.generatedAt)
+              )
+            )
           }
-        : {}),
+        : {})
     });
   });
 }

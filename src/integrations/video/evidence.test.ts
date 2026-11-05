@@ -12,9 +12,9 @@ describe("video evidence", () => {
           index: 2,
           timestampSeconds: 60,
           imagePath: "/frame-2.png",
-          visualText: "画面显示 SQLite 存储初始化代码。",
-        },
-      ],
+          visualText: "画面显示 SQLite 存储初始化代码。"
+        }
+      ]
     });
     expect(evidence).toContain("部分画面分析失败");
     expect(evidence).toContain("60.0");
@@ -32,8 +32,8 @@ describe("video evidence", () => {
   });
 
   it("says visual inspection is unavailable when no frame was analyzed", () => {
-    expect(
-      videoVisualEvidence({ status: "unavailable", frames: [], reason: "not inspected" }),
-    ).toContain("画面分析不可用");
+    expect(videoVisualEvidence({ status: "unavailable", frames: [], reason: "not inspected" })).toContain(
+      "画面分析不可用"
+    );
   });
 });

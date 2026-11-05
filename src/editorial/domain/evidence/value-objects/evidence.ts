@@ -9,12 +9,7 @@ export type EvidenceIdentity = {
   fallbackUrl: (candidate: CandidateProject) => string;
 };
 
-export type SubscriptionEvidenceKind =
-  | "activity"
-  | "article"
-  | "pull-request"
-  | "release"
-  | "repository";
+export type SubscriptionEvidenceKind = "activity" | "article" | "pull-request" | "release" | "repository";
 
 export type SubscriptionEvidence = {
   facts: string[];

@@ -6,13 +6,12 @@ import { Effect, Layer } from "effect";
 
 import { DiagnosticsStore, type DailyAiDiagnosticSnapshot } from "../../application/ports.js";
 
-const toError = (error: unknown): Error =>
-  error instanceof Error ? error : new Error(String(error));
+const toError = (error: unknown): Error => (error instanceof Error ? error : new Error(String(error)));
 
 /** Preserve recovery evidence locally without adding it to the model's tool messages. */
 export async function saveDailyAiDiagnostics(
   snapshot: DailyAiDiagnosticSnapshot,
-  env: NodeJS.ProcessEnv = process.env,
+  env: NodeJS.ProcessEnv = process.env
 ): Promise<void> {
   const directory = env.RIVUS_DEPLOYMENT_STATE_DIR
     ? join(env.RIVUS_DEPLOYMENT_STATE_DIR, "rss-summary", "daily-ai")
@@ -29,13 +28,11 @@ export async function saveDailyAiDiagnostics(
   }
 }
 
-export const DiagnosticsFileLive = (
-  env: NodeJS.ProcessEnv = process.env,
-): Layer.Layer<DiagnosticsStore> =>
+export const DiagnosticsFileLive = (env: NodeJS.ProcessEnv = process.env): Layer.Layer<DiagnosticsStore> =>
   Layer.succeed(DiagnosticsStore, {
     save: (snapshot) =>
       Effect.tryPromise({
         try: () => saveDailyAiDiagnostics(snapshot, env),
-        catch: toError,
-      }),
+        catch: toError
+      })
   });

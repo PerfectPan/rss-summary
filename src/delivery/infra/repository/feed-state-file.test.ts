@@ -6,18 +6,15 @@ import { fileURLToPath } from "node:url";
 import { Effect } from "effect";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 
-import {
-  createEmptyFeedState,
-  FeedStateFileLive,
-  FeedStateStore,
-  loadFeedState,
-} from "../../index.js";
+import { createEmptyFeedState, FeedStateFileLive, FeedStateStore, loadFeedState } from "../../index.js";
 
 const fixtureRoot = fileURLToPath(new URL("../../../../tests/fixtures/state/", import.meta.url));
 const roots: string[] = [];
 
 afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { force: true, recursive: true });
+  for (const root of roots.splice(0)) {
+    rmSync(root, { force: true, recursive: true });
+  }
 });
 
 describe("feed state file repository", () => {
@@ -26,9 +23,7 @@ describe("feed state file repository", () => {
       const bytes = readFileSync(join(fixtureRoot, fixture), "utf8");
       const target = join(newRoot(), fixture);
 
-      const loaded = await run(
-        FeedStateStore.use((store) => store.load(join(fixtureRoot, fixture))),
-      );
+      const loaded = await run(FeedStateStore.use((store) => store.load(join(fixtureRoot, fixture))));
       await run(FeedStateStore.use((store) => store.save(target, loaded)));
 
       expect(readFileSync(target, "utf8")).toBe(bytes);

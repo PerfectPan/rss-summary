@@ -15,7 +15,7 @@ remain eligible; standalone industry collection and the shared source list are u
 It combines the remaining curated first-party sources from `industry-feeds.json` with subscribed
 X accounts (ClaudeDevs by default) for its complete rolling window. Broad news search remains a
 separate product. The reusable account collector accepts caller-owned windows and shares native
-Grok transport, request budgets and caching with news; see [X collection](grok-x-search.md).
+Grok transport, request budgets and caching with news; see [X collection](../reference/grok-x-search.md).
 Every publishable item is backed by public
 evidence (`id`, normalized title, canonical URL, published time, cleaned excerpt and
 source tier). The Agent owns semantic selection, translation or summarization, and category choice.

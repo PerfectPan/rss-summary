@@ -11,7 +11,7 @@ import {
   type CacheRequest,
   type CachedPage,
   type HashText,
-  type Reservation,
+  type Reservation
 } from "../value-objects/budget.js";
 
 /**
@@ -52,25 +52,24 @@ type RestoreOptions = {
 export class SearchBudget {
   private constructor(
     readonly persisted: BudgetState,
-    readonly limits: BudgetLimits,
+    readonly limits: BudgetLimits
   ) {}
 
   static restore(
     persisted: BudgetState,
     limits: BudgetLimits,
-    options: RestoreOptions,
+    options: RestoreOptions
   ): Result<{ state: SearchBudget; events: readonly BudgetEvent[] }, NewsSearchError> {
     const failure = validatePersisted(persisted, limits.timezoneOffset, options);
-    if (failure) return err(failure);
+    if (failure) {
+      return err(failure);
+    }
     return ok({ state: new SearchBudget(persisted, limits), events: [] });
   }
 
   /** Empty ledger used when the state file does not exist yet. */
   static empty(limits: BudgetLimits): SearchBudget {
-    return new SearchBudget(
-      { version: 1, timezoneOffset: limits.timezoneOffset, daily: {}, cache: {} },
-      limits,
-    );
+    return new SearchBudget({ version: 1, timezoneOffset: limits.timezoneOffset, daily: {}, cache: {} }, limits);
   }
 
   usage(instant: Date): BudgetUsage {
@@ -84,10 +83,7 @@ export class SearchBudget {
    */
   findCache(request: CacheRequest, instant: number): CacheEntry | undefined {
     return Object.values(this.persisted.cache)
-      .filter(
-        (entry) =>
-          isFresh(entry, instant, this.limits.cacheTtlMs) && matchesRequest(entry, request),
-      )
+      .filter((entry) => isFresh(entry, instant, this.limits.cacheTtlMs) && matchesRequest(entry, request))
       .sort((left, right) => Date.parse(right.fetchedAt) - Date.parse(left.fetchedAt))[0];
   }
 
@@ -101,7 +97,7 @@ export class SearchBudget {
     request: CacheRequest,
     instant: Date,
     commit: boolean,
-    present: PresentCache,
+    present: PresentCache
   ): Result<BudgetTransition<Reservation>, NewsSearchError> {
     const usage = this.usage(instant);
     const cached = this.findCache(request, instant.getTime());
@@ -111,19 +107,16 @@ export class SearchBudget {
         events: [{ _tag: "CacheHit", fetchedAt: cached.fetchedAt }],
         value: {
           usage,
-          cached: present(cached, usage),
-        },
+          cached: present(cached, usage)
+        }
       });
     }
-    if (
-      usage.dailyUsed >= this.limits.dailyLimit ||
-      usage.monthlyUsed >= this.limits.monthlyLimit
-    ) {
+    if (usage.dailyUsed >= this.limits.dailyLimit || usage.monthlyUsed >= this.limits.monthlyLimit) {
       return err(
         new NewsSearchError(
           "local_budget_exhausted",
-          `Local search budget exhausted (daily ${usage.dailyUsed}/${this.limits.dailyLimit}, monthly ${usage.monthlyUsed}/${this.limits.monthlyLimit}).`,
-        ),
+          `Local search budget exhausted (daily ${usage.dailyUsed}/${this.limits.dailyLimit}, monthly ${usage.monthlyUsed}/${this.limits.monthlyLimit}).`
+        )
       );
     }
     if (!commit) {
@@ -133,15 +126,15 @@ export class SearchBudget {
     const nextUsage: BudgetUsage = {
       ...usage,
       dailyUsed: usage.dailyUsed + 1,
-      monthlyUsed: usage.monthlyUsed + 1,
+      monthlyUsed: usage.monthlyUsed + 1
     };
     const state = new SearchBudget(
       {
         ...this.persisted,
         // Prior days stay so a clock rollback cannot reopen a spent allowance.
-        daily: { ...this.persisted.daily, [day]: usage.dailyUsed + 1 },
+        daily: { ...this.persisted.daily, [day]: usage.dailyUsed + 1 }
       },
-      this.limits,
+      this.limits
     );
     return ok({
       state,
@@ -150,10 +143,10 @@ export class SearchBudget {
           _tag: "Reserved",
           day,
           dailyUsed: nextUsage.dailyUsed,
-          monthlyUsed: nextUsage.monthlyUsed,
-        },
+          monthlyUsed: nextUsage.monthlyUsed
+        }
       ],
-      value: { usage: nextUsage },
+      value: { usage: nextUsage }
     });
   }
 
@@ -162,7 +155,7 @@ export class SearchBudget {
     page: CachedPage,
     fetchedAt: string,
     hash: HashText,
-    isCacheable: (page: SearchPage) => boolean,
+    isCacheable: (page: SearchPage) => boolean
   ): Result<BudgetTransition<void>, NewsSearchError> {
     if (!isCacheable(page)) {
       return ok({ state: this, events: [], value: undefined });
@@ -170,21 +163,19 @@ export class SearchBudget {
     const key = cacheKey(request, hash);
     const instant = Date.parse(fetchedAt);
     const cache = Object.fromEntries(
-      Object.entries(this.persisted.cache).filter(([, entry]) =>
-        isFresh(entry, instant, this.limits.cacheTtlMs),
-      ),
+      Object.entries(this.persisted.cache).filter(([, entry]) => isFresh(entry, instant, this.limits.cacheTtlMs))
     );
     const state = new SearchBudget(
       {
         ...this.persisted,
-        cache: { ...cache, [key]: { request, fetchedAt, page } },
+        cache: { ...cache, [key]: { request, fetchedAt, page } }
       },
-      this.limits,
+      this.limits
     );
     return ok({
       state,
       events: [{ _tag: "CacheStored", key, fetchedAt }],
-      value: undefined,
+      value: undefined
     });
   }
 }
@@ -192,12 +183,12 @@ export class SearchBudget {
 function validatePersisted(
   state: BudgetState,
   timezoneOffset: string,
-  options: RestoreOptions,
+  options: RestoreOptions
 ): NewsSearchError | undefined {
   if (state.timezoneOffset !== timezoneOffset) {
     return new NewsSearchError(
       "local_budget_state",
-      "Local search budget timezone differs from the configured timezone.",
+      "Local search budget timezone differs from the configured timezone."
     );
   }
   for (const [key, entry] of Object.entries(state.cache)) {

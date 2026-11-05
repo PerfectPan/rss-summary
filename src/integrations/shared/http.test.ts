@@ -9,18 +9,17 @@ import { githubHeaders } from "../github/index.js";
 describe("acquisition HTTP", () => {
   it("keeps the historical request headers", () => {
     expect(rssHeaders).toEqual({
-      accept:
-        "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.8",
-      "user-agent": "rss-summary/0.1",
+      accept: "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.8",
+      "user-agent": "rss-summary/0.1"
     });
     expect(webHeaders).toEqual({
       accept: "text/html, application/xhtml+xml;q=0.9, */*;q=0.8",
-      "user-agent": "rss-summary/0.1",
+      "user-agent": "rss-summary/0.1"
     });
     expect(githubHeaders(undefined)).toEqual({
       Accept: "application/vnd.github+json",
       "X-GitHub-Api-Version": "2022-11-28",
-      "User-Agent": "rss-summary",
+      "User-Agent": "rss-summary"
     });
     expect(githubHeaders("token").Authorization).toBe("Bearer token");
   });
@@ -33,15 +32,15 @@ describe("acquisition HTTP", () => {
         });
       });
     await expect(timeoutFetch(hanging, 20)("https://example.com")).rejects.toMatchObject({
-      name: "TimeoutError",
+      name: "TimeoutError"
     });
 
     const cause = new TypeError("network reset");
     const wrapped = new HttpClientError.HttpClientError({
       reason: new HttpClientError.TransportError({
         request: { method: "GET", url: "https://example.com", urlParams: [] } as never,
-        cause,
-      }),
+        cause
+      })
     });
     expect(asError(wrapped)).toBe(cause);
     expect(asError(cause).message).toBe("network reset");

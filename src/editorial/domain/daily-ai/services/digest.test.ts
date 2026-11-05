@@ -11,7 +11,7 @@ const evidence = (overrides: Partial<DailyAiEvidence> = {}): DailyAiEvidence => 
   tier: "official",
   sourceName: "OpenAI",
   topicId: "developer-tools",
-  ...overrides,
+  ...overrides
 });
 
 describe("Daily AI editorial domain", () => {
@@ -21,38 +21,35 @@ describe("Daily AI editorial domain", () => {
         {
           category: "模型发布",
           headline: "OpenAI 公布 Astra 的关键网络安全能力与发布保障",
-          refs: ["source-1"],
+          refs: ["source-1"]
         },
         {
           category: "模型发布",
           headline: "引用不存在的候选",
-          refs: ["missing"],
-        },
-      ],
+          refs: ["missing"]
+        }
+      ]
     });
 
     expect(result.items).toEqual([
       {
         category: "模型发布",
         headline: "OpenAI 公布 Astra 的关键网络安全能力与发布保障",
-        refs: ["source-1"],
-      },
+        refs: ["source-1"]
+      }
     ]);
-    expect(result.audit.editorialIssues).toEqual([
-      expect.objectContaining({ index: 1, reason: "unknown-reference" }),
-    ]);
+    expect(result.audit.editorialIssues).toEqual([expect.objectContaining({ index: 1, reason: "unknown-reference" })]);
   });
 
   it("allows the editor to reject every low-information candidate", () => {
-    const result = buildDailyAiDigest(
-      [evidence({ title: "0.163.0-alpha.6", excerpt: "Release 0.163.0-alpha.6" })],
-      { draft: [] },
-    );
+    const result = buildDailyAiDigest([evidence({ title: "0.163.0-alpha.6", excerpt: "Release 0.163.0-alpha.6" })], {
+      draft: []
+    });
     expect(result.items).toEqual([]);
     expect(result.audit.decisions).toContainEqual({
       evidenceIds: ["source-1"],
       status: "filtered",
-      reason: "not-selected-by-editorial-draft",
+      reason: "not-selected-by-editorial-draft"
     });
     expect(result.audit.editorialIssues).toEqual([]);
   });
@@ -62,20 +59,20 @@ describe("Daily AI editorial domain", () => {
       evidence({
         id: `source-${index}`,
         title: `Event ${index}`,
-        url: `https://example.com/${index}`,
-      }),
+        url: `https://example.com/${index}`
+      })
     );
     const result = buildDailyAiDigest(sources, {
       draft: sources.map(({ id, title }) => ({
         category: "开发生态",
         headline: title,
-        refs: [id],
-      })),
+        refs: [id]
+      }))
     });
     expect(result.items).toHaveLength(9);
     expect(result.audit.decisions.at(-1)).toMatchObject({
       evidenceIds: ["source-8"],
-      status: "selected",
+      status: "selected"
     });
   });
 
@@ -93,25 +90,25 @@ describe("Daily AI editorial domain", () => {
         evidence({
           id: "source-2",
           url: "https://github.com/openai/astra",
-          sourceName: "GitHub Releases",
-        }),
+          sourceName: "GitHub Releases"
+        })
       ],
       {
         draft: [
           {
             category: "模型发布",
             headline: "OpenAI 公布 Astra 的关键网络安全能力与发布保障",
-            refs: ["source-1", "source-2"],
-          },
-        ],
-      },
+            refs: ["source-1", "source-2"]
+          }
+        ]
+      }
     );
 
     expect(result.items[0]?.refs).toEqual(["source-1", "source-2"]);
     expect(result.audit.decisions).toContainEqual({
       evidenceIds: ["source-2"],
       status: "merged",
-      reason: "merged-with:source-1",
+      reason: "merged-with:source-1"
     });
   });
 
@@ -119,7 +116,7 @@ describe("Daily AI editorial domain", () => {
     const result = buildDailyAiDigest([
       evidence({ id: "bad", url: "file:///tmp/private" }),
       evidence(),
-      evidence({ title: "duplicate id" }),
+      evidence({ title: "duplicate id" })
     ]);
 
     expect(result.evidence.map(({ id }) => id)).toEqual(["source-1"]);

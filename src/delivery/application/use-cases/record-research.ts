@@ -26,7 +26,7 @@ export function recordResearch(input: {
       next = markResearched(next, suggestion.key, {
         at: input.at,
         decision: suggestion.decision,
-        reason: suggestion.reason,
+        reason: suggestion.reason
       });
     }
     yield* store.save(input.stateFile, next);

@@ -4,7 +4,7 @@ import { candidateEvidenceUrl, candidateIdentity } from "../../../../integration
 import {
   validateSubscriptionEditorialDraft,
   validateSubscriptionResearch,
-  validateSubscriptionSelectionDraft,
+  validateSubscriptionSelectionDraft
 } from "../../../index.js";
 import { assembleSubscriptionEvidence } from "../services/evidence.js";
 import type { EvidenceDocument } from "../value-objects/evidence.js";
@@ -14,7 +14,7 @@ import type { EvidenceDocument } from "../value-objects/evidence.js";
 // combination so they stay inside editorial's boundary.
 const evidenceIdentity = {
   identify: candidateIdentity,
-  fallbackUrl: candidateEvidenceUrl,
+  fallbackUrl: candidateEvidenceUrl
 };
 
 const buildSubscriptionEvidence = (document: EvidenceDocument) =>
@@ -28,19 +28,19 @@ describe("subscription editorial contract", () => {
         [
           {
             ref: "github-pull-request:example/project:41",
-            summary: "为上传流程增加断点续传。网络中断后可从检查点继续。",
+            summary: "为上传流程增加断点续传。网络中断后可从检查点继续。"
           },
           {
             ref: "publication:https://deno.com/blog/v2.4",
-            summary: "文章介绍 Deno 2.4 的运行时更新，并说明 TypeScript 工作流的变化。",
-          },
+            summary: "文章介绍 Deno 2.4 的运行时更新，并说明 TypeScript 工作流的变化。"
+          }
         ],
-        evidence,
-      ),
+        evidence
+      )
     ).toHaveLength(2);
-    expect(() =>
-      validateSubscriptionEditorialDraft([{ ref: "missing", summary: "不存在的证据。" }], evidence),
-    ).toThrow(/unknown reference/u);
+    expect(() => validateSubscriptionEditorialDraft([{ ref: "missing", summary: "不存在的证据。" }], evidence)).toThrow(
+      /unknown reference/u
+    );
   });
 
   it("treats AI selection as an explicit second pass and rejects omitted evidence", () => {
@@ -50,32 +50,32 @@ describe("subscription editorial contract", () => {
         {
           ref: "github-repository:example/project",
           selected: false,
-          reason: "普通 star 活动，没有足够的新信息。",
+          reason: "普通 star 活动，没有足够的新信息。"
         },
         {
           ref: "github-pull-request:example/project:41",
           selected: true,
-          reason: "包含明确的上传恢复能力变化，值得关注。",
-        },
+          reason: "包含明确的上传恢复能力变化，值得关注。"
+        }
       ],
-      evidence,
+      evidence
     );
 
     expect([...selection.selectedRefs]).toEqual(["github-pull-request:example/project:41"]);
     expect(selection.decisions).toEqual([
       expect.objectContaining({
         ref: "github-repository:example/project",
-        selected: false,
+        selected: false
       }),
       expect.objectContaining({
         ref: "github-pull-request:example/project:41",
-        selected: true,
+        selected: true
       }),
       expect.objectContaining({
         ref: "publication:https://deno.com/blog/v2.4",
         reason: "AI selection omitted this item",
-        selected: false,
-      }),
+        selected: false
+      })
     ]);
   });
 
@@ -86,54 +86,47 @@ describe("subscription editorial contract", () => {
         [
           {
             ref: "github-pull-request:example/project:41",
-            summary: "先保存检查点；再恢复上传；最后报告结果。",
-          },
+            summary: "先保存检查点；再恢复上传；最后报告结果。"
+          }
         ],
-        evidence,
-      ),
+        evidence
+      )
     ).toEqual([
       {
         ref: "github-pull-request:example/project:41",
-        summary: "先保存检查点；再恢复上传；最后报告结果。",
-      },
+        summary: "先保存检查点；再恢复上传；最后报告结果。"
+      }
     ]);
   });
 
   it("accepts a summary of exactly 8 and exactly 180 characters", () => {
     const evidence = buildSubscriptionEvidence(document());
     const ref = "github-pull-request:example/project:41";
-    expect(validateSubscriptionEditorialDraft([{ ref, summary: "a".repeat(8) }], evidence)).toEqual(
-      [{ ref, summary: "a".repeat(8) }],
-    );
-    expect(
-      validateSubscriptionEditorialDraft([{ ref, summary: "a".repeat(180) }], evidence),
-    ).toEqual([{ ref, summary: "a".repeat(180) }]);
-    expect(() =>
-      validateSubscriptionEditorialDraft([{ ref, summary: "a".repeat(7) }], evidence),
-    ).toThrow(/too short/u);
+    expect(validateSubscriptionEditorialDraft([{ ref, summary: "a".repeat(8) }], evidence)).toEqual([
+      { ref, summary: "a".repeat(8) }
+    ]);
+    expect(validateSubscriptionEditorialDraft([{ ref, summary: "a".repeat(180) }], evidence)).toEqual([
+      { ref, summary: "a".repeat(180) }
+    ]);
+    expect(() => validateSubscriptionEditorialDraft([{ ref, summary: "a".repeat(7) }], evidence)).toThrow(/too short/u);
   });
 
   it("accepts a selection reason of 4 characters and keeps 240 characters", () => {
     const evidence = buildSubscriptionEvidence(document());
     const ref = "github-repository:example/project";
     expect(
-      validateSubscriptionSelectionDraft([{ ref, selected: true, reason: "abcd" }], evidence)
-        .decisions[0]?.reason,
+      validateSubscriptionSelectionDraft([{ ref, selected: true, reason: "abcd" }], evidence).decisions[0]?.reason
     ).toBe("abcd");
-    expect(() =>
-      validateSubscriptionSelectionDraft([{ ref, selected: false, reason: "abc" }], evidence),
-    ).toThrow(/too short/u);
+    expect(() => validateSubscriptionSelectionDraft([{ ref, selected: false, reason: "abc" }], evidence)).toThrow(
+      /too short/u
+    );
     expect(
-      validateSubscriptionSelectionDraft(
-        [{ ref, selected: true, reason: "a".repeat(240) }],
-        evidence,
-      ).decisions[0]?.reason,
+      validateSubscriptionSelectionDraft([{ ref, selected: true, reason: "a".repeat(240) }], evidence).decisions[0]
+        ?.reason
     ).toHaveLength(240);
     expect(
-      validateSubscriptionSelectionDraft(
-        [{ ref, selected: true, reason: "b".repeat(241) }],
-        evidence,
-      ).decisions[0]?.reason,
+      validateSubscriptionSelectionDraft([{ ref, selected: true, reason: "b".repeat(241) }], evidence).decisions[0]
+        ?.reason
     ).toBe("b".repeat(240));
   });
 
@@ -142,14 +135,11 @@ describe("subscription editorial contract", () => {
     const ref = "publication:https://deno.com/blog/v2.4";
     const url = "https://deno.com/blog/v2.4";
     expect(
-      validateSubscriptionResearch(
-        [{ ref, url, status: "ok", content: "c".repeat(80) }],
-        evidence,
-      )[0]?.content,
+      validateSubscriptionResearch([{ ref, url, status: "ok", content: "c".repeat(80) }], evidence)[0]?.content
     ).toHaveLength(80);
-    expect(() =>
-      validateSubscriptionResearch([{ ref, url, status: "ok", content: "c".repeat(79) }], evidence),
-    ).toThrow(/too short/u);
+    expect(() => validateSubscriptionResearch([{ ref, url, status: "ok", content: "c".repeat(79) }], evidence)).toThrow(
+      /too short/u
+    );
   });
 
   it("traces numeric claims including grouped digits and unit suffixes", () => {
@@ -162,12 +152,11 @@ describe("subscription editorial contract", () => {
         sourceName: "Example",
         summaryPolicy: "required" as const,
         title: "Item",
-        url: "https://example.com/item",
-      },
+        url: "https://example.com/item"
+      }
     ];
     const ref = evidence[0]!.id;
-    const accept = (summary: string) =>
-      validateSubscriptionEditorialDraft([{ ref, summary }], evidence);
+    const accept = (summary: string) => validateSubscriptionEditorialDraft([{ ref, summary }], evidence);
     const reject = (summary: string) => expect(() => accept(summary)).toThrow(/numeric claim/u);
 
     expect(accept("count is 12.")).toHaveLength(1);
@@ -175,12 +164,10 @@ describe("subscription editorial contract", () => {
     const rated = [
       {
         ...evidence[0]!,
-        rawText: `${evidence[0]!.rawText} rate is 12%.`,
-      },
+        rawText: `${evidence[0]!.rawText} rate is 12%.`
+      }
     ];
-    expect(
-      validateSubscriptionEditorialDraft([{ ref, summary: "rate is 12%." }], rated),
-    ).toHaveLength(1);
+    expect(validateSubscriptionEditorialDraft([{ ref, summary: "rate is 12%." }], rated)).toHaveLength(1);
     reject("up to 12%.");
     reject("reach 3亿.");
     reject("reach 2B now");
@@ -197,11 +184,11 @@ describe("subscription editorial contract", () => {
         [
           {
             ref: "github-pull-request:example/project:41",
-            summary: "a".repeat(181),
-          },
+            summary: "a".repeat(181)
+          }
         ],
-        evidence,
-      ),
+        evidence
+      )
     ).toThrow(/too long/u);
   });
 });
@@ -230,8 +217,8 @@ function document(): Document {
             type: "watch",
             actor: "alice",
             repo: "example/project",
-            createdAt: "2026-08-15T09:00:00Z",
-          },
+            createdAt: "2026-08-15T09:00:00Z"
+          }
         ],
         repository: {
           fullName: "example/project",
@@ -240,8 +227,8 @@ function document(): Document {
           language: "TypeScript",
           stargazersCount: 12_345,
           topics: [],
-          pushedAt: "2026-08-15T00:00:00Z",
-        },
+          pushedAt: "2026-08-15T00:00:00Z"
+        }
       },
       {
         repo: "example/project",
@@ -261,12 +248,12 @@ function document(): Document {
             prNumber: 41,
             title: "Add resumable uploads",
             summary: "Adds checkpointed upload state so interrupted transfers can resume.",
-            htmlUrl: "https://github.com/example/project/pull/41",
-          },
+            htmlUrl: "https://github.com/example/project/pull/41"
+          }
         ],
         label: "example/project #41 · Add resumable uploads",
         url: "https://github.com/example/project/pull/41",
-        description: "Adds checkpointed upload state so interrupted transfers can resume.",
+        description: "Adds checkpointed upload state so interrupted transfers can resume."
       },
       {
         repo: "rss:https://deno.com/blog/v2.4",
@@ -286,13 +273,13 @@ function document(): Document {
             createdAt: "2026-08-15T11:00:00Z",
             title: "Deno 2.4",
             summary: "Runtime updates for TypeScript and JavaScript.",
-            htmlUrl: "https://deno.com/blog/v2.4",
-          },
+            htmlUrl: "https://deno.com/blog/v2.4"
+          }
         ],
         label: "Deno 2.4",
         url: "https://deno.com/blog/v2.4",
-        description: "Runtime updates for TypeScript and JavaScript.",
-      },
-    ],
+        description: "Runtime updates for TypeScript and JavaScript."
+      }
+    ]
   };
 }

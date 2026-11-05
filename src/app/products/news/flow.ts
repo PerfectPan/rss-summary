@@ -8,20 +8,16 @@ import {
   projectNewsHit,
   selectNewsStoriesWithAudit,
   type NewsBriefEdition,
-  type SelectedNewsStory,
+  type SelectedNewsStory
 } from "../../../editorial/index.js";
 import {
   buildNewsAudit,
   summarizeNewsSources,
   type NewsBriefAudit,
   type NewsSourceStatus,
-  type NewsTopic,
+  type NewsTopic
 } from "./output.js";
-import {
-  calendarDayAtOffset,
-  parseOffsetMilliseconds,
-  startOfCalendarDay,
-} from "../../../kernel/index.js";
+import { calendarDayAtOffset, parseOffsetMilliseconds, startOfCalendarDay } from "../../../kernel/index.js";
 import { boundedInteger } from "../../config/parse.js";
 import { loadNewsTopics } from "./topics.js";
 import { createGlmResearch, type GlmResearch } from "../../../integrations/glm/index.js";
@@ -40,12 +36,9 @@ import {
   withFallback,
   type FallbackSearchProvider,
   type NewsSearchInput,
-  type SearchSource,
+  type SearchSource
 } from "../../../acquisition/index.js";
-import {
-  DeepSeekSearchClient,
-  deepSeekSourcePolicies,
-} from "../../../integrations/deepseek/index.js";
+import { DeepSeekSearchClient, deepSeekSourcePolicies } from "../../../integrations/deepseek/index.js";
 import { DoubaoSearchClient } from "../../../integrations/doubao/index.js";
 import { GrokSearchClient, normalizeProvider } from "../../../integrations/grok/index.js";
 import type { AuditedSearchPage as NewsSearchPage } from "../../../integrations/grok/index.js";
@@ -86,21 +79,19 @@ export class AllNewsQueriesFailedError extends Error {
   readonly result: RivusNewsBriefResult;
 
   constructor(result: RivusNewsBriefResult) {
-    const grokFailures = result.audit.queries.filter(({ errorCode }) =>
-      errorCode?.startsWith("grok_"),
-    );
+    const grokFailures = result.audit.queries.filter(({ errorCode }) => errorCode?.startsWith("grok_"));
     const reasons: Record<string, string> = {
       grok_timeout: "Grok 搜索超时",
       grok_call_limit: "Grok 持续追加搜索，已终止本次请求",
       grok_output_limit: "Grok 输出超过限制",
       grok_not_found: "未找到 Grok CLI",
       grok_invalid_response: "Grok 未返回完整、可验证的搜索结果",
-      grok_source_policy: "Grok 不支持当前来源要求",
+      grok_source_policy: "Grok 不支持当前来源要求"
     };
     super(
       grokFailures.length
         ? `新闻搜索未完成：${[...new Set(grokFailures.map(({ errorCode }) => reasons[errorCode!] ?? "Grok 调用失败"))].join("；")}。本次未生成新闻简报。`
-        : "All news search queries failed.",
+        : "All news search queries failed."
     );
     this.name = "AllNewsQueriesFailedError";
     this.result = result;
@@ -124,34 +115,37 @@ const newsSearchConcurrency = 2;
 export function resolveNewsEditionWindow(
   occurrence: string,
   timezoneOffset: string,
-  edition: NewsBriefEdition,
+  edition: NewsBriefEdition
 ): { day: string; since: number; until: number; label: string; timezoneOffset: string } {
   const until = Date.parse(occurrence);
-  if (!Number.isFinite(until)) throw new Error("occurrence must be a valid date-time.");
+  if (!Number.isFinite(until)) {
+    throw new Error("occurrence must be a valid date-time.");
+  }
   const day = calendarDayAtOffset(occurrence, timezoneOffset);
   const dayStart = startOfCalendarDay(day, timezoneOffset);
   const noonCutoff = dayStart + noonCutoffMinutes * 60_000;
   const since = edition === "noon" ? dayStart : noonCutoff;
   const windowEnd = edition === "noon" ? Math.min(until, noonCutoff) : until;
-  if (windowEnd <= since)
+  if (windowEnd <= since) {
     throw new Error(`${edition} news occurrence is earlier than its delivery window.`);
+  }
   return {
     day,
     since,
     until: windowEnd,
     label: `${edition === "noon" ? "00:00" : "12:30"}–${timeAtOffset(windowEnd, timezoneOffset)}`,
-    timezoneOffset,
+    timezoneOffset
   };
 }
 
 export function generateRivusNewsBrief(
   value: unknown,
-  dependencies: NewsBriefDependencies = {},
+  dependencies: NewsBriefDependencies = {}
 ): Effect.Effect<RivusNewsBriefResult, Error> {
   return Effect.gen(function* () {
     const input = yield* Effect.try({
       try: () => parseInput(value),
-      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause)))
     });
     const env = dependencies.env ?? process.env;
     const timezoneOffset = env.FEED_TIMEZONE_OFFSET ?? "+08:00";
@@ -164,26 +158,22 @@ export function generateRivusNewsBrief(
                 since: Date.parse(input.since),
                 until: Date.parse(input.occurrence),
                 label: `${input.since}–${input.occurrence}（补采）`,
-                timezoneOffset,
+                timezoneOffset
               }
             : resolveNewsEditionWindow(input.occurrence, timezoneOffset, input.edition)),
-          reportedUrls: input.reportedUrls,
+          reportedUrls: input.reportedUrls
         };
       },
-      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause)))
     });
     const rotation = editionRotation(window.day, input.edition);
-    const topics = (dependencies.topics ?? loadNewsTopics(env.NEWS_TOPICS_FILE)).filter(
-      ({ enabled }) => enabled,
-    );
+    const topics = (dependencies.topics ?? loadNewsTopics(env.NEWS_TOPICS_FILE)).filter(({ enabled }) => enabled);
     if (topics.length === 0) {
       return yield* Effect.fail(new Error("At least one news topic must be enabled."));
     }
     const mode = env.NEWS_SEARCH_MODE ?? "grok";
     if (!["doubao", "hybrid", "combined", "grok"].includes(mode)) {
-      return yield* Effect.fail(
-        new Error("NEWS_SEARCH_MODE must be doubao, hybrid, combined or grok."),
-      );
+      return yield* Effect.fail(new Error("NEWS_SEARCH_MODE must be doubao, hybrid, combined or grok."));
     }
     const fallbackName = env.NEWS_SEARCH_FALLBACK?.trim() || undefined;
     if (fallbackName && fallbackName !== "deepseek") {
@@ -197,38 +187,30 @@ export function generateRivusNewsBrief(
     // fallback would spend a second DeepSeek request on the same query.
     if (supplementName && fallbackName) {
       return yield* Effect.fail(
-        new Error(
-          "NEWS_SEARCH_SUPPLEMENT and NEWS_SEARCH_FALLBACK cannot be set together; unset NEWS_SEARCH_FALLBACK.",
-        ),
+        new Error("NEWS_SEARCH_SUPPLEMENT and NEWS_SEARCH_FALLBACK cannot be set together; unset NEWS_SEARCH_FALLBACK.")
       );
     }
     const count = boundedInteger(env.NEWS_SEARCH_COUNT_PER_QUERY, 10, 1, 50);
     const managedSearch = yield* Effect.try({
       try: () => (dependencies.search ? undefined : createSearch(env, mode, dependencies.now)),
-      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause)))
     });
     // Only news briefs fall back to DeepSeek; X account collection cannot use
     // it because the endpoint cannot search posts by author.
     const deepSeekRetry = {
       now: dependencies.now,
       random: dependencies.random ?? Math.random,
-      sleep: dependencies.sleep ?? sleep,
+      sleep: dependencies.sleep ?? sleep
     };
     const fallbackSearch = yield* Effect.try({
-      try: () =>
-        dependencies.search || !fallbackName
-          ? undefined
-          : createDeepSeekFallback(env, deepSeekRetry),
-      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+      try: () => (dependencies.search || !fallbackName ? undefined : createDeepSeekFallback(env, deepSeekRetry)),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause)))
     });
     // The supplement searches DeepSeek in parallel with the primary instead of
     // only after its failure.
     const supplementSearch = yield* Effect.try({
-      try: () =>
-        dependencies.search || !supplementName
-          ? undefined
-          : createDeepSeekSearch(env, deepSeekRetry),
-      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+      try: () => (dependencies.search || !supplementName ? undefined : createDeepSeekSearch(env, deepSeekRetry)),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause)))
     });
     const requests = topics.flatMap((topic) =>
       topic.queries.map((query) => ({
@@ -237,8 +219,7 @@ export function generateRivusNewsBrief(
         input: {
           query:
             mode !== "grok" && query.glm?.sourceQueries
-              ? (query.glm.sourceQueries[query.glm.domains[rotation % query.glm.domains.length]!] ??
-                query.text)
+              ? (query.glm.sourceQueries[query.glm.domains[rotation % query.glm.domains.length]!] ?? query.text)
               : query.text,
           count,
           day: window.day,
@@ -248,24 +229,22 @@ export function generateRivusNewsBrief(
             ? {
                 window: {
                   since: new Date(window.since).toISOString(),
-                  until: new Date(window.until).toISOString(),
-                },
+                  until: new Date(window.until).toISOString()
+                }
               }
-            : {}),
-        },
-      })),
+            : {})
+        }
+      }))
     );
     const requestedMaxQueries = yield* Effect.try({
       try: () =>
         boundedInteger(
-          dependencies.maxQueries === undefined
-            ? env.NEWS_SEARCH_MAX_QUERIES
-            : String(dependencies.maxQueries),
+          dependencies.maxQueries === undefined ? env.NEWS_SEARCH_MAX_QUERIES : String(dependencies.maxQueries),
           4,
           1,
-          32,
+          32
         ),
-      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause)))
     });
     const maxQueries =
       mode === "grok"
@@ -274,19 +253,19 @@ export function generateRivusNewsBrief(
     const selectedQueryIds = selectQueryIds(
       requests.map((request) => request.query.id),
       rotation,
-      maxQueries,
+      maxQueries
     );
     const searchEffect = (input: NewsSearchInput): Effect.Effect<NewsSearchPage, unknown> =>
       dependencies.search
         ? Effect.tryPromise({
             try: () => dependencies.search!(input),
-            catch: (reason) => reason,
+            catch: (reason) => reason
           })
         : managedSearch!(input);
     const primarySearch = (input: NewsSearchInput) =>
       retrySearchEffect(searchEffect(input), {
         random: dependencies.random ?? Math.random,
-        sleep: dependencies.sleep ?? sleep,
+        sleep: dependencies.sleep ?? sleep
       });
     // Source outages hand the query to DeepSeek; local budget boundaries and
     // unsupported source policies keep the primary failure.
@@ -300,26 +279,21 @@ export function generateRivusNewsBrief(
               search: (input) => runPluginEffect(newsSearch(input)),
               ...(managedSearch
                 ? {
-                    cachedSearch: (input: NewsSearchInput) =>
-                      runPluginEffect(managedSearch.cachedSearch(input)),
+                    cachedSearch: (input: NewsSearchInput) => runPluginEffect(managedSearch.cachedSearch(input))
                   }
                 : {}),
               glm: dependencies.glm ?? createGlmResearch({ apiKey: env.GLM_CODING_API_KEY ?? "" }),
               window,
               maxSearches: boundedInteger(env.NEWS_GLM_MAX_SEARCHES, 14, 1, 64),
-              queryIds: requests
-                .filter(({ query }) => selectedQueryIds.has(query.id))
-                .map(({ query }) => query.id),
+              queryIds: requests.filter(({ query }) => selectedQueryIds.has(query.id)).map(({ query }) => query.id),
               rotation,
               combine: mode === "combined",
               recency:
-                (dependencies.now?.() ?? new Date()).getTime() - window.since > 7 * 86_400_000
-                  ? "noLimit"
-                  : "oneWeek",
-              maxReads: boundedInteger(env.NEWS_GLM_MAX_READS, 14, 1, 64),
+                (dependencies.now?.() ?? new Date()).getTime() - window.since > 7 * 86_400_000 ? "noLimit" : "oneWeek",
+              maxReads: boundedInteger(env.NEWS_GLM_MAX_READS, 14, 1, 64)
             })
           : undefined,
-      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause))),
+      catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause)))
     });
     // One supplement request per configured keyword; official-policy topics and
     // queries without keywords never supplement.
@@ -329,7 +303,7 @@ export function generateRivusNewsBrief(
         : deepSeekSourcePolicies.includes(request.topic.sourcePolicy)
           ? request.query.deepseek.queries.map((keyword) => ({
               name: "deepseek",
-              search: (input: NewsSearchInput) => supplementSearch!({ ...input, query: keyword }),
+              search: (input: NewsSearchInput) => supplementSearch!({ ...input, query: keyword })
             }))
           : [];
     const settled = yield* settleSearches(
@@ -338,32 +312,30 @@ export function generateRivusNewsBrief(
         const supplement = supplementSources(request);
         if (!selectedQueryIds.has(request.query.id)) {
           if (supplement.length === 0) {
-            return Effect.fail(
-              new NewsSearchError("query_deferred", "Query deferred by the per-run search limit."),
-            );
+            return Effect.fail(new NewsSearchError("query_deferred", "Query deferred by the per-run search limit."));
           }
           // The primary never ran for this query; the supplement answers alone
           // and the audit discloses it through the deferral code.
           return Effect.map(mergeSearches(supplement)(request.input), (page) => ({
             ...page,
-            providerFallback: { triggeredBy: "query_deferred" },
+            providerFallback: { triggeredBy: "query_deferred" }
           }));
         }
         const primary = execute
           ? Effect.tryPromise({ try: () => execute(request), catch: (reason) => reason })
           : newsSearch(request.input);
-        if (supplement.length === 0) return primary;
+        if (supplement.length === 0) {
+          return primary;
+        }
         return mergeSearches([{ name: mode, search: () => primary }, ...supplement])(request.input);
       },
-      mode !== "doubao" ? 1 : newsSearchConcurrency,
+      mode !== "doubao" ? 1 : newsSearchConcurrency
     );
     const successful = settled.filter((result) => result._tag === "Fulfilled");
     const { sourceStatus, warnings } = summarizeNewsSources(requests, settled);
     const generatedAt = (dependencies.now ?? (() => new Date()))().toISOString();
     if (successful.length === 0) {
-      const failures = settled.flatMap((result) =>
-        result._tag === "Rejected" ? [result.reason] : [],
-      );
+      const failures = settled.flatMap((result) => (result._tag === "Rejected" ? [result.reason] : []));
       if (!failures.every((error) => isSearchFailure(error))) {
         return yield* Effect.fail(new AggregateError(failures, "All news search queries failed."));
       }
@@ -377,21 +349,22 @@ export function generateRivusNewsBrief(
         sourceStatus,
         windowLabel: window.label,
         stories: [],
-        topics,
+        topics
       };
       if (
         failures.every(
-          (error) =>
-            isSearchFailure(error) &&
-            ["local_budget_exhausted", "query_deferred"].includes(error.code),
+          (error) => isSearchFailure(error) && ["local_budget_exhausted", "query_deferred"].includes(error.code)
         )
-      )
+      ) {
         return unavailable;
+      }
       return yield* Effect.fail(new AllNewsQueriesFailedError(unavailable));
     }
 
     const hits = settled.flatMap((result, index) => {
-      if (result._tag !== "Fulfilled") return [];
+      if (result._tag !== "Fulfilled") {
+        return [];
+      }
       const request = requests[index]!;
       return result.value.results.map((searchResult) =>
         projectNewsHit(
@@ -404,10 +377,10 @@ export function generateRivusNewsBrief(
             queryText: request.query.text,
             subjectAny: request.query.subjectAny,
             eventAny: request.query.eventAny,
-            excludedAny: request.query.excludedAny,
+            excludedAny: request.query.excludedAny
           },
-          resolveNewsCredibility(searchResult),
-        ),
+          resolveNewsCredibility(searchResult)
+        )
       );
     });
     const built = buildNewsStoriesWithAudit(hits, window);
@@ -419,7 +392,7 @@ export function generateRivusNewsBrief(
       built.decisions,
       selection.decisions,
       built.stories.length,
-      stories.length,
+      stories.length
     );
     return {
       audit,
@@ -431,7 +404,7 @@ export function generateRivusNewsBrief(
       sourceStatus,
       windowLabel: window.label,
       stories,
-      topics,
+      topics
     };
   });
 }
@@ -453,11 +426,13 @@ function parseInput(value: unknown): RivusNewsBriefInput {
   }
   let since: string | undefined;
   if (input.since !== undefined) {
-    if (typeof input.since !== "string" || !Number.isFinite(Date.parse(input.since)))
+    if (typeof input.since !== "string" || !Number.isFinite(Date.parse(input.since))) {
       throw new Error("since must be an ISO date-time.");
+    }
     const duration = Date.parse(input.occurrence) - Date.parse(input.since);
-    if (!(duration > 0 && duration <= 72 * 3_600_000))
+    if (!(duration > 0 && duration <= 72 * 3_600_000)) {
       throw new Error("Catch-up window must be within 72 hours of occurrence.");
+    }
     since = input.since;
   }
   let reportedUrls: string[] | undefined;
@@ -466,8 +441,9 @@ function parseInput(value: unknown): RivusNewsBriefInput {
       !Array.isArray(input.reportedUrls) ||
       input.reportedUrls.length > 1000 ||
       input.reportedUrls.some((url) => typeof url !== "string" || !canonicalizeUrl(url))
-    )
+    ) {
       throw new Error("reportedUrls must contain at most 1000 valid URLs.");
+    }
     reportedUrls = input.reportedUrls.map((url) => canonicalizeUrl(url as string)!);
   }
   return { edition: input.edition, occurrence: input.occurrence, since, reportedUrls };
@@ -476,78 +452,51 @@ function parseInput(value: unknown): RivusNewsBriefInput {
 function createSearch(
   env: NodeJS.ProcessEnv,
   mode: string,
-  now?: () => Date,
+  now?: () => Date
 ): ReturnType<typeof createBudgetedNewsSearch> {
   if (mode === "grok") {
     const model = env.NEWS_GROK_MODEL?.trim() || undefined;
-    if (model && !/^[a-zA-Z0-9._-]+$/u.test(model)) throw new Error("Invalid NEWS_GROK_MODEL.");
+    if (model && !/^[a-zA-Z0-9._-]+$/u.test(model)) {
+      throw new Error("Invalid NEWS_GROK_MODEL.");
+    }
     const client = new GrokSearchClient({
       executable: env.NEWS_GROK_EXECUTABLE?.trim() || undefined,
       model,
       timeoutMs: boundedInteger(env.NEWS_GROK_TIMEOUT_MS, 120_000, 1_000, 180_000),
-      timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00",
+      timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00"
     });
     return createBudgetedNewsSearch({
       search: (input) => client.search(input),
       provider: `grok://cli/v1/${model ?? "default"}`,
       normalize: normalizeProvider,
       stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || searchBudgetDefaults.stateFile,
-      dailyLimit: boundedInteger(
-        env.NEWS_SEARCH_DAILY_LIMIT,
-        searchBudgetDefaults.grok.dailyLimit,
-        0,
-        100_000,
-      ),
-      monthlyLimit: boundedInteger(
-        env.NEWS_SEARCH_MONTHLY_LIMIT,
-        searchBudgetDefaults.grok.monthlyLimit,
-        0,
-        1_000_000,
-      ),
+      dailyLimit: boundedInteger(env.NEWS_SEARCH_DAILY_LIMIT, searchBudgetDefaults.grok.dailyLimit, 0, 100_000),
+      monthlyLimit: boundedInteger(env.NEWS_SEARCH_MONTHLY_LIMIT, searchBudgetDefaults.grok.monthlyLimit, 0, 1_000_000),
       timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00",
       cacheTtlMs:
-        boundedInteger(
-          env.NEWS_SEARCH_CACHE_TTL_MINUTES,
-          searchBudgetDefaults.cacheTtlMinutes,
-          0,
-          43_200,
-        ) * 60_000,
-      now,
+        boundedInteger(env.NEWS_SEARCH_CACHE_TTL_MINUTES, searchBudgetDefaults.cacheTtlMinutes, 0, 43_200) * 60_000,
+      now
     });
   }
   const apiKey = env.DOUBAO_SEARCH_API_KEY?.trim();
-  if (!apiKey) throw new Error("DOUBAO_SEARCH_API_KEY is required for news briefs.");
+  if (!apiKey) {
+    throw new Error("DOUBAO_SEARCH_API_KEY is required for news briefs.");
+  }
   const client = new DoubaoSearchClient({
     apiKey,
     baseUrl: env.DOUBAO_SEARCH_BASE_URL?.trim() || undefined,
-    timeoutMs: boundedInteger(env.NEWS_SEARCH_TIMEOUT_MS, 15_000, 1_000, 60_000),
+    timeoutMs: boundedInteger(env.NEWS_SEARCH_TIMEOUT_MS, 15_000, 1_000, 60_000)
   });
   return createBudgetedNewsSearch({
     search: (input) => client.search(input),
     stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || searchBudgetDefaults.stateFile,
-    provider:
-      env.DOUBAO_SEARCH_BASE_URL?.trim() || "https://open.feedcoopapi.com/search_api/web_search",
-    dailyLimit: boundedInteger(
-      env.NEWS_SEARCH_DAILY_LIMIT,
-      searchBudgetDefaults.doubao.dailyLimit,
-      0,
-      100_000,
-    ),
-    monthlyLimit: boundedInteger(
-      env.NEWS_SEARCH_MONTHLY_LIMIT,
-      searchBudgetDefaults.doubao.monthlyLimit,
-      0,
-      1_000_000,
-    ),
+    provider: env.DOUBAO_SEARCH_BASE_URL?.trim() || "https://open.feedcoopapi.com/search_api/web_search",
+    dailyLimit: boundedInteger(env.NEWS_SEARCH_DAILY_LIMIT, searchBudgetDefaults.doubao.dailyLimit, 0, 100_000),
+    monthlyLimit: boundedInteger(env.NEWS_SEARCH_MONTHLY_LIMIT, searchBudgetDefaults.doubao.monthlyLimit, 0, 1_000_000),
     timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00",
     cacheTtlMs:
-      boundedInteger(
-        env.NEWS_SEARCH_CACHE_TTL_MINUTES,
-        searchBudgetDefaults.cacheTtlMinutes,
-        0,
-        43_200,
-      ) * 60_000,
-    now,
+      boundedInteger(env.NEWS_SEARCH_CACHE_TTL_MINUTES, searchBudgetDefaults.cacheTtlMinutes, 0, 43_200) * 60_000,
+    now
   });
 }
 
@@ -563,7 +512,9 @@ function timeAtOffset(instant: number, timezoneOffset: string): string {
  */
 function deepSeekStateFile(env: NodeJS.ProcessEnv): string {
   const override = env.DEEPSEEK_SEARCH_STATE_FILE?.trim();
-  if (override) return override;
+  if (override) {
+    return override;
+  }
   const primary = env.NEWS_SEARCH_STATE_FILE?.trim() || searchBudgetDefaults.stateFile;
   return join(dirname(primary), "deepseek-search.json");
 }
@@ -575,51 +526,41 @@ function deepSeekStateFile(env: NodeJS.ProcessEnv): string {
  */
 function createDeepSeekSearch(
   env: NodeJS.ProcessEnv,
-  retry: { now?: () => Date; random: () => number; sleep: (milliseconds: number) => Promise<void> },
+  retry: { now?: () => Date; random: () => number; sleep: (milliseconds: number) => Promise<void> }
 ) {
   const apiKey = env.DEEPSEEK_API_KEY?.trim();
-  if (!apiKey) throw new Error("DEEPSEEK_API_KEY is required for news briefs.");
-  const baseUrl =
-    env.DEEPSEEK_SEARCH_BASE_URL?.trim() || "https://api.deepseek.com/v1/tools/search";
+  if (!apiKey) {
+    throw new Error("DEEPSEEK_API_KEY is required for news briefs.");
+  }
+  const baseUrl = env.DEEPSEEK_SEARCH_BASE_URL?.trim() || "https://api.deepseek.com/v1/tools/search";
   const client = new DeepSeekSearchClient({
     apiKey,
     baseUrl,
-    timeoutMs: boundedInteger(env.DEEPSEEK_SEARCH_TIMEOUT_MS, 15_000, 1_000, 60_000),
+    timeoutMs: boundedInteger(env.DEEPSEEK_SEARCH_TIMEOUT_MS, 15_000, 1_000, 60_000)
   });
   const budgeted = createBudgetedNewsSearch({
     search: (input) => client.search(input),
     stateFile: deepSeekStateFile(env),
     provider: baseUrl,
-    dailyLimit: boundedInteger(
-      env.DEEPSEEK_SEARCH_DAILY_LIMIT,
-      searchBudgetDefaults.deepseek.dailyLimit,
-      0,
-      100_000,
-    ),
+    dailyLimit: boundedInteger(env.DEEPSEEK_SEARCH_DAILY_LIMIT, searchBudgetDefaults.deepseek.dailyLimit, 0, 100_000),
     monthlyLimit: boundedInteger(
       env.DEEPSEEK_SEARCH_MONTHLY_LIMIT,
       searchBudgetDefaults.deepseek.monthlyLimit,
       0,
-      1_000_000,
+      1_000_000
     ),
     timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00",
     cacheTtlMs:
-      boundedInteger(
-        env.NEWS_SEARCH_CACHE_TTL_MINUTES,
-        searchBudgetDefaults.cacheTtlMinutes,
-        0,
-        43_200,
-      ) * 60_000,
-    now: retry.now,
+      boundedInteger(env.NEWS_SEARCH_CACHE_TTL_MINUTES, searchBudgetDefaults.cacheTtlMinutes, 0, 43_200) * 60_000,
+    now: retry.now
   });
-  return (input: NewsSearchInput) =>
-    retrySearchEffect(budgeted(input), { random: retry.random, sleep: retry.sleep });
+  return (input: NewsSearchInput) => retrySearchEffect(budgeted(input), { random: retry.random, sleep: retry.sleep });
 }
 
 /** The fallback flavor of the DeepSeek search: only policies it can serve. */
 function createDeepSeekFallback(
   env: NodeJS.ProcessEnv,
-  retry: { now?: () => Date; random: () => number; sleep: (milliseconds: number) => Promise<void> },
+  retry: { now?: () => Date; random: () => number; sleep: (milliseconds: number) => Promise<void> }
 ): FallbackSearchProvider {
   return { sourcePolicies: deepSeekSourcePolicies, search: createDeepSeekSearch(env, retry) };
 }

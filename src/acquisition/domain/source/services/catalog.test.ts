@@ -7,24 +7,24 @@ describe("feed store", () => {
     const feeds = addFeedSubscription([], {
       name: " GitHub Blog ",
       url: " https://github.blog/feed ",
-      tags: [" github ", "ai", "", "github"],
+      tags: [" github ", "ai", "", "github"]
     });
 
     expect(feeds).toEqual([
       {
         name: "GitHub Blog",
         url: "https://github.blog/feed",
-        tags: ["github", "ai"],
-      },
+        tags: ["github", "ai"]
+      }
     ]);
   });
 
   it("rejects duplicate feed URLs", () => {
     expect(() =>
-      addFeedSubscription(
-        [{ name: "GitHub Blog", url: "https://github.blog/feed", tags: ["github"] }],
-        { url: "https://github.blog/feed", tags: ["ai"] },
-      ),
+      addFeedSubscription([{ name: "GitHub Blog", url: "https://github.blog/feed", tags: ["github"] }], {
+        url: "https://github.blog/feed",
+        tags: ["ai"]
+      })
     ).toThrow("RSS feed already exists: https://github.blog/feed");
   });
 
@@ -34,11 +34,11 @@ describe("feed store", () => {
         {
           name: "GitHub Blog",
           url: "https://github.blog/feed",
-          tags: ["github", "ai"],
-        },
-      ]),
+          tags: ["github", "ai"]
+        }
+      ])
     ).toBe(
-      '[\n  {\n    "name": "GitHub Blog",\n    "url": "https://github.blog/feed",\n    "tags": [\n      "github",\n      "ai"\n    ]\n  }\n]\n',
+      '[\n  {\n    "name": "GitHub Blog",\n    "url": "https://github.blog/feed",\n    "tags": [\n      "github",\n      "ai"\n    ]\n  }\n]\n'
     );
   });
 
@@ -46,9 +46,9 @@ describe("feed store", () => {
     const feeds = removeFeedSubscription(
       [
         { name: "GitHub Blog", url: "https://github.blog/feed", tags: ["github"] },
-        { name: "Deno Blog", url: "https://deno.com/feed", tags: ["deno"] },
+        { name: "Deno Blog", url: "https://deno.com/feed", tags: ["deno"] }
       ],
-      " https://github.blog/feed ",
+      " https://github.blog/feed "
     );
 
     expect(feeds).toEqual([{ name: "Deno Blog", url: "https://deno.com/feed", tags: ["deno"] }]);
@@ -56,7 +56,7 @@ describe("feed store", () => {
 
   it("rejects removing a missing feed URL", () => {
     expect(() => removeFeedSubscription([], "https://github.blog/feed")).toThrow(
-      "RSS feed not found: https://github.blog/feed",
+      "RSS feed not found: https://github.blog/feed"
     );
   });
 });

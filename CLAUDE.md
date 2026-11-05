@@ -5,7 +5,7 @@ Follow `AGENTS.md` first. This file exists so Claude-based coding tools pick up 
 ## Workflow
 
 - Do not push directly to `main`.
-- Work on a short-lived branch, preferably `codex/...` when Codex is driving the change or another descriptive feature branch when Claude is driving it.
+- Work on a short descriptive branch and open a pull request; `codex/...` stays welcome when Codex drives the change.
 - Open a pull request and wait for the `Verify` GitHub Actions check before merging.
 - Run `pnpm verify` locally before saying a change is ready.
 

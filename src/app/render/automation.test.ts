@@ -7,7 +7,7 @@ describe("app/render/automation presentation", () => {
   it("presents delivered reply text through the single decode path", () => {
     const presentation = automationPresentationForText(
       "# 固定标题\n\n一条固定说明\n\n## 模型发布\n\n1. 新模型上线 [↗ #1](https://example.com/item)\n",
-      "industry",
+      "industry"
     );
     expect(presentation).toMatchObject({
       kind: "industry",
@@ -16,16 +16,13 @@ describe("app/render/automation presentation", () => {
         {
           id: "1-models",
           items: [{ headline: "新模型上线" }],
-          title: "模型发布",
-        },
+          title: "模型发布"
+        }
       ],
-      title: "固定标题",
+      title: "固定标题"
     });
     expect(
-      automationPresentationForText(
-        "一条没有标题的说明\n\n- 列表项 [来源 ↗](https://example.com/a)",
-        "news",
-      ),
+      automationPresentationForText("一条没有标题的说明\n\n- 列表项 [来源 ↗](https://example.com/a)", "news")
     ).toMatchObject({ title: "Rivus 自动简报" });
   });
 
@@ -43,7 +40,7 @@ describe("app/render/automation presentation", () => {
               number: 1,
               headline: "DeepSeek-V4-Pro 正式版 API 上线",
               links: [{ text: "↗ #1", url: "https://api.example.test/deepseek" }],
-              notes: [],
+              notes: []
             },
             {
               shape: "numbered",
@@ -52,15 +49,15 @@ describe("app/render/automation presentation", () => {
               links: [
                 { text: "↗ #2", url: "https://github.com/openai/codex/releases/tag/v1" },
                 { text: "↗ #3", url: "https://github.com/openai/codex/commit/abc" },
-                { text: "↗ #4 · X（Grok 整理）", url: "https://x.com/openai/codex/1" },
+                { text: "↗ #4 · X（Grok 整理）", url: "https://x.com/openai/codex/1" }
               ],
-              notes: [],
-            },
-          ],
-        },
+              notes: []
+            }
+          ]
+        }
       ],
       trailing: [],
-      variant: "daily-ai",
+      variant: "daily-ai"
     };
 
     expect(renderAutomationPresentation(view, "daily-ai")).toEqual({
@@ -73,20 +70,20 @@ describe("app/render/automation presentation", () => {
           items: [
             {
               headline: "DeepSeek-V4-Pro 正式版 API 上线",
-              sources: [{ label: "api.example.test", url: "https://api.example.test/deepseek" }],
+              sources: [{ label: "api.example.test", url: "https://api.example.test/deepseek" }]
             },
             {
               headline: "Codex CLI 发布新版本",
               sources: [
                 { label: "GitHub", url: "https://github.com/openai/codex/releases/tag/v1" },
-                { label: "↗ #4 · X（Grok 整理）", url: "https://x.com/openai/codex/1" },
-              ],
-            },
+                { label: "↗ #4 · X（Grok 整理）", url: "https://x.com/openai/codex/1" }
+              ]
+            }
           ],
-          title: "模型发布",
-        },
+          title: "模型发布"
+        }
       ],
-      title: "Daily AI Digest · 2026-08-13",
+      title: "Daily AI Digest · 2026-08-13"
     });
   });
 
@@ -106,16 +103,16 @@ describe("app/render/automation presentation", () => {
               links: [
                 {
                   text: "Cloudflare 确认事故源于内部配置失误",
-                  url: "https://example.test/cloudflare",
-                },
+                  url: "https://example.test/cloudflare"
+                }
               ],
-              notes: ["不是网络攻击，服务已经恢复。", "Cloudflare · 11:20"],
-            },
-          ],
-        },
+              notes: ["不是网络攻击，服务已经恢复。", "Cloudflare · 11:20"]
+            }
+          ]
+        }
       ],
       trailing: [{ kind: "status", text: "数据源状态：部分来源尚未完成" }],
-      variant: "news",
+      variant: "news"
     };
 
     const presentation = renderAutomationPresentation(view, "news");
@@ -123,7 +120,7 @@ describe("app/render/automation presentation", () => {
     expect(presentation.sections[0]?.items[0]).toMatchObject({
       headline: "Cloudflare 确认事故源于内部配置失误",
       note: "不是网络攻击，服务已经恢复。 · Cloudflare · 11:20",
-      sources: [{ label: "example.test", url: "https://example.test/cloudflare" }],
+      sources: [{ label: "example.test", url: "https://example.test/cloudflare" }]
     });
     expect(presentation.footnote).toBe("数据源状态：部分来源尚未完成");
   });
@@ -142,22 +139,20 @@ describe("app/render/automation presentation", () => {
               headline: "owner/repo",
               links: [{ text: "owner/repo", url: "https://github.com/owner/repo" }],
               notes: ["⭐ 12.3k · TypeScript", "项目说明。"],
-              sourceLabel: "GitHub Home",
-            },
-          ],
-        },
+              sourceLabel: "GitHub Home"
+            }
+          ]
+        }
       ],
       trailing: [],
-      variant: "brief",
+      variant: "brief"
     };
 
-    expect(renderAutomationPresentation(view, "subscriptions").sections[0]?.items[0]).toMatchObject(
-      {
-        headline: "owner/repo",
-        note: "⭐ 12.3k · TypeScript · 项目说明。",
-        sources: [{ label: "GitHub Home", url: "https://github.com/owner/repo" }],
-      },
-    );
+    expect(renderAutomationPresentation(view, "subscriptions").sections[0]?.items[0]).toMatchObject({
+      headline: "owner/repo",
+      note: "⭐ 12.3k · TypeScript · 项目说明。",
+      sources: [{ label: "GitHub Home", url: "https://github.com/owner/repo" }]
+    });
   });
 
   it("routes trailing plain notices into meta without items and the last note with items", () => {
@@ -166,11 +161,11 @@ describe("app/render/automation presentation", () => {
       meta: ["0 条更新 · 个人博客 · 2026-08-15 +08:00"],
       sections: [],
       trailing: [{ kind: "plain", text: "今天没有新的订阅内容。" }],
-      variant: "brief",
+      variant: "brief"
     };
     expect(renderAutomationPresentation(empty, "subscriptions").meta).toEqual([
       "0 条更新 · 个人博客 · 2026-08-15 +08:00",
-      "今天没有新的订阅内容。",
+      "今天没有新的订阅内容。"
     ]);
 
     const withItems: ViewDocument = {
@@ -185,13 +180,13 @@ describe("app/render/automation presentation", () => {
               shape: "bullet",
               headline: "发布了「Deno 2.4」。",
               links: [{ text: "个人博客 ↗", url: "https://deno.example.test/v2.4" }],
-              notes: [],
-            },
-          ],
-        },
+              notes: []
+            }
+          ]
+        }
       ],
       trailing: [{ kind: "plain", text: "另有 1 篇论文等待原文核验，暂不直接推送。" }],
-      variant: "brief",
+      variant: "brief"
     };
     const item = renderAutomationPresentation(withItems, "subscriptions").sections[0]?.items[0];
     expect(item?.note).toBe("另有 1 篇论文等待原文核验，暂不直接推送。");

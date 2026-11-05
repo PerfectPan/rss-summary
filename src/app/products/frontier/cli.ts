@@ -15,18 +15,16 @@ type Writable = {
 /** `rss-summary industry [--json] [--day YYYY-MM-DD] [--only-new] [--dry-run]` */
 export async function runIndustryCommand(
   argv: string[],
-  deps: { stdout?: Writable; stderr?: Writable } = {},
+  deps: { stdout?: Writable; stderr?: Writable } = {}
 ): Promise<number> {
   const stderr = deps.stderr ?? process.stderr;
   const config = Effect.map(loadEnvConfig(), (base) => applyCliArgs(base, parseCliArgs(argv)));
   return runCliEffect(
     Effect.flatMap(config, (resolved) =>
       runIndustryFlow(resolved, (document, format) =>
-        format === "json"
-          ? renderJsonIndustryBrief(document)
-          : renderViewMarkdown(industryView(document)),
-      ),
+        format === "json" ? renderJsonIndustryBrief(document) : renderViewMarkdown(industryView(document))
+      )
     ),
-    { stderr, layer: appLayerFromConfig(config) },
+    { stderr, layer: appLayerFromConfig(config) }
   );
 }

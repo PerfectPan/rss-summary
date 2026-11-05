@@ -7,5 +7,5 @@ export const searchBudgetDefaults = {
   doubao: { dailyLimit: 14, monthlyLimit: 420 },
   deepseek: { dailyLimit: 14, monthlyLimit: 420 },
   cacheTtlMinutes: 360,
-  stateFile: ".state/news-search.json",
+  stateFile: ".state/news-search.json"
 } as const;

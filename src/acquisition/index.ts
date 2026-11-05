@@ -4,7 +4,7 @@ export type {
   ActivityType,
   Acquired,
   PullRequestDetails,
-  RepositoryMetadata,
+  RepositoryMetadata
 } from "./domain/item/index.js";
 export type {
   CredibilityMethod,
@@ -13,29 +13,23 @@ export type {
   ItemKind,
   ItemRouting,
   SignalType,
-  TimePrecision,
+  TimePrecision
 } from "./domain/item/index.js";
-export {
-  resolveNewsCredibility,
-  type ResolvedNewsCredibility,
-} from "./domain/item/policies/news-credibility.js";
+export { resolveNewsCredibility, type ResolvedNewsCredibility } from "./domain/item/policies/news-credibility.js";
 export {
   addFeedSubscription,
   formatFeedSubscriptions,
   parseFeedSubscriptions,
   parseIndustrySources,
-  removeFeedSubscription,
+  removeFeedSubscription
 } from "./domain/source/index.js";
-export {
-  listingPublicationType,
-  type PublicationKind,
-} from "./domain/source/policies/publication.js";
+export { listingPublicationType, type PublicationKind } from "./domain/source/policies/publication.js";
 export {
   isWebPageSource,
   type FeedSubscription,
   type FeedSubscriptionInput,
   type IndustrySource,
-  type WebPageSubscription,
+  type WebPageSubscription
 } from "./domain/source/index.js";
 export {
   GitHubActivity,
@@ -43,19 +37,15 @@ export {
   RssFeed,
   SourceCatalogStore,
   WebPage,
-  type PaginationOptions,
+  type PaginationOptions
 } from "./application/ports.js";
 export {
   collectIndustrySources,
   collectRssFeeds,
   type SourceCollection,
-  type SourceHealth,
+  type SourceHealth
 } from "./application/use-cases/collect-sources.js";
-export {
-  addCatalogFeed,
-  listCatalogFeeds,
-  removeCatalogFeed,
-} from "./application/use-cases/manage-source-catalog.js";
+export { addCatalogFeed, listCatalogFeeds, removeCatalogFeed } from "./application/use-cases/manage-source-catalog.js";
 export { decodeFeedsJson, feedsFileSchema } from "./infra/models/feeds.js";
 export { decodeIndustryJson, industryFeedsFileSchema } from "./infra/models/industry-feeds.js";
 export { SourceCatalogStoreLive } from "./infra/factories/live.js";
@@ -75,32 +65,23 @@ export {
   type SearchPage,
   type SearchResult,
   type SearchUsage,
-  type SearchSourcePolicy,
+  type SearchSourcePolicy
 } from "./domain/search/index.js";
 export { searchBudgetDefaults } from "./application/services/budget-defaults.js";
-export {
-  GrokProcess,
-  SearchBudgetRepository,
-  SearchProvider,
-  type GrokProcessRequest,
-} from "./application/ports.js";
+export { GrokProcess, SearchBudgetRepository, SearchProvider, type GrokProcessRequest } from "./application/ports.js";
 export {
   retryDelayMs,
   retrySearchEffect,
   searchWithRetry,
-  isTransientSearchError,
+  isTransientSearchError
 } from "./application/services/with-retry.js";
-export {
-  withBudget,
-  type BudgetedSearch,
-  type BudgetedSearchPage,
-} from "./application/services/with-budget.js";
+export { withBudget, type BudgetedSearch, type BudgetedSearchPage } from "./application/services/with-budget.js";
 export {
   fallbackTriggerCodes,
   shouldFallbackOnSourceOutage,
   withFallback,
   type FallbackSearchProvider,
-  type ProviderSearch,
+  type ProviderSearch
 } from "./application/services/with-fallback.js";
 export { mergeSearches, type SearchSource } from "./application/services/merge-searches.js";
 export { settleSearches, type SearchSettlement } from "./application/use-cases/search.js";
@@ -108,5 +89,5 @@ export { createBudgetedNewsSearch, type BudgetOptions } from "./infra/factories/
 export {
   collectXAccountPosts,
   type CollectXAccountOptions,
-  type XAccountPosts,
+  type XAccountPosts
 } from "./application/use-cases/collect-x-posts.js";

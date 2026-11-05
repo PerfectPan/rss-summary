@@ -8,26 +8,20 @@ export {
   type ReadResult,
   type ReadSuccess,
   type VideoFrame,
-  type VideoVisuals,
+  type VideoVisuals
 } from "./domain/document/index.js";
 export {
   isPrivateIpv4,
   isVideoResearchUrl,
   validateArticleResearchUrl,
-  validateResearchUrl,
+  validateResearchUrl
 } from "./domain/document/index.js";
 export type { ArticleExtract } from "./domain/document/index.js";
-export {
-  BrowserReader,
-  GlmReader,
-  HttpReader,
-  VideoReader,
-  type GlmPage,
-} from "./application/ports.js";
+export { BrowserReader, GlmReader, HttpReader, VideoReader, type GlmPage } from "./application/ports.js";
 export {
   readOriginal,
   type ReadMethod,
   type ReadMode,
   type ReadOriginalRequest,
-  type ReadOriginalResult,
+  type ReadOriginalResult
 } from "./application/use-cases/read-original.js";

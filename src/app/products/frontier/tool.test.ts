@@ -31,17 +31,17 @@ describe("Rivus industry brief adapter", () => {
           matchedInterests: ["agent"],
           events: [],
           label: "Agent release",
-          url: "https://example.com/a",
-        },
-      ],
+          url: "https://example.com/a"
+        }
+      ]
     };
 
     const result = await generateRivusIndustryBrief(
       { occurrence: "2026-08-09T01:00:00.000Z" },
       {
         env: { FEED_TIMEZONE_OFFSET: "+08:00" },
-        buildIndustryDocument: () => Effect.succeed(document),
-      },
+        buildIndustryDocument: () => Effect.succeed(document)
+      }
     );
 
     expect(result.candidateCount).toBe(1);
@@ -64,14 +64,14 @@ describe("Rivus industry brief adapter", () => {
           reasons: ["matches paper abstract: agent"],
           events: [],
           label: "Unverified agent claim",
-          url: "https://arxiv.org/abs/2608.01234",
-        },
-      ],
+          url: "https://arxiv.org/abs/2608.01234"
+        }
+      ]
     };
 
     const result = await generateRivusIndustryBrief(undefined, {
       env: {},
-      buildIndustryDocument: () => Effect.succeed(document),
+      buildIndustryDocument: () => Effect.succeed(document)
     });
 
     expect(result).toMatchObject({ candidateCount: 0, paperCandidateCount: 1 });
@@ -80,10 +80,7 @@ describe("Rivus industry brief adapter", () => {
 
   it("rejects day and occurrence used together", async () => {
     await expect(
-      generateRivusIndustryBrief(
-        { day: "2026-08-09", occurrence: "2026-08-09T01:00:00.000Z" },
-        { env: {} },
-      ),
+      generateRivusIndustryBrief({ day: "2026-08-09", occurrence: "2026-08-09T01:00:00.000Z" }, { env: {} })
     ).rejects.toThrow(/cannot be used together/);
   });
 });
@@ -96,38 +93,32 @@ describe("frontier Tool onlyNew semantics", () => {
       buildIndustryDocument: (config) => {
         seen = config;
         return Effect.succeed({ generatedAt: "2026-08-09T01:00:00.000Z", candidates: [] });
-      },
+      }
     });
     return seen!;
   }
 
   it("defaults to only-new when the input omits onlyNew, even if the environment asks otherwise", async () => {
     expect(await requestedOnlyNew({ occurrence: "2026-08-09T01:00:00.000Z" }, {})).toMatchObject({
-      onlyNew: true,
+      onlyNew: true
     });
-    expect(
-      await requestedOnlyNew({ occurrence: "2026-08-09T01:00:00.000Z" }, { FEED_ONLY_NEW: "true" }),
-    ).toMatchObject({ onlyNew: true });
+    expect(await requestedOnlyNew({ occurrence: "2026-08-09T01:00:00.000Z" }, { FEED_ONLY_NEW: "true" })).toMatchObject(
+      { onlyNew: true }
+    );
   });
 
   it("keeps an explicit onlyNew: true", async () => {
-    const config = await requestedOnlyNew(
-      { occurrence: "2026-08-09T01:00:00.000Z", onlyNew: true },
-      {},
-    );
+    const config = await requestedOnlyNew({ occurrence: "2026-08-09T01:00:00.000Z", onlyNew: true }, {});
     expect(config.onlyNew).toBe(true);
   });
 
   it("lets an explicit onlyNew: false fall back to FEED_ONLY_NEW", async () => {
     expect(
-      await requestedOnlyNew(
-        { occurrence: "2026-08-09T01:00:00.000Z", onlyNew: false },
-        { FEED_ONLY_NEW: "true" },
-      ),
+      await requestedOnlyNew({ occurrence: "2026-08-09T01:00:00.000Z", onlyNew: false }, { FEED_ONLY_NEW: "true" })
     ).toMatchObject({ onlyNew: true });
-    expect(
-      await requestedOnlyNew({ occurrence: "2026-08-09T01:00:00.000Z", onlyNew: false }, {}),
-    ).toMatchObject({ onlyNew: false });
+    expect(await requestedOnlyNew({ occurrence: "2026-08-09T01:00:00.000Z", onlyNew: false }, {})).toMatchObject({
+      onlyNew: false
+    });
   });
 });
 
@@ -152,8 +143,8 @@ describe("frontier Tool dry-run safety", () => {
         buildIndustryDocument: (config) => {
           seen = config;
           return Effect.succeed({ generatedAt: "2026-08-09T01:00:00.000Z", candidates: [] });
-        },
-      },
+        }
+      }
     );
     expect(seen).toMatchObject({ dryRun: true, webhookUrl: undefined });
   });
@@ -170,9 +161,9 @@ describe("frontier Tool dry-run safety", () => {
         fetchedUrls.push(url);
         return new Response(atom, {
           status: 200,
-          headers: { "content-type": "application/atom+xml" },
+          headers: { "content-type": "application/atom+xml" }
         });
-      }),
+      })
     );
 
     try {
@@ -183,12 +174,12 @@ describe("frontier Tool dry-run safety", () => {
             FEED_TIMEZONE_OFFSET: "+08:00",
             FEED_INTERESTS: "typescript",
             INDUSTRY_SOURCES: JSON.stringify([
-              { name: "Industry Feed", url: "https://example.com/industry.xml", tags: [] },
+              { name: "Industry Feed", url: "https://example.com/industry.xml", tags: [] }
             ]),
             INDUSTRY_STATE_FILE: industryStateFile,
-            NOTIFY_WEBHOOK_URL: webhookUrl,
-          },
-        },
+            NOTIFY_WEBHOOK_URL: webhookUrl
+          }
+        }
       );
 
       expect(result.generatedAt).toBeTruthy();

@@ -12,7 +12,9 @@ export type GitHubAcquired = {
 
 export function decodeGitHubEvent(input: unknown): Result<GitHubAcquired, DecodeFailure> {
   const decoded = decodeEventCard(input);
-  if (decoded._tag === "Err") return decoded;
+  if (decoded._tag === "Err") {
+    return decoded;
+  }
   const card = decoded.value;
   return ok({ card, item: itemFromGitHubCard(card) });
 }

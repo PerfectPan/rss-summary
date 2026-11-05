@@ -20,7 +20,7 @@ export class NewsSearchError extends Error implements SearchFailure {
   constructor(
     code: string,
     message: string,
-    options: { readonly retryAfterMs?: number; readonly [key: string]: unknown } = {},
+    options: { readonly retryAfterMs?: number; readonly [key: string]: unknown } = {}
   ) {
     super(message);
     this.name = "NewsSearchError";
@@ -28,18 +28,22 @@ export class NewsSearchError extends Error implements SearchFailure {
     this.retryAfterMs = options.retryAfterMs;
     const extras = options as { readonly retryAfterMs?: number; readonly [key: string]: unknown };
     for (const key of Object.keys(extras)) {
-      if (key === "retryAfterMs") continue;
+      if (key === "retryAfterMs") {
+        continue;
+      }
       Object.defineProperty(this, key, {
         value: extras[key],
         enumerable: true,
-        writable: true,
+        writable: true
       });
     }
   }
 }
 
 export function isSearchFailure(value: unknown): value is NewsSearchError {
-  if (typeof value !== "object" || value === null) return false;
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
   const failure = value as { _tag?: unknown; code?: unknown };
   return failure._tag === "SearchFailure" && typeof failure.code === "string";
 }

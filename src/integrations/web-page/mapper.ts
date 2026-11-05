@@ -7,15 +7,14 @@ import { decodeEntry, extractWebPageEntries, type WebPageEntry } from "./dto.js"
 export function acquireWebPage(html: string, source: WebPageSubscription): Acquired[] {
   return extractWebPageEntries(html, source).flatMap((entry) => {
     const decoded = decodeEntry(entry);
-    if (!decoded) return [];
+    if (!decoded) {
+      return [];
+    }
     return [publicationAcquired(normalizeWebPageEntry(decoded, source))];
   });
 }
 
-export function normalizeWebPageEntry(
-  entry: WebPageEntry,
-  source: WebPageSubscription,
-): ActivityCardDto {
+export function normalizeWebPageEntry(entry: WebPageEntry, source: WebPageSubscription): ActivityCardDto {
   return {
     id: `web:${source.url}:${entry.url}`,
     type: listingPublicationType(source.tags),
@@ -29,6 +28,6 @@ export function normalizeWebPageEntry(
     summary: entry.summary,
     sourceName: source.name,
     sourceUrl: source.url,
-    tags: source.tags,
+    tags: source.tags
   };
 }

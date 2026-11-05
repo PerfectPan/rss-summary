@@ -15,10 +15,10 @@ function stream(posts: unknown[]): string {
       type: "tool_call_update",
       toolCallId: "native",
       status: "completed",
-      rawOutput: { name: "x_keyword_search" },
+      rawOutput: { name: "x_keyword_search" }
     },
     { type: "text", data: JSON.stringify({ posts }) },
-    { type: "end", stopReason: "end_turn" },
+    { type: "end", stopReason: "end_turn" }
   ]
     .map((event) => JSON.stringify(event))
     .join("\n");
@@ -28,7 +28,7 @@ it("accepts a native call receipt and rejects a plain object", () => {
   const call = {
     type: "tool_call",
     toolCallId: "native",
-    rawInput: { variant: "XSearch", backend: true },
+    rawInput: { variant: "XSearch", backend: true }
   };
   expect(isNativeCall(call)).toBe(true);
   expect(isNativeCall({})).toBe(false);
@@ -39,10 +39,10 @@ it("accepts a native call receipt and rejects a plain object", () => {
         type: "tool_call_update",
         toolCallId: "native",
         status: "completed",
-        rawOutput: { name: "x_keyword_search" },
+        rawOutput: { name: "x_keyword_search" }
       },
-      calls,
-    ),
+      calls
+    )
   ).toBe(true);
   expect(isNativeReceipt({ type: "tool_call_update", toolCallId: "other" }, calls)).toBe(false);
 });
@@ -55,12 +55,12 @@ it("parses a completed native stream into an unrated post and leaves elapsed tim
         author: "OpenAI",
         title: "发布",
         summary: "模型发布。",
-        publishedAt,
-      },
+        publishedAt
+      }
     ]),
     1,
     since,
-    until,
+    until
   );
   expect(acquired.page.provider).toBe("grok");
   expect(acquired.page.grok?.elapsedMs).toBeUndefined();
@@ -68,17 +68,17 @@ it("parses a completed native stream into an unrated post and leaves elapsed tim
     id: postId,
     url: `https://x.com/openai/status/${postId}`,
     authInfoLevel: 4,
-    siteName: "@OpenAI · X（Grok 整理）",
+    siteName: "@OpenAI · X（Grok 整理）"
   });
   expect(acquired.items[0]).toMatchObject({
     kind: "post",
     credibility: { tier: "unrated" },
-    provenance: { note: "Grok 原生 X 搜索，内容经模型整理；未独立核验作者或原文" },
+    provenance: { note: "Grok 原生 X 搜索，内容经模型整理；未独立核验作者或原文" }
   });
 });
 
 it("rejects a stream that has no native receipt", () => {
   expect(() => parseGrokStream("{}", 1, since, until)).toThrow(
-    "Grok response lacks a completed native X search receipt, valid completion or structured results.",
+    "Grok response lacks a completed native X search receipt, valid completion or structured results."
   );
 });

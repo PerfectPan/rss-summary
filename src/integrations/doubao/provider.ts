@@ -11,16 +11,14 @@ export type DoubaoSearchClientOptions = {
   timeoutMs?: number;
 };
 
-export const DoubaoSearchLive = (
-  options: DoubaoSearchClientOptions,
-): Layer.Layer<SearchProvider> => {
+export const DoubaoSearchLive = (options: DoubaoSearchClientOptions): Layer.Layer<SearchProvider> => {
   const client = new DoubaoSearchClient(options);
   return Layer.succeed(SearchProvider, {
     search: (input) =>
       Effect.tryPromise({
         try: () => client.search(input),
-        catch: (cause) => (cause instanceof Error ? cause : new Error(errorText(cause))),
-      }),
+        catch: (cause) => (cause instanceof Error ? cause : new Error(errorText(cause)))
+      })
   });
 };
 

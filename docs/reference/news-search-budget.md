@@ -62,7 +62,7 @@ blocks new provider requests; an eligible cache entry may still be read. The cap
 so a retry can consume another slot without completing another query.
 
 Set these values in the Node process environment used by the CLI or Rivus Host, as described in
-[Rivus Plugin configuration](rivus-plugin.md#configure-sources). Use one state file for callers sharing
+[Rivus Plugin configuration](../development/rivus-plugin.md#configure-sources#configure-sources). Use one state file for callers sharing
 this deployment's budget. Separate ledgers for its Daily AI, noon and evening jobs would split the
 cap. The state file is distinct from subscription/frontier seen state and is never committed or
 included in the package.

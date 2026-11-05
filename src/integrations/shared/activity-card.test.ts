@@ -16,7 +16,7 @@ const card: ActivityCardDto = {
   summary: "A release note",
   sourceName: "Deno Blog",
   sourceUrl: "https://deno.com/feed",
-  tags: ["releases"],
+  tags: ["releases"]
 };
 
 describe("publication items", () => {
@@ -25,23 +25,20 @@ describe("publication items", () => {
     expect(acquired.card).toBe(card);
     expect(acquired.item.kind).toBe("publication");
     expect(acquired.item.subject.key).toBe("publication:https://deno.com/blog/v2.4");
-    expect(acquired.item.signals).toEqual([
-      { type: "published-article", label: "rss feed: Deno Blog" },
-    ]);
+    expect(acquired.item.signals).toEqual([{ type: "published-article", label: "rss feed: Deno Blog" }]);
     expect(acquired.item.display.facts).toEqual(["releases"]);
   });
 
   it("uses the website and research labels for those publication kinds", () => {
     expect(publicationAcquired({ ...card, type: "paper", source: "web" }).item.signals).toEqual([
-      { type: "published-paper", label: "research paper: Deno Blog" },
+      { type: "published-paper", label: "research paper: Deno Blog" }
     ]);
     expect(publicationAcquired({ ...card, type: "paper", source: "web" }).item.kind).toBe("paper");
     expect(publicationAcquired({ ...card, type: "release" }).item.signals).toEqual([
-      { type: "released", label: "new release published" },
+      { type: "released", label: "new release published" }
     ]);
-    expect(
-      publicationAcquired({ ...card, source: "web", sourceName: "Example News" }).item.signals[0]
-        ?.label,
-    ).toBe("website source: Example News");
+    expect(publicationAcquired({ ...card, source: "web", sourceName: "Example News" }).item.signals[0]?.label).toBe(
+      "website source: Example News"
+    );
   });
 });

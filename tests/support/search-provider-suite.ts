@@ -1,10 +1,7 @@
 import { Effect } from "effect";
 import { describe, expect, it } from "vite-plus/test";
 
-import {
-  withBudget,
-  type BudgetDriver,
-} from "../../src/acquisition/application/services/with-budget.js";
+import { withBudget, type BudgetDriver } from "../../src/acquisition/application/services/with-budget.js";
 import { searchWithRetry } from "../../src/acquisition/application/services/with-retry.js";
 import { cacheablePage, presentCachedPage } from "../../src/acquisition/domain/budget/index.js";
 import { normalizeProvider } from "../../src/integrations/grok/identity.js";
@@ -12,13 +9,9 @@ import {
   SearchBudget,
   type BudgetLimits,
   type BudgetState,
-  type CachedPage,
+  type CachedPage
 } from "../../src/acquisition/domain/budget/index.js";
-import {
-  NewsSearchError,
-  type SearchInput,
-  type SearchPage,
-} from "../../src/acquisition/domain/search/index.js";
+import { NewsSearchError, type SearchInput, type SearchPage } from "../../src/acquisition/domain/search/index.js";
 
 /**
  * One contract for every SearchProvider.
@@ -36,7 +29,7 @@ const input: SearchInput = {
   query: "suite",
   count: 1,
   day: "2026-08-16",
-  sourcePolicy: "news",
+  sourcePolicy: "news"
 };
 
 export function describeSearchProvider(options: {
@@ -64,9 +57,9 @@ export function describeSearchProvider(options: {
             random: () => 0,
             sleep: async (milliseconds) => {
               delays.push(milliseconds);
-            },
-          }),
-        ),
+            }
+          })
+        )
       ).rejects.toBeTruthy();
       expect(handle.invocations()).toBe(1);
       expect(delays).toEqual([]);
@@ -80,8 +73,8 @@ export function describeSearchProvider(options: {
           random: () => 0,
           sleep: async (milliseconds) => {
             delays.push(milliseconds);
-          },
-        }),
+          }
+        })
       );
       expect(delays).toEqual([125, 250]);
       expect(Array.isArray(page.results)).toBe(true);
@@ -91,7 +84,7 @@ export function describeSearchProvider(options: {
       const handle = await Promise.resolve(options.create(() => "ok"));
       const budgeted = withBudget(
         (value) => Effect.runPromise(handle.search(value)),
-        memoryDriver(10, options.cacheable),
+        memoryDriver(10, options.cacheable)
       );
       const first = await Effect.runPromise(budgeted(input));
       const second = await Effect.runPromise(budgeted(input));
@@ -116,12 +109,12 @@ export function describeSearchProvider(options: {
           random: () => 0,
           sleep: async (milliseconds) => {
             delays.push(milliseconds);
-          },
-        }),
+          }
+        })
       );
       expect(delays).toEqual([125, 250]);
       expect(page).toMatchObject({
-        searchUsage: { source: "network", dailyUsed: 3, monthlyUsed: 3 },
+        searchUsage: { source: "network", dailyUsed: 3, monthlyUsed: 3 }
       });
     });
   });
@@ -153,7 +146,7 @@ function memoryDriver(dailyLimit: number, cacheable: boolean): BudgetDriver {
     dailyLimit,
     monthlyLimit: dailyLimit,
     timezoneOffset: "+08:00",
-    cacheTtlMs: 60_000,
+    cacheTtlMs: 60_000
   };
   const hash = (material: string) => material;
   let budget = SearchBudget.empty(limits);
@@ -168,28 +161,28 @@ function memoryDriver(dailyLimit: number, cacheable: boolean): BudgetDriver {
     presentCache: presentCachedPage,
     decodePage: (page) =>
       ({
-        ...(page.provider === "doubao" || page.provider === "grok"
-          ? { provider: page.provider }
-          : {}),
+        ...(page.provider === "doubao" || page.provider === "grok" ? { provider: page.provider } : {}),
         ...(page.logId === undefined ? {} : { logId: page.logId }),
         resultCount: page.resultCount,
         ...(page.timeCostMs === undefined ? {} : { timeCostMs: page.timeCostMs }),
-        results: page.results.map((result) => ({ ...result })),
+        results: page.results.map((result) => ({ ...result }))
       }) as CachedPage,
     load: () => Effect.succeed(budget),
     save: (state) =>
       Effect.sync(() => {
         budget = restore(state, limits, hash);
       }),
-    withLock: (effect) => effect,
+    withLock: (effect) => effect
   };
 }
 
 function restore(state: BudgetState, limits: BudgetLimits, hash: (material: string) => string) {
   const restored = SearchBudget.restore(state, limits, {
     hash,
-    normalize: normalizeProvider,
+    normalize: normalizeProvider
   });
-  if (restored._tag === "Err") throw restored.error;
+  if (restored._tag === "Err") {
+    throw restored.error;
+  }
   return restored.value.state;
 }

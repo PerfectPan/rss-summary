@@ -29,10 +29,7 @@ export class GitHubActivity extends Context.Service<
   GitHubActivity,
   {
     readonly getHomeEvents: () => Effect.Effect<Acquired[], Error>;
-    readonly getReceivedEvents: (
-      username: string,
-      pagination: PaginationOptions,
-    ) => Effect.Effect<Acquired[], Error>;
+    readonly getReceivedEvents: (username: string, pagination: PaginationOptions) => Effect.Effect<Acquired[], Error>;
   }
 >()("rss-summary/acquisition/GitHubActivity/v1") {}
 
@@ -40,13 +37,8 @@ export class GitHubCatalog extends Context.Service<
   GitHubCatalog,
   {
     readonly getRepository: (fullName: string) => Effect.Effect<RepositoryMetadata, Error>;
-    readonly getPullRequest: (
-      fullName: string,
-      number: number,
-    ) => Effect.Effect<PullRequestDetails, Error>;
-    readonly getFollowing: (
-      pagination?: PaginationOptions,
-    ) => Effect.Effect<ReadonlySet<string>, Error>;
+    readonly getPullRequest: (fullName: string, number: number) => Effect.Effect<PullRequestDetails, Error>;
+    readonly getFollowing: (pagination?: PaginationOptions) => Effect.Effect<ReadonlySet<string>, Error>;
   }
 >()("rss-summary/acquisition/GitHubCatalog/v1") {}
 
@@ -54,10 +46,7 @@ export class SourceCatalogStore extends Context.Service<
   SourceCatalogStore,
   {
     readonly loadFeeds: (path: string) => Effect.Effect<FeedSubscription[], Error>;
-    readonly saveFeeds: (
-      path: string,
-      feeds: readonly FeedSubscription[],
-    ) => Effect.Effect<void, Error>;
+    readonly saveFeeds: (path: string, feeds: readonly FeedSubscription[]) => Effect.Effect<void, Error>;
   }
 >()("rss-summary/acquisition/SourceCatalogStore/v1") {}
 
@@ -72,15 +61,9 @@ export class SearchProvider extends Context.Service<
 export class SearchBudgetRepository extends Context.Service<
   SearchBudgetRepository,
   {
-    readonly load: (
-      path: string,
-      limits: BudgetLimits,
-    ) => Effect.Effect<SearchBudget, NewsSearchError>;
+    readonly load: (path: string, limits: BudgetLimits) => Effect.Effect<SearchBudget, NewsSearchError>;
     readonly save: (path: string, state: BudgetState) => Effect.Effect<void, NewsSearchError>;
-    readonly withLock: <A, E>(
-      path: string,
-      effect: Effect.Effect<A, E>,
-    ) => Effect.Effect<A, E | NewsSearchError>;
+    readonly withLock: <A, E>(path: string, effect: Effect.Effect<A, E>) => Effect.Effect<A, E | NewsSearchError>;
   }
 >()("rss-summary/acquisition/SearchBudgetRepository/v1") {}
 

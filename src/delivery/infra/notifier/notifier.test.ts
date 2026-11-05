@@ -15,21 +15,21 @@ describe("notifier", () => {
           write: (chunk: string | Uint8Array) => {
             stdout += String(chunk);
             return true;
-          },
+          }
         },
         fetch: async (url, init) => {
           calls.push({ url: String(url), body: JSON.parse(String(init?.body)) });
           return new Response("ok", { status: 200 });
-        },
+        }
       },
-      "# Digest",
+      "# Digest"
     );
 
     expect(calls).toEqual([
       {
         url: "https://example.test/webhook",
-        body: { text: "# Digest" },
-      },
+        body: { text: "# Digest" }
+      }
     ]);
     expect(stdout).toBe("# Digest\n");
   });
@@ -43,10 +43,10 @@ describe("notifier", () => {
           write: (chunk: string | Uint8Array) => {
             stdout += String(chunk);
             return true;
-          },
-        },
+          }
+        }
       },
-      "# Digest",
+      "# Digest"
     );
 
     expect(stdout).toBe("# Digest\n");
@@ -58,10 +58,10 @@ describe("notifier", () => {
         {
           webhookUrl: "https://example.test/webhook",
           stdout: { write: () => true },
-          fetch: async () => new Response("boom", { status: 500 }),
+          fetch: async () => new Response("boom", { status: 500 })
         },
-        "# Digest",
-      ),
+        "# Digest"
+      )
     ).rejects.toThrow(/500 boom/);
   });
 });
@@ -70,7 +70,7 @@ function send(options: Parameters<typeof NotifierLive>[0], markdown: string): Pr
   return Effect.runPromise(
     Effect.provide(
       Notifier.use((notifier) => notifier.send(markdown)),
-      NotifierLive(options),
-    ),
+      NotifierLive(options)
+    )
   );
 }

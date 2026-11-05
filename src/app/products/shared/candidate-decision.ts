@@ -8,13 +8,7 @@ export function candidateDecision(
   candidate: CandidateProject,
   selectedCandidates: CandidateProject[],
   reasonWhenFiltered: (candidate: CandidateProject) => string,
-  presentationPolicy?: Parameters<typeof decideCandidate>[4],
+  presentationPolicy?: Parameters<typeof decideCandidate>[4]
 ) {
-  return decideCandidate(
-    candidate,
-    selectedCandidates,
-    reasonWhenFiltered,
-    candidateIdentity,
-    presentationPolicy,
-  );
+  return decideCandidate(candidate, selectedCandidates, reasonWhenFiltered, candidateIdentity, presentationPolicy);
 }

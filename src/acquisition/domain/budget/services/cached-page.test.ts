@@ -8,7 +8,7 @@ const usage: BudgetUsage = {
   dailyUsed: 1,
   monthlyUsed: 1,
   dailyLimit: 4,
-  monthlyLimit: 120,
+  monthlyLimit: 120
 };
 
 it("caches only structurally cacheable pages, and a provider can opt out entirely", () => {
@@ -21,8 +21,8 @@ it("caches only structurally cacheable pages, and a provider can opt out entirel
       provider: "doubao",
       resultCount: 1,
       results: [result],
-      fallback: { reason: "empty", searched: true, reads: 0, warnings: [] },
-    }),
+      fallback: { reason: "empty", searched: true, reads: 0, warnings: [] }
+    })
   ).toBe(false);
   expect(
     cacheablePage({
@@ -33,11 +33,11 @@ it("caches only structurally cacheable pages, and a provider can opt out entirel
           sourceVerification: {
             method: "configured-domain",
             domain: "example.com",
-            policy: "official",
-          },
-        },
-      ],
-    }),
+            policy: "official"
+          }
+        }
+      ]
+    })
   ).toBe(false);
 
   // A provider whose pages must never be cached (a composed or unverified
@@ -61,15 +61,15 @@ it("clones a cached native-search receipt", () => {
       count: 1,
       day: "2026-08-16",
       sinceDay: "2026-08-16",
-      sourcePolicy: "news" as const,
+      sourcePolicy: "news" as const
     },
     fetchedAt: "2026-08-16T04:00:00.000Z",
     page: {
       provider: "grok" as const,
       resultCount: 0,
       results: [],
-      grok: { nativeTools, rejectedResults: 0 },
-    },
+      grok: { nativeTools, rejectedResults: 0 }
+    }
   } as CacheEntry;
   const page = presentCachedPage(entry, usage) as ReturnType<typeof presentCachedPage> & {
     grok?: { nativeTools: string[] };
@@ -79,6 +79,6 @@ it("clones a cached native-search receipt", () => {
   expect(page.searchUsage).toEqual({
     ...usage,
     source: "cache",
-    fetchedAt: "2026-08-16T04:00:00.000Z",
+    fetchedAt: "2026-08-16T04:00:00.000Z"
   });
 });

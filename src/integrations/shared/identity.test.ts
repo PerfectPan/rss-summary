@@ -3,11 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { candidateEvidenceUrl, candidateIdentity, researchKeyForCandidate } from "./identity.js";
 import type { ActivityCardDto } from "../../acquisition/index.js";
 import type { CandidateProject } from "../../editorial/index.js";
-import {
-  createEmptyFeedState,
-  filterUndelivered,
-  filterUnresearched,
-} from "../../delivery/index.js";
+import { createEmptyFeedState, filterUndelivered, filterUnresearched } from "../../delivery/index.js";
 
 function card(overrides: Partial<ActivityCardDto>): ActivityCardDto {
   return {
@@ -17,7 +13,7 @@ function card(overrides: Partial<ActivityCardDto>): ActivityCardDto {
     actor: "someone",
     repo: "owner/repo",
     createdAt: "2026-08-16T00:00:00Z",
-    ...overrides,
+    ...overrides
   } as ActivityCardDto;
 }
 
@@ -28,8 +24,8 @@ describe("candidate identity keys", () => {
         events: [card({ type: "pull_request", repo: "owner/repo", prNumber: 7 })],
         source: "github",
         category: "activity",
-        repo: "owner/repo",
-      }),
+        repo: "owner/repo"
+      })
     ).toBe("github-pull-request:owner/repo:7");
 
     expect(
@@ -37,8 +33,8 @@ describe("candidate identity keys", () => {
         events: [card({ source: "rss", htmlUrl: "https://example.com/a" })],
         source: "rss",
         category: "article",
-        repo: "rss:https://example.com/a",
-      }),
+        repo: "rss:https://example.com/a"
+      })
     ).toBe("publication:https://example.com/a");
 
     expect(
@@ -46,8 +42,8 @@ describe("candidate identity keys", () => {
         events: [card({ type: "release", htmlUrl: "https://example.com/release" })],
         source: "github",
         category: "release",
-        repo: "owner/repo",
-      }),
+        repo: "owner/repo"
+      })
     ).toBe("github-release:https://example.com/release");
 
     expect(
@@ -55,21 +51,21 @@ describe("candidate identity keys", () => {
         events: [card({ type: "fork" })],
         source: "github",
         category: "discovery",
-        repo: "owner/repo",
-      }),
+        repo: "owner/repo"
+      })
     ).toBe("github-repository:owner/repo");
   });
 
   it("falls back to candidate fields when the event list is empty", () => {
-    expect(
-      candidateIdentity({ events: [], source: "rss", category: "article", repo: "rss:x" }),
-    ).toBe("publication:rss:x");
-    expect(
-      candidateIdentity({ events: [], source: "github", category: "release", repo: "owner/repo" }),
-    ).toBe("github-release:owner/repo");
-    expect(
-      candidateIdentity({ events: [], source: "github", category: "activity", repo: "owner/repo" }),
-    ).toBe("github-repository:owner/repo");
+    expect(candidateIdentity({ events: [], source: "rss", category: "article", repo: "rss:x" })).toBe(
+      "publication:rss:x"
+    );
+    expect(candidateIdentity({ events: [], source: "github", category: "release", repo: "owner/repo" })).toBe(
+      "github-release:owner/repo"
+    );
+    expect(candidateIdentity({ events: [], source: "github", category: "activity", repo: "owner/repo" })).toBe(
+      "github-repository:owner/repo"
+    );
   });
 
   it("maps publication candidates onto the research ledger keys", () => {
@@ -79,8 +75,8 @@ describe("candidate identity keys", () => {
         source: "rss",
         category: "article",
         repo: "rss:https://example.com/a",
-        url: "https://example.com/a",
-      }),
+        url: "https://example.com/a"
+      })
     ).toBe("rss:https://example.com/a");
     expect(
       researchKeyForCandidate({
@@ -88,16 +84,16 @@ describe("candidate identity keys", () => {
         source: "web",
         category: "paper",
         repo: "web:https://example.com/p",
-        url: "https://example.com/p",
-      }),
+        url: "https://example.com/p"
+      })
     ).toBe("web:https://example.com/p");
     expect(
       researchKeyForCandidate({
         events: [],
         source: "github",
         category: "activity",
-        repo: "owner/repo",
-      }),
+        repo: "owner/repo"
+      })
     ).toBe("github:owner/repo");
   });
 
@@ -114,10 +110,10 @@ describe("research keys", () => {
           source: "rss",
           category: "article",
           eventTypes: ["article"],
-          eventType: "article",
+          eventType: "article"
         }),
-        url: "https://example.com/post",
-      }),
+        url: "https://example.com/post"
+      })
     ).toBe("rss:https://example.com/post");
   });
 
@@ -128,10 +124,10 @@ describe("research keys", () => {
           source: "web",
           category: "article",
           eventTypes: ["article"],
-          eventType: "article",
+          eventType: "article"
         }),
-        url: "https://example.com/news/post",
-      }),
+        url: "https://example.com/news/post"
+      })
     ).toBe("web:https://example.com/news/post");
   });
 
@@ -140,19 +136,19 @@ describe("research keys", () => {
     const firstStar = candidate("owner/useful-tool", ["star-1"], {
       category: "discovery",
       eventTypes: ["watch"],
-      eventType: "watch",
+      eventType: "watch"
     });
     const secondStar = candidate("owner/useful-tool", ["star-2"], {
       category: "discovery",
       eventTypes: ["watch"],
       eventType: "watch",
-      actor: "another-followee",
+      actor: "another-followee"
     });
 
     markCandidateResearched(state, firstStar, {
       at: "2026-06-28T08:00:00Z",
       decision: "track",
-      reason: "useful agent tooling project",
+      reason: "useful agent tooling project"
     });
 
     expect(filterUndelivered([secondStar], eventIdsOf, state)).toEqual([secondStar]);
@@ -167,7 +163,7 @@ describe("research keys", () => {
 function markCandidateResearched(
   state: { researched: Record<string, { at: string; decision?: string; reason?: string }> },
   candidate: CandidateProject,
-  record: { at: string; decision?: string; reason?: string },
+  record: { at: string; decision?: string; reason?: string }
 ): void {
   state.researched[researchKeyForCandidate(candidate)] = record;
 }
@@ -185,7 +181,7 @@ function candidate(
     category?: CandidateProject["category"];
     eventTypes?: CandidateProject["eventTypes"];
     eventType?: CandidateProject["events"][number]["type"];
-  } = {},
+  } = {}
 ): CandidateProject {
   const actor = options.actor ?? "actor";
   const eventType = options.eventType ?? "pull_request";
@@ -202,7 +198,7 @@ function candidate(
       type: eventType,
       actor,
       repo,
-      createdAt: "2026-06-24T08:00:00Z",
-    })),
+      createdAt: "2026-06-24T08:00:00Z"
+    }))
   };
 }

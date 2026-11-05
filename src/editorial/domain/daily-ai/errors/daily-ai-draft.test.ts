@@ -12,15 +12,15 @@ const evidence = (overrides: Partial<DailyAiEvidence> = {}): DailyAiEvidence => 
   tier: "official",
   sourceName: "OpenAI",
   topicId: "developer-tools",
-  ...overrides,
+  ...overrides
 });
 
 describe("Daily AI editorial domain", () => {
   it("fails generation instead of rendering no-news when every draft item is invalid", () => {
     expect(() =>
       buildDailyAiDigest([evidence()], {
-        draft: [{ category: "unknown", headline: "Astra", refs: ["missing"] }],
-      }),
+        draft: [{ category: "unknown", headline: "Astra", refs: ["missing"] }]
+      })
     ).toThrow(DailyAiDraftValidationError);
   });
 });

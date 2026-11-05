@@ -7,12 +7,12 @@ describe("delivery ledger", () => {
     const next = markDelivered(
       createEmptyFeedState(),
       eventIdsOf(candidate("new/repo", ["event-1", "event-2"])),
-      "2026-06-24T08:00:00Z",
+      "2026-06-24T08:00:00Z"
     );
 
     expect(next.seen).toEqual({
       "event-1": "2026-06-24T08:00:00Z",
-      "event-2": "2026-06-24T08:00:00Z",
+      "event-2": "2026-06-24T08:00:00Z"
     });
   });
 
@@ -26,10 +26,10 @@ describe("delivery ledger", () => {
         seen: {
           "event-a": "2026-06-24T08:00:00Z",
           "event-b": "2026-06-24T08:00:00Z",
-          "event-c": "2026-06-24T08:00:00Z",
+          "event-c": "2026-06-24T08:00:00Z"
         },
-        researched: {},
-      }),
+        researched: {}
+      })
     );
   });
 

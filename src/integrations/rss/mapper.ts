@@ -14,7 +14,7 @@ export function parseFeedXml(xml: string, feed: FeedSubscription, now: Date): Ac
   const { channelItems, atomEntries } = xmlFeed(xml);
   return [
     ...channelItems.map((item) => normalizeRssItem(item, feed, now)),
-    ...atomEntries.map((entry) => normalizeAtomEntry(entry, feed, now)),
+    ...atomEntries.map((entry) => normalizeAtomEntry(entry, feed, now))
   ];
 }
 
@@ -22,10 +22,7 @@ function normalizeRssItem(item: XmlRecord, feed: FeedSubscription, now: Date): A
   const title = text(item.title);
   const htmlUrl = text(item.link);
   const guid = text(item.guid) ?? htmlUrl ?? title ?? "untitled";
-  const summary = chooseRicherSummary(
-    cleanSummary(text(item.description)),
-    cleanSummary(text(item.encoded)),
-  );
+  const summary = chooseRicherSummary(cleanSummary(text(item.description)), cleanSummary(text(item.encoded)));
   const createdAt = normalizeDate(text(item.pubDate) ?? text(item.date), now);
 
   return {
@@ -41,16 +38,17 @@ function normalizeRssItem(item: XmlRecord, feed: FeedSubscription, now: Date): A
     summary,
     sourceName: feed.name,
     sourceUrl: feed.url,
-    tags: feed.tags,
+    tags: feed.tags
   };
 }
 
-function chooseRicherSummary(
-  description: string | undefined,
-  encoded: string | undefined,
-): string | undefined {
-  if (!description) return encoded;
-  if (!encoded) return description;
+function chooseRicherSummary(description: string | undefined, encoded: string | undefined): string | undefined {
+  if (!description) {
+    return encoded;
+  }
+  if (!encoded) {
+    return description;
+  }
   return encoded.length > description.length ? encoded : description;
 }
 
@@ -74,7 +72,7 @@ function normalizeAtomEntry(entry: XmlRecord, feed: FeedSubscription, now: Date)
     summary,
     sourceName: feed.name,
     sourceUrl: feed.url,
-    tags: feed.tags,
+    tags: feed.tags
   };
 }
 
@@ -87,13 +85,17 @@ function atomLink(value: unknown): string | undefined {
 }
 
 function normalizeDate(value: string | undefined, now: Date): string {
-  if (!value) return now.toISOString();
+  if (!value) {
+    return now.toISOString();
+  }
   const time = new Date(value).getTime();
   return Number.isFinite(time) ? new Date(time).toISOString() : now.toISOString();
 }
 
 function cleanSummary(value: string | undefined): string | undefined {
-  if (!value) return undefined;
+  if (!value) {
+    return undefined;
+  }
   // Strip markup first, then decode entities (&amp; → &, &#x…; → chars) via `he`.
   const stripped = value
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/giu, " ")
@@ -120,9 +122,7 @@ function cleanBoilerplate(value: string): string | undefined {
     .replace(/\s+/gu, " ")
     .trim();
   const summaryMarker = /(?:^|\s)(?:今日摘要|今日要闻)\s*[:：]?\s*/u.exec(cleaned);
-  const withoutHeader = summaryMarker
-    ? cleaned.slice(summaryMarker.index + summaryMarker[0].length)
-    : cleaned;
+  const withoutHeader = summaryMarker ? cleaned.slice(summaryMarker.index + summaryMarker[0].length) : cleaned;
   const withoutFooter = withoutHeader.split(/\s*AI资讯日报多渠道\s*/u, 1)[0]?.trim() ?? "";
   return withoutFooter || undefined;
 }
@@ -135,11 +135,15 @@ function cleanBoilerplate(value: string): string | undefined {
  */
 export function rssPublicationType(
   htmlUrl: string | undefined,
-  feed: Pick<FeedSubscription, "tags" | "url">,
+  feed: Pick<FeedSubscription, "tags" | "url">
 ): "article" | "paper" | "release" {
   const tags = new Set(feed.tags.map((tag) => tag.toLowerCase()));
-  if (tags.has("papers") || tags.has("academic")) return "paper";
-  if (tags.has("releases")) return "release";
+  if (tags.has("papers") || tags.has("academic")) {
+    return "paper";
+  }
+  if (tags.has("releases")) {
+    return "release";
+  }
   return hostIsAcademic(htmlUrl) || hostIsAcademic(feed.url) ? "paper" : "article";
 }
 
@@ -157,7 +161,9 @@ export function isDailyAiPaperSource(source: { url: string; tags: readonly strin
 }
 
 function hostIsAcademic(value: string | undefined): boolean {
-  if (!value) return false;
+  if (!value) {
+    return false;
+  }
   try {
     const hostname = new URL(value).hostname.toLowerCase();
     return hostname === "arxiv.org" || hostname.endsWith(".arxiv.org");

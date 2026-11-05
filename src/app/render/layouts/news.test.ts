@@ -23,8 +23,8 @@ describe("app/render/news-render", () => {
         queryHits: 1,
         scoreBreakdown: { rank: 16, authority: 8, freshness: 6, crossQuery: 0 },
         score: 100,
-        selectedTopicId: "technology",
-      },
+        selectedTopicId: "technology"
+      }
     ];
 
     const markdown = renderViewMarkdown(
@@ -48,9 +48,9 @@ describe("app/render/news-render", () => {
                 intent: "model-release",
                 subjectAny: ["AI"],
                 eventAny: ["发布"],
-                excludedAny: [],
-              },
-            ],
+                excludedAny: []
+              }
+            ]
           },
           {
             id: "empty",
@@ -66,14 +66,14 @@ describe("app/render/news-render", () => {
                 intent: "developer-change",
                 subjectAny: ["x"],
                 eventAny: ["发布"],
-                excludedAny: [],
-              },
-            ],
-          },
+                excludedAny: []
+              }
+            ]
+          }
         ],
         warnings: ["某源：1 个查询暂不可用"],
-        windowLabel: "00:00–12:30",
-      }),
+        windowLabel: "00:00–12:30"
+      })
     );
 
     expect(markdown).toContain("# 午间热点 · 2026-07-29");
@@ -93,7 +93,7 @@ it("does not present incomplete collection as no news and keeps recovery informa
     stories: [],
     topics: [],
     warnings: [],
-    windowLabel: "00:00–12:30",
+    windowLabel: "00:00–12:30"
   };
   const status = {
     state: "partial" as const,
@@ -101,22 +101,18 @@ it("does not present incomplete collection as no news and keeps recovery informa
     completed: 1,
     recovered: 0,
     incompleteTopics: ["安全"],
-    notes: [],
+    notes: []
   };
-  expect(renderViewMarkdown(newsView({ ...document, sourceStatus: status }))).toContain(
-    "部分来源尚未完成",
-  );
+  expect(renderViewMarkdown(newsView({ ...document, sourceStatus: status }))).toContain("部分来源尚未完成");
   const recovered = renderViewMarkdown(
     newsView({
       ...document,
-      sourceStatus: { ...status, state: "recovered", notes: ["备用来源已完成"] },
-    }),
+      sourceStatus: { ...status, state: "recovered", notes: ["备用来源已完成"] }
+    })
   );
   expect(recovered).toContain("采集说明：备用来源已完成");
   expect(recovered).not.toContain("数据源状态：");
-  expect(
-    renderViewMarkdown(
-      newsView({ ...document, sourceStatus: { ...status, state: "unavailable" } }),
-    ),
-  ).toContain("无法判断是否有新增");
+  expect(renderViewMarkdown(newsView({ ...document, sourceStatus: { ...status, state: "unavailable" } }))).toContain(
+    "无法判断是否有新增"
+  );
 });

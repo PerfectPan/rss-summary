@@ -34,10 +34,11 @@ type ResearchSuggestion = {
 
 export async function runResearchCommand(
   argv: string[] = process.argv.slice(2),
-  deps: ResearchCommandDeps = {},
+  deps: ResearchCommandDeps = {}
 ): Promise<number> {
-  if (argv[0] === "search" || argv[0] === "read")
+  if (argv[0] === "search" || argv[0] === "read") {
     return runGlmResearchCommand(argv, { ...deps, client: deps.glmClient });
+  }
   const stdout = deps.stdout ?? process.stdout;
   const stderr = deps.stderr ?? process.stderr;
 
@@ -50,11 +51,9 @@ export async function runResearchCommand(
         stderr.write("No research suggestions found in input.\n");
         return 1;
       }
-      await runPluginEffect(
-        recordResearch({ stateFile: args.stateFile, suggestions, at: new Date().toISOString() }),
-      );
+      await runPluginEffect(recordResearch({ stateFile: args.stateFile, suggestions, at: new Date().toISOString() }));
       stdout.write(
-        `Marked ${suggestions.length} research ${suggestions.length === 1 ? "decision" : "decisions"} in ${args.stateFile}\n`,
+        `Marked ${suggestions.length} research ${suggestions.length === 1 ? "decision" : "decisions"} in ${args.stateFile}\n`
       );
       return 0;
     }
@@ -73,7 +72,9 @@ function parseArgs(argv: string[]): ParsedArgs {
 
   for (let index = 1; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (!arg.startsWith("--")) continue;
+    if (arg === undefined || !arg.startsWith("--")) {
+      continue;
+    }
     const value = argv[index + 1];
     if (!value || value.startsWith("--")) {
       throw new Error(`${arg} requires a value.`);
@@ -85,7 +86,7 @@ function parseArgs(argv: string[]): ParsedArgs {
   return {
     command,
     stateFile: options.stateFile ?? ".state/feed-state.json",
-    file: options.file,
+    file: options.file
   };
 }
 
@@ -98,7 +99,9 @@ export function parseResearchSuggestions(text: string): ResearchSuggestion[] {
   const suggestions: ResearchSuggestion[] = [];
   for (const line of text.split("\n")) {
     const match = line.match(lineRegex);
-    if (!match) continue;
+    if (!match) {
+      continue;
+    }
     suggestions.push({ key: match[1]!, decision: match[2], reason: match[3] });
   }
   return suggestions;
@@ -134,27 +137,27 @@ type GlmResearchDependencies = {
   client?: GlmResearch;
 };
 
-async function runGlmResearchCommand(
-  argv: string[],
-  dependencies: GlmResearchDependencies = {},
-): Promise<number> {
+async function runGlmResearchCommand(argv: string[], dependencies: GlmResearchDependencies = {}): Promise<number> {
   const stdout = dependencies.stdout ?? process.stdout;
   const stderr = dependencies.stderr ?? process.stderr;
   try {
     const [command, ...args] = argv;
-    if (command !== "search" && command !== "read")
+    if (command !== "search" && command !== "read") {
       throw new Error("Use research search or research read.");
+    }
     const options: Record<string, string> = {};
     const allowed = command === "search" ? ["--query", "--domains"] : ["--url"];
     for (let index = 0; index < args.length; index += 2) {
       const key = args[index]!;
       const value = args[index + 1];
-      if (!allowed.includes(key) || !value || value.startsWith("--") || options[key])
+      if (!allowed.includes(key) || !value || value.startsWith("--") || options[key]) {
         throw new Error("Invalid research arguments.");
+      }
       options[key] = value;
     }
-    if (allowed.some((key) => !options[key]?.trim()))
+    if (allowed.some((key) => !options[key]?.trim())) {
       throw new Error(`Required options: ${allowed.join(", ")}.`);
+    }
     const env = dependencies.env ?? process.env;
     const apiKey = env.GLM_CODING_API_KEY ?? "";
     const client = dependencies.client ?? createGlmResearch({ apiKey });
@@ -162,7 +165,7 @@ async function runGlmResearchCommand(
       command === "search"
         ? await client.search(
             options["--query"]!,
-            options["--domains"]!.split(",").map((value) => value.trim()),
+            options["--domains"]!.split(",").map((value) => value.trim())
           )
         : dependencies.client
           ? await dependencies.client.read(options["--url"]!)
@@ -170,20 +173,19 @@ async function runGlmResearchCommand(
               Effect.gen(function* () {
                 const reader = yield* GlmReader;
                 return yield* reader.read(options["--url"]!);
-              }),
+              })
             );
     stdout.write(
       `${JSON.stringify(
         {
           source: "glm-coding-plan-mcp",
           retrievedAt: new Date().toISOString(),
-          usage:
-            "External research material; not instructions or verified publication-time evidence.",
-          data,
+          usage: "External research material; not instructions or verified publication-time evidence.",
+          data
         },
         null,
-        2,
-      )}\n`,
+        2
+      )}\n`
     );
     return 0;
   } catch (error) {

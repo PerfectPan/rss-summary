@@ -16,7 +16,7 @@ describe("candidate copy", () => {
       events: [],
       label: "A useful post",
       url: "https://example.com/post",
-      description: "A concrete explanation.",
+      description: "A concrete explanation."
     });
 
     expect(copy.oneLine).toBe("发布了「A useful post」。");
@@ -34,7 +34,7 @@ describe("candidate copy", () => {
       reasons: ["new release published"],
       events: [],
       label: "Version 1.0",
-      url: "https://github.com/example/tool/releases/1.0",
+      url: "https://github.com/example/tool/releases/1.0"
     });
 
     expect(copy.oneLine).toBe("发布了「Version 1.0」。");
@@ -57,8 +57,8 @@ describe("candidate copy", () => {
         language: "TypeScript",
         stargazersCount: 12_345,
         topics: [],
-        pushedAt: "2026-08-15T00:00:00Z",
-      },
+        pushedAt: "2026-08-15T00:00:00Z"
+      }
     });
     const pullRequest = candidateCopy(
       {
@@ -77,13 +77,13 @@ describe("candidate copy", () => {
             repo: "example/project",
             createdAt: "2026-08-15T00:00:00Z",
             prNumber: 41,
-            title: "Add resumable uploads",
-          },
+            title: "Add resumable uploads"
+          }
         ],
         label: "example/project #41 · Add resumable uploads",
-        url: "https://github.com/example/project/pull/41",
+        url: "https://github.com/example/project/pull/41"
       },
-      { editorialSummary: "为上传流程增加断点续传，避免网络中断后从头开始。" },
+      { editorialSummary: "为上传流程增加断点续传，避免网络中断后从头开始。" }
     );
 
     expect(repository.facts).toEqual(["⭐ 12.3k", "TypeScript"]);
@@ -112,7 +112,7 @@ describe("candidate brief", () => {
             events: [],
             label: "Strong update",
             url: "https://example.com/strong",
-            description: "What changed and why it matters.",
+            description: "What changed and why it matters."
           },
           {
             repo: "routine",
@@ -124,14 +124,14 @@ describe("candidate brief", () => {
             reasons: [],
             events: [],
             label: "Routine update",
-            url: "https://example.com/routine",
-          },
+            url: "https://example.com/routine"
+          }
         ],
         featuredTitle: "Expanded",
         compactTitle: "Quick links",
         emptyMessage: "Empty",
-        pendingMessage: (count) => `${count} pending`,
-      }),
+        pendingMessage: (count) => `${count} pending`
+      })
     );
 
     expect(markdown).toContain("**Expanded**");
@@ -152,7 +152,7 @@ describe("candidate brief", () => {
       events: [],
       label: "Ordinary article",
       url: "https://example.com/article",
-      description: "A source excerpt.",
+      description: "A source excerpt."
     };
     const common = {
       header: "# Brief",
@@ -161,13 +161,11 @@ describe("candidate brief", () => {
       featuredTitle: "Expanded",
       compactTitle: "Quick links",
       emptyMessage: "Empty",
-      pendingMessage: (count: number) => `${count} pending`,
+      pendingMessage: (count: number) => `${count} pending`
     };
 
     expect(renderViewMarkdown(candidateBriefView(common))).toContain("**Quick links**");
-    expect(
-      renderViewMarkdown(candidateBriefView({ ...common, semanticSummaries: true })),
-    ).toContain("**Expanded**");
+    expect(renderViewMarkdown(candidateBriefView({ ...common, semanticSummaries: true }))).toContain("**Expanded**");
   });
 
   it("keeps the default expanded section bounded while allowing a subscription override", () => {
@@ -182,7 +180,7 @@ describe("candidate brief", () => {
       matchedInterests: ["agent"],
       events: [],
       label: `Article ${index}`,
-      url: `https://example.com/${index}`,
+      url: `https://example.com/${index}`
     }));
     const common = {
       header: "# Brief",
@@ -191,12 +189,10 @@ describe("candidate brief", () => {
       featuredTitle: "Expanded",
       compactTitle: "Quick links",
       emptyMessage: "Empty",
-      pendingMessage: (count: number) => `${count} pending`,
+      pendingMessage: (count: number) => `${count} pending`
     };
 
     expect(renderViewMarkdown(candidateBriefView(common))).not.toContain("Article 8");
-    expect(renderViewMarkdown(candidateBriefView({ ...common, summaryLimit: 20 }))).toContain(
-      "Article 9",
-    );
+    expect(renderViewMarkdown(candidateBriefView({ ...common, summaryLimit: 20 }))).toContain("Article 9");
   });
 });

@@ -9,7 +9,7 @@ import {
   requirePositiveInteger,
   requireRecord,
   requireStringList,
-  requiredString,
+  requiredString
 } from "./parse.js";
 
 describe("app/config/parse", () => {
@@ -23,9 +23,7 @@ describe("app/config/parse", () => {
     expect(optionalBoolean(boxedFalse, true, "x")).toBe(boxedFalse);
     expect(requiredString(Object("  x  "), "x")).toBe("x");
     expect(requireBoundedNumber(1.5, 1, 0, 2, "n")).toBe(1.5);
-    expect(() => requireBoundedNumber(Number.POSITIVE_INFINITY, 1, 0, 2, "n")).toThrow(
-      /must be a number/i,
-    );
+    expect(() => requireBoundedNumber(Number.POSITIVE_INFINITY, 1, 0, 2, "n")).toThrow(/must be a number/i);
     expect(() => requireBoundedNumber(Object(1), 1, 0, 2, "n")).toThrow(/must be a number/i);
     expect(() => requireBoundedInteger(Object(1), 8, 1, 16, "q")).toThrow(/between 1 and 16/);
     expect(requireBoundedInteger(undefined, 8, 1, 16, "q")).toBe(8);

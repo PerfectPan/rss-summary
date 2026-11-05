@@ -13,32 +13,29 @@ export type GlmResearch = {
     domains: string[],
     recency?: "noLimit" | "oneDay" | "oneWeek",
     observe?: (counts: { rawResults: number; domainRejected: number }) => void,
-    location?: "cn" | "us",
+    location?: "cn" | "us"
   ) => Promise<ResearchSearchResult[]>;
   read: (url: string) => Promise<ResearchPage>;
 };
 
 /** Compose the GLM research surface from acquisition search and reading. */
-export function createGlmResearch(options: {
-  apiKey: string;
-  fetch?: typeof fetch;
-  timeoutMs?: number;
-}): GlmResearch {
-  if (!options.apiKey.trim()) throw new Error("GLM_CODING_API_KEY is required.");
+export function createGlmResearch(options: { apiKey: string; fetch?: typeof fetch; timeoutMs?: number }): GlmResearch {
+  if (!options.apiKey.trim()) {
+    throw new Error("GLM_CODING_API_KEY is required.");
+  }
   const apiKey = options.apiKey.trim();
   const client = new GlmSearchClient({
     apiKey,
     ...(options.fetch ? { fetch: options.fetch } : {}),
-    ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
+    ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {})
   });
   return {
-    search: (query, domains, recency, observe, location) =>
-      client.search(query, domains, recency, observe, location),
+    search: (query, domains, recency, observe, location) => client.search(query, domains, recency, observe, location),
     read: (url) =>
       readGlmPage(url, {
         apiKey,
         ...(options.fetch ? { fetch: options.fetch } : {}),
-        ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
-      }),
+        ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {})
+      })
   };
 }

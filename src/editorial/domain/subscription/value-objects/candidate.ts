@@ -2,7 +2,7 @@ import type {
   ActivityCardDto,
   ActivitySource,
   ActivityType,
-  RepositoryMetadata,
+  RepositoryMetadata
 } from "../../../../acquisition/index.js";
 
 export type ActivityCard = ActivityCardDto;

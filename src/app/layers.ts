@@ -9,22 +9,10 @@ import {
   SourceCatalogStore,
   SearchBudgetRepositoryLive,
   SourceCatalogStoreLive,
-  WebPage,
+  WebPage
 } from "../acquisition/index.js";
-import {
-  DeliveryLive,
-  DiagnosticsStore,
-  FeedStateStore,
-  Notifier,
-  RunArchive,
-} from "../delivery/index.js";
-import {
-  BrowserReader,
-  GlmReader,
-  HttpReader,
-  type GlmPage,
-  VideoReader,
-} from "../reading/index.js";
+import { DeliveryLive, DiagnosticsStore, FeedStateStore, Notifier, RunArchive } from "../delivery/index.js";
+import { BrowserReader, GlmReader, HttpReader, type GlmPage, VideoReader } from "../reading/index.js";
 import { ArticleResearchClient, extractArticle } from "../integrations/article-http/index.js";
 import { browserArticleResearch, type BrowserPageFetcher } from "../integrations/browser/index.js";
 import { readGlmPage } from "../integrations/glm/index.js";
@@ -37,7 +25,7 @@ import {
   VideoResearchClient,
   videoVisualEvidence,
   type VideoTranscriptFormatter,
-  type VideoVisualFormatter,
+  type VideoVisualFormatter
 } from "../integrations/video/index.js";
 import type { ReadRequest, ReadResult } from "../reading/index.js";
 import type { DeliveryOptions } from "../delivery/index.js";
@@ -70,7 +58,7 @@ export type ReadingLiveOptions = {
  * leg of the chain without touching the others.
  */
 export function ReadingLive(
-  options: ReadingLiveOptions = {},
+  options: ReadingLiveOptions = {}
 ): Layer.Layer<HttpReader | BrowserReader | VideoReader | GlmReader, never, never> {
   const httpClient = new ArticleResearchClient({
     extract: extractArticle,
@@ -78,7 +66,7 @@ export function ReadingLive(
     maxBytes: options.maxBytes,
     maxChars: options.maxChars,
     now: options.now,
-    timeoutMs: options.timeoutMs,
+    timeoutMs: options.timeoutMs
   });
   const browserResearch = browserArticleResearch({
     browserChannel: options.browserChannel,
@@ -86,26 +74,23 @@ export function ReadingLive(
     fetchPage: options.fetchPage,
     headless: options.headless,
     maxChars: options.maxChars,
-    timeoutMs: options.browserTimeoutMs,
+    timeoutMs: options.browserTimeoutMs
   });
   const videoClient = new VideoResearchClient({
     env: options.videoEnv,
     fetch: options.fetch,
     formatTranscript: options.formatTranscript ?? transcriptEvidence,
-    formatVisuals: options.formatVisuals ?? videoVisualEvidence,
+    formatVisuals: options.formatVisuals ?? videoVisualEvidence
   });
   const http = Layer.succeed(HttpReader, {
-    research: (request) =>
-      Effect.promise(() => (options.httpResearch ?? httpClient.research.bind(httpClient))(request)),
+    research: (request) => Effect.promise(() => (options.httpResearch ?? httpClient.research.bind(httpClient))(request))
   });
   const browser = Layer.succeed(BrowserReader, {
-    research: options.browserResearch ?? browserResearch,
+    research: options.browserResearch ?? browserResearch
   });
   const video = Layer.succeed(VideoReader, {
     research: (request) =>
-      Effect.promise(() =>
-        (options.videoResearch ?? videoClient.research.bind(videoClient))(request),
-      ),
+      Effect.promise(() => (options.videoResearch ?? videoClient.research.bind(videoClient))(request))
   });
   const glm = Layer.succeed(GlmReader, {
     read: (url) =>
@@ -117,11 +102,11 @@ export function ReadingLive(
               readGlmPage(target, {
                 apiKey: options.apiKey ?? "",
                 fetch: options.fetch,
-                timeoutMs: options.glmTimeoutMs,
+                timeoutMs: options.glmTimeoutMs
               }))
           )(url),
-        catch: (cause) => cause,
-      }),
+        catch: (cause) => cause
+      })
   });
   return Layer.mergeAll(http, browser, video, glm);
 }
@@ -137,17 +122,15 @@ export type AcquisitionOptions = {
  * GitHub activity and catalog) plus the module's own state-backed stores.
  */
 export function AcquisitionLive(
-  options: AcquisitionOptions = {},
-): Layer.Layer<
-  RssFeed | WebPage | GitHubActivity | GitHubCatalog | SourceCatalogStore | SearchBudgetRepository
-> {
+  options: AcquisitionOptions = {}
+): Layer.Layer<RssFeed | WebPage | GitHubActivity | GitHubCatalog | SourceCatalogStore | SearchBudgetRepository> {
   return Layer.mergeAll(
     RssFeedLive({ fetch: options.fetch }),
     WebPageLive({ fetch: options.fetch }),
     GitHubActivityLive(options),
     GitHubCatalogLive({ token: options.token, fetch: options.fetch }),
     SourceCatalogStoreLive,
-    SearchBudgetRepositoryLive,
+    SearchBudgetRepositoryLive
   );
 }
 
@@ -181,12 +164,8 @@ export type AppLiveOptions = {
  */
 export function AppLive(options: AppLiveOptions = {}): Layer.Layer<AppServices> {
   return Layer.provideMerge(
-    Layer.mergeAll(
-      AcquisitionLive(options.acquisition),
-      ReadingLive(options.reading),
-      DeliveryLive(options.delivery),
-    ),
-    NodeFileSystemLayer,
+    Layer.mergeAll(AcquisitionLive(options.acquisition), ReadingLive(options.reading), DeliveryLive(options.delivery)),
+    NodeFileSystemLayer
   );
 }
 
@@ -198,21 +177,19 @@ export function appLiveOptions(config: AppConfig): AppLiveOptions {
       githubHome: {
         storageState: config.githubHomeStorageState,
         fetchMode: config.githubHomeFetch,
-        ...(config.githubHomeBrowserChannel === undefined
-          ? {}
-          : { browserChannel: config.githubHomeBrowserChannel }),
-      },
+        ...(config.githubHomeBrowserChannel === undefined ? {} : { browserChannel: config.githubHomeBrowserChannel })
+      }
     },
     delivery: {
       ...(config.webhookUrl === undefined ? {} : { webhookUrl: config.webhookUrl }),
-      env: config.raw,
+      env: config.raw
     },
     reading: {
       apiKey: config.glmCodingApiKey,
       browserChannel: config.articleResearch.browserChannel,
       browserTimeoutMs: config.articleResearch.browserTimeoutMs,
-      headless: config.articleResearch.browserHeadless,
-    },
+      headless: config.articleResearch.browserHeadless
+    }
   };
 }
 
@@ -223,17 +200,15 @@ function rawOptions(env: NodeJS.ProcessEnv): AppLiveOptions {
       githubHome: {
         storageState: env.GITHUB_HOME_STORAGE_STATE ?? ".state/github-home-storage.json",
         fetchMode: env.GITHUB_HOME_FETCH === "browser" ? "browser" : "conduit",
-        ...(env.GITHUB_HOME_BROWSER_CHANNEL === undefined
-          ? {}
-          : { browserChannel: env.GITHUB_HOME_BROWSER_CHANNEL }),
-      },
+        ...(env.GITHUB_HOME_BROWSER_CHANNEL === undefined ? {} : { browserChannel: env.GITHUB_HOME_BROWSER_CHANNEL })
+      }
     },
     delivery: { env },
     reading: {
       apiKey: env.GLM_CODING_API_KEY ?? "",
       browserChannel: env.RSS_ARTICLE_BROWSER_CHANNEL?.trim() || "chrome",
-      headless: env.RSS_ARTICLE_BROWSER_HEADLESS !== "false",
-    },
+      headless: env.RSS_ARTICLE_BROWSER_HEADLESS !== "false"
+    }
   };
 }
 
@@ -241,9 +216,7 @@ function rawOptions(env: NodeJS.ProcessEnv): AppLiveOptions {
  * AppLive from a configuration effect, so CLI boundary failures (invalid
  * environment, missing files) surface through the command's exit path.
  */
-export function appLayerFromConfig(
-  config: Effect.Effect<AppConfig, Error>,
-): Layer.Layer<AppServices, Error> {
+export function appLayerFromConfig(config: Effect.Effect<AppConfig, Error>): Layer.Layer<AppServices, Error> {
   return Layer.unwrap(Effect.map(config, (resolved) => AppLive(appLiveOptions(resolved))));
 }
 
@@ -256,6 +229,6 @@ export function appLayerFromConfig(
 export const AppLiveFromEnv: Layer.Layer<AppServices> = Layer.unwrap(
   Effect.match(loadEnvConfig(), {
     onFailure: () => AppLive(rawOptions(process.env)),
-    onSuccess: (config) => AppLive(appLiveOptions(config)),
-  }),
+    onSuccess: (config) => AppLive(appLiveOptions(config))
+  })
 );

@@ -6,7 +6,7 @@ export {
   openRequestContext,
   renderPage,
   type BrowserLaunchOptions,
-  type RenderPageOptions,
+  type RenderPageOptions
 } from "./browser.js";
 export { asError, provideHttp, timeoutFetch } from "./http.js";
 export { decodeSchema, type DecodeFailure } from "./decode.js";
@@ -17,11 +17,6 @@ export {
   applyScoringContext,
   projectActivity,
   refreshRouting,
-  type ScoringContext,
+  type ScoringContext
 } from "./scoring-trace.js";
-export {
-  candidateEvidenceUrl,
-  candidateIdentity,
-  researchKeyForCandidate,
-  type IdentitySubject,
-} from "./identity.js";
+export { candidateEvidenceUrl, candidateIdentity, researchKeyForCandidate, type IdentitySubject } from "./identity.js";

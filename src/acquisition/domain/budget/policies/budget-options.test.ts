@@ -9,7 +9,7 @@ it("rejects blank budget options", () => {
       monthlyLimit: 1,
       cacheTtlMs: 0,
       stateFile: " ",
-      timezoneOffset: "+08:00",
-    }),
+      timezoneOffset: "+08:00"
+    })
   ).toThrow("News search budgets, cache TTL and state file must be valid.");
 });

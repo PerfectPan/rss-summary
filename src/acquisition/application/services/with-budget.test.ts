@@ -11,22 +11,19 @@ const input: SearchInput = {
   query: "release",
   count: 1,
   day: "2026-09-29",
-  sourcePolicy: "news",
+  sourcePolicy: "news"
 };
 const page: SearchPage = {
   resultCount: 1,
-  results: [{ id: "1", title: "Release", url: "https://example.com/release", rankPosition: 1 }],
+  results: [{ id: "1", title: "Release", url: "https://example.com/release", rankPosition: 1 }]
 };
 
-function driver(
-  dailyLimit = 2,
-  cacheTtlMs = 60_000,
-): BudgetDriver & { budget: () => SearchBudget } {
+function driver(dailyLimit = 2, cacheTtlMs = 60_000): BudgetDriver & { budget: () => SearchBudget } {
   const limits: BudgetLimits = {
     dailyLimit,
     monthlyLimit: 4,
     timezoneOffset: "+08:00",
-    cacheTtlMs,
+    cacheTtlMs
   };
   const hash = (material: string) => material;
   let current = SearchBudget.empty(limits);
@@ -41,20 +38,22 @@ function driver(
     decodePage: (value) =>
       ({
         resultCount: value.resultCount,
-        results: value.results.map((result) => ({ ...result })),
+        results: value.results.map((result) => ({ ...result }))
       }) as CachedPage,
     load: () => Effect.succeed(current),
     save: (state) =>
       Effect.sync(() => {
         const restored = SearchBudget.restore(state, limits, {
           hash,
-          normalize: normalizeProvider,
+          normalize: normalizeProvider
         });
-        if (restored._tag === "Err") throw restored.error;
+        if (restored._tag === "Err") {
+          throw restored.error;
+        }
         current = restored.value.state;
       }),
     withLock: (effect) => effect,
-    budget: () => current,
+    budget: () => current
   };
 }
 
@@ -68,9 +67,7 @@ describe("withBudget", () => {
         resolve = settle;
       });
     }, driver(1));
-    const pending = Effect.runPromise(
-      Effect.all([search(input), search(input)], { concurrency: "unbounded" }),
-    );
+    const pending = Effect.runPromise(Effect.all([search(input), search(input)], { concurrency: "unbounded" }));
     await vi.waitFor(() => expect(calls).toBe(1));
     resolve(page);
     const [left, right] = await pending;
@@ -83,7 +80,9 @@ describe("withBudget", () => {
     let calls = 0;
     const search = withBudget(async () => {
       calls += 1;
-      if (calls === 1) throw new NewsSearchError("http_429", "rate limit");
+      if (calls === 1) {
+        throw new NewsSearchError("http_429", "rate limit");
+      }
       return page;
     }, options);
     await expect(Effect.runPromise(search(input))).rejects.toMatchObject({ code: "http_429" });
@@ -91,7 +90,7 @@ describe("withBudget", () => {
     expect(stored.searchUsage).toMatchObject({
       source: "network",
       fetchedAt: "2026-09-29T03:00:00.000Z",
-      dailyUsed: 2,
+      dailyUsed: 2
     });
     const cached = await Effect.runPromise(search(input));
     expect(cached.searchUsage.source).toBe("cache");
@@ -120,8 +119,8 @@ describe("withBudget", () => {
     expect(() =>
       search({
         ...input,
-        window: { since: "2026-09-29T04:00:00Z", until: "2026-09-29T04:00:00Z" },
-      }),
+        window: { since: "2026-09-29T04:00:00Z", until: "2026-09-29T04:00:00Z" }
+      })
     ).toThrow("Invalid search time window.");
   });
 });

@@ -3,12 +3,7 @@ import { readFileSync } from "node:fs";
 import type { NewsQueryIntent, NewsSourcePolicy } from "../../../editorial/index.js";
 import type { NewsTopic, NewsTopicQuery } from "./output.js";
 import { defaultNewsTopicsFile } from "../../config/assets.js";
-import {
-  optionalBoolean,
-  requiredString,
-  requirePositiveInteger,
-  requireRecord,
-} from "../../config/parse.js";
+import { optionalBoolean, requiredString, requirePositiveInteger, requireRecord } from "../../config/parse.js";
 const topicIdPattern = /^[a-z][a-z0-9-]*$/u;
 const queryIdPattern = /^[a-z][a-z0-9-]*$/u;
 const maxSearchQueryLength = 100;
@@ -18,13 +13,13 @@ const queryIntents = new Set<NewsQueryIntent>([
   "service-incident",
   "security-advisory",
   "policy-action",
-  "capital-event",
+  "capital-event"
 ]);
 const newsTopicLimits = {
   maxItemsPerTopic: 10,
   maxQueriesPerTopic: 8,
   maxTopics: 8,
-  maxTotalQueries: 32,
+  maxTotalQueries: 32
 } as const;
 
 export function loadNewsTopics(filePath = defaultNewsTopicsFile()): NewsTopic[] {
@@ -33,11 +28,11 @@ export function loadNewsTopics(filePath = defaultNewsTopicsFile()): NewsTopic[] 
 
 export function parseNewsTopics(value: string): NewsTopic[] {
   const parsed: unknown = JSON.parse(value);
-  if (!Array.isArray(parsed)) throw new Error("News topic configuration must be a JSON array.");
+  if (!Array.isArray(parsed)) {
+    throw new Error("News topic configuration must be a JSON array.");
+  }
   if (parsed.length > newsTopicLimits.maxTopics) {
-    throw new Error(
-      `News topic configuration supports at most ${newsTopicLimits.maxTopics} topics.`,
-    );
+    throw new Error(`News topic configuration supports at most ${newsTopicLimits.maxTopics} topics.`);
   }
 
   const ids = new Set<string>();
@@ -45,8 +40,12 @@ export function parseNewsTopics(value: string): NewsTopic[] {
   const topics = parsed.map((item, index) => {
     const record = requireRecord(item, `news topic ${index + 1}`);
     const id = requiredString(record.id, `news topic ${index + 1} id`);
-    if (!topicIdPattern.test(id)) throw new Error(`News topic id must use kebab-case: ${id}`);
-    if (ids.has(id)) throw new Error(`Duplicate news topic id: ${id}`);
+    if (!topicIdPattern.test(id)) {
+      throw new Error(`News topic id must use kebab-case: ${id}`);
+    }
+    if (ids.has(id)) {
+      throw new Error(`Duplicate news topic id: ${id}`);
+    }
     ids.add(id);
 
     const label = requiredString(record.label, `news topic ${id} label`);
@@ -55,44 +54,35 @@ export function parseNewsTopics(value: string): NewsTopic[] {
     const sourcePolicy = parseSourcePolicy(record.sourcePolicy, id);
     const maxItems = requirePositiveInteger(record.maxItems, 5, `news topic ${id} maxItems`);
     if (maxItems > newsTopicLimits.maxItemsPerTopic) {
-      throw new Error(
-        `News topic ${id} maxItems must not exceed ${newsTopicLimits.maxItemsPerTopic}.`,
-      );
+      throw new Error(`News topic ${id} maxItems must not exceed ${newsTopicLimits.maxItemsPerTopic}.`);
     }
     if (!Array.isArray(record.queries) || record.queries.length === 0) {
       throw new Error(`News topic ${id} must define at least one query.`);
     }
     if (record.queries.length > newsTopicLimits.maxQueriesPerTopic) {
-      throw new Error(
-        `News topic ${id} supports at most ${newsTopicLimits.maxQueriesPerTopic} queries.`,
-      );
+      throw new Error(`News topic ${id} supports at most ${newsTopicLimits.maxQueriesPerTopic} queries.`);
     }
-    const queries = record.queries.map((query, queryIndex) =>
-      parseQuery(query, id, queryIndex, queryIds),
-    );
+    const queries = record.queries.map((query, queryIndex) => parseQuery(query, id, queryIndex, queryIds));
 
     return { id, label, icon, enabled, sourcePolicy, maxItems, queries };
   });
   const totalQueries = topics.reduce((total, topic) => total + topic.queries.length, 0);
   if (totalQueries > newsTopicLimits.maxTotalQueries) {
-    throw new Error(
-      `News topic configuration supports at most ${newsTopicLimits.maxTotalQueries} queries.`,
-    );
+    throw new Error(`News topic configuration supports at most ${newsTopicLimits.maxTotalQueries} queries.`);
   }
   return topics;
 }
 
-function parseQuery(
-  value: unknown,
-  topicId: string,
-  queryIndex: number,
-  queryIds: Set<string>,
-): NewsTopicQuery {
+function parseQuery(value: unknown, topicId: string, queryIndex: number, queryIds: Set<string>): NewsTopicQuery {
   const context = `news topic ${topicId} query ${queryIndex + 1}`;
   const record = requireRecord(value, context);
   const id = requiredString(record.id, `${context} id`);
-  if (!queryIdPattern.test(id)) throw new Error(`News query id must use kebab-case: ${id}`);
-  if (queryIds.has(id)) throw new Error(`Duplicate news query id: ${id}`);
+  if (!queryIdPattern.test(id)) {
+    throw new Error(`News query id must use kebab-case: ${id}`);
+  }
+  if (queryIds.has(id)) {
+    throw new Error(`Duplicate news query id: ${id}`);
+  }
   queryIds.add(id);
   const text = requiredString(record.text, `${context} text`);
   if (text.length > maxSearchQueryLength) {
@@ -104,12 +94,10 @@ function parseQuery(
     text,
     intent,
     ...(record.glm === undefined ? {} : { glm: parseGlmQuery(record.glm, context) }),
-    ...(record.deepseek === undefined
-      ? {}
-      : { deepseek: parseDeepSeekQuery(record.deepseek, context) }),
+    ...(record.deepseek === undefined ? {} : { deepseek: parseDeepSeekQuery(record.deepseek, context) }),
     subjectAny: parseTerms(record.subjectAny, `${context} subjectAny`, true),
     eventAny: parseTerms(record.eventAny, `${context} eventAny`, true),
-    excludedAny: parseTerms(record.excludedAny, `${context} excludedAny`, false),
+    excludedAny: parseTerms(record.excludedAny, `${context} excludedAny`, false)
   };
 }
 
@@ -126,7 +114,7 @@ function parseDeepSeekQuery(value: unknown, context: string): { queries: string[
         throw new Error(`${context} deepseek query must not exceed 100 characters.`);
       }
       return keyword;
-    }),
+    })
   };
 }
 
@@ -141,19 +129,25 @@ function parseTerms(value: unknown, context: string, required: boolean): string[
   if (!Array.isArray(value) || (required && value.length === 0)) {
     throw new Error(`${context} must be ${required ? "a non-empty" : "an"} array.`);
   }
-  if (value.length > 20) throw new Error(`${context} supports at most 20 terms.`);
+  if (value.length > 20) {
+    throw new Error(`${context} supports at most 20 terms.`);
+  }
   return value.map((term, index) => requiredString(term, `${context} term ${index + 1}`));
 }
 
 function parseSourcePolicy(value: unknown, id: string): NewsSourcePolicy {
-  if (value === "authoritative" || value === "official" || value === "news") return value;
+  if (value === "authoritative" || value === "official" || value === "news") {
+    return value;
+  }
   throw new Error(`News topic ${id} sourcePolicy must be news, authoritative or official.`);
 }
 
 function parseGlmQuery(value: unknown, context: string): NonNullable<NewsTopicQuery["glm"]> {
   const record = requireRecord(value, `${context} glm`);
   const query = requiredString(record.query, `${context} glm query`);
-  if (query.length > 70) throw new Error(`${context} glm query must not exceed 70 characters.`);
+  if (query.length > 70) {
+    throw new Error(`${context} glm query must not exceed 70 characters.`);
+  }
   if (!Array.isArray(record.domains) || record.domains.length < 1 || record.domains.length > 8) {
     throw new Error(`${context} glm domains must contain 1 to 8 hostnames.`);
   }
@@ -172,11 +166,13 @@ function parseGlmQuery(value: unknown, context: string): NonNullable<NewsTopicQu
     const entries = requireRecord(record.sourceQueries, `${context} glm sourceQueries`);
     sourceQueries = {};
     for (const [domain, value] of Object.entries(entries)) {
-      if (!domains.includes(domain))
+      if (!domains.includes(domain)) {
         throw new Error(`${context} source query must use a configured domain.`);
+      }
       const text = requiredString(value, `${context} source query`);
-      if (text.length > 70)
+      if (text.length > 70) {
         throw new Error(`${context} source query must not exceed 70 characters.`);
+      }
       sourceQueries[domain] = text;
     }
   }

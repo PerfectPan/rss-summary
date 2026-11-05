@@ -1,9 +1,6 @@
 import type { RivusAutomationTemplate } from "@rivus/agent";
 
-import {
-  automationPresentationForText,
-  type RssAutomationPresentation,
-} from "../../render/automation.js";
+import { automationPresentationForText, type RssAutomationPresentation } from "../../render/automation.js";
 import { RSS_SUMMARY_NEWS_TOOL_ID } from "./tool.js";
 
 export const RSS_SUMMARY_NOON_AUTOMATION_ID = "rss-summary/noon-news-brief";
@@ -18,13 +15,13 @@ function newsAutomation(options: {
 } {
   return {
     createInput: ({ occurrence }) => ({
-      text: `请只调用一次 ${RSS_SUMMARY_NEWS_TOOL_ID}，输入 ${JSON.stringify({ occurrence, edition: options.edition })}。成功后仅将结果中的 markdown 字段原样返回，不添加任何说明。`,
+      text: `请只调用一次 ${RSS_SUMMARY_NEWS_TOOL_ID}，输入 ${JSON.stringify({ occurrence, edition: options.edition })}。成功后仅将结果中的 markdown 字段原样返回，不添加任何说明。`
     }),
     createPresentation: ({ text }) => automationPresentationForText(text, "news"),
     id: options.id,
     profileId: options.profileId,
     requestedSkillIds: [],
-    requestedToolIds: [RSS_SUMMARY_NEWS_TOOL_ID],
+    requestedToolIds: [RSS_SUMMARY_NEWS_TOOL_ID]
   };
 }
 

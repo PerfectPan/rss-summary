@@ -35,8 +35,12 @@ export function validateDeepSeekInput(input: SearchInputContract): void {
  * to stay within the length limit.
  */
 export function deepSeekOutgoingQuery(query: string, sinceDay?: string): string {
-  if (!sinceDay) return query;
-  if (/(?:^|\s)after:\d/u.test(query)) return query;
+  if (!sinceDay) {
+    return query;
+  }
+  if (/(?:^|\s)after:\d/u.test(query)) {
+    return query;
+  }
   const operator = `after:${sinceDay}`;
   const keywordBudget = maxOutgoingQueryLength - operator.length - 1;
   const keywords = query.trimEnd().slice(0, Math.max(0, keywordBudget)).trimEnd();
@@ -50,7 +54,9 @@ export class DeepSeekSearchClient {
   private readonly timeoutMs: number;
 
   constructor(options: DeepSeekSearchClientOptions) {
-    if (options.apiKey.trim() === "") throw new Error("DEEPSEEK_API_KEY is required.");
+    if (options.apiKey.trim() === "") {
+      throw new Error("DEEPSEEK_API_KEY is required.");
+    }
     this.apiKey = options.apiKey;
     this.baseUrl = options.baseUrl ?? "https://api.deepseek.com/v1/tools/search";
     this.fetchImpl = options.fetch ?? fetch;
@@ -68,10 +74,10 @@ export class DeepSeekSearchClient {
         method: "POST",
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
-          "Content-Type": "application/json",
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({ query: outgoingQuery, count: input.count }),
-        signal: AbortSignal.timeout(this.timeoutMs),
+        signal: AbortSignal.timeout(this.timeoutMs)
       });
     } catch (cause) {
       throw new DeepSeekSearchError("network_error", errorText(cause));
@@ -98,10 +104,16 @@ function errorText(value: unknown): string {
 }
 
 function parseRetryAfter(value: string | null): number | undefined {
-  if (!value) return undefined;
+  if (!value) {
+    return undefined;
+  }
   const seconds = Number(value);
-  if (Number.isFinite(seconds) && seconds >= 0) return Math.round(seconds * 1_000);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.round(seconds * 1_000);
+  }
   const date = Date.parse(value);
-  if (!Number.isFinite(date)) return undefined;
+  if (!Number.isFinite(date)) {
+    return undefined;
+  }
   return Math.max(0, date - Date.now());
 }

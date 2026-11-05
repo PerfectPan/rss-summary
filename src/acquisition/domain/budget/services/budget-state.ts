@@ -9,15 +9,12 @@ export function usageFor(state: BudgetState, instant: Date, limits: BudgetLimits
     .filter(([recordDay]) => recordDay.startsWith(day.slice(0, 7)))
     .reduce((total, [, used]) => total + used, 0);
   if (!Number.isSafeInteger(monthlyUsed)) {
-    throw new NewsSearchError(
-      "local_budget_state",
-      "Local search budget contains an invalid monthly total.",
-    );
+    throw new NewsSearchError("local_budget_state", "Local search budget contains an invalid monthly total.");
   }
   return {
     dailyUsed: state.daily[day] ?? 0,
     monthlyUsed,
     dailyLimit: limits.dailyLimit,
-    monthlyLimit: limits.monthlyLimit,
+    monthlyLimit: limits.monthlyLimit
   };
 }

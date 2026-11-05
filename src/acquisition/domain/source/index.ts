@@ -3,12 +3,12 @@ export {
   type FeedSubscription,
   type FeedSubscriptionInput,
   type IndustrySource,
-  type WebPageSubscription,
+  type WebPageSubscription
 } from "./value-objects/subscription.js";
 export {
   addFeedSubscription,
   formatFeedSubscriptions,
   parseFeedSubscriptions,
   parseIndustrySources,
-  removeFeedSubscription,
+  removeFeedSubscription
 } from "./services/catalog.js";

@@ -7,13 +7,13 @@ describe("event window", () => {
     const window = resolveEventWindow({
       day: "2026-06-27",
       timezoneOffset: "+08:00",
-      windowHours: 36,
+      windowHours: 36
     });
 
     expect(window).toEqual({
       since: Date.parse("2026-06-27T00:00:00+08:00"),
       until: Date.parse("2026-06-28T00:00:00+08:00"),
-      label: "2026-06-27 +08:00",
+      label: "2026-06-27 +08:00"
     });
 
     expect(isWithinEventWindow({ createdAt: "2026-06-26T15:59:59.999Z" }, window)).toBe(false);
@@ -26,14 +26,14 @@ describe("event window", () => {
     const window = resolveEventWindow(
       {
         timezoneOffset: "+08:00",
-        windowHours: 36,
+        windowHours: 36
       },
-      new Date("2026-06-27T10:00:00.000Z"),
+      new Date("2026-06-27T10:00:00.000Z")
     );
 
     expect(window).toEqual({
       since: Date.parse("2026-06-25T22:00:00.000Z"),
-      label: "last 36 hours",
+      label: "last 36 hours"
     });
   });
 
@@ -43,13 +43,13 @@ describe("event window", () => {
       until: "2026-06-28T09:00:00+08:00",
       day: "2026-06-28",
       timezoneOffset: "+08:00",
-      windowHours: 36,
+      windowHours: 36
     });
 
     expect(window).toEqual({
       since: Date.parse("2026-06-27T09:00:00+08:00"),
       until: Date.parse("2026-06-28T09:00:00+08:00"),
-      label: "2026-06-27T09:00:00+08:00 to 2026-06-28T09:00:00+08:00",
+      label: "2026-06-27T09:00:00+08:00 to 2026-06-28T09:00:00+08:00"
     });
   });
 
@@ -58,38 +58,38 @@ describe("event window", () => {
       resolveEventWindow({
         since: "2026-06-27T09:00:00+08:00",
         timezoneOffset: "+08:00",
-        windowHours: 36,
-      }),
+        windowHours: 36
+      })
     ).toThrow(/set together/);
     expect(() =>
       resolveEventWindow({
         since: "nonsense",
         until: "2026-06-28T09:00:00+08:00",
         timezoneOffset: "+08:00",
-        windowHours: 36,
-      }),
+        windowHours: 36
+      })
     ).toThrow(/FEED_SINCE/);
     expect(() =>
       resolveEventWindow({
         since: "2026-06-28T09:00:00+08:00",
         until: "nonsense",
         timezoneOffset: "+08:00",
-        windowHours: 36,
-      }),
+        windowHours: 36
+      })
     ).toThrow(/FEED_UNTIL/);
     expect(() =>
       resolveEventWindow({
         since: "2026-06-28T09:00:00+08:00",
         until: "2026-06-27T09:00:00+08:00",
         timezoneOffset: "+08:00",
-        windowHours: 36,
-      }),
+        windowHours: 36
+      })
     ).toThrow(/must be after/);
-    expect(() =>
-      resolveEventWindow({ day: "06-27-2026", timezoneOffset: "+08:00", windowHours: 36 }),
-    ).toThrow(/FEED_DAY/);
-    expect(() =>
-      resolveEventWindow({ day: "2026-06-27", timezoneOffset: "bad", windowHours: 36 }),
-    ).toThrow(/FEED_TIMEZONE_OFFSET/);
+    expect(() => resolveEventWindow({ day: "06-27-2026", timezoneOffset: "+08:00", windowHours: 36 })).toThrow(
+      /FEED_DAY/
+    );
+    expect(() => resolveEventWindow({ day: "2026-06-27", timezoneOffset: "bad", windowHours: 36 })).toThrow(
+      /FEED_TIMEZONE_OFFSET/
+    );
   });
 });

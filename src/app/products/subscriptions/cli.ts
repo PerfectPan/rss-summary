@@ -15,17 +15,17 @@ type Writable = {
 /** `rss-summary digest [--rss-only] [digest options]` */
 export async function runDigestCommand(
   argv: string[],
-  deps: { stdout?: Writable; stderr?: Writable } = {},
+  deps: { stdout?: Writable; stderr?: Writable } = {}
 ): Promise<number> {
   const stderr = deps.stderr ?? process.stderr;
   const config = Effect.map(loadEnvConfig(), (base) => applyCliArgs(base, parseCliArgs(argv)));
   return runCliEffect(
     Effect.flatMap(config, (resolved) =>
       runSubscriptionFlow(resolved, (document, format) =>
-        format === "json" ? renderJsonDigest(document) : renderViewMarkdown(digestView(document)),
-      ),
+        format === "json" ? renderJsonDigest(document) : renderViewMarkdown(digestView(document))
+      )
     ),
-    { stderr, layer: appLayerFromConfig(config) },
+    { stderr, layer: appLayerFromConfig(config) }
   );
 }
 
@@ -35,7 +35,7 @@ import {
   addFeedSubscription,
   listCatalogFeeds,
   removeCatalogFeed,
-  RssFeed,
+  RssFeed
 } from "../../../acquisition/index.js";
 import { errorMessage } from "../../../kernel/index.js";
 import { runPluginEffect } from "../../runtime.js";
@@ -56,7 +56,7 @@ type ParsedArgs = {
 
 export async function runFeedsCommand(
   argv: string[] = process.argv.slice(2),
-  deps: FeedsCommandDeps = {},
+  deps: FeedsCommandDeps = {}
 ): Promise<number> {
   const stdout = deps.stdout ?? process.stdout;
   const stderr = deps.stderr ?? process.stderr;
@@ -84,8 +84,7 @@ export async function runFeedsCommand(
     if (args.command === "test") {
       const fetchFeedEvents =
         deps.fetchFeedEvents ??
-        ((feed: FeedSubscription) =>
-          runPluginEffect(RssFeed.use((rss) => rss.getFeedEvents(feed))));
+        ((feed: FeedSubscription) => runPluginEffect(RssFeed.use((rss) => rss.getFeedEvents(feed))));
       await testFeeds(stdout, await loadFeedsForTest(args), fetchFeedEvents);
       return 0;
     }
@@ -104,7 +103,9 @@ function parseArgs(argv: string[]): ParsedArgs {
 
   for (let index = 1; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (!arg.startsWith("--")) continue;
+    if (arg === undefined || !arg.startsWith("--")) {
+      continue;
+    }
     const value = argv[index + 1];
     if (!value || value.startsWith("--")) {
       throw new Error(`${arg} requires a value.`);
@@ -118,7 +119,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     file: options.file ?? "feeds.json",
     name: options.name,
     url: options.url,
-    tags: parseTags(options.tags),
+    tags: parseTags(options.tags)
   };
 }
 
@@ -127,17 +128,21 @@ function requireFeedInput(args: ParsedArgs): { name?: string; url: string; tags:
   return {
     name: args.name,
     url,
-    tags: args.tags,
+    tags: args.tags
   };
 }
 
 function requireUrl(args: ParsedArgs): string {
-  if (!args.url) throw new Error("--url is required.");
+  if (!args.url) {
+    throw new Error("--url is required.");
+  }
   return args.url;
 }
 
 async function loadFeedsForTest(args: ParsedArgs): Promise<FeedSubscription[]> {
-  if (args.url) return addFeedSubscription([], requireFeedInput(args));
+  if (args.url) {
+    return addFeedSubscription([], requireFeedInput(args));
+  }
   return runPluginEffect(listCatalogFeeds(args.file));
 }
 
@@ -155,7 +160,7 @@ function writeFeedList(stdout: Writable, feeds: FeedSubscription[], file: string
 async function testFeeds(
   stdout: Writable,
   feeds: FeedSubscription[],
-  fetchFeedEvents: (feed: FeedSubscription) => Promise<Acquired[]>,
+  fetchFeedEvents: (feed: FeedSubscription) => Promise<Acquired[]>
 ): Promise<void> {
   if (feeds.length === 0) {
     stdout.write("No RSS feeds to test.\n");
@@ -180,7 +185,9 @@ function writeHelp(stdout: Writable): void {
 }
 
 function parseTags(value: string | undefined): string[] {
-  if (!value) return [];
+  if (!value) {
+    return [];
+  }
   return value
     .split(",")
     .map((tag) => tag.trim())

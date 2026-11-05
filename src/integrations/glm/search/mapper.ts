@@ -16,21 +16,14 @@ export type GlmSearchAcquired = {
   domainRejected: number;
 };
 
-export function parseGlmSearchResults(
-  value: unknown,
-  allowed: readonly string[],
-): GlmSearchAcquired {
+export function parseGlmSearchResults(value: unknown, allowed: readonly string[]): GlmSearchAcquired {
   const records = glmResultList(value);
   const results: ResearchSearchResult[] = [];
   const items: Item[] = [];
   let domainRejected = 0;
   const seen = new Set<string>();
   for (const record of records) {
-    if (
-      typeof record.title !== "string" ||
-      typeof record.link !== "string" ||
-      !record.title.trim()
-    ) {
+    if (typeof record.title !== "string" || typeof record.link !== "string" || !record.title.trim()) {
       continue;
     }
     let url: URL;
@@ -46,16 +39,20 @@ export function parseGlmSearchResults(
       domainRejected++;
       continue;
     }
-    if (seen.has(url.href)) continue;
+    if (seen.has(url.href)) {
+      continue;
+    }
     seen.add(url.href);
     const result: ResearchSearchResult = {
       title: record.title.slice(0, 500),
       url: url.href,
-      snippet: text(record.content).slice(0, 3000),
+      snippet: text(record.content).slice(0, 3000)
     };
     results.push(result);
     items.push(itemFromGlm(result, results.length));
-    if (results.length === 10) break;
+    if (results.length === 10) {
+      break;
+    }
   }
   return { results, items, rawResults: records.length, domainRejected };
 }
@@ -77,6 +74,6 @@ function itemFromGlm(result: ResearchSearchResult, rankPosition: number): Item {
     credibility: { tier: "unrated" },
     signals: [],
     rank: { position: rankPosition },
-    display: { label: name, reference: result.url, facts: [] },
+    display: { label: name, reference: result.url, facts: [] }
   };
 }

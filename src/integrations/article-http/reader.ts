@@ -43,20 +43,23 @@ export class ArticleResearchClient {
       const response = await this.fetchImpl(url, {
         headers: {
           accept: "text/html, application/xhtml+xml, text/plain;q=0.8, */*;q=0.5",
-          "user-agent": "rss-summary/0.1 article-research",
+          "user-agent": "rss-summary/0.1 article-research"
         },
         redirect: "follow",
-        signal: AbortSignal.timeout(this.timeoutMs),
+        signal: AbortSignal.timeout(this.timeoutMs)
       });
-      if (!response.ok) throw new Error(`article returned HTTP ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`article returned HTTP ${response.status}`);
+      }
       const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
       if (contentType && !/(?:html|xhtml|text|xml)/u.test(contentType)) {
         throw new Error(`unsupported article content type: ${contentType}`);
       }
       const body = await readResponseBody(response, this.maxBytes);
       const extracted = this.extract(body, response.url || url, this.maxChars);
-      if (extracted.content.length < 80)
+      if (extracted.content.length < 80) {
         throw new Error("article body was too short after extraction");
+      }
       return {
         content: extracted.content,
         fetchedUrl: response.url || url,
@@ -65,7 +68,7 @@ export class ArticleResearchClient {
         retrievedAt,
         status: "ok",
         title: extracted.title,
-        url,
+        url
       };
     } catch (error) {
       return {
@@ -74,7 +77,7 @@ export class ArticleResearchClient {
         ref: request.ref,
         retrievedAt,
         status: "failed",
-        url: request.url,
+        url: request.url
       };
     }
   }
@@ -86,6 +89,8 @@ async function readResponseBody(response: Response, maxBytes: number): Promise<s
     throw new Error(`article response exceeded ${maxBytes} bytes`);
   }
   const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.byteLength > maxBytes) throw new Error(`article response exceeded ${maxBytes} bytes`);
+  if (bytes.byteLength > maxBytes) {
+    throw new Error(`article response exceeded ${maxBytes} bytes`);
+  }
   return new TextDecoder().decode(bytes);
 }

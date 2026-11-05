@@ -152,7 +152,7 @@ Do not set `NOTIFY_WEBHOOK_URL` for the Plugin path; Rivus owns delivery. Browse
 Keep `NEWS_SEARCH_STATE_FILE` outside replaceable package directories and use the same persistent file
 for Daily AI, standalone news and CLI callers in this deployment. Before enabling the new budget,
 carry forward observed current-month usage rather than starting an empty ledger. Query caps, limits,
-cache behavior and recovery steps are defined in [News search budget](news-search-budget.md).
+cache behavior and recovery steps are defined in [News search budget](../reference/news-search-budget.md).
 
 For articles, the subscription research Tool uses browser-first mode by default. On a Mac mini with Chrome installed, set
 `RSS_ARTICLE_BROWSER_CHANNEL=chrome` (the default), keep `RSS_ARTICLE_BROWSER_HEADLESS=true` for daemon runs,
@@ -217,5 +217,5 @@ Full collect/render snapshots are written atomically with private file permissio
 and phase. They are operational diagnostics, not delivery state, and must not enter Git.
 Daily AI render reuses collect evidence without another search. The obsolete
 `DAILY_AI_NEWS_MAX_QUERIES` has no effect.
-See [Grok X search](grok-x-search.md) for caps, usage interpretation and a no-send trial.
+See [Grok X search](../reference/grok-x-search.md) for caps, usage interpretation and a no-send trial.
 Changing these variables does not install the updated plugin or reload an existing host.

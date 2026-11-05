@@ -18,10 +18,8 @@ async function resolveTestConfig(stateFile: string) {
   const base = await Effect.runPromise(
     loadEnvConfig({
       GITHUB_USERNAME: "PerfectPan",
-      RSS_FEEDS: JSON.stringify([
-        { name: "Example Feed", url: "https://example.com/feed", tags: ["ai"] },
-      ]),
-    }),
+      RSS_FEEDS: JSON.stringify([{ name: "Example Feed", url: "https://example.com/feed", tags: ["ai"] }])
+    })
   );
   return applyCliArgs(
     base,
@@ -32,8 +30,8 @@ async function resolveTestConfig(stateFile: string) {
       "--until",
       "2026-07-15T00:00:00+08:00",
       "--state-file",
-      stateFile,
-    ]),
+      stateFile
+    ])
   );
 }
 
@@ -68,7 +66,7 @@ beforeEach(() => {
     if (url === "https://example.com/feed") {
       return new Response(feedXml, {
         status: 200,
-        headers: { "content-type": "application/rss+xml" },
+        headers: { "content-type": "application/rss+xml" }
       });
     }
     return new Response("not found", { status: 404 });
@@ -86,10 +84,7 @@ describe("digest source isolation", () => {
 
   it("keeps RSS candidates when GitHub Home is unavailable", async () => {
     const root = await mkdtemp(join(tmpdir(), "rss-summary-run-log-"));
-    vi.stubEnv(
-      "RSS_FEEDS",
-      JSON.stringify([{ name: "Example Feed", url: "https://example.com/feed", tags: ["ai"] }]),
-    );
+    vi.stubEnv("RSS_FEEDS", JSON.stringify([{ name: "Example Feed", url: "https://example.com/feed", tags: ["ai"] }]));
     vi.stubEnv("FEED_RUN_LOG_DIR", join(root, "runs"));
     process.argv = [
       "node",
@@ -100,7 +95,7 @@ describe("digest source isolation", () => {
       "--since",
       "2026-07-14T00:00:00+08:00",
       "--until",
-      "2026-07-15T00:00:00+08:00",
+      "2026-07-15T00:00:00+08:00"
     ];
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     captureStdout();
@@ -118,19 +113,17 @@ describe("digest source isolation", () => {
           "--since",
           "2026-07-14T00:00:00+08:00",
           "--until",
-          "2026-07-15T00:00:00+08:00",
-        ]),
+          "2026-07-15T00:00:00+08:00"
+        ])
       );
       const { runSubscriptionFlow } = await import("./flow.js");
       await Effect.runPromise(
         Effect.provide(
           runSubscriptionFlow(config, (document, format) =>
-            format === "json"
-              ? renderJsonDigest(document)
-              : renderViewMarkdown(digestView(document)),
+            format === "json" ? renderJsonDigest(document) : renderViewMarkdown(digestView(document))
           ),
-          AppLive(appLiveOptions(config)),
-        ),
+          AppLive(appLiveOptions(config))
+        )
       );
 
       expect(errorSpy).toHaveBeenCalledWith(expect.stringContaining("GitHub feed unavailable"));
@@ -151,7 +144,7 @@ describe("digest source isolation", () => {
       const { buildDigestDocument } = await import("./flow.js");
 
       const document = await Effect.runPromise(
-        Effect.provide(buildDigestDocument(config), AppLive(appLiveOptions(config))),
+        Effect.provide(buildDigestDocument(config), AppLive(appLiveOptions(config)))
       );
 
       expect(document.candidates).toHaveLength(1);
@@ -171,9 +164,9 @@ describe("digest source isolation", () => {
       JSON.stringify({
         seen: {},
         researched: {
-          "rss:https://example.com/post": { at: "2026-07-13T00:00:00Z", decision: "read" },
-        },
-      }),
+          "rss:https://example.com/post": { at: "2026-07-13T00:00:00Z", decision: "read" }
+        }
+      })
     );
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     try {
@@ -181,7 +174,7 @@ describe("digest source isolation", () => {
       const { buildDigestDocument } = await import("./flow.js");
 
       const document = await Effect.runPromise(
-        Effect.provide(buildDigestDocument(config), AppLive(appLiveOptions(config))),
+        Effect.provide(buildDigestDocument(config), AppLive(appLiveOptions(config)))
       );
 
       expect(document.candidates).toHaveLength(1);

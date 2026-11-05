@@ -1,19 +1,15 @@
 import {
   candidateEvidenceUrl,
   candidateIdentity,
-  researchKeyForCandidate,
+  researchKeyForCandidate
 } from "../../../integrations/shared/index.js";
 import {
   assembleSubscriptionEditorial,
   assembleSubscriptionEvidence,
-  selectedSubscriptionCandidates,
+  selectedSubscriptionCandidates
 } from "../../../editorial/index.js";
 
-import type {
-  CandidateProject,
-  PresentationDepth,
-  PresentationReasonCode,
-} from "../../../editorial/index.js";
+import type { CandidateProject, PresentationDepth, PresentationReasonCode } from "../../../editorial/index.js";
 
 /**
  * External JSON projections for the subscriptions product. The digest document
@@ -71,7 +67,7 @@ export type DigestAudit = {
 
 const evidenceIdentity = {
   identify: candidateIdentity,
-  fallbackUrl: (candidate: CandidateProject) => candidateEvidenceUrl(candidate),
+  fallbackUrl: (candidate: CandidateProject) => candidateEvidenceUrl(candidate)
 };
 
 export function subscriptionEvidenceId(candidate: CandidateProject): string {
@@ -82,21 +78,17 @@ export function buildSubscriptionEvidence(document: DigestDocument) {
   return assembleSubscriptionEvidence(document, evidenceIdentity);
 }
 
-export function buildSubscriptionEditorial(
-  document: DigestDocument,
-  draft?: unknown,
-  research?: unknown,
-) {
+export function buildSubscriptionEditorial(document: DigestDocument, draft?: unknown, research?: unknown) {
   return assembleSubscriptionEditorial(document, evidenceIdentity, draft, research);
 }
 
 export function applySubscriptionSelection<T extends DigestDocument>(
   document: T,
-  selection: Parameters<typeof selectedSubscriptionCandidates>[1],
+  selection: Parameters<typeof selectedSubscriptionCandidates>[1]
 ): T {
   return {
     ...document,
-    candidates: selectedSubscriptionCandidates(document.candidates, selection, candidateIdentity),
+    candidates: selectedSubscriptionCandidates(document.candidates, selection, candidateIdentity)
   };
 }
 
@@ -106,7 +98,7 @@ export { candidateIdentity, researchKeyForCandidate } from "../../../integration
 export function markCandidateResearched(
   state: { researched: Record<string, { at: string; decision?: string; reason?: string }> },
   candidate: CandidateProject,
-  record: { at: string; decision?: string; reason?: string },
+  record: { at: string; decision?: string; reason?: string }
 ): void {
   state.researched[researchKeyForCandidate(candidate)] = record;
 }

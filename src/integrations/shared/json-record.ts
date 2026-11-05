@@ -10,21 +10,27 @@ export function text(value: unknown): string | undefined {
     const normalized = value.trim();
     return normalized === "" ? undefined : normalized;
   }
-  if (isFiniteNumber(value)) return finiteNumberText(value);
+  if (isFiniteNumber(value)) {
+    return finiteNumberText(value);
+  }
   return undefined;
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   // Equivalent plain-object check: `[object Object]`, then a null prototype or a prototype whose constructor is Object.
-  if (value === null || typeof value !== "object") return false;
-  if (Object.prototype.toString.call(value) !== "[object Object]") return false;
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+  if (Object.prototype.toString.call(value) !== "[object Object]") {
+    return false;
+  }
   const proto: object | null = Object.getPrototypeOf(value);
-  if (proto === null) return true;
+  if (proto === null) {
+    return true;
+  }
   const ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
   return (
-    typeof ctor === "function" &&
-    ctor instanceof ctor &&
-    Function.prototype.toString.call(ctor) === objectCtorString
+    typeof ctor === "function" && ctor instanceof ctor && Function.prototype.toString.call(ctor) === objectCtorString
   );
 }
 
@@ -32,9 +38,7 @@ function isStringValue(value: unknown): value is string {
   // Primitive strings and boxed String objects; arrays are not strings.
   return (
     typeof value === "string" ||
-    (isObjectLike(value) &&
-      !Array.isArray(value) &&
-      Object.prototype.toString.call(value) === "[object String]")
+    (isObjectLike(value) && !Array.isArray(value) && Object.prototype.toString.call(value) === "[object String]")
   );
 }
 

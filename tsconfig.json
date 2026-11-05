@@ -1,15 +1,13 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
     "lib": ["ES2022", "DOM"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "strict": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
     "outDir": "dist",
     "types": ["node", "vitest/globals"]
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts"],
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "@perfectpan/lint-config/tsconfig/base.json"
 }

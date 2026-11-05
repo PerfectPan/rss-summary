@@ -9,9 +9,7 @@ import { activityGroupKey } from "./scoring-trace.js";
  * the underlying card ids; editorial treats the strings as opaque.
  */
 export type IdentitySubject = {
-  events: ReadonlyArray<
-    Pick<ActivityCardDto, "id" | "type" | "source" | "repo" | "prNumber" | "htmlUrl">
-  >;
+  events: ReadonlyArray<Pick<ActivityCardDto, "id" | "type" | "source" | "repo" | "prNumber" | "htmlUrl">>;
   source?: string;
   /** Candidate categories are compared structurally; see editorial's aggregate. */
   category: ActivityType | (string & {});
@@ -22,10 +20,15 @@ export type IdentitySubject = {
 /** Stable semantic identity used by audits and the delivery ledger. */
 export function candidateIdentity(candidate: IdentitySubject): string {
   const event = candidate.events[0];
-  if (event) return activityGroupKey(event);
-  if (candidate.source === "rss" || candidate.source === "web")
+  if (event) {
+    return activityGroupKey(event);
+  }
+  if (candidate.source === "rss" || candidate.source === "web") {
     return `publication:${candidate.url ?? candidate.repo}`;
-  if (candidate.category === "release") return `github-release:${candidate.url ?? candidate.repo}`;
+  }
+  if (candidate.category === "release") {
+    return `github-release:${candidate.url ?? candidate.repo}`;
+  }
   return `github-repository:${candidate.repo}`;
 }
 

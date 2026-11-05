@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import {
-  credibilityForAuthority,
-  deepSeekPublicationDay,
-  deepSeekSourcePolicies,
-} from "./mapper.js";
+import { credibilityForAuthority, deepSeekPublicationDay, deepSeekSourcePolicies } from "./mapper.js";
 
 describe("DeepSeek authority mapping", () => {
   it("maps an authority score onto the tiers without ever reaching official", () => {
@@ -26,11 +22,11 @@ describe("DeepSeek date granularity", () => {
     // 2026-08-16T16:00:00Z is midnight of Beijing day 2026-08-17.
     expect(deepSeekPublicationDay("2026-08-16T16:00:00Z")).toEqual({
       day: "2026-08-17",
-      timezoneOffset: "+08:00",
+      timezoneOffset: "+08:00"
     });
     expect(deepSeekPublicationDay("2026-12-31T16:00:00.000Z")).toEqual({
       day: "2027-01-01",
-      timezoneOffset: "+08:00",
+      timezoneOffset: "+08:00"
     });
   });
 

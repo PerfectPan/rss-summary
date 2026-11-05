@@ -11,9 +11,7 @@ describe("publication precision", () => {
   it("rejects impossible dates and keeps explicit instant offsets", () => {
     expect(newsPublicationRange("2026-02-30")).toBeUndefined();
     expect(newsPublicationRange(undefined)).toBeUndefined();
-    expect(newsPublicationRange("2026-09-29T09:30:00+08:00")?.since).toBe(
-      Date.parse("2026-09-29T01:30:00Z"),
-    );
+    expect(newsPublicationRange("2026-09-29T09:30:00+08:00")?.since).toBe(Date.parse("2026-09-29T01:30:00Z"));
   });
 
   it("resolves a known-timezone day to exactly that zone's 24 hours", () => {
@@ -22,17 +20,13 @@ describe("publication precision", () => {
     expect(result).toEqual({
       since: Date.parse("2026-09-28T00:00:00+08:00"),
       until: Date.parse("2026-09-29T00:00:00+08:00"),
-      precision: "day",
+      precision: "day"
     });
   });
 
   it("rejects impossible days and invalid offsets", () => {
-    expect(
-      newsPublicationDayRange({ day: "2026-02-30", timezoneOffset: "+08:00" }),
-    ).toBeUndefined();
+    expect(newsPublicationDayRange({ day: "2026-02-30", timezoneOffset: "+08:00" })).toBeUndefined();
     expect(newsPublicationDayRange({ day: "not-a-day", timezoneOffset: "+08:00" })).toBeUndefined();
-    expect(
-      newsPublicationDayRange({ day: "2026-09-28", timezoneOffset: "Beijing" }),
-    ).toBeUndefined();
+    expect(newsPublicationDayRange({ day: "2026-09-28", timezoneOffset: "Beijing" })).toBeUndefined();
   });
 });
