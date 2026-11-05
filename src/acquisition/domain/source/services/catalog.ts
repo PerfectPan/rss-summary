@@ -1,5 +1,69 @@
 import type { FeedSubscription, FeedSubscriptionInput, IndustrySource } from "../index.js";
 
+function hostnameOf(value: string): string {
+  try {
+    return new URL(value).hostname.replace(/^www\./u, "");
+  } catch {
+    return value;
+  }
+}
+
+function requireString(value: unknown, label: string): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`${label} is required.`);
+  }
+  return value.trim();
+}
+
+function ensureHttpUrl(value: string, label: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error(`${label} must be a valid URL.`);
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error(`${label} must use http or https.`);
+  }
+}
+
+function parseStringArray(value: unknown, label: string, required = true): string[] {
+  if (value === undefined && !required) {
+    return [];
+  }
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+    throw new Error(`${label} must be an array of strings.`);
+  }
+  return value.map((item) => item.trim()).filter(Boolean);
+}
+
+function optionalName(value: unknown, url: string): string {
+  return typeof value === "string" && value.trim() ? value.trim() : hostnameOf(url);
+}
+
+function parseFeedSubscriptionRecord(record: Record<string, unknown>): FeedSubscription {
+  const url = requireString(record.url, "RSS feed url");
+  ensureHttpUrl(url, "RSS feed url");
+  return {
+    name: optionalName(record.name, url),
+    url,
+    tags: parseStringArray(record.tags, "RSS feed tags", false)
+  };
+}
+
+function normalizeFeedSubscription(input: FeedSubscriptionInput): FeedSubscription {
+  const url = input.url.trim();
+  if (!url) {
+    throw new Error("RSS feed url is required.");
+  }
+
+  return {
+    name: input.name?.trim() || hostnameOf(url),
+    url,
+    tags: [...new Set((input.tags ?? []).map((tag) => tag.trim()).filter(Boolean))]
+  };
+}
+
 export function addFeedSubscription(
   feeds: readonly FeedSubscription[],
   input: FeedSubscriptionInput
@@ -92,68 +156,4 @@ export function parseIndustrySources(value: string): IndustrySource[] {
       tags: parseStringArray(record.tags, "Web page source tags", false)
     };
   });
-}
-
-function normalizeFeedSubscription(input: FeedSubscriptionInput): FeedSubscription {
-  const url = input.url.trim();
-  if (!url) {
-    throw new Error("RSS feed url is required.");
-  }
-
-  return {
-    name: input.name?.trim() || hostnameOf(url),
-    url,
-    tags: [...new Set((input.tags ?? []).map((tag) => tag.trim()).filter(Boolean))]
-  };
-}
-
-function parseFeedSubscriptionRecord(record: Record<string, unknown>): FeedSubscription {
-  const url = requireString(record.url, "RSS feed url");
-  ensureHttpUrl(url, "RSS feed url");
-  return {
-    name: optionalName(record.name, url),
-    url,
-    tags: parseStringArray(record.tags, "RSS feed tags", false)
-  };
-}
-
-function optionalName(value: unknown, url: string): string {
-  return typeof value === "string" && value.trim() ? value.trim() : hostnameOf(url);
-}
-
-function parseStringArray(value: unknown, label: string, required = true): string[] {
-  if (value === undefined && !required) {
-    return [];
-  }
-  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
-    throw new Error(`${label} must be an array of strings.`);
-  }
-  return value.map((item) => item.trim()).filter(Boolean);
-}
-
-function ensureHttpUrl(value: string, label: string): void {
-  let parsed: URL;
-  try {
-    parsed = new URL(value);
-  } catch {
-    throw new Error(`${label} must be a valid URL.`);
-  }
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new Error(`${label} must use http or https.`);
-  }
-}
-
-function requireString(value: unknown, label: string): string {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new Error(`${label} is required.`);
-  }
-  return value.trim();
-}
-
-function hostnameOf(value: string): string {
-  try {
-    return new URL(value).hostname.replace(/^www\./u, "");
-  } catch {
-    return value;
-  }
 }

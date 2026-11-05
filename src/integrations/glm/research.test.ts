@@ -3,29 +3,31 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { createGlmResearch } from "./research.js";
 
 function clientWith(payload: unknown, { sse = true, isError = false } = {}) {
-  const fetchMock = vi.fn(async (_url: unknown, init?: RequestInit) => {
-    const request = JSON.parse(String(init?.body));
-    if (request.method === "notifications/initialized") {
-      return new Response(null, { status: 202 });
-    }
-    const message = {
-      jsonrpc: "2.0",
-      id: request.id,
-      result:
-        request.method === "initialize"
-          ? { protocolVersion: "2024-11-05" }
-          : { isError, content: [{ type: "text", text: JSON.stringify(JSON.stringify(payload)) }] }
-    };
-    return new Response(
-      sse ? `: heartbeat\r\n\r\nevent: message\r\ndata: ${JSON.stringify(message)}\r\n\r\n` : JSON.stringify(message),
-      {
-        headers: {
-          "Content-Type": sse ? "text/event-stream" : "application/json",
-          "Mcp-Session-Id": "test-session"
-        }
+  const fetchMock = vi.fn<(_url: unknown, init?: RequestInit) => Promise<Response>>(
+    async (_url: unknown, init?: RequestInit) => {
+      const request = JSON.parse(String(init?.body));
+      if (request.method === "notifications/initialized") {
+        return new Response(null, { status: 202 });
       }
-    );
-  });
+      const message = {
+        jsonrpc: "2.0",
+        id: request.id,
+        result:
+          request.method === "initialize"
+            ? { protocolVersion: "2024-11-05" }
+            : { isError, content: [{ type: "text", text: JSON.stringify(JSON.stringify(payload)) }] }
+      };
+      return new Response(
+        sse ? `: heartbeat\r\n\r\nevent: message\r\ndata: ${JSON.stringify(message)}\r\n\r\n` : JSON.stringify(message),
+        {
+          headers: {
+            "Content-Type": sse ? "text/event-stream" : "application/json",
+            "Mcp-Session-Id": "test-session"
+          }
+        }
+      );
+    }
+  );
   return {
     client: createGlmResearch({ apiKey: "test-key", fetch: fetchMock as typeof fetch }),
     fetchMock
@@ -110,7 +112,7 @@ describe("GLM research composition", () => {
     ).rejects.toThrow("GLM read tool failed.");
     const client = createGlmResearch({
       apiKey: "secret",
-      fetch: vi.fn(async () => new Response("secret", { status: 401 })) as typeof fetch
+      fetch: vi.fn<() => Promise<Response>>(async () => new Response("secret", { status: 401 })) as typeof fetch
     });
     await expect(client.read("https://example.com")).rejects.toThrow("GLM MCP HTTP 401.");
   });
@@ -119,14 +121,14 @@ describe("GLM research composition", () => {
     for (const body of ["not json", "x".repeat(2_000_001), JSON.stringify({ id: 99, result: {} })]) {
       const client = createGlmResearch({
         apiKey: "secret",
-        fetch: vi.fn(async () => new Response(body)) as typeof fetch
+        fetch: vi.fn<() => Promise<Response>>(async () => new Response(body)) as typeof fetch
       });
       await expect(client.read("https://example.com")).rejects.toThrow("size/time limits or was invalid");
     }
   });
 
   it("uses one deadline across the operation and does not retry failed calls", async () => {
-    const fetchMock = vi.fn(
+    const fetchMock = vi.fn<(_url: unknown, init?: RequestInit) => Promise<Response>>(
       async (_url: unknown, init?: RequestInit) =>
         new Promise<Response>((_resolve, reject) => {
           init?.signal?.addEventListener("abort", () => reject(new Error("sensitive network error")), { once: true });
@@ -178,7 +180,7 @@ it("preserves a publication date without inventing a time", async () => {
 
 it("passes source, week and region constraints and reports discarded raw hits", async () => {
   const { client, fetchMock } = clientWith([{ title: "outside", link: "https://other.com/post" }]);
-  const observe = vi.fn();
+  const observe = vi.fn<(counts: { rawResults: number; domainRejected: number }) => void>();
   await client.search("release", ["example.com"], "oneWeek", observe, "us");
   expect(JSON.parse(String(fetchMock.mock.calls[2]![1]?.body)).params.arguments).toMatchObject({
     search_domain_filter: "example.com",

@@ -47,6 +47,25 @@ export function deepSeekOutgoingQuery(query: string, sinceDay?: string): string 
   return `${keywords} ${operator}`;
 }
 
+function errorText(value: unknown): string {
+  return value instanceof Error ? value.message : String(value);
+}
+
+function parseRetryAfter(value: string | null): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Math.round(seconds * 1_000);
+  }
+  const date = Date.parse(value);
+  if (!Number.isFinite(date)) {
+    return undefined;
+  }
+  return Math.max(0, date - Date.now());
+}
+
 export class DeepSeekSearchClient {
   private readonly apiKey: string;
   private readonly baseUrl: string;
@@ -97,23 +116,4 @@ export class DeepSeekSearchClient {
     }
     return parseDeepSeekResponse(body, retryAfterMs).page;
   }
-}
-
-function errorText(value: unknown): string {
-  return value instanceof Error ? value.message : String(value);
-}
-
-function parseRetryAfter(value: string | null): number | undefined {
-  if (!value) {
-    return undefined;
-  }
-  const seconds = Number(value);
-  if (Number.isFinite(seconds) && seconds >= 0) {
-    return Math.round(seconds * 1_000);
-  }
-  const date = Date.parse(value);
-  if (!Number.isFinite(date)) {
-    return undefined;
-  }
-  return Math.max(0, date - Date.now());
 }

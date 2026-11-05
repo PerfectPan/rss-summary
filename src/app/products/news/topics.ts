@@ -22,85 +22,6 @@ const newsTopicLimits = {
   maxTotalQueries: 32
 } as const;
 
-export function loadNewsTopics(filePath = defaultNewsTopicsFile()): NewsTopic[] {
-  return parseNewsTopics(readFileSync(filePath, "utf8"));
-}
-
-export function parseNewsTopics(value: string): NewsTopic[] {
-  const parsed: unknown = JSON.parse(value);
-  if (!Array.isArray(parsed)) {
-    throw new Error("News topic configuration must be a JSON array.");
-  }
-  if (parsed.length > newsTopicLimits.maxTopics) {
-    throw new Error(`News topic configuration supports at most ${newsTopicLimits.maxTopics} topics.`);
-  }
-
-  const ids = new Set<string>();
-  const queryIds = new Set<string>();
-  const topics = parsed.map((item, index) => {
-    const record = requireRecord(item, `news topic ${index + 1}`);
-    const id = requiredString(record.id, `news topic ${index + 1} id`);
-    if (!topicIdPattern.test(id)) {
-      throw new Error(`News topic id must use kebab-case: ${id}`);
-    }
-    if (ids.has(id)) {
-      throw new Error(`Duplicate news topic id: ${id}`);
-    }
-    ids.add(id);
-
-    const label = requiredString(record.label, `news topic ${id} label`);
-    const icon = requiredString(record.icon ?? "📰", `news topic ${id} icon`);
-    const enabled = optionalBoolean(record.enabled, true, `news topic ${id} enabled`);
-    const sourcePolicy = parseSourcePolicy(record.sourcePolicy, id);
-    const maxItems = requirePositiveInteger(record.maxItems, 5, `news topic ${id} maxItems`);
-    if (maxItems > newsTopicLimits.maxItemsPerTopic) {
-      throw new Error(`News topic ${id} maxItems must not exceed ${newsTopicLimits.maxItemsPerTopic}.`);
-    }
-    if (!Array.isArray(record.queries) || record.queries.length === 0) {
-      throw new Error(`News topic ${id} must define at least one query.`);
-    }
-    if (record.queries.length > newsTopicLimits.maxQueriesPerTopic) {
-      throw new Error(`News topic ${id} supports at most ${newsTopicLimits.maxQueriesPerTopic} queries.`);
-    }
-    const queries = record.queries.map((query, queryIndex) => parseQuery(query, id, queryIndex, queryIds));
-
-    return { id, label, icon, enabled, sourcePolicy, maxItems, queries };
-  });
-  const totalQueries = topics.reduce((total, topic) => total + topic.queries.length, 0);
-  if (totalQueries > newsTopicLimits.maxTotalQueries) {
-    throw new Error(`News topic configuration supports at most ${newsTopicLimits.maxTotalQueries} queries.`);
-  }
-  return topics;
-}
-
-function parseQuery(value: unknown, topicId: string, queryIndex: number, queryIds: Set<string>): NewsTopicQuery {
-  const context = `news topic ${topicId} query ${queryIndex + 1}`;
-  const record = requireRecord(value, context);
-  const id = requiredString(record.id, `${context} id`);
-  if (!queryIdPattern.test(id)) {
-    throw new Error(`News query id must use kebab-case: ${id}`);
-  }
-  if (queryIds.has(id)) {
-    throw new Error(`Duplicate news query id: ${id}`);
-  }
-  queryIds.add(id);
-  const text = requiredString(record.text, `${context} text`);
-  if (text.length > maxSearchQueryLength) {
-    throw new Error(`${context} text must not exceed ${maxSearchQueryLength} characters.`);
-  }
-  const intent = parseQueryIntent(record.intent, id);
-  return {
-    id,
-    text,
-    intent,
-    ...(record.glm === undefined ? {} : { glm: parseGlmQuery(record.glm, context) }),
-    ...(record.deepseek === undefined ? {} : { deepseek: parseDeepSeekQuery(record.deepseek, context) }),
-    subjectAny: parseTerms(record.subjectAny, `${context} subjectAny`, true),
-    eventAny: parseTerms(record.eventAny, `${context} eventAny`, true),
-    excludedAny: parseTerms(record.excludedAny, `${context} excludedAny`, false)
-  };
-}
-
 /** Keywords for the parallel supplement search; one request per keyword. */
 function parseDeepSeekQuery(value: unknown, context: string): { queries: string[] } {
   const record = requireRecord(value, `${context} deepseek`);
@@ -177,4 +98,83 @@ function parseGlmQuery(value: unknown, context: string): NonNullable<NewsTopicQu
     }
   }
   return { query, domains: [...new Set(domains)], ...(sourceQueries ? { sourceQueries } : {}) };
+}
+
+function parseQuery(value: unknown, topicId: string, queryIndex: number, queryIds: Set<string>): NewsTopicQuery {
+  const context = `news topic ${topicId} query ${queryIndex + 1}`;
+  const record = requireRecord(value, context);
+  const id = requiredString(record.id, `${context} id`);
+  if (!queryIdPattern.test(id)) {
+    throw new Error(`News query id must use kebab-case: ${id}`);
+  }
+  if (queryIds.has(id)) {
+    throw new Error(`Duplicate news query id: ${id}`);
+  }
+  queryIds.add(id);
+  const text = requiredString(record.text, `${context} text`);
+  if (text.length > maxSearchQueryLength) {
+    throw new Error(`${context} text must not exceed ${maxSearchQueryLength} characters.`);
+  }
+  const intent = parseQueryIntent(record.intent, id);
+  return {
+    id,
+    text,
+    intent,
+    ...(record.glm === undefined ? {} : { glm: parseGlmQuery(record.glm, context) }),
+    ...(record.deepseek === undefined ? {} : { deepseek: parseDeepSeekQuery(record.deepseek, context) }),
+    subjectAny: parseTerms(record.subjectAny, `${context} subjectAny`, true),
+    eventAny: parseTerms(record.eventAny, `${context} eventAny`, true),
+    excludedAny: parseTerms(record.excludedAny, `${context} excludedAny`, false)
+  };
+}
+
+export function parseNewsTopics(value: string): NewsTopic[] {
+  const parsed: unknown = JSON.parse(value);
+  if (!Array.isArray(parsed)) {
+    throw new Error("News topic configuration must be a JSON array.");
+  }
+  if (parsed.length > newsTopicLimits.maxTopics) {
+    throw new Error(`News topic configuration supports at most ${newsTopicLimits.maxTopics} topics.`);
+  }
+
+  const ids = new Set<string>();
+  const queryIds = new Set<string>();
+  const topics = parsed.map((item, index) => {
+    const record = requireRecord(item, `news topic ${index + 1}`);
+    const id = requiredString(record.id, `news topic ${index + 1} id`);
+    if (!topicIdPattern.test(id)) {
+      throw new Error(`News topic id must use kebab-case: ${id}`);
+    }
+    if (ids.has(id)) {
+      throw new Error(`Duplicate news topic id: ${id}`);
+    }
+    ids.add(id);
+
+    const label = requiredString(record.label, `news topic ${id} label`);
+    const icon = requiredString(record.icon ?? "📰", `news topic ${id} icon`);
+    const enabled = optionalBoolean(record.enabled, true, `news topic ${id} enabled`);
+    const sourcePolicy = parseSourcePolicy(record.sourcePolicy, id);
+    const maxItems = requirePositiveInteger(record.maxItems, 5, `news topic ${id} maxItems`);
+    if (maxItems > newsTopicLimits.maxItemsPerTopic) {
+      throw new Error(`News topic ${id} maxItems must not exceed ${newsTopicLimits.maxItemsPerTopic}.`);
+    }
+    if (!Array.isArray(record.queries) || record.queries.length === 0) {
+      throw new Error(`News topic ${id} must define at least one query.`);
+    }
+    if (record.queries.length > newsTopicLimits.maxQueriesPerTopic) {
+      throw new Error(`News topic ${id} supports at most ${newsTopicLimits.maxQueriesPerTopic} queries.`);
+    }
+    const queries = record.queries.map((query, queryIndex) => parseQuery(query, id, queryIndex, queryIds));
+
+    return { id, label, icon, enabled, sourcePolicy, maxItems, queries };
+  });
+  const totalQueries = topics.reduce((total, topic) => total + topic.queries.length, 0);
+  if (totalQueries > newsTopicLimits.maxTotalQueries) {
+    throw new Error(`News topic configuration supports at most ${newsTopicLimits.maxTotalQueries} queries.`);
+  }
+  return topics;
+}
+
+export function loadNewsTopics(filePath = defaultNewsTopicsFile()): NewsTopic[] {
+  return parseNewsTopics(readFileSync(filePath, "utf8"));
 }

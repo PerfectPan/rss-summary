@@ -23,7 +23,7 @@ function fallbackProvider(
   sourcePolicies: readonly SearchInput["sourcePolicy"][] = ["news", "authoritative"]
 ): FallbackSearchProvider & { search: ReturnType<typeof vi.fn> } {
   return {
-    search: vi.fn(() => Effect.succeed(page)),
+    search: vi.fn<() => Effect.Effect<SearchPage, never>>(() => Effect.succeed(page)),
     sourcePolicies
   };
 }

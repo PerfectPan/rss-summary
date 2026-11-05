@@ -3,47 +3,6 @@ import type { Acquired, ActivityCardDto, ActivityType } from "../../../acquisiti
 import { itemFromGitHubCard } from "../../shared/activity-card.js";
 import { homeSnapshot, type HomeFeedCardSnapshot, type HomeFeedLinkSnapshot } from "./dto.js";
 
-export function acquireHomeCard(input: unknown): Acquired {
-  const card = normalizeHomeCardSnapshot(homeSnapshot(input));
-  return { card, item: itemFromGitHubCard(card) };
-}
-
-export function acquireHomeCards(inputs: readonly unknown[]): Acquired[] {
-  return inputs.flatMap((input) => {
-    const acquired = acquireHomeCard(input);
-    return acquired.card.type === "other" ? [] : [acquired];
-  });
-}
-
-export function normalizeHomeCardSnapshots(cards: HomeFeedCardSnapshot[]): ActivityCardDto[] {
-  return cards.map(normalizeHomeCardSnapshot).filter((card) => card.type !== "other");
-}
-
-export function normalizeHomeCardSnapshot(snapshot: HomeFeedCardSnapshot): ActivityCardDto {
-  const cardType = stringField(snapshot.card, "card_type");
-  const createdAt = stringField(snapshot.card, "created_at");
-  const pullRequest = findPullRequestLink(snapshot.links);
-  const repository = pullRequest?.repo
-    ? { fullName: pullRequest.repo, htmlUrl: repoUrl(pullRequest.repo) }
-    : findRepositoryLink(snapshot.links);
-  const normalized = normalizeHomeCardType(cardType);
-  const actor = usesSyntheticActor(normalized.type) ? "GitHub Home" : (findActor(snapshot.links) ?? "GitHub Home");
-
-  return {
-    id: snapshot.id || fallbackId(cardType, repository?.fullName, createdAt),
-    type: normalized.type,
-    source: "github",
-    actor,
-    repo: repository?.fullName ?? "",
-    createdAt,
-    action: normalized.action,
-    prNumber: pullRequest?.number,
-    htmlUrl: pullRequest?.href ?? repository?.htmlUrl,
-    title: pullRequest?.title ?? repository?.fullName,
-    summary: cleanSummary(snapshot.text)
-  };
-}
-
 function normalizeHomeCardType(cardType: string): { type: ActivityType; action: string } {
   if (cardType === "MERGED_PULL_REQUEST") {
     return { type: "pull_request", action: "merged" };
@@ -76,6 +35,42 @@ function normalizeHomeCardType(cardType: string): { type: ActivityType; action: 
     return { type: "release", action: "published" };
   }
   return { type: "other", action: cardType.toLowerCase() };
+}
+
+function usesSyntheticActor(type: ActivityType): boolean {
+  return type === "trending" || type === "recommendation";
+}
+
+function parseGithubUrl(
+  href: string
+):
+  | { kind: "repo"; repo: string }
+  | { kind: "pull"; repo: string; number: number }
+  | { kind: "user"; login: string }
+  | undefined {
+  let url: URL;
+  try {
+    url = new URL(href);
+  } catch {
+    return undefined;
+  }
+  if (url.hostname !== "github.com") {
+    return undefined;
+  }
+  const parts = url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
+  if (parts.length === 1) {
+    return { kind: "user", login: parts[0] ?? "" };
+  }
+  if (parts.length >= 4 && parts[2] === "pull") {
+    const number = Number(parts[3]);
+    if (Number.isInteger(number)) {
+      return { kind: "pull", repo: `${parts[0]}/${parts[1]}`, number };
+    }
+  }
+  if (parts.length === 2) {
+    return { kind: "repo", repo: `${parts[0]}/${parts[1]}` };
+  }
+  return undefined;
 }
 
 function findPullRequestLink(links: HomeFeedLinkSnapshot[]):
@@ -130,49 +125,13 @@ function findActor(links: HomeFeedLinkSnapshot[]): string | undefined {
   return undefined;
 }
 
-function usesSyntheticActor(type: ActivityType): boolean {
-  return type === "trending" || type === "recommendation";
-}
-
-function parseGithubUrl(
-  href: string
-):
-  | { kind: "repo"; repo: string }
-  | { kind: "pull"; repo: string; number: number }
-  | { kind: "user"; login: string }
-  | undefined {
-  let url: URL;
-  try {
-    url = new URL(href);
-  } catch {
-    return undefined;
-  }
-  if (url.hostname !== "github.com") {
-    return undefined;
-  }
-  const parts = url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
-  if (parts.length === 1) {
-    return { kind: "user", login: parts[0] ?? "" };
-  }
-  if (parts.length >= 4 && parts[2] === "pull") {
-    const number = Number(parts[3]);
-    if (Number.isInteger(number)) {
-      return { kind: "pull", repo: `${parts[0]}/${parts[1]}`, number };
-    }
-  }
-  if (parts.length === 2) {
-    return { kind: "repo", repo: `${parts[0]}/${parts[1]}` };
-  }
-  return undefined;
+function cleanText(text: string): string {
+  return text.replace(/\s+/gu, " ").trim();
 }
 
 function cleanSummary(text: string): string | undefined {
   const cleaned = cleanText(text);
   return cleaned ? cleaned : undefined;
-}
-
-function cleanText(text: string): string {
-  return text.replace(/\s+/gu, " ").trim();
 }
 
 function repoUrl(fullName: string): string {
@@ -186,4 +145,45 @@ function fallbackId(cardType: string, repo: string | undefined, createdAt: strin
 function stringField(record: Record<string, unknown> | null, key: string): string {
   const value = record?.[key];
   return typeof value === "string" ? value : "";
+}
+
+export function normalizeHomeCardSnapshot(snapshot: HomeFeedCardSnapshot): ActivityCardDto {
+  const cardType = stringField(snapshot.card, "card_type");
+  const createdAt = stringField(snapshot.card, "created_at");
+  const pullRequest = findPullRequestLink(snapshot.links);
+  const repository = pullRequest?.repo
+    ? { fullName: pullRequest.repo, htmlUrl: repoUrl(pullRequest.repo) }
+    : findRepositoryLink(snapshot.links);
+  const normalized = normalizeHomeCardType(cardType);
+  const actor = usesSyntheticActor(normalized.type) ? "GitHub Home" : (findActor(snapshot.links) ?? "GitHub Home");
+
+  return {
+    id: snapshot.id || fallbackId(cardType, repository?.fullName, createdAt),
+    type: normalized.type,
+    source: "github",
+    actor,
+    repo: repository?.fullName ?? "",
+    createdAt,
+    action: normalized.action,
+    prNumber: pullRequest?.number,
+    htmlUrl: pullRequest?.href ?? repository?.htmlUrl,
+    title: pullRequest?.title ?? repository?.fullName,
+    summary: cleanSummary(snapshot.text)
+  };
+}
+
+export function acquireHomeCard(input: unknown): Acquired {
+  const card = normalizeHomeCardSnapshot(homeSnapshot(input));
+  return { card, item: itemFromGitHubCard(card) };
+}
+
+export function acquireHomeCards(inputs: readonly unknown[]): Acquired[] {
+  return inputs.flatMap((input) => {
+    const acquired = acquireHomeCard(input);
+    return acquired.card.type === "other" ? [] : [acquired];
+  });
+}
+
+export function normalizeHomeCardSnapshots(cards: HomeFeedCardSnapshot[]): ActivityCardDto[] {
+  return cards.map(normalizeHomeCardSnapshot).filter((card) => card.type !== "other");
 }

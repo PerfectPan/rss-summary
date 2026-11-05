@@ -46,37 +46,6 @@ export function publicationAcquired(card: ActivityCardDto): Acquired {
   };
 }
 
-export function itemFromGitHubCard(card: ActivityCardDto): Item {
-  const signal = signalFor(card);
-  const reference = card.htmlUrl;
-  return {
-    id: card.id,
-    kind: kindFor(card.type),
-    subject: {
-      key: subjectKey(card),
-      name: card.repo || card.actor,
-      ...(reference ? { url: reference } : {})
-    },
-    content: {
-      ...(card.title ? { title: card.title } : {}),
-      ...(card.summary ? { excerpt: card.summary } : {}),
-      ...(reference ? { url: reference } : {})
-    },
-    publishedAt: { value: card.createdAt, precision: "instant" },
-    provenance: {
-      origin: reference || (card.repo ? `https://github.com/${card.repo}` : card.actor),
-      ...(card.actor ? { actor: { name: card.actor, followed: false } } : {})
-    },
-    credibility: { tier: "unrated" },
-    signals: signal ? [signal] : [],
-    display: {
-      ...(displayLabel(card) ? { label: displayLabel(card) } : {}),
-      ...(reference ? { reference } : {}),
-      facts: []
-    }
-  };
-}
-
 function signalFor(card: ActivityCardDto): { type: SignalType; label: string } | undefined {
   if (card.type === "watch") {
     return { type: "endorsed", label: "followee starred this repository" };
@@ -153,4 +122,35 @@ function displayLabel(card: ActivityCardDto): string | undefined {
   const number = card.prNumber ? ` #${card.prNumber}` : "";
   const title = card.title ? ` · ${card.title}` : "";
   return `${card.repo}${number}${title}`;
+}
+
+export function itemFromGitHubCard(card: ActivityCardDto): Item {
+  const signal = signalFor(card);
+  const reference = card.htmlUrl;
+  return {
+    id: card.id,
+    kind: kindFor(card.type),
+    subject: {
+      key: subjectKey(card),
+      name: card.repo || card.actor,
+      ...(reference ? { url: reference } : {})
+    },
+    content: {
+      ...(card.title ? { title: card.title } : {}),
+      ...(card.summary ? { excerpt: card.summary } : {}),
+      ...(reference ? { url: reference } : {})
+    },
+    publishedAt: { value: card.createdAt, precision: "instant" },
+    provenance: {
+      origin: reference || (card.repo ? `https://github.com/${card.repo}` : card.actor),
+      ...(card.actor ? { actor: { name: card.actor, followed: false } } : {})
+    },
+    credibility: { tier: "unrated" },
+    signals: signal ? [signal] : [],
+    display: {
+      ...(displayLabel(card) ? { label: displayLabel(card) } : {}),
+      ...(reference ? { reference } : {}),
+      facts: []
+    }
+  };
 }

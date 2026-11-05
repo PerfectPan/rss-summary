@@ -5,7 +5,8 @@ import { runGithubHomeCommand, writeGithubHomeHelp } from "./github-home.js";
 
 vi.mock("../../integrations/github/index.js", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
-  saveLoginStorageState: vi.fn()
+  saveLoginStorageState:
+    vi.fn<(options: { storageState: string; browserChannel?: string }) => Effect.Effect<void, Error>>()
 }));
 
 import { saveLoginStorageState } from "../../integrations/github/index.js";

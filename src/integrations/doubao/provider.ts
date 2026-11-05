@@ -11,6 +11,10 @@ export type DoubaoSearchClientOptions = {
   timeoutMs?: number;
 };
 
+function errorText(value: unknown): string {
+  return value instanceof Error ? value.message : String(value);
+}
+
 export const DoubaoSearchLive = (options: DoubaoSearchClientOptions): Layer.Layer<SearchProvider> => {
   const client = new DoubaoSearchClient(options);
   return Layer.succeed(SearchProvider, {
@@ -21,7 +25,3 @@ export const DoubaoSearchLive = (options: DoubaoSearchClientOptions): Layer.Laye
       })
   });
 };
-
-function errorText(value: unknown): string {
-  return value instanceof Error ? value.message : String(value);
-}

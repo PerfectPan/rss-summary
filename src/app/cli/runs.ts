@@ -9,6 +9,24 @@ import { runPluginEffect } from "../runtime.js";
 
 type Writable = { write(chunk: string): unknown };
 
+function run<A, E>(effect: Effect.Effect<A, E, RunArchive>): Promise<A> {
+  return runPluginEffect(effect);
+}
+
+function valueFor(argv: string[], flag: string): string | undefined {
+  const index = argv.indexOf(flag);
+  const value = index >= 0 ? argv[index + 1] : undefined;
+  return value && !value.startsWith("--") ? value : undefined;
+}
+
+function writeRunsHelp(stdout: Writable): void {
+  stdout.write(`Usage:
+  rss-summary runs list [--dir .state/runs]
+  rss-summary runs failures [--dir .state/runs]
+  rss-summary runs show <artifact-path-or-label> [--dir .state/runs]
+`);
+}
+
 export async function runRunsCommand(
   argv: string[],
   deps: { stdout?: Writable; stderr?: Writable; env?: NodeJS.ProcessEnv } = {}
@@ -56,22 +74,4 @@ export async function runRunsCommand(
     stderr.write(`${errorMessage(error)}\n`);
     return 1;
   }
-}
-
-function run<A, E>(effect: Effect.Effect<A, E, RunArchive>): Promise<A> {
-  return runPluginEffect(effect);
-}
-
-function valueFor(argv: string[], flag: string): string | undefined {
-  const index = argv.indexOf(flag);
-  const value = index >= 0 ? argv[index + 1] : undefined;
-  return value && !value.startsWith("--") ? value : undefined;
-}
-
-function writeRunsHelp(stdout: Writable): void {
-  stdout.write(`Usage:
-  rss-summary runs list [--dir .state/runs]
-  rss-summary runs failures [--dir .state/runs]
-  rss-summary runs show <artifact-path-or-label> [--dir .state/runs]
-`);
 }

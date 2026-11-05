@@ -31,6 +31,22 @@ describe("subscriptions digest CLI", () => {
   });
 });
 
+async function nodeMessage(readOrWrite: () => void | Promise<void>): Promise<string> {
+  try {
+    await readOrWrite();
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  throw new Error("expected the Node filesystem call to fail");
+}
+
+async function historicalSaveMessage(path: string): Promise<string> {
+  return nodeMessage(() => {
+    mkdirSync(dirname(path), { recursive: true });
+    writeFileSync(path, "unused");
+  });
+}
+
 describe("feeds CLI", () => {
   it("adds and lists RSS feeds through a file", async () => {
     const file = join(mkdtempSync(join(tmpdir(), "rss-summary-feeds-")), "feeds.json");
@@ -146,19 +162,3 @@ describe("feeds CLI", () => {
     }
   });
 });
-
-async function historicalSaveMessage(path: string): Promise<string> {
-  return nodeMessage(() => {
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, "unused");
-  });
-}
-
-async function nodeMessage(readOrWrite: () => void | Promise<void>): Promise<string> {
-  try {
-    await readOrWrite();
-  } catch (error) {
-    return error instanceof Error ? error.message : String(error);
-  }
-  throw new Error("expected the Node filesystem call to fail");
-}

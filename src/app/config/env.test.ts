@@ -454,7 +454,7 @@ describe("app/config/env daily-ai and video variables", () => {
   };
 
   it("defaults DAILY_AI_X_HANDLES to ClaudeDevs and treats empty as disabled", async () => {
-    const xAccounts = vi.fn(
+    const xAccounts = vi.fn<(_value: { handles: string[] }) => Promise<XAccountPosts>>(
       async (_value: { handles: string[] }): Promise<XAccountPosts> => ({ posts: [], audit: [] })
     );
     await generateDailyAiDigest({ occurrence }, { env: {}, industry: async () => official, xAccounts });

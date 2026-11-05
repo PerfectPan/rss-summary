@@ -12,7 +12,7 @@ import {
   type RivusNewsBriefResult
 } from "./flow.js";
 import type { NewsTopicQuery } from "./output.js";
-import { NewsSearchError, type NewsSearchInput } from "../../../acquisition/index.js";
+import { NewsSearchError, type NewsSearchInput, type NewsSearchResult } from "../../../acquisition/index.js";
 import { DoubaoSearchError } from "../../../integrations/doubao/index.js";
 import { GrokSearchClient } from "../../../integrations/grok/index.js";
 import { newsView } from "../../render/layouts/news.js";
@@ -35,12 +35,38 @@ function withNewsMarkdown(result: RivusNewsBriefResult) {
   };
 }
 
+function newsQuery(id: string, text: string, eventAny = ["安全更新"], subjectAny = [text]): NewsTopicQuery {
+  return {
+    id,
+    text,
+    intent: "developer-change",
+    subjectAny,
+    eventAny,
+    excludedAny: ["评测"]
+  };
+}
+
+function newsTopic(id: string, queryIds: string[]) {
+  return {
+    id,
+    label: id,
+    icon: "📰",
+    enabled: true,
+    sourcePolicy: "authoritative" as const,
+    maxItems: 3,
+    queries: queryIds.map((queryId) => newsQuery(queryId, queryId))
+  };
+}
+
 describe("Rivus news brief Tool adapter", () => {
   it("rotates four of seven queries and reports deferred coverage", async () => {
     const queryIds = ["one", "two", "three", "four", "five", "six", "seven"];
     const covered = new Set<string>();
     for (const occurrence of ["2026-10-04T12:30:00+08:00", "2026-10-05T12:30:00+08:00", "2026-10-06T12:30:00+08:00"]) {
-      const search = vi.fn(async () => ({ resultCount: 0, results: [] }));
+      const search = vi.fn<() => Promise<{ resultCount: number; results: never[] }>>(async () => ({
+        resultCount: 0,
+        results: []
+      }));
       const result = await Effect.runPromise(
         generateRivusNewsBrief(
           { edition: "noon", occurrence },
@@ -68,7 +94,7 @@ describe("Rivus news brief Tool adapter", () => {
     "uses the complete explicit window at %s regardless of edition cutoff",
     async (occurrence) => {
       const until = Date.parse(occurrence);
-      const search = vi.fn(async () => ({
+      const search = vi.fn<() => Promise<{ resultCount: number; results: NewsSearchResult[] }>>(async () => ({
         resultCount: 2,
         results: [
           {
@@ -112,10 +138,10 @@ describe("Rivus news brief Tool adapter", () => {
   it("counts HTTP retries across invocations and explains a local cap without GLM fallback", async () => {
     const directory = await mkdtemp(join(tmpdir(), "news-budget-integration-"));
     const stateFile = join(directory, "budget.json");
-    const fetch = vi.fn(async () => new Response("rate limit", { status: 429 }));
+    const fetch = vi.fn<() => Promise<Response>>(async () => new Response("rate limit", { status: 429 }));
     const glm = {
-      search: vi.fn(async () => []),
-      read: vi.fn(async () => {
+      search: vi.fn<() => Promise<never[]>>(async () => []),
+      read: vi.fn<() => Promise<never>>(async () => {
         throw new Error("unused");
       })
     };
@@ -181,7 +207,7 @@ describe("Rivus news brief Tool adapter", () => {
 
   it("checks the shared local cap even after the provider quota circuit opens", async () => {
     const directory = await mkdtemp(join(tmpdir(), "news-quota-circuit-"));
-    const fetch = vi.fn(
+    const fetch = vi.fn<() => Promise<Response>>(
       async () =>
         new Response(
           JSON.stringify({
@@ -191,8 +217,8 @@ describe("Rivus news brief Tool adapter", () => {
         )
     );
     const glm = {
-      search: vi.fn(async () => []),
-      read: vi.fn(async () => {
+      search: vi.fn<() => Promise<never[]>>(async () => []),
+      read: vi.fn<() => Promise<never>>(async () => {
         throw new Error("unused");
       })
     };
@@ -249,7 +275,13 @@ describe("Rivus news brief Tool adapter", () => {
   });
 
   it("searches every enabled topic query and renders one bounded mobile brief", async () => {
-    const search = vi.fn(async ({ query }: { query: string }) => {
+    const search = vi.fn<
+      ({
+        query
+      }: {
+        query: string;
+      }) => Promise<{ logId: string; resultCount: number; timeCostMs: number; results: NewsSearchResult[] }>
+    >(async ({ query }: { query: string }) => {
       const siteName = query.includes("政策") ? "权威政务媒体" : "Technology News";
       return {
         logId: `log:${query}`,
@@ -420,7 +452,7 @@ describe("Rivus news brief Tool adapter", () => {
     let inFlight = 0;
     let maxInFlight = 0;
     const releases: Array<() => void> = [];
-    const search = vi.fn(
+    const search = vi.fn<() => Promise<{ resultCount: number; results: [] }>>(
       async () =>
         new Promise<{ resultCount: number; results: [] }>((resolve) => {
           inFlight += 1;
@@ -486,9 +518,9 @@ describe("Rivus news brief Tool adapter", () => {
   });
 
   it("retries a transient Doubao rate limit and succeeds", async () => {
-    const sleep = vi.fn(async () => undefined);
+    const sleep = vi.fn<() => Promise<undefined>>(async () => undefined);
     const search = vi
-      .fn()
+      .fn<() => Promise<{ logId: string; resultCount: number; results: never[] }>>()
       .mockRejectedValueOnce(new DoubaoSearchError("rate_limit_exceeded", "rate limit exceeded"))
       .mockResolvedValueOnce({ logId: "retry-ok", resultCount: 0, results: [] });
 
@@ -517,15 +549,17 @@ describe("Rivus news brief Tool adapter", () => {
 
   it("marks an exhausted rate limit unavailable after three attempts", async () => {
     const sleepDelays: number[] = [];
-    const sleep = vi.fn(async (milliseconds: number) => {
+    const sleep = vi.fn<(milliseconds: number) => Promise<void>>(async (milliseconds: number) => {
       sleepDelays.push(milliseconds);
     });
-    const search = vi.fn(async ({ query }: { query: string }) => {
-      if (query === "limited") {
-        throw new DoubaoSearchError("rate_limit_exceeded", "rate limit exceeded");
+    const search = vi.fn<({ query }: { query: string }) => Promise<{ resultCount: number; results: never[] }>>(
+      async ({ query }: { query: string }) => {
+        if (query === "limited") {
+          throw new DoubaoSearchError("rate_limit_exceeded", "rate limit exceeded");
+        }
+        return { resultCount: 0, results: [] };
       }
-      return { resultCount: 0, results: [] };
-    });
+    );
 
     const result = await Effect.runPromise(
       generateRivusNewsBrief(
@@ -555,13 +589,15 @@ describe("Rivus news brief Tool adapter", () => {
   });
 
   it("does not retry non-transient search errors", async () => {
-    const sleep = vi.fn(async () => undefined);
-    const search = vi.fn(async ({ query }: { query: string }) => {
-      if (query === "invalid") {
-        throw new Error("Doubao search query is invalid");
+    const sleep = vi.fn<() => Promise<undefined>>(async () => undefined);
+    const search = vi.fn<({ query }: { query: string }) => Promise<{ resultCount: number; results: never[] }>>(
+      async ({ query }: { query: string }) => {
+        if (query === "invalid") {
+          throw new Error("Doubao search query is invalid");
+        }
+        return { resultCount: 0, results: [] };
       }
-      return { resultCount: 0, results: [] };
-    });
+    );
 
     const result = await Effect.runPromise(
       generateRivusNewsBrief(
@@ -588,9 +624,9 @@ describe("Rivus news brief Tool adapter", () => {
   });
 
   it("honors Retry-After without jitter", async () => {
-    const sleep = vi.fn(async () => undefined);
+    const sleep = vi.fn<() => Promise<undefined>>(async () => undefined);
     const search = vi
-      .fn()
+      .fn<() => Promise<{ resultCount: number; results: never[] }>>()
       .mockRejectedValueOnce(
         new DoubaoSearchError("rate_limit_exceeded", "rate limit exceeded", {
           retryAfterMs: 1_500
@@ -686,33 +722,10 @@ describe("Rivus news brief Tool adapter", () => {
   });
 });
 
-function newsQuery(id: string, text: string, eventAny = ["安全更新"], subjectAny = [text]): NewsTopicQuery {
-  return {
-    id,
-    text,
-    intent: "developer-change",
-    subjectAny,
-    eventAny,
-    excludedAny: ["评测"]
-  };
-}
-
-function newsTopic(id: string, queryIds: string[]) {
-  return {
-    id,
-    label: id,
-    icon: "📰",
-    enabled: true,
-    sourcePolicy: "authoritative" as const,
-    maxItems: 3,
-    queries: queryIds.map((queryId) => newsQuery(queryId, queryId))
-  };
-}
-
 it("runs hybrid search through the news application, merges evidence and preserves quota state", async () => {
   const url = "https://devblogs.microsoft.com/typescript/release";
   const publishedAt = "2026-07-29T01:00:00Z";
-  const search = vi.fn(async () => ({
+  const search = vi.fn<() => Promise<{ resultCount: number; results: NewsSearchResult[] }>>(async () => ({
     resultCount: 1,
     results: [
       {
@@ -744,8 +757,12 @@ it("runs hybrid search through the news application, merges evidence and preserv
     throw new DoubaoSearchError("10406", "quota exhausted");
   });
   const glm = {
-    search: vi.fn(async () => [{ title: "TypeScript released", url, snippet: "TypeScript released a compiler" }]),
-    read: vi.fn(async () => ({
+    search: vi.fn<() => Promise<Array<{ title: string; url: string; snippet: string }>>>(async () => [
+      { title: "TypeScript released", url, snippet: "TypeScript released a compiler" }
+    ]),
+    read: vi.fn<
+      () => Promise<{ title: string; url: string; content: string; truncated: boolean; publishedAt: string }>
+    >(async () => ({
       title: "TypeScript released",
       url,
       content: "TypeScript released a new compiler.",
@@ -985,7 +1002,11 @@ it("uses full topic text for Grok and preserves the model warning on healthy cov
       sourceQueries: { "openai.com": "domain-specific" }
     }
   };
-  const search = vi.fn(async () => ({ provider: "grok" as const, resultCount: 0, results: [] }));
+  const search = vi.fn<() => Promise<{ provider: "grok"; resultCount: number; results: never[] }>>(async () => ({
+    provider: "grok" as const,
+    resultCount: 0,
+    results: []
+  }));
   const result = await Effect.runPromise(
     generateRivusNewsBrief(
       { edition: "noon", occurrence: "2026-10-08T04:30:00Z" },
@@ -1010,7 +1031,7 @@ it("uses full topic text for Grok and preserves the model warning on healthy cov
 });
 
 it.each([undefined, "grok"])("does not retry Grok failures or invoke fallback in mode %s", async (mode) => {
-  const search = vi.fn(async () => {
+  const search = vi.fn<() => Promise<never>>(async () => {
     throw new NewsSearchError("grok_cli_failed", "CLI failed");
   });
   await expect(
@@ -1025,7 +1046,7 @@ it.each([undefined, "grok"])("does not retry Grok failures or invoke fallback in
 });
 
 it("preserves safe Grok timeout diagnostics in the failed evening brief", async () => {
-  const search = vi.fn(async () => {
+  const search = vi.fn<() => Promise<never>>(async () => {
     throw new NewsSearchError("grok_timeout", "private stderr", {
       grok: {
         nativeTools: ["x_keyword_search"],
@@ -1102,15 +1123,17 @@ describe("DeepSeek news fallback", () => {
     run: (counts: { doubao: number; deepseek: number }) => Promise<T>
   ): Promise<T> {
     const counts = { doubao: 0, deepseek: 0 };
-    const fetch = vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
-      const url = typeof input === "string" ? input : input.toString();
-      if (url === doubaoUrl) {
-        counts.doubao += 1;
+    const fetch = vi.fn<(input: RequestInfo | URL) => Promise<Response>>(
+      async (input: RequestInfo | URL): Promise<Response> => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url === doubaoUrl) {
+          counts.doubao += 1;
+          return respond(url);
+        }
+        counts.deepseek += 1;
         return respond(url);
       }
-      counts.deepseek += 1;
-      return respond(url);
-    });
+    );
     vi.stubGlobal("fetch", fetch);
     try {
       return await run(counts);
@@ -1259,8 +1282,12 @@ describe("DeepSeek news fallback", () => {
     const directory = await mkdtemp(join(tmpdir(), "news-deepseek-hybrid-"));
     const url = "https://devblogs.microsoft.com/typescript/release";
     const glm = {
-      search: vi.fn(async () => [{ title: "TypeScript 正式发布 6.0", url, snippet: "TypeScript 6.0 was released." }]),
-      read: vi.fn(async () => ({
+      search: vi.fn<() => Promise<Array<{ title: string; url: string; snippet: string }>>>(async () => [
+        { title: "TypeScript 正式发布 6.0", url, snippet: "TypeScript 6.0 was released." }
+      ]),
+      read: vi.fn<
+        () => Promise<{ title: string; url: string; content: string; truncated: boolean; publishedAt: string }>
+      >(async () => ({
         title: "TypeScript 正式发布 6.0",
         url,
         content: "TypeScript 正式发布 6.0，包含编译器改进。",
@@ -1321,8 +1348,8 @@ describe("DeepSeek news fallback", () => {
   it("serves hybrid queries from DeepSeek without disturbing GLM when it recovers", async () => {
     const directory = await mkdtemp(join(tmpdir(), "news-deepseek-hybrid-ok-"));
     const glm = {
-      search: vi.fn(async () => []),
-      read: vi.fn(async () => {
+      search: vi.fn<() => Promise<never[]>>(async () => []),
+      read: vi.fn<() => Promise<never>>(async () => {
         throw new Error("unused");
       })
     };
@@ -1479,20 +1506,24 @@ describe("DeepSeek news supplement", () => {
   it("merges the primary page with per-keyword DeepSeek pages and deduplicates", async () => {
     const directory = await mkdtemp(join(tmpdir(), "news-deepseek-supplement-"));
     const bodies: string[] = [];
-    const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === "string" ? input : input.toString();
-      if (url === doubaoUrl) {
-        return new Response(doubaoBody("https://example.com/shared", "Doubao"), { status: 200 });
+    const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url === doubaoUrl) {
+          return new Response(doubaoBody("https://example.com/shared", "Doubao"), { status: 200 });
+        }
+        bodies.push(String(init?.body));
+        const query = JSON.parse(String(init?.body)).query as string;
+        if (query.startsWith("doubao-keyword")) {
+          return new Response(deepSeekBody("https://example.com/shared?utm_source=feed", "DeepSeek A"), {
+            status: 200
+          });
+        }
+        return new Response(deepSeekBody("https://example.com/supplement-only", "DeepSeek B"), {
+          status: 200
+        });
       }
-      bodies.push(String(init?.body));
-      const query = JSON.parse(String(init?.body)).query as string;
-      if (query.startsWith("doubao-keyword")) {
-        return new Response(deepSeekBody("https://example.com/shared?utm_source=feed", "DeepSeek A"), { status: 200 });
-      }
-      return new Response(deepSeekBody("https://example.com/supplement-only", "DeepSeek B"), {
-        status: 200
-      });
-    });
+    );
     vi.stubGlobal("fetch", fetch);
     try {
       const result = await Effect.runPromise(
@@ -1543,7 +1574,7 @@ describe("DeepSeek news supplement", () => {
 
   it("keeps a failing supplement away from a successful primary", async () => {
     const directory = await mkdtemp(join(tmpdir(), "news-deepseek-supplement-budget-"));
-    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+    const fetch = vi.fn<(input: RequestInfo | URL) => Promise<Response>>(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input.toString();
       if (url === doubaoUrl) {
         return new Response(doubaoBody("https://example.com/primary", "Doubao"), { status: 200 });
@@ -1594,21 +1625,23 @@ describe("DeepSeek news supplement", () => {
 
   it("answers deferred queries with DeepSeek alone and discloses the deferral", async () => {
     const directory = await mkdtemp(join(tmpdir(), "news-deepseek-supplement-deferred-"));
-    const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = typeof input === "string" ? input : input.toString();
-      if (url === doubaoUrl) {
-        return new Response(doubaoBody("https://example.com/selected", "Doubao"), { status: 200 });
-      }
-      const query = JSON.parse(String(init?.body)).query as string;
-      if (query.includes("selected-keyword")) {
-        return new Response(deepSeekBody("https://example.com/selected-ds", "Selected"), {
+    const fetch = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = typeof input === "string" ? input : input.toString();
+        if (url === doubaoUrl) {
+          return new Response(doubaoBody("https://example.com/selected", "Doubao"), { status: 200 });
+        }
+        const query = JSON.parse(String(init?.body)).query as string;
+        if (query.includes("selected-keyword")) {
+          return new Response(deepSeekBody("https://example.com/selected-ds", "Selected"), {
+            status: 200
+          });
+        }
+        return new Response(deepSeekBody("https://example.com/deferred-only", "Deferred"), {
           status: 200
         });
       }
-      return new Response(deepSeekBody("https://example.com/deferred-only", "Deferred"), {
-        status: 200
-      });
-    });
+    );
     vi.stubGlobal("fetch", fetch);
     try {
       const result = await Effect.runPromise(
@@ -1667,7 +1700,7 @@ describe("DeepSeek news supplement", () => {
 
   it("runs DeepSeek alone when the primary has a source outage", async () => {
     const directory = await mkdtemp(join(tmpdir(), "news-deepseek-supplement-outage-"));
-    const fetch = vi.fn(async (input: RequestInfo | URL) => {
+    const fetch = vi.fn<(input: RequestInfo | URL) => Promise<Response>>(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input.toString();
       if (url === doubaoUrl) {
         return new Response("down", { status: 500 });
@@ -1795,7 +1828,7 @@ describe("DeepSeek independent budget ledger", () => {
   it("keeps the DeepSeek leg running when the primary exhausts its own ledger", async () => {
     const directory = await mkdtemp(join(tmpdir(), "news-primary-ledger-exhausted-"));
     const grok = vi.spyOn(GrokSearchClient.prototype, "search");
-    const fetch = vi.fn(
+    const fetch = vi.fn<() => Promise<Response>>(
       async () =>
         new Response(
           JSON.stringify({
@@ -1865,7 +1898,7 @@ it("runs the Grok leg after DeepSeek spending passes the primary's cap", async (
     resultCount: 0,
     results: []
   });
-  const fetch = vi.fn(
+  const fetch = vi.fn<() => Promise<Response>>(
     async () =>
       new Response(
         JSON.stringify({

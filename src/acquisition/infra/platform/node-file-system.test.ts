@@ -16,6 +16,44 @@ afterEach(() => {
   }
 });
 
+function readExit(path: string) {
+  return Effect.runPromise(
+    Effect.provide(
+      Effect.exit(
+        Effect.gen(function* () {
+          const fs = yield* FileSystem.FileSystem;
+          return yield* fs.readFileString(path);
+        })
+      ),
+      NodeFileSystemLive
+    )
+  );
+}
+
+function expectTypedNodeCause(exit: Exit.Exit<unknown, unknown>, message: string): void {
+  expect(Exit.isFailure(exit)).toBe(true);
+  if (!Exit.isFailure(exit)) {
+    return;
+  }
+  expect(Cause.hasDies(exit.cause)).toBe(false);
+  const error = Cause.squash(exit.cause);
+  expect(PlatformError.isPlatformError(error)).toBe(true);
+  if (!PlatformError.isPlatformError(error)) {
+    return;
+  }
+  expect(error.reason.cause).toBeInstanceOf(Error);
+  expect((error.reason.cause as Error).message).toBe(message);
+}
+
+async function nodeMessage(readOrWrite: () => void | Promise<void>): Promise<string> {
+  try {
+    await readOrWrite();
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  throw new Error("expected the Node filesystem call to fail");
+}
+
 describe("node file system", () => {
   it("creates, writes, and reads through the FileSystem port", async () => {
     const directory = mkdtempSync(join(tmpdir(), "acq-fs-"));
@@ -64,41 +102,3 @@ describe("node file system", () => {
     expectTypedNodeCause(exit, await nodeMessage(() => writeFileAsync(directory, "nope")));
   });
 });
-
-function readExit(path: string) {
-  return Effect.runPromise(
-    Effect.provide(
-      Effect.exit(
-        Effect.gen(function* () {
-          const fs = yield* FileSystem.FileSystem;
-          return yield* fs.readFileString(path);
-        })
-      ),
-      NodeFileSystemLive
-    )
-  );
-}
-
-function expectTypedNodeCause(exit: Exit.Exit<unknown, unknown>, message: string): void {
-  expect(Exit.isFailure(exit)).toBe(true);
-  if (!Exit.isFailure(exit)) {
-    return;
-  }
-  expect(Cause.hasDies(exit.cause)).toBe(false);
-  const error = Cause.squash(exit.cause);
-  expect(PlatformError.isPlatformError(error)).toBe(true);
-  if (!PlatformError.isPlatformError(error)) {
-    return;
-  }
-  expect(error.reason.cause).toBeInstanceOf(Error);
-  expect((error.reason.cause as Error).message).toBe(message);
-}
-
-async function nodeMessage(readOrWrite: () => void | Promise<void>): Promise<string> {
-  try {
-    await readOrWrite();
-  } catch (error) {
-    return error instanceof Error ? error.message : String(error);
-  }
-  throw new Error("expected the Node filesystem call to fail");
-}

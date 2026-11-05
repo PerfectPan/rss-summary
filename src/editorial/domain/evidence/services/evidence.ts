@@ -16,6 +16,30 @@ import type {
   SubscriptionSelection
 } from "../value-objects/evidence.js";
 
+function bounded(value: string, maximum: number): string {
+  return value.replace(/\s+/gu, " ").trim().slice(0, maximum);
+}
+
+function evidenceKind(candidate: CandidateProject): SubscriptionEvidenceKind {
+  if (candidate.eventTypes.includes("pull_request")) {
+    return "pull-request";
+  }
+  if (candidate.category === "discovery") {
+    return "repository";
+  }
+  if (candidate.category === "article") {
+    return "article";
+  }
+  if (candidate.category === "release") {
+    return "release";
+  }
+  return "activity";
+}
+
+function evidenceTitle(candidate: CandidateProject): string {
+  return candidate.label ?? candidate.events[0]?.title ?? candidate.repository?.fullName ?? candidate.repo;
+}
+
 /** Build the bounded, source-grounded contract exposed to the automation model. */
 export function assembleSubscriptionEvidence(
   document: EvidenceDocument,
@@ -49,93 +73,6 @@ export function assembleSubscriptionEvidence(
       }
     ];
   });
-}
-
-export function assembleSubscriptionEditorial(
-  document: EvidenceDocument,
-  identity: EvidenceIdentity,
-  draft?: unknown,
-  research?: unknown
-): SubscriptionEditorial {
-  const evidence = mergeSubscriptionResearch(assembleSubscriptionEvidence(document, identity), research);
-  const items = validateSubscriptionEditorialItemsForRender(draft, evidence);
-  const supplied = new Map(items.map(({ ref, summary }) => [ref, summary]));
-  const summaries = new Map<string, string>();
-  for (const item of evidence) {
-    const summary = supplied.get(item.id);
-    if (summary) {
-      summaries.set(item.id, summary);
-      continue;
-    }
-    if (item.summaryPolicy === "required") {
-      summaries.set(item.id, compactSummary(item.rawText, item.title, item.sourceName));
-    }
-  }
-  return { evidence, summaries };
-}
-
-/** Replace shallow feed excerpts with the Agent's fetched article evidence. */
-export function mergeSubscriptionResearch(evidence: SubscriptionEvidence[], value: unknown): SubscriptionEvidence[] {
-  const entries = validateSubscriptionResearch(value, evidence);
-  if (entries.length === 0) {
-    return evidence;
-  }
-  const researched = new Map(entries.map((entry) => [entry.ref, entry]));
-  return evidence.map((item) => {
-    const research = researched.get(item.id);
-    if (!research || research.status !== "ok" || !research.content) {
-      return item;
-    }
-    return {
-      ...item,
-      rawText: bounded(`${item.rawText}\n${research.content}`, 7_000),
-      title: research.title?.trim() || item.title
-    };
-  });
-}
-
-export function selectedSubscriptionCandidates(
-  candidates: readonly CandidateProject[],
-  selection: SubscriptionSelection,
-  identify: (candidate: CandidateProject) => string
-): CandidateProject[] {
-  return candidates.filter((candidate) => selection.selectedRefs.has(identify(candidate)));
-}
-
-/** Cancel the push of selected evidence whose research body is missing or failed to fetch. */
-export function excludeSubscriptionResearchFailures(
-  selection: SubscriptionSelection,
-  failedRefs: ReadonlySet<string>
-): SubscriptionSelection {
-  const decisions = selection.decisions.map((decision) =>
-    failedRefs.has(decision.ref) && decision.selected
-      ? { ...decision, reason: "研究正文缺失或抓取失败，已取消推送", selected: false }
-      : decision
-  );
-  return {
-    decisions,
-    selectedRefs: new Set(decisions.filter((item) => item.selected).map((item) => item.ref))
-  };
-}
-
-function evidenceKind(candidate: CandidateProject): SubscriptionEvidenceKind {
-  if (candidate.eventTypes.includes("pull_request")) {
-    return "pull-request";
-  }
-  if (candidate.category === "discovery") {
-    return "repository";
-  }
-  if (candidate.category === "article") {
-    return "article";
-  }
-  if (candidate.category === "release") {
-    return "release";
-  }
-  return "activity";
-}
-
-function evidenceTitle(candidate: CandidateProject): string {
-  return candidate.label ?? candidate.events[0]?.title ?? candidate.repository?.fullName ?? candidate.repo;
 }
 
 function validateSubscriptionEditorialItemsForRender(
@@ -190,6 +127,69 @@ function validateSubscriptionEditorialItemsForRender(
   return accepted;
 }
 
-function bounded(value: string, maximum: number): string {
-  return value.replace(/\s+/gu, " ").trim().slice(0, maximum);
+/** Replace shallow feed excerpts with the Agent's fetched article evidence. */
+export function mergeSubscriptionResearch(evidence: SubscriptionEvidence[], value: unknown): SubscriptionEvidence[] {
+  const entries = validateSubscriptionResearch(value, evidence);
+  if (entries.length === 0) {
+    return evidence;
+  }
+  const researched = new Map(entries.map((entry) => [entry.ref, entry]));
+  return evidence.map((item) => {
+    const research = researched.get(item.id);
+    if (!research || research.status !== "ok" || !research.content) {
+      return item;
+    }
+    return {
+      ...item,
+      rawText: bounded(`${item.rawText}\n${research.content}`, 7_000),
+      title: research.title?.trim() || item.title
+    };
+  });
+}
+
+export function assembleSubscriptionEditorial(
+  document: EvidenceDocument,
+  identity: EvidenceIdentity,
+  draft?: unknown,
+  research?: unknown
+): SubscriptionEditorial {
+  const evidence = mergeSubscriptionResearch(assembleSubscriptionEvidence(document, identity), research);
+  const items = validateSubscriptionEditorialItemsForRender(draft, evidence);
+  const supplied = new Map(items.map(({ ref, summary }) => [ref, summary]));
+  const summaries = new Map<string, string>();
+  for (const item of evidence) {
+    const summary = supplied.get(item.id);
+    if (summary) {
+      summaries.set(item.id, summary);
+      continue;
+    }
+    if (item.summaryPolicy === "required") {
+      summaries.set(item.id, compactSummary(item.rawText, item.title, item.sourceName));
+    }
+  }
+  return { evidence, summaries };
+}
+
+export function selectedSubscriptionCandidates(
+  candidates: readonly CandidateProject[],
+  selection: SubscriptionSelection,
+  identify: (candidate: CandidateProject) => string
+): CandidateProject[] {
+  return candidates.filter((candidate) => selection.selectedRefs.has(identify(candidate)));
+}
+
+/** Cancel the push of selected evidence whose research body is missing or failed to fetch. */
+export function excludeSubscriptionResearchFailures(
+  selection: SubscriptionSelection,
+  failedRefs: ReadonlySet<string>
+): SubscriptionSelection {
+  const decisions = selection.decisions.map((decision) =>
+    failedRefs.has(decision.ref) && decision.selected
+      ? { ...decision, reason: "研究正文缺失或抓取失败，已取消推送", selected: false }
+      : decision
+  );
+  return {
+    decisions,
+    selectedRefs: new Set(decisions.filter((item) => item.selected).map((item) => item.ref))
+  };
 }

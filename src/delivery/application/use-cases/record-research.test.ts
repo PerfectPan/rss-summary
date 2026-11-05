@@ -3,6 +3,16 @@ import { Effect, Layer } from "effect";
 
 import { createEmptyFeedState, FeedStateStore, recordResearch, type FeedState } from "../../index.js";
 
+function storeLayer(state: FeedState, saved: Array<{ path: string; state: FeedState }>): Layer.Layer<FeedStateStore> {
+  return Layer.succeed(FeedStateStore, {
+    load: () => Effect.succeed(state),
+    save: (path, next) =>
+      Effect.sync(() => {
+        saved.push({ path, state: next });
+      })
+  });
+}
+
 describe("record research", () => {
   it("records every suggestion under one timestamp and saves the state", async () => {
     const saved: Array<{ path: string; state: FeedState }> = [];
@@ -64,13 +74,3 @@ describe("record research", () => {
     expect(saved).toHaveLength(0);
   });
 });
-
-function storeLayer(state: FeedState, saved: Array<{ path: string; state: FeedState }>): Layer.Layer<FeedStateStore> {
-  return Layer.succeed(FeedStateStore, {
-    load: () => Effect.succeed(state),
-    save: (path, next) =>
-      Effect.sync(() => {
-        saved.push({ path, state: next });
-      })
-  });
-}

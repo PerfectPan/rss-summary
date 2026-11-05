@@ -29,6 +29,10 @@ export async function launchChromium(
   }
 }
 
+function asBrowserError(cause: unknown): Error {
+  return cause instanceof Error ? cause : new Error(String(cause));
+}
+
 /** A launched Chromium inside the caller's scope. */
 export function launchBrowser(options: BrowserLaunchOptions) {
   return Effect.gen(function* () {
@@ -41,10 +45,6 @@ export function launchBrowser(options: BrowserLaunchOptions) {
       (launched) => Effect.promise(() => launched.close())
     );
   });
-}
-
-function asBrowserError(cause: unknown): Error {
-  return cause instanceof Error ? cause : new Error(String(cause));
 }
 
 /** One page in a fresh context inside the caller's scope. */

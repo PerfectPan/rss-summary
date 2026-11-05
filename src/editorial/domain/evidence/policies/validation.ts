@@ -23,6 +23,26 @@ export function invalidEditorialItemMessage(entry: unknown): string | undefined 
   return undefined;
 }
 
+function cleanSummary(value: unknown): string {
+  if (typeof value !== "string") {
+    throw new Error("summary must be a string");
+  }
+  const summary = value.replace(/\s+/gu, " ").trim();
+  if (summary.length < 8) {
+    throw new Error("summary is too short");
+  }
+  if (summary.length > 180) {
+    throw new Error("summary is too long");
+  }
+  return summary;
+}
+
+function numericClaims(value: string): string[] {
+  return [...value.matchAll(/\d+(?:[.,]\d+)*(?:\s?(?:%|％|B|M|K|亿|万))?/giu)].map(([claim]) =>
+    claim.replace(/[\s,]/gu, "").replace("％", "%").toLowerCase()
+  );
+}
+
 /**
  * Accept only short summaries tied to known evidence. The model is allowed to
  * rephrase source text, but may not introduce numeric claims absent upstream.
@@ -113,6 +133,21 @@ export function validateSubscriptionResearch(value: unknown, evidence: Subscript
   });
 }
 
+function bounded(value: string, maximum: number): string {
+  return value.replace(/\s+/gu, " ").trim().slice(0, maximum);
+}
+
+function boundedSelectionReason(value: unknown): string {
+  if (typeof value !== "string") {
+    throw new Error("selection reason must be a string");
+  }
+  const reason = bounded(value, 240);
+  if (reason.length < 4) {
+    throw new Error("selection reason is too short");
+  }
+  return reason;
+}
+
 /**
  * Validate the model's second-pass selection against the collected evidence.
  * Omitted evidence is treated as rejected, never as implicitly selected.
@@ -163,39 +198,4 @@ export function validateSubscriptionSelectionDraft(
     decisions,
     selectedRefs: new Set(decisions.filter((item) => item.selected).map((item) => item.ref))
   };
-}
-
-function cleanSummary(value: unknown): string {
-  if (typeof value !== "string") {
-    throw new Error("summary must be a string");
-  }
-  const summary = value.replace(/\s+/gu, " ").trim();
-  if (summary.length < 8) {
-    throw new Error("summary is too short");
-  }
-  if (summary.length > 180) {
-    throw new Error("summary is too long");
-  }
-  return summary;
-}
-
-function boundedSelectionReason(value: unknown): string {
-  if (typeof value !== "string") {
-    throw new Error("selection reason must be a string");
-  }
-  const reason = bounded(value, 240);
-  if (reason.length < 4) {
-    throw new Error("selection reason is too short");
-  }
-  return reason;
-}
-
-function numericClaims(value: string): string[] {
-  return [...value.matchAll(/\d+(?:[.,]\d+)*(?:\s?(?:%|％|B|M|K|亿|万))?/giu)].map(([claim]) =>
-    claim.replace(/[\s,]/gu, "").replace("％", "%").toLowerCase()
-  );
-}
-
-function bounded(value: string, maximum: number): string {
-  return value.replace(/\s+/gu, " ").trim().slice(0, maximum);
 }

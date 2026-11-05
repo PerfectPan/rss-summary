@@ -30,6 +30,26 @@ export type ArticleResearchToolDependencies = {
 
 export type ArticleResearchMode = "auto" | "browser" | "http";
 
+function parseInput(value: unknown): { mode: ArticleResearchMode; ref: string; url: string } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Article research input must be an object.");
+  }
+  const record = value as Record<string, unknown>;
+  const ref = typeof record.ref === "string" ? record.ref.trim() : "";
+  const url = typeof record.url === "string" ? record.url.trim() : "";
+  const mode = record.mode === undefined ? "auto" : record.mode;
+  if (!ref) {
+    throw new Error("Article research requires ref.");
+  }
+  if (!url) {
+    throw new Error("Article research requires url.");
+  }
+  if (mode !== "auto" && mode !== "browser" && mode !== "http") {
+    throw new Error("Article research mode must be auto, browser, or http.");
+  }
+  return { mode, ref, url };
+}
+
 /** Agent-facing, read-only research Tool for one selected source URL. */
 export function createArticleResearchExecutor(
   dependencies: ArticleResearchToolDependencies = {}
@@ -61,26 +81,6 @@ export function createArticleResearchExecutor(
     );
     return { ...result, tool: "article-research" };
   };
-}
-
-function parseInput(value: unknown): { mode: ArticleResearchMode; ref: string; url: string } {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("Article research input must be an object.");
-  }
-  const record = value as Record<string, unknown>;
-  const ref = typeof record.ref === "string" ? record.ref.trim() : "";
-  const url = typeof record.url === "string" ? record.url.trim() : "";
-  const mode = record.mode === undefined ? "auto" : record.mode;
-  if (!ref) {
-    throw new Error("Article research requires ref.");
-  }
-  if (!url) {
-    throw new Error("Article research requires url.");
-  }
-  if (mode !== "auto" && mode !== "browser" && mode !== "http") {
-    throw new Error("Article research mode must be auto, browser, or http.");
-  }
-  return { mode, ref, url };
 }
 
 export const researchToolDescriptor: Pick<

@@ -33,7 +33,9 @@ async function setup(overrides: Partial<Options> = {}) {
   const directory = await mkdtemp(join(tmpdir(), "doubao-budget-"));
   directories.push(directory);
   let instant = new Date("2026-09-29T03:00:00.000Z");
-  const providerSearch = vi.fn(async (): Promise<NewsSearchPage> => structuredClone(page));
+  const providerSearch = vi.fn<() => Promise<NewsSearchPage>>(
+    async (): Promise<NewsSearchPage> => structuredClone(page)
+  );
   const options: Options = {
     stateFile: join(directory, "private", "budget.json"),
     dailyLimit: 10,
@@ -165,7 +167,7 @@ describe("persistent news search budget", () => {
   it("keeps failed attempts charged and reserves again for every retry", async () => {
     const { options } = await setup({ dailyLimit: 3 });
     let attempts = 0;
-    const providerSearch = vi.fn(async (): Promise<NewsSearchPage> => {
+    const providerSearch = vi.fn<() => Promise<NewsSearchPage>>(async (): Promise<NewsSearchPage> => {
       attempts += 1;
       if (attempts <= 2) {
         throw new NewsSearchError("http_429", "rate limit");
@@ -335,7 +337,7 @@ describe("cached search budget probe", () => {
     "rejects after a provider quota failure consumed the last local allowance (%j)",
     async (limit) => {
       const { options } = await setup(limit);
-      const providerSearch = vi.fn(async (): Promise<NewsSearchPage> => {
+      const providerSearch = vi.fn<() => Promise<NewsSearchPage>>(async (): Promise<NewsSearchPage> => {
         throw new NewsSearchError("10406", "provider quota exhausted");
       });
       const search = createBudgetedNewsSearch({ ...options, search: providerSearch });
@@ -442,7 +444,7 @@ describe("raw Doubao response cache", () => {
 
   it("shares an in-flight request in one instance without consuming another attempt", async () => {
     const { options } = await setup({ dailyLimit: 1 });
-    const providerSearch = vi.fn(async () => page);
+    const providerSearch = vi.fn<() => Promise<NewsSearchPage>>(async () => page);
     const search = createBudgetedNewsSearch({ ...options, search: providerSearch });
     const [first, second] = await Effect.runPromise(
       Effect.all([search(input), search(input)], { concurrency: "unbounded" })
@@ -454,7 +456,9 @@ describe("raw Doubao response cache", () => {
 
   it.each(["glm", "mixed"] as const)("never caches %s responses", async (provider) => {
     const { options } = await setup({ cacheTtlMs: 60_000 });
-    const providerSearch = vi.fn(async (): Promise<NewsSearchPage> => ({ ...page, provider }));
+    const providerSearch = vi.fn<() => Promise<NewsSearchPage>>(
+      async (): Promise<NewsSearchPage> => ({ ...page, provider })
+    );
     const search = createBudgetedNewsSearch({ ...options, search: providerSearch });
     await Effect.runPromise(search(input));
     await Effect.runPromise(search(input));
@@ -471,7 +475,7 @@ it("isolates Grok cache by model/provider while sharing attempt counters with Do
   };
   const { options, search: doubao } = await setup({ cacheTtlMs: 60_000 });
   await Effect.runPromise(doubao(input));
-  const provider = vi.fn(async () => grokPage);
+  const provider = vi.fn<() => Promise<NewsSearchPage>>(async () => grokPage);
   const grok = createBudgetedNewsSearch({
     ...options,
     provider: "grok://cli/v1/default",

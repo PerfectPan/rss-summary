@@ -30,6 +30,24 @@ const readerUserAgent = "rss-summary/0.1 article-research-browser";
 const DEFAULT_MAX_CHARS = 16_000;
 const DEFAULT_TIMEOUT_MS = 30_000;
 
+/* v8 ignore start -- Playwright browser automation is exercised through the Mac mini smoke path. */
+function fetchRenderedPage(input: {
+  browserChannel?: string;
+  headless: boolean;
+  timeoutMs: number;
+  url: string;
+}): Effect.Effect<{ html: string; url: string }, unknown> {
+  return renderPage({
+    browserChannel: input.browserChannel,
+    headless: input.headless,
+    timeoutMs: input.timeoutMs,
+    url: input.url,
+    userAgent: readerUserAgent,
+    waitForSelector: articleRootSelector
+  });
+}
+/* v8 ignore stop */
+
 /**
  * Render one selected public URL in an isolated browser context and extract
  * its readable body. Failures surface as a `failed` ReadResult, never as a
@@ -92,21 +110,3 @@ export function browserArticleResearch(
     );
   };
 }
-
-/* v8 ignore start -- Playwright browser automation is exercised through the Mac mini smoke path. */
-function fetchRenderedPage(input: {
-  browserChannel?: string;
-  headless: boolean;
-  timeoutMs: number;
-  url: string;
-}): Effect.Effect<{ html: string; url: string }, unknown> {
-  return renderPage({
-    browserChannel: input.browserChannel,
-    headless: input.headless,
-    timeoutMs: input.timeoutMs,
-    url: input.url,
-    userAgent: readerUserAgent,
-    waitForSelector: articleRootSelector
-  });
-}
-/* v8 ignore stop */

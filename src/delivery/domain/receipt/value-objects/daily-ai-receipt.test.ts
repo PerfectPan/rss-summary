@@ -4,7 +4,7 @@ import { commitDailyAiDeliveryReceipt, createDailyAiDeliveryReceipt } from "../i
 
 describe("Daily AI delivery receipt", () => {
   it("writes seen state once only after successful delivery", async () => {
-    const save = vi.fn(async () => undefined);
+    const save = vi.fn<() => Promise<undefined>>(async () => undefined);
     let receipt = createDailyAiDeliveryReceipt("2026-08-11T01:00:00Z", ["s1"]);
     receipt = (await commitDailyAiDeliveryReceipt(receipt, { delivered: true, save })) ?? receipt;
     receipt = (await commitDailyAiDeliveryReceipt(receipt, { delivered: true, save })) ?? receipt;
@@ -13,7 +13,7 @@ describe("Daily AI delivery receipt", () => {
   });
 
   it("does not write on failure and permits a later successful retry", async () => {
-    const save = vi.fn(async () => undefined);
+    const save = vi.fn<() => Promise<undefined>>(async () => undefined);
     let receipt = createDailyAiDeliveryReceipt("2026-08-11T01:00:00Z", ["s1"]);
     receipt = (await commitDailyAiDeliveryReceipt(receipt, { delivered: false, save })) ?? receipt;
     expect(receipt.committed).toBe(false);

@@ -6,7 +6,7 @@ import { GlmSearchClient, GlmSearchLive } from "./provider.js";
 import { describeSearchProvider, type ProviderStep } from "../../../../tests/support/search-provider-suite.js";
 
 function fetchFor(step: ProviderStep): typeof fetch {
-  return vi.fn(async (_url: unknown, init?: RequestInit) => {
+  return vi.fn<(_url: unknown, init?: RequestInit) => Promise<Response>>(async (_url: unknown, init?: RequestInit) => {
     if (step === "http_429") {
       throw new Error("glm transport cannot emit http_429");
     }
@@ -37,20 +37,22 @@ function fetchFor(step: ProviderStep): typeof fetch {
 
 describe("GLM search", () => {
   it("reports a tool failure and maps a page that is not a cacheable provider", async () => {
-    const failing = vi.fn(async (_url: unknown, init?: RequestInit) => {
-      const request = JSON.parse(String(init?.body)) as { method?: string; id?: number };
-      if (request.method === "notifications/initialized") {
-        return new Response(null, { status: 202 });
+    const failing = vi.fn<(_url: unknown, init?: RequestInit) => Promise<Response>>(
+      async (_url: unknown, init?: RequestInit) => {
+        const request = JSON.parse(String(init?.body)) as { method?: string; id?: number };
+        if (request.method === "notifications/initialized") {
+          return new Response(null, { status: 202 });
+        }
+        const message = {
+          jsonrpc: "2.0",
+          id: request.id,
+          result: request.method === "initialize" ? { protocolVersion: "2024-11-05" } : { isError: true, content: [] }
+        };
+        return new Response(JSON.stringify(message), {
+          headers: { "Content-Type": "application/json" }
+        });
       }
-      const message = {
-        jsonrpc: "2.0",
-        id: request.id,
-        result: request.method === "initialize" ? { protocolVersion: "2024-11-05" } : { isError: true, content: [] }
-      };
-      return new Response(JSON.stringify(message), {
-        headers: { "Content-Type": "application/json" }
-      });
-    });
+    );
     const client = new GlmSearchClient({ apiKey: "suite", fetch: failing as typeof fetch });
     await expect(client.search("suite query", [])).rejects.toThrow("GLM search tool failed.");
 

@@ -8,6 +8,97 @@ import { checkBoundaries, type SourceInput, type Violation } from "../../scripts
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 
+/** Sibling tests may bypass their layer's rules but not module internals. */
+function testGraph(): SourceInput[] {
+  return [
+    {
+      path: "src/kernel/text.test.ts",
+      source: [
+        'import { readFileSync } from "node:fs";',
+        'import { Effect, Layer } from "effect";',
+        'import { err } from "./result.js";',
+        "export const value = [readFileSync, Effect, Layer, err];"
+      ].join("\n")
+    },
+    {
+      path: "src/acquisition/domain/item/item.test.ts",
+      source: [
+        'import { Effect } from "effect";',
+        'import { readConduit } from "../../../integrations/github/index.js";',
+        'import { scoreAcquired } from "../../../editorial/index.js";',
+        'import { suite } from "../../../../tests/support/search-provider-suite.js";',
+        "export const value = [Effect, readConduit, scoreAcquired, suite];"
+      ].join("\n")
+    }
+  ];
+}
+
+function legalGraph(): SourceInput[] {
+  return [
+    { path: "src/kernel/text.ts", source: "export const empty = '';\n" },
+    {
+      path: "src/acquisition/domain/item/value-objects/model.ts",
+      source:
+        'import { empty } from "../../../../kernel/text.js";\nexport const created = (value: string) => new Date(value);\nexport const label = empty;\n'
+    },
+    {
+      path: "src/acquisition/application/use-cases/search.ts",
+      source:
+        'import { Effect } from "effect";\nimport { created } from "../../domain/item/value-objects/model.js";\nexport const search = [Effect, created];\n'
+    },
+    {
+      path: "src/integrations/rss/mapper.ts",
+      source:
+        'import { created } from "../../acquisition/index.js";\nimport { decodeSchema } from "../shared/decode.js";\nexport const parsed = [created, decodeSchema];\n'
+    },
+    {
+      path: "src/integrations/shared/scoring-trace.ts",
+      source:
+        'import type { Acquired } from "../../acquisition/index.js";\nexport const routed = (acquired: Acquired) => acquired;\n'
+    },
+    {
+      path: "src/acquisition/infra/repository/search-budget-file.ts",
+      source:
+        'import { Effect } from "effect";\nimport { empty } from "../../../kernel/text.js";\nexport const file = [Effect, empty];\n'
+    },
+    {
+      path: "src/editorial/domain/news/policies/rank.ts",
+      source:
+        'import type { created } from "../../../../acquisition/domain/item/value-objects/model.js";\nimport { empty } from "../../../../kernel/text.js";\nexport const rank = [empty, created];\n'
+    },
+    {
+      path: "src/app/products/shared/industry.ts",
+      source:
+        'import { collectIndustrySources } from "../../../acquisition/index.js";\nimport { refreshRouting } from "../../../integrations/shared/index.js";\nexport const industry = [collectIndustrySources, refreshRouting];\n'
+    },
+    {
+      path: "src/app/products/news/flow.ts",
+      source:
+        'import { settleSearches } from "../../../acquisition/index.js";\nimport { empty } from "../../../kernel/index.js";\nimport { createGlmResearch } from "../../../integrations/glm/index.js";\nexport const flow = [settleSearches, empty, createGlmResearch];\n'
+    }
+  ];
+}
+
+function rulesOf(violations: Violation[], file?: string): string[] {
+  return violations
+    .filter((violation) => file === undefined || violation.file === file)
+    .map((violation) => violation.rule)
+    .sort();
+}
+
+function walk(dir: string): string[] {
+  const files: string[] = [];
+  for (const name of readdirSync(dir)) {
+    const path = join(dir, name);
+    if (statSync(path).isDirectory()) {
+      files.push(...walk(path));
+    } else if (name.endsWith(".ts") && !name.endsWith(".d.ts")) {
+      files.push(path);
+    }
+  }
+  return files;
+}
+
 describe("architecture boundaries", () => {
   it("keeps the whole src tree free of boundary violations", () => {
     const files = walk(join(root, "src")).map((path) => ({
@@ -514,94 +605,3 @@ describe("architecture boundaries", () => {
     ).toEqual([]);
   });
 });
-
-/** Sibling tests may bypass their layer's rules but not module internals. */
-function testGraph(): SourceInput[] {
-  return [
-    {
-      path: "src/kernel/text.test.ts",
-      source: [
-        'import { readFileSync } from "node:fs";',
-        'import { Effect, Layer } from "effect";',
-        'import { err } from "./result.js";',
-        "export const value = [readFileSync, Effect, Layer, err];"
-      ].join("\n")
-    },
-    {
-      path: "src/acquisition/domain/item/item.test.ts",
-      source: [
-        'import { Effect } from "effect";',
-        'import { readConduit } from "../../../integrations/github/index.js";',
-        'import { scoreAcquired } from "../../../editorial/index.js";',
-        'import { suite } from "../../../../tests/support/search-provider-suite.js";',
-        "export const value = [Effect, readConduit, scoreAcquired, suite];"
-      ].join("\n")
-    }
-  ];
-}
-
-function legalGraph(): SourceInput[] {
-  return [
-    { path: "src/kernel/text.ts", source: "export const empty = '';\n" },
-    {
-      path: "src/acquisition/domain/item/value-objects/model.ts",
-      source:
-        'import { empty } from "../../../../kernel/text.js";\nexport const created = (value: string) => new Date(value);\nexport const label = empty;\n'
-    },
-    {
-      path: "src/acquisition/application/use-cases/search.ts",
-      source:
-        'import { Effect } from "effect";\nimport { created } from "../../domain/item/value-objects/model.js";\nexport const search = [Effect, created];\n'
-    },
-    {
-      path: "src/integrations/rss/mapper.ts",
-      source:
-        'import { created } from "../../acquisition/index.js";\nimport { decodeSchema } from "../shared/decode.js";\nexport const parsed = [created, decodeSchema];\n'
-    },
-    {
-      path: "src/integrations/shared/scoring-trace.ts",
-      source:
-        'import type { Acquired } from "../../acquisition/index.js";\nexport const routed = (acquired: Acquired) => acquired;\n'
-    },
-    {
-      path: "src/acquisition/infra/repository/search-budget-file.ts",
-      source:
-        'import { Effect } from "effect";\nimport { empty } from "../../../kernel/text.js";\nexport const file = [Effect, empty];\n'
-    },
-    {
-      path: "src/editorial/domain/news/policies/rank.ts",
-      source:
-        'import type { created } from "../../../../acquisition/domain/item/value-objects/model.js";\nimport { empty } from "../../../../kernel/text.js";\nexport const rank = [empty, created];\n'
-    },
-    {
-      path: "src/app/products/shared/industry.ts",
-      source:
-        'import { collectIndustrySources } from "../../../acquisition/index.js";\nimport { refreshRouting } from "../../../integrations/shared/index.js";\nexport const industry = [collectIndustrySources, refreshRouting];\n'
-    },
-    {
-      path: "src/app/products/news/flow.ts",
-      source:
-        'import { settleSearches } from "../../../acquisition/index.js";\nimport { empty } from "../../../kernel/index.js";\nimport { createGlmResearch } from "../../../integrations/glm/index.js";\nexport const flow = [settleSearches, empty, createGlmResearch];\n'
-    }
-  ];
-}
-
-function rulesOf(violations: Violation[], file?: string): string[] {
-  return violations
-    .filter((violation) => file === undefined || violation.file === file)
-    .map((violation) => violation.rule)
-    .sort();
-}
-
-function walk(dir: string): string[] {
-  const files: string[] = [];
-  for (const name of readdirSync(dir)) {
-    const path = join(dir, name);
-    if (statSync(path).isDirectory()) {
-      files.push(...walk(path));
-    } else if (name.endsWith(".ts") && !name.endsWith(".d.ts")) {
-      files.push(path);
-    }
-  }
-  return files;
-}

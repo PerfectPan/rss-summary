@@ -16,6 +16,27 @@ export type GlmSearchAcquired = {
   domainRejected: number;
 };
 
+function itemFromGlm(result: ResearchSearchResult, rankPosition: number): Item {
+  let name = result.url;
+  try {
+    name = new URL(result.url).hostname;
+  } catch {
+    name = result.url;
+  }
+  return {
+    id: `glm:${result.url}`,
+    kind: "publication",
+    subject: { key: result.url, name, url: result.url },
+    content: { title: result.title, excerpt: result.snippet, url: result.url },
+    publishedAt: { value: "", precision: "date" },
+    provenance: { origin: result.url },
+    credibility: { tier: "unrated" },
+    signals: [],
+    rank: { position: rankPosition },
+    display: { label: name, reference: result.url, facts: [] }
+  };
+}
+
 export function parseGlmSearchResults(value: unknown, allowed: readonly string[]): GlmSearchAcquired {
   const records = glmResultList(value);
   const results: ResearchSearchResult[] = [];
@@ -55,25 +76,4 @@ export function parseGlmSearchResults(value: unknown, allowed: readonly string[]
     }
   }
   return { results, items, rawResults: records.length, domainRejected };
-}
-
-function itemFromGlm(result: ResearchSearchResult, rankPosition: number): Item {
-  let name = result.url;
-  try {
-    name = new URL(result.url).hostname;
-  } catch {
-    name = result.url;
-  }
-  return {
-    id: `glm:${result.url}`,
-    kind: "publication",
-    subject: { key: result.url, name, url: result.url },
-    content: { title: result.title, excerpt: result.snippet, url: result.url },
-    publishedAt: { value: "", precision: "date" },
-    provenance: { origin: result.url },
-    credibility: { tier: "unrated" },
-    signals: [],
-    rank: { position: rankPosition },
-    display: { label: name, reference: result.url, facts: [] }
-  };
 }

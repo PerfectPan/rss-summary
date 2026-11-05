@@ -28,6 +28,14 @@ export function parsePublishTime(value: string, timezoneOffset?: string): number
   return Date.parse(!hasExplicitZone && timezoneOffset ? `${normalized}${timezoneOffset}` : normalized);
 }
 
+function stripLeadingLiteral(value: string, literal: string | undefined): string {
+  const prefix = literal?.replace(/\s+/gu, " ").trim();
+  if (!prefix || !value.startsWith(prefix)) {
+    return value;
+  }
+  return value.slice(prefix.length).replace(/^[：:·|—–\-，,。；;\s]+/u, "");
+}
+
 export function compactSummary(value: string, title: string, siteName?: string): string {
   let normalized = value.replace(/\s+/gu, " ").trim();
   normalized = stripLeadingLiteral(normalized, title);
@@ -53,12 +61,4 @@ export function formatCompactCount(value: number): string {
     return `${(value / 1_000).toFixed(1)}k`;
   }
   return String(value);
-}
-
-function stripLeadingLiteral(value: string, literal: string | undefined): string {
-  const prefix = literal?.replace(/\s+/gu, " ").trim();
-  if (!prefix || !value.startsWith(prefix)) {
-    return value;
-  }
-  return value.slice(prefix.length).replace(/^[：:·|—–\-，,。；;\s]+/u, "");
 }

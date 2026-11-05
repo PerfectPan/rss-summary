@@ -14,6 +14,17 @@ const markdown = `# 固定标题
 1. 新模型上线 [↗ #1](https://example.com/item)
 `;
 
+function presentationOf(template: RivusAutomationTemplate): RivusAutomationTemplate & {
+  createPresentation(output: { occurrence: string; text: string }): RssAutomationPresentation;
+} {
+  if (!("createPresentation" in template)) {
+    throw new Error("Automation presentation adapter is missing");
+  }
+  return template as RivusAutomationTemplate & {
+    createPresentation(output: { occurrence: string; text: string }): RssAutomationPresentation;
+  };
+}
+
 describe("golden Rivus registration", () => {
   it("snapshots tools, the profile, and automation input plus presentation", async () => {
     const registered = registerPlugin();
@@ -47,14 +58,3 @@ describe("golden Rivus registration", () => {
     });
   });
 });
-
-function presentationOf(template: RivusAutomationTemplate): RivusAutomationTemplate & {
-  createPresentation(output: { occurrence: string; text: string }): RssAutomationPresentation;
-} {
-  if (!("createPresentation" in template)) {
-    throw new Error("Automation presentation adapter is missing");
-  }
-  return template as RivusAutomationTemplate & {
-    createPresentation(output: { occurrence: string; text: string }): RssAutomationPresentation;
-  };
-}

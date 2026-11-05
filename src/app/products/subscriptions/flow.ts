@@ -31,43 +31,88 @@ import type { AppServices } from "../../layers.js";
 
 export type { DigestDocument };
 
-/** Subscription digest workflow. The CLI injects `render` for the output format. */
-export function runSubscriptionFlow(
-  config: AppConfig,
-  render: (document: DigestDocument, format: AppConfig["outputFormat"]) => string
-): Effect.Effect<void, Error, AppServices> {
-  return Effect.gen(function* () {
-    const { audit, document, state } = yield* collectDigest(config);
-    const output = render(document, config.outputFormat);
+type DigestServices = GitHubActivity | GitHubCatalog | RssFeed | FeedStateStore;
 
-    const deliveredCandidates =
-      config.outputFormat === "markdown"
-        ? document.candidates.filter((candidate) => candidate.category !== "paper")
-        : document.candidates;
-    yield* deliver({
-      runLogDir: config.runLogDir,
-      audit,
-      output,
-      dryRun: config.dryRun,
-      ...(config.onlyNew && !config.dryRun
-        ? {
-            afterSend: FeedStateStore.use((store) =>
-              store.save(
-                config.stateFile,
-                markDelivered(state, deliveredCandidates.flatMap(deliveredEventIds), document.generatedAt)
-              )
-            )
-          }
-        : {})
+function deliveredEventIds(candidate: CandidateProject): string[] {
+  return candidate.events.map((event) => event.id);
+}
+
+function fetchGithubEvents(config: AppConfig): Effect.Effect<Acquired[], Error, GitHubActivity> {
+  return Effect.gen(function* () {
+    const github = yield* GitHubActivity;
+    if (config.githubFeedSource === "home") {
+      return yield* github.getHomeEvents();
+    }
+    return yield* github.getReceivedEvents(config.username, {
+      perPage: config.perPage,
+      pages: config.eventPages
     });
   });
 }
 
-export function buildDigestDocument(config: AppConfig): Effect.Effect<DigestDocument, Error, AppServices> {
-  return Effect.map(collectDigest(config), ({ document }) => document);
+function fetchRepositoryMetadata(
+  events: ActivityCardDto[],
+  maxRepos: number
+): Effect.Effect<Map<string, RepositoryMetadata>, Error, GitHubCatalog> {
+  const names = [
+    ...new Set(
+      events
+        .filter((event) => event.type !== "other")
+        .filter((event) => event.source !== "rss")
+        .map((event) => event.repo)
+        .filter(Boolean)
+    )
+  ].slice(0, maxRepos);
+
+  return Effect.gen(function* () {
+    const catalog = yield* GitHubCatalog;
+    const repositories = new Map<string, RepositoryMetadata>();
+    yield* Effect.forEach(
+      names,
+      (name) =>
+        Effect.gen(function* () {
+          const result = yield* Effect.result(catalog.getRepository(name));
+          if (result._tag === "Success") {
+            repositories.set(name, result.success);
+          }
+        }),
+      { concurrency: "unbounded" }
+    );
+    return repositories;
+  });
 }
 
-type DigestServices = GitHubActivity | GitHubCatalog | RssFeed | FeedStateStore;
+function fetchFollowees(): Effect.Effect<Set<string>, Error, GitHubCatalog> {
+  return Effect.gen(function* () {
+    const catalog = yield* GitHubCatalog;
+    const followed = yield* catalog.getFollowing();
+    return new Set(followed);
+  });
+}
+
+function enrichPullRequests(events: ActivityCardDto[]): Effect.Effect<void, Error, GitHubCatalog> {
+  const pullRequests = events.filter((event) => event.type === "pull_request" && event.prNumber).slice(0, 20);
+
+  return Effect.gen(function* () {
+    const catalog = yield* GitHubCatalog;
+    yield* Effect.forEach(
+      pullRequests,
+      (event) =>
+        Effect.gen(function* () {
+          const result = yield* Effect.result(catalog.getPullRequest(event.repo, event.prNumber ?? 0));
+          if (result._tag === "Failure") {
+            return;
+          }
+          event.title = result.success.title;
+          event.htmlUrl = result.success.htmlUrl;
+          if (result.success.body) {
+            event.summary = result.success.body;
+          }
+        }),
+      { concurrency: "unbounded" }
+    );
+  });
+}
 
 function collectDigest(
   config: AppConfig
@@ -177,83 +222,38 @@ function collectDigest(
   });
 }
 
-function deliveredEventIds(candidate: CandidateProject): string[] {
-  return candidate.events.map((event) => event.id);
-}
-
-function fetchGithubEvents(config: AppConfig): Effect.Effect<Acquired[], Error, GitHubActivity> {
+/** Subscription digest workflow. The CLI injects `render` for the output format. */
+export function runSubscriptionFlow(
+  config: AppConfig,
+  render: (document: DigestDocument, format: AppConfig["outputFormat"]) => string
+): Effect.Effect<void, Error, AppServices> {
   return Effect.gen(function* () {
-    const github = yield* GitHubActivity;
-    if (config.githubFeedSource === "home") {
-      return yield* github.getHomeEvents();
-    }
-    return yield* github.getReceivedEvents(config.username, {
-      perPage: config.perPage,
-      pages: config.eventPages
+    const { audit, document, state } = yield* collectDigest(config);
+    const output = render(document, config.outputFormat);
+
+    const deliveredCandidates =
+      config.outputFormat === "markdown"
+        ? document.candidates.filter((candidate) => candidate.category !== "paper")
+        : document.candidates;
+    yield* deliver({
+      runLogDir: config.runLogDir,
+      audit,
+      output,
+      dryRun: config.dryRun,
+      ...(config.onlyNew && !config.dryRun
+        ? {
+            afterSend: FeedStateStore.use((store) =>
+              store.save(
+                config.stateFile,
+                markDelivered(state, deliveredCandidates.flatMap(deliveredEventIds), document.generatedAt)
+              )
+            )
+          }
+        : {})
     });
   });
 }
 
-function fetchRepositoryMetadata(
-  events: ActivityCardDto[],
-  maxRepos: number
-): Effect.Effect<Map<string, RepositoryMetadata>, Error, GitHubCatalog> {
-  const names = [
-    ...new Set(
-      events
-        .filter((event) => event.type !== "other")
-        .filter((event) => event.source !== "rss")
-        .map((event) => event.repo)
-        .filter(Boolean)
-    )
-  ].slice(0, maxRepos);
-
-  return Effect.gen(function* () {
-    const catalog = yield* GitHubCatalog;
-    const repositories = new Map<string, RepositoryMetadata>();
-    yield* Effect.forEach(
-      names,
-      (name) =>
-        Effect.gen(function* () {
-          const result = yield* Effect.result(catalog.getRepository(name));
-          if (result._tag === "Success") {
-            repositories.set(name, result.success);
-          }
-        }),
-      { concurrency: "unbounded" }
-    );
-    return repositories;
-  });
-}
-
-function fetchFollowees(): Effect.Effect<Set<string>, Error, GitHubCatalog> {
-  return Effect.gen(function* () {
-    const catalog = yield* GitHubCatalog;
-    const followed = yield* catalog.getFollowing();
-    return new Set(followed);
-  });
-}
-
-function enrichPullRequests(events: ActivityCardDto[]): Effect.Effect<void, Error, GitHubCatalog> {
-  const pullRequests = events.filter((event) => event.type === "pull_request" && event.prNumber).slice(0, 20);
-
-  return Effect.gen(function* () {
-    const catalog = yield* GitHubCatalog;
-    yield* Effect.forEach(
-      pullRequests,
-      (event) =>
-        Effect.gen(function* () {
-          const result = yield* Effect.result(catalog.getPullRequest(event.repo, event.prNumber ?? 0));
-          if (result._tag === "Failure") {
-            return;
-          }
-          event.title = result.success.title;
-          event.htmlUrl = result.success.htmlUrl;
-          if (result.success.body) {
-            event.summary = result.success.body;
-          }
-        }),
-      { concurrency: "unbounded" }
-    );
-  });
+export function buildDigestDocument(config: AppConfig): Effect.Effect<DigestDocument, Error, AppServices> {
+  return Effect.map(collectDigest(config), ({ document }) => document);
 }

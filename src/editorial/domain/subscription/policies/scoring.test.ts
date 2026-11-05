@@ -34,6 +34,59 @@ const emptyRepository = {
   pushedAt: null as string | null
 };
 
+function scoreEvents(
+  events: Array<{
+    action?: string;
+    actor?: string;
+    id?: string;
+    prNumber?: number;
+    summary?: string;
+    title?: string;
+    type:
+      | "announcement"
+      | "article"
+      | "create"
+      | "follow"
+      | "fork"
+      | "paper"
+      | "pull_request"
+      | "recommendation"
+      | "release"
+      | "trending"
+      | "watch";
+  }>,
+  options: {
+    followees?: Set<string>;
+    interests?: string[];
+    repository?: typeof emptyRepository;
+  } = {}
+) {
+  const [candidate] = buildCandidateProjects(
+    events.map((event, index) => ({
+      id: event.id ?? String(index + 1),
+      type: event.type,
+      actor: event.actor ?? "someone",
+      repo: "example/repo",
+      createdAt: `2026-08-15T02:00:${String(index).padStart(2, "0")}Z`,
+      ...(event.action ? { action: event.action } : {}),
+      ...(event.prNumber ? { prNumber: event.prNumber } : {}),
+      ...(event.title ? { title: event.title } : {}),
+      ...(event.summary ? { summary: event.summary } : {}),
+      source: event.type === "article" || event.type === "paper" ? ("rss" as const) : undefined,
+      sourceName: event.type === "article" || event.type === "paper" ? (event.actor ?? "someone") : undefined
+    })),
+    {
+      followees: options.followees ?? new Set<string>(),
+      interests: options.interests ?? [],
+      repositories: new Map(options.repository ? [["example/repo", options.repository]] : [])
+    }
+  );
+  if (!candidate) {
+    throw new Error("expected a scored candidate");
+  }
+  return candidate;
+}
+
 describe("github feed domain", () => {
   it("normalizes a merged pull request event into an activity card", () => {
     const card = normalizeEvent({
@@ -586,56 +639,3 @@ describe("github feed domain", () => {
     }
   });
 });
-
-function scoreEvents(
-  events: Array<{
-    action?: string;
-    actor?: string;
-    id?: string;
-    prNumber?: number;
-    summary?: string;
-    title?: string;
-    type:
-      | "announcement"
-      | "article"
-      | "create"
-      | "follow"
-      | "fork"
-      | "paper"
-      | "pull_request"
-      | "recommendation"
-      | "release"
-      | "trending"
-      | "watch";
-  }>,
-  options: {
-    followees?: Set<string>;
-    interests?: string[];
-    repository?: typeof emptyRepository;
-  } = {}
-) {
-  const [candidate] = buildCandidateProjects(
-    events.map((event, index) => ({
-      id: event.id ?? String(index + 1),
-      type: event.type,
-      actor: event.actor ?? "someone",
-      repo: "example/repo",
-      createdAt: `2026-08-15T02:00:${String(index).padStart(2, "0")}Z`,
-      ...(event.action ? { action: event.action } : {}),
-      ...(event.prNumber ? { prNumber: event.prNumber } : {}),
-      ...(event.title ? { title: event.title } : {}),
-      ...(event.summary ? { summary: event.summary } : {}),
-      source: event.type === "article" || event.type === "paper" ? ("rss" as const) : undefined,
-      sourceName: event.type === "article" || event.type === "paper" ? (event.actor ?? "someone") : undefined
-    })),
-    {
-      followees: options.followees ?? new Set<string>(),
-      interests: options.interests ?? [],
-      repositories: new Map(options.repository ? [["example/repo", options.repository]] : [])
-    }
-  );
-  if (!candidate) {
-    throw new Error("expected a scored candidate");
-  }
-  return candidate;
-}

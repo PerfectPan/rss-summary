@@ -42,19 +42,19 @@ function harness(
   } = {}
 ) {
   const calls: string[] = [];
-  const http = vi.fn(async (request: ReadRequest) => {
+  const http = vi.fn<(request: ReadRequest) => Promise<ReadResult>>(async (request: ReadRequest) => {
     calls.push("http");
     return handlers.http ? handlers.http(request) : failed(request, "http down");
   });
-  const browser = vi.fn(async (request: ReadRequest) => {
+  const browser = vi.fn<(request: ReadRequest) => Promise<ReadResult>>(async (request: ReadRequest) => {
     calls.push("browser");
     return handlers.browser ? handlers.browser(request) : failed(request, "browser down");
   });
-  const videoReader = vi.fn(async (request: ReadRequest) => {
+  const videoReader = vi.fn<(request: ReadRequest) => Promise<ReadResult>>(async (request: ReadRequest) => {
     calls.push("video");
     return handlers.video ? handlers.video(request) : ok(request, "Video");
   });
-  const glm = vi.fn(async (url: string) => {
+  const glm = vi.fn<(url: string) => Promise<GlmPage>>(async (url: string) => {
     calls.push("glm");
     return handlers.glm ? handlers.glm(url) : { title: "Article", url, content: longBody, truncated: false };
   });

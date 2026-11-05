@@ -2,6 +2,16 @@ import { describe, expect, it } from "vite-plus/test";
 
 import { createEmptyFeedState, filterUndelivered, filterUnresearched, markResearched } from "../index.js";
 
+type TestCandidate = { repo: string; events: Array<{ id: string }> };
+
+function candidate(repo: string, eventIds: string[]): TestCandidate {
+  return { repo, events: eventIds.map((id) => ({ id })) };
+}
+
+function eventIdsOf(candidate: TestCandidate): string[] {
+  return candidate.events.map((event) => event.id);
+}
+
 describe("delivery ledger", () => {
   it("keeps candidates with unseen events and filters fully seen candidates", () => {
     const state = createEmptyFeedState();
@@ -33,13 +43,3 @@ describe("delivery ledger", () => {
     expect(filterUndelivered([candidate("repo", [""])], eventIdsOf, state)).toEqual([]);
   });
 });
-
-type TestCandidate = { repo: string; events: Array<{ id: string }> };
-
-function candidate(repo: string, eventIds: string[]): TestCandidate {
-  return { repo, events: eventIds.map((id) => ({ id })) };
-}
-
-function eventIdsOf(candidate: TestCandidate): string[] {
-  return candidate.events.map((event) => event.id);
-}

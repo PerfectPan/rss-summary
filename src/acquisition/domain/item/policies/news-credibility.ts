@@ -11,6 +11,23 @@ export type ResolvedNewsCredibility = {
   rank: number;
 };
 
+function tierForRank(rank: number): { tier: CredibilityTier } {
+  if (rank === 1) {
+    return { tier: "official" };
+  }
+  if (rank === 2) {
+    return { tier: "authoritative" };
+  }
+  return { tier: "unrated" };
+}
+
+function certified(rank: number, method?: CredibilityMethod): ResolvedNewsCredibility {
+  // The numeric authority-rank table mirrors the news score table: 1 is an
+  // official source, 2 is authoritative, every other rank stays unrated. Each
+  // search integration maps its own authority field onto these ranks.
+  return { ...tierForRank(rank), ...(method ? { method } : {}), rank };
+}
+
 export function resolveNewsCredibility(input: {
   url: string;
   authInfoLevel?: number;
@@ -43,21 +60,4 @@ export function resolveNewsCredibility(input: {
     return { tier: authoritative ? "authoritative" : "unrated", rank: authoritative ? 2 : 4 };
   }
   return certified(input.authInfoLevel ?? 4);
-}
-
-function certified(rank: number, method?: CredibilityMethod): ResolvedNewsCredibility {
-  // The numeric authority-rank table mirrors the news score table: 1 is an
-  // official source, 2 is authoritative, every other rank stays unrated. Each
-  // search integration maps its own authority field onto these ranks.
-  return { ...tierForRank(rank), ...(method ? { method } : {}), rank };
-}
-
-function tierForRank(rank: number): { tier: CredibilityTier } {
-  if (rank === 1) {
-    return { tier: "official" };
-  }
-  if (rank === 2) {
-    return { tier: "authoritative" };
-  }
-  return { tier: "unrated" };
 }

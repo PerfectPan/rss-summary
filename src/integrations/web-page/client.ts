@@ -18,23 +18,19 @@ export type WebPageOptions = {
   maxAttempts?: number;
 };
 
-/** Fetch one listing page and map its dated links into activity cards. */
-export function readWebPageEvents(
-  source: WebPageSubscription,
-  options: WebPageOptions = {}
-): Effect.Effect<ActivityCardDto[], Error> {
-  const fetchImpl = timeoutFetch(options.fetch ?? fetch, options.timeoutMs ?? 12_000);
-  const maxAttempts = options.maxAttempts ?? 3;
+function isRetryableStatus(status: number): boolean {
+  return status === 429 || status >= 500;
+}
+
+function isRetryableFetchError(error: unknown): boolean {
+  return error instanceof TypeError || (error instanceof Error && error.name === "TimeoutError");
+}
+
+function readOnce(url: string) {
   return Effect.gen(function* () {
-    const html = yield* fetchHtml(source.url, maxAttempts);
-    const entries = extractWebPageEntries(html, source);
-    if (entries.length === 0) {
-      return yield* Effect.fail(
-        new Error(`Web page ${source.name} returned no dated links matching its path prefixes`)
-      );
-    }
-    return entries.map((entry) => normalizeWebPageEntry(entry, source));
-  }).pipe((effect) => provideHttp(effect, fetchImpl));
+    const http = yield* HttpClient.HttpClient;
+    return yield* http.get(url, { headers: webHeaders });
+  });
 }
 
 function fetchHtml(url: string, maxAttempts: number): Effect.Effect<string, Error, HttpClient.HttpClient> {
@@ -63,17 +59,21 @@ function fetchHtml(url: string, maxAttempts: number): Effect.Effect<string, Erro
   });
 }
 
-function readOnce(url: string) {
+/** Fetch one listing page and map its dated links into activity cards. */
+export function readWebPageEvents(
+  source: WebPageSubscription,
+  options: WebPageOptions = {}
+): Effect.Effect<ActivityCardDto[], Error> {
+  const fetchImpl = timeoutFetch(options.fetch ?? fetch, options.timeoutMs ?? 12_000);
+  const maxAttempts = options.maxAttempts ?? 3;
   return Effect.gen(function* () {
-    const http = yield* HttpClient.HttpClient;
-    return yield* http.get(url, { headers: webHeaders });
-  });
-}
-
-function isRetryableStatus(status: number): boolean {
-  return status === 429 || status >= 500;
-}
-
-function isRetryableFetchError(error: unknown): boolean {
-  return error instanceof TypeError || (error instanceof Error && error.name === "TimeoutError");
+    const html = yield* fetchHtml(source.url, maxAttempts);
+    const entries = extractWebPageEntries(html, source);
+    if (entries.length === 0) {
+      return yield* Effect.fail(
+        new Error(`Web page ${source.name} returned no dated links matching its path prefixes`)
+      );
+    }
+    return entries.map((entry) => normalizeWebPageEntry(entry, source));
+  }).pipe((effect) => provideHttp(effect, fetchImpl));
 }

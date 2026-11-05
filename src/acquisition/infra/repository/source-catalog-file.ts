@@ -7,6 +7,14 @@ import type { FeedSubscription } from "../../domain/source/index.js";
 import { SourceCatalogStore } from "../../application/ports.js";
 import { decodeFeedsJson } from "../models/feeds.js";
 
+/** The feeds CLI prints `error.message`. Keep Node's own message for that text. */
+function asFileError(error: unknown): Error {
+  if (PlatformError.isPlatformError(error) && error.reason.cause instanceof Error) {
+    return error.reason.cause;
+  }
+  return error instanceof Error ? error : new Error(String(error));
+}
+
 export const SourceCatalogFileLive = Layer.effect(
   SourceCatalogStore,
   Effect.gen(function* () {
@@ -29,11 +37,3 @@ export const SourceCatalogFileLive = Layer.effect(
     return { loadFeeds, saveFeeds };
   })
 );
-
-/** The feeds CLI prints `error.message`. Keep Node's own message for that text. */
-function asFileError(error: unknown): Error {
-  if (PlatformError.isPlatformError(error) && error.reason.cause instanceof Error) {
-    return error.reason.cause;
-  }
-  return error instanceof Error ? error : new Error(String(error));
-}

@@ -27,6 +27,42 @@ const harness = useGoldenHarness();
 const occurrence = "2026-08-16T04:00:00.000Z";
 const publishedAt = "2026-08-15T12:00:00.000Z";
 
+async function installDailyAi(executable: string): Promise<void> {
+  process.env.DAILY_AI_X_HANDLES = "ClaudeDevs";
+  process.env.X_ACCOUNT_POSTS_PER_FETCH = "1";
+  process.env.NEWS_SEARCH_MODE = "grok";
+  await writeGrokExecutable(
+    executable,
+    grokStream({
+      author: "@ClaudeDevs",
+      publishedAt,
+      summary: "Claude 更新了 TypeScript 工具链的具体工作流。",
+      title: "Claude 更新了 TypeScript 工具链"
+    })
+  );
+  installFetch((url) => {
+    if (url === INDUSTRY_FEED_URL) {
+      return textResponse(INDUSTRY_ATOM, 200, "application/atom+xml");
+    }
+    if (url === INDUSTRY_PAGE_URL) {
+      return textResponse(INDUSTRY_PAGE_HTML, 200, "text/html");
+    }
+    throw new Error(`Unexpected fetch ${url}`);
+  });
+}
+
+function evidenceOf(value: unknown): Array<{ id: string }> {
+  if (!value || typeof value !== "object" || !("evidence" in value) || !Array.isArray(value.evidence)) {
+    throw new Error("collect phase did not return evidence");
+  }
+  return value.evidence.map((item) => {
+    if (!item || typeof item !== "object" || typeof (item as { id?: unknown }).id !== "string") {
+      throw new Error("evidence item is missing id");
+    }
+    return { id: (item as { id: string }).id };
+  });
+}
+
 describe("golden daily AI tool", () => {
   it("runs collect and render", async () => {
     const context = harness.context();
@@ -81,39 +117,3 @@ describe("golden daily AI tool", () => {
     );
   });
 });
-
-async function installDailyAi(executable: string): Promise<void> {
-  process.env.DAILY_AI_X_HANDLES = "ClaudeDevs";
-  process.env.X_ACCOUNT_POSTS_PER_FETCH = "1";
-  process.env.NEWS_SEARCH_MODE = "grok";
-  await writeGrokExecutable(
-    executable,
-    grokStream({
-      author: "@ClaudeDevs",
-      publishedAt,
-      summary: "Claude 更新了 TypeScript 工具链的具体工作流。",
-      title: "Claude 更新了 TypeScript 工具链"
-    })
-  );
-  installFetch((url) => {
-    if (url === INDUSTRY_FEED_URL) {
-      return textResponse(INDUSTRY_ATOM, 200, "application/atom+xml");
-    }
-    if (url === INDUSTRY_PAGE_URL) {
-      return textResponse(INDUSTRY_PAGE_HTML, 200, "text/html");
-    }
-    throw new Error(`Unexpected fetch ${url}`);
-  });
-}
-
-function evidenceOf(value: unknown): Array<{ id: string }> {
-  if (!value || typeof value !== "object" || !("evidence" in value) || !Array.isArray(value.evidence)) {
-    throw new Error("collect phase did not return evidence");
-  }
-  return value.evidence.map((item) => {
-    if (!item || typeof item !== "object" || typeof (item as { id?: unknown }).id !== "string") {
-      throw new Error("evidence item is missing id");
-    }
-    return { id: (item as { id: string }).id };
-  });
-}

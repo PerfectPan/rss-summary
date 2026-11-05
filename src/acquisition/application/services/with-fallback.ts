@@ -53,15 +53,15 @@ export const fallbackTriggerCodes: readonly string[] = [
   "10406"
 ];
 
-/** Whether a primary failure is a source outage a fallback may recover from. */
-export function shouldFallbackOnSourceOutage(error: unknown): boolean {
-  return isSearchFailure(error) && isTriggerCode(error.code);
-}
-
 function isTriggerCode(code: string): boolean {
   return (
     fallbackTriggerCodes.includes(code) || (/^http_5\d{2}$/u.test(code) && fallbackTriggerCodes.includes("http_5"))
   );
+}
+
+/** Whether a primary failure is a source outage a fallback may recover from. */
+export function shouldFallbackOnSourceOutage(error: unknown): boolean {
+  return isSearchFailure(error) && isTriggerCode(error.code);
 }
 
 /**

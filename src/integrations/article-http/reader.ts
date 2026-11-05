@@ -18,6 +18,18 @@ const DEFAULT_MAX_BYTES = 2_000_000;
 const DEFAULT_MAX_CHARS = 16_000;
 const DEFAULT_TIMEOUT_MS = 15_000;
 
+async function readResponseBody(response: Response, maxBytes: number): Promise<string> {
+  const contentLength = Number(response.headers.get("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > maxBytes) {
+    throw new Error(`article response exceeded ${maxBytes} bytes`);
+  }
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  if (bytes.byteLength > maxBytes) {
+    throw new Error(`article response exceeded ${maxBytes} bytes`);
+  }
+  return new TextDecoder().decode(bytes);
+}
+
 /** Fetch and extract the readable body of one article selected by the Agent. */
 export class ArticleResearchClient {
   private readonly extract: ArticleExtract;
@@ -81,16 +93,4 @@ export class ArticleResearchClient {
       };
     }
   }
-}
-
-async function readResponseBody(response: Response, maxBytes: number): Promise<string> {
-  const contentLength = Number(response.headers.get("content-length"));
-  if (Number.isFinite(contentLength) && contentLength > maxBytes) {
-    throw new Error(`article response exceeded ${maxBytes} bytes`);
-  }
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.byteLength > maxBytes) {
-    throw new Error(`article response exceeded ${maxBytes} bytes`);
-  }
-  return new TextDecoder().decode(bytes);
 }

@@ -28,19 +28,11 @@ export type IndustryBriefDocument = {
   audit?: RunAudit;
 };
 
-/**
- * Product-agnostic industry pipeline: collect industry sources → window filter
- * → scoring → paper quota → candidate list. The frontier product delivers the
- * document; Daily AI embeds its candidates and audit after dropping paper
- * sources from the fetch list.
- */
-export function buildIndustryDocument(
-  config: AppConfig
-): Effect.Effect<IndustryBriefDocument, Error, IndustryServices> {
-  return Effect.map(collectIndustryBrief(config), ({ document }) => document);
-}
-
 export type IndustryServices = RssFeed | WebPage | FeedStateStore | Notifier | RunArchive | DiagnosticsStore;
+
+export function industryEventIds(candidate: CandidateProject): string[] {
+  return candidate.events.map((event) => event.id);
+}
 
 export function collectIndustryBrief(
   config: AppConfig
@@ -125,6 +117,14 @@ export function collectIndustryBrief(
   });
 }
 
-export function industryEventIds(candidate: CandidateProject): string[] {
-  return candidate.events.map((event) => event.id);
+/**
+ * Product-agnostic industry pipeline: collect industry sources → window filter
+ * → scoring → paper quota → candidate list. The frontier product delivers the
+ * document; Daily AI embeds its candidates and audit after dropping paper
+ * sources from the fetch list.
+ */
+export function buildIndustryDocument(
+  config: AppConfig
+): Effect.Effect<IndustryBriefDocument, Error, IndustryServices> {
+  return Effect.map(collectIndustryBrief(config), ({ document }) => document);
 }

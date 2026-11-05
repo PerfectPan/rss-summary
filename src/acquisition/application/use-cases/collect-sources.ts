@@ -26,6 +26,49 @@ type Collected = {
   source: SourceHealth;
 };
 
+function collected(source: { name: string; url: string }, kind: SourceHealth["kind"], acquired: Acquired[]): Collected {
+  return {
+    acquired,
+    source: {
+      id: source.url,
+      kind,
+      name: source.name,
+      url: source.url,
+      status: "ok",
+      itemCount: acquired.length
+    }
+  };
+}
+
+function settle(
+  result: { _tag: "Success"; success: Collected } | { _tag: "Failure"; failure: unknown },
+  source: { name: string; url: string },
+  kind: SourceHealth["kind"]
+): Collected {
+  if (result._tag === "Success") {
+    return result.success;
+  }
+  return {
+    acquired: [],
+    source: {
+      id: source.url,
+      kind,
+      name: source.name,
+      url: source.url,
+      status: "failed",
+      itemCount: 0,
+      error: errorMessage(result.failure)
+    }
+  };
+}
+
+function combine(results: Collected[]): SourceCollection {
+  return {
+    acquired: results.flatMap((result) => result.acquired),
+    sources: results.map((result) => result.source)
+  };
+}
+
 export const collectRssFeeds = (feeds: readonly FeedSubscription[]): Effect.Effect<SourceCollection, never, RssFeed> =>
   Effect.gen(function* () {
     const rss = yield* RssFeed;
@@ -71,46 +114,3 @@ export const collectIndustrySources = (
       })
     );
   });
-
-function collected(source: { name: string; url: string }, kind: SourceHealth["kind"], acquired: Acquired[]): Collected {
-  return {
-    acquired,
-    source: {
-      id: source.url,
-      kind,
-      name: source.name,
-      url: source.url,
-      status: "ok",
-      itemCount: acquired.length
-    }
-  };
-}
-
-function settle(
-  result: { _tag: "Success"; success: Collected } | { _tag: "Failure"; failure: unknown },
-  source: { name: string; url: string },
-  kind: SourceHealth["kind"]
-): Collected {
-  if (result._tag === "Success") {
-    return result.success;
-  }
-  return {
-    acquired: [],
-    source: {
-      id: source.url,
-      kind,
-      name: source.name,
-      url: source.url,
-      status: "failed",
-      itemCount: 0,
-      error: errorMessage(result.failure)
-    }
-  };
-}
-
-function combine(results: Collected[]): SourceCollection {
-  return {
-    acquired: results.flatMap((result) => result.acquired),
-    sources: results.map((result) => result.source)
-  };
-}

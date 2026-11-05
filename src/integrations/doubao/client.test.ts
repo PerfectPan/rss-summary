@@ -12,7 +12,7 @@ const input = {
 
 describe("Doubao search source", () => {
   it("requests an exact day without broad query rewriting and with authoritative URL results", async () => {
-    const fetch = vi.fn(
+    const fetch = vi.fn<(_url: string | URL | Request, _init?: RequestInit) => Promise<Response>>(
       async (_url: string | URL | Request, _init?: RequestInit) =>
         new Response(
           JSON.stringify({
@@ -67,7 +67,7 @@ describe("Doubao search source", () => {
   });
 
   it("uses the API's official-only filter for political news", async () => {
-    const fetch = vi.fn(
+    const fetch = vi.fn<(_url: string | URL | Request, _init?: RequestInit) => Promise<Response>>(
       async (_url: string | URL | Request, _init?: RequestInit) =>
         new Response(JSON.stringify({ ResponseMetadata: {}, Result: { WebResults: [] } }), {
           status: 200

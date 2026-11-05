@@ -4,6 +4,17 @@ import { describe, expect, it } from "vite-plus/test";
 
 import { parseNewsTopics } from "./topics.js";
 
+function rawQuery(id: string, text = "AI 正式发布") {
+  return {
+    id,
+    text,
+    intent: "model-release",
+    subjectAny: ["AI"],
+    eventAny: ["正式发布"],
+    excludedAny: ["评测"]
+  };
+}
+
 describe("news topics", () => {
   it("loads the curated daily brief topics within the eight-item and search budgets", () => {
     const topics = parseNewsTopics(readFileSync(new URL("../../../../news-topics.json", import.meta.url), "utf8"));
@@ -154,17 +165,6 @@ describe("news topics", () => {
   });
 });
 
-function rawQuery(id: string, text = "AI 正式发布") {
-  return {
-    id,
-    text,
-    intent: "model-release",
-    subjectAny: ["AI"],
-    eventAny: ["正式发布"],
-    excludedAny: ["评测"]
-  };
-}
-
 it("validates optional GLM query and trusted-source configuration", () => {
   const topic = {
     id: "tools",
@@ -222,6 +222,18 @@ it("rejects per-source queries that escape the configured domains or query limit
   }
 });
 
+function topicWith(query: ReturnType<typeof rawQuery> & { deepseek?: { queries: string[] } }) {
+  return {
+    id: "tools",
+    label: "Tools",
+    icon: "x",
+    enabled: true,
+    sourcePolicy: "news",
+    maxItems: 1,
+    queries: [query]
+  };
+}
+
 it("parses optional DeepSeek supplement keywords with bounded length and count", () => {
   const query = {
     ...rawQuery("release"),
@@ -236,15 +248,3 @@ it("parses optional DeepSeek supplement keywords with bounded length and count",
     );
   }
 });
-
-function topicWith(query: ReturnType<typeof rawQuery> & { deepseek?: { queries: string[] } }) {
-  return {
-    id: "tools",
-    label: "Tools",
-    icon: "x",
-    enabled: true,
-    sourcePolicy: "news",
-    maxItems: 1,
-    queries: [query]
-  };
-}

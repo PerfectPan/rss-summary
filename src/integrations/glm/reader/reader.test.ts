@@ -3,29 +3,31 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { readGlmPage } from "./reader.js";
 
 function pageWith(payload: unknown, { sse = true, isError = false } = {}) {
-  const fetchMock = vi.fn(async (_url: unknown, init?: RequestInit) => {
-    const request = JSON.parse(String(init?.body));
-    if (request.method === "notifications/initialized") {
-      return new Response(null, { status: 202 });
-    }
-    const message = {
-      jsonrpc: "2.0",
-      id: request.id,
-      result:
-        request.method === "initialize"
-          ? { protocolVersion: "2024-11-05" }
-          : { isError, content: [{ type: "text", text: JSON.stringify(JSON.stringify(payload)) }] }
-    };
-    return new Response(
-      sse ? `: heartbeat\r\n\r\nevent: message\r\ndata: ${JSON.stringify(message)}\r\n\r\n` : JSON.stringify(message),
-      {
-        headers: {
-          "Content-Type": sse ? "text/event-stream" : "application/json",
-          "Mcp-Session-Id": "test-session"
-        }
+  const fetchMock = vi.fn<(_url: unknown, init?: RequestInit) => Promise<Response>>(
+    async (_url: unknown, init?: RequestInit) => {
+      const request = JSON.parse(String(init?.body));
+      if (request.method === "notifications/initialized") {
+        return new Response(null, { status: 202 });
       }
-    );
-  });
+      const message = {
+        jsonrpc: "2.0",
+        id: request.id,
+        result:
+          request.method === "initialize"
+            ? { protocolVersion: "2024-11-05" }
+            : { isError, content: [{ type: "text", text: JSON.stringify(JSON.stringify(payload)) }] }
+      };
+      return new Response(
+        sse ? `: heartbeat\r\n\r\nevent: message\r\ndata: ${JSON.stringify(message)}\r\n\r\n` : JSON.stringify(message),
+        {
+          headers: {
+            "Content-Type": sse ? "text/event-stream" : "application/json",
+            "Mcp-Session-Id": "test-session"
+          }
+        }
+      );
+    }
+  );
   return { fetchMock };
 }
 

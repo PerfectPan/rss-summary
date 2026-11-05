@@ -57,7 +57,7 @@ function analyzed() {
 
 describe("video frame research", () => {
   it("sends actual frame files to the vision model and preserves the full source material", async () => {
-    const run = vi.fn(async (args: string[]) => {
+    const run = vi.fn<(args: string[]) => Promise<{ stdout: string }>>(async (args: string[]) => {
       if (args[0] === "slides") {
         return extracted(args);
       }
@@ -140,7 +140,7 @@ describe("video frame research", () => {
   it.each(["outside", "not-png", "oversized", "duplicate", "negative-time", "too-many"])(
     "rejects unsafe frame outputs before any model call: %s",
     async (kind) => {
-      const run = vi.fn(async (args: string[]) => {
+      const run = vi.fn<(args: string[]) => Promise<{ stdout: string }>>(async (args: string[]) => {
         const result = JSON.parse((await extracted(args)).stdout);
         const frames = result.slides.slides;
         if (kind === "outside") {
@@ -173,7 +173,7 @@ describe("video frame research", () => {
 
   it("stops model calls after the frame research deadline", async () => {
     const now = vi.spyOn(Date, "now").mockReturnValue(0);
-    const run = vi.fn(async (args: string[]) => {
+    const run = vi.fn<(args: string[]) => Promise<{ stdout: string }>>(async (args: string[]) => {
       const result = await extracted(args);
       now.mockReturnValue(600_001);
       return result;

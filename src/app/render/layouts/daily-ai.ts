@@ -9,6 +9,32 @@ export type DailyAiDigestDocument = {
   warnings: string[];
 };
 
+function numberedItem(
+  evidence: DailyAiEvidence[],
+  usedRefs: string[],
+  item: DailyAiEditorialItem,
+  number: number
+): ViewItem {
+  const links = item.refs.map((ref) => {
+    if (!usedRefs.includes(ref)) {
+      usedRefs.push(ref);
+    }
+    const refNumber = usedRefs.indexOf(ref) + 1;
+    const source = evidence.find((candidate) => candidate.id === ref)!;
+    return {
+      text: `↗ #${refNumber}${source.id.startsWith("x:") ? " · X（Grok 整理）" : ""}`,
+      url: source.url
+    };
+  });
+  return {
+    shape: "numbered",
+    number,
+    headline: item.headline,
+    links,
+    notes: []
+  };
+}
+
 /** Lay the Daily AI digest out as a View IR document with global ref numbers. */
 export function dailyAiView(document: DailyAiDigestDocument): ViewDocument {
   const usedRefs: string[] = [];
@@ -35,31 +61,5 @@ export function dailyAiView(document: DailyAiDigestDocument): ViewDocument {
     sections,
     trailing,
     variant: "daily-ai"
-  };
-}
-
-function numberedItem(
-  evidence: DailyAiEvidence[],
-  usedRefs: string[],
-  item: DailyAiEditorialItem,
-  number: number
-): ViewItem {
-  const links = item.refs.map((ref) => {
-    if (!usedRefs.includes(ref)) {
-      usedRefs.push(ref);
-    }
-    const refNumber = usedRefs.indexOf(ref) + 1;
-    const source = evidence.find((candidate) => candidate.id === ref)!;
-    return {
-      text: `↗ #${refNumber}${source.id.startsWith("x:") ? " · X（Grok 整理）" : ""}`,
-      url: source.url
-    };
-  });
-  return {
-    shape: "numbered",
-    number,
-    headline: item.headline,
-    links,
-    notes: []
   };
 }

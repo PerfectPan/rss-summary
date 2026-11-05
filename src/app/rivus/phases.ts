@@ -62,6 +62,46 @@ type SubscriptionToolDependencies = {
   generate?: (value: unknown) => Promise<RivusDigestResult>;
 };
 
+function parseInput(value: unknown): {
+  draft?: unknown;
+  phase?: "collect" | "select" | "render";
+  research?: unknown;
+  request: Record<string, unknown>;
+  selection?: unknown;
+} {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Subscription Tool input must be an object.");
+  }
+  const record = value as Record<string, unknown>;
+  const phase = record.phase;
+  if (phase !== undefined && phase !== "collect" && phase !== "select" && phase !== "render") {
+    throw new Error("phase must be collect, select, or render.");
+  }
+  if (phase && typeof record.occurrence !== "string") {
+    throw new Error("multi-phase subscription execution requires occurrence.");
+  }
+  const { draft, phase: _phase, research, selection, ...request } = record;
+  return {
+    draft,
+    ...(phase ? { phase } : {}),
+    ...(research === undefined ? {} : { research }),
+    request,
+    ...(selection === undefined ? {} : { selection })
+  };
+}
+
+function cacheKey(request: Record<string, unknown>): string {
+  return JSON.stringify(
+    Object.fromEntries(Object.entries(request).sort(([left], [right]) => left.localeCompare(right)))
+  );
+}
+
+function trimCache(cache: Map<string, CollectedRivusDigest>): void {
+  while (cache.size > 8) {
+    cache.delete(cache.keys().next().value!);
+  }
+}
+
 /** Three-phase Tool executor: collect evidence, select worthwhile items, then render model copy. */
 export function createRivusSubscriptionExecutor(
   dependencies: SubscriptionToolDependencies = {}
@@ -157,46 +197,6 @@ export function createRivusSubscriptionExecutor(
   };
 }
 
-function parseInput(value: unknown): {
-  draft?: unknown;
-  phase?: "collect" | "select" | "render";
-  research?: unknown;
-  request: Record<string, unknown>;
-  selection?: unknown;
-} {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("Subscription Tool input must be an object.");
-  }
-  const record = value as Record<string, unknown>;
-  const phase = record.phase;
-  if (phase !== undefined && phase !== "collect" && phase !== "select" && phase !== "render") {
-    throw new Error("phase must be collect, select, or render.");
-  }
-  if (phase && typeof record.occurrence !== "string") {
-    throw new Error("multi-phase subscription execution requires occurrence.");
-  }
-  const { draft, phase: _phase, research, selection, ...request } = record;
-  return {
-    draft,
-    ...(phase ? { phase } : {}),
-    ...(research === undefined ? {} : { research }),
-    request,
-    ...(selection === undefined ? {} : { selection })
-  };
-}
-
-function cacheKey(request: Record<string, unknown>): string {
-  return JSON.stringify(
-    Object.fromEntries(Object.entries(request).sort(([left], [right]) => left.localeCompare(right)))
-  );
-}
-
-function trimCache(cache: Map<string, CollectedRivusDigest>): void {
-  while (cache.size > 8) {
-    cache.delete(cache.keys().next().value!);
-  }
-}
-
 export type RivusDailyAiToolResult =
   | {
       phase: "collect";
@@ -227,6 +227,31 @@ type DailyAiExecutorDependencies = {
   collect?: (value: unknown) => Promise<DailyAiDigestResult>;
   saveDiagnostics?: (snapshot: Parameters<typeof saveDailyAiDiagnostics>[0]) => Promise<void>;
 };
+
+function parseToolInput(value: unknown): {
+  occurrence: string;
+  phase: "collect" | "render";
+  draft?: unknown;
+} {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Daily AI Tool input must be an object.");
+  }
+  const record = value as Record<string, unknown>;
+  const occurrence = record.occurrence;
+  if (typeof occurrence !== "string" || !Number.isFinite(Date.parse(occurrence))) {
+    throw new Error("occurrence must be a valid date-time.");
+  }
+  if (record.phase !== "collect" && record.phase !== "render") {
+    throw new Error("phase must be collect or render.");
+  }
+  return { occurrence, phase: record.phase, draft: record.draft };
+}
+
+function trimDailyAiCache(cache: Map<string, DailyAiDigestResult>): void {
+  while (cache.size > 8) {
+    cache.delete(cache.keys().next().value!);
+  }
+}
 
 export function createRivusDailyAiDigestExecutor(
   dependencies: DailyAiExecutorDependencies = {}
@@ -303,29 +328,4 @@ export function createRivusDailyAiDigestExecutor(
       )
     };
   };
-}
-
-function parseToolInput(value: unknown): {
-  occurrence: string;
-  phase: "collect" | "render";
-  draft?: unknown;
-} {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("Daily AI Tool input must be an object.");
-  }
-  const record = value as Record<string, unknown>;
-  const occurrence = record.occurrence;
-  if (typeof occurrence !== "string" || !Number.isFinite(Date.parse(occurrence))) {
-    throw new Error("occurrence must be a valid date-time.");
-  }
-  if (record.phase !== "collect" && record.phase !== "render") {
-    throw new Error("phase must be collect or render.");
-  }
-  return { occurrence, phase: record.phase, draft: record.draft };
-}
-
-function trimDailyAiCache(cache: Map<string, DailyAiDigestResult>): void {
-  while (cache.size > 8) {
-    cache.delete(cache.keys().next().value!);
-  }
 }

@@ -27,32 +27,6 @@ afterEach(() => {
   }
 });
 
-describe("inspect runs", () => {
-  it("lists runs newest first and keeps only failed ones for failures", async () => {
-    const root = mkdtempSync(join(tmpdir(), "rss-summary-inspect-runs-"));
-    roots.push(root);
-    const failed = saveRunArtifact(root, audit("1", "2026-08-09T12:34:56.000Z"), failedDelivery(), "# a");
-    const ok = saveRunArtifact(root, audit("2", "2026-08-09T13:34:56.000Z"), okDelivery(), "# b");
-    const sourceFailure = saveRunArtifact(
-      root,
-      { ...audit("3", "2026-08-09T14:34:56.000Z"), sources: [sourceResult("failed")] },
-      okDelivery(),
-      "# c"
-    );
-
-    const runs = await run(listRuns(root));
-    expect(runs.map(({ path }) => path)).toEqual([sourceFailure.jsonPath, ok.jsonPath, failed.jsonPath]);
-
-    const failedRuns = await run(listFailedRuns(root));
-    expect(failedRuns.map(({ path }) => path)).toEqual([sourceFailure.jsonPath, failed.jsonPath]);
-
-    expect(await run(runArtifactForLabel(root, runArtifactLabel(ok.jsonPath)))).toBe(ok.jsonPath);
-    expect(await run(runArtifactForLabel(root, "missing-label"))).toBeUndefined();
-
-    expect((await run(readRunArtifact(failed.jsonPath))).delivery.status).toBe("failed");
-  });
-});
-
 function run<A, E>(effect: Effect.Effect<A, E, RunArchive>): Promise<A> {
   return Effect.runPromise(Effect.provide(effect, RunArchiveFilesLive));
 }
@@ -91,3 +65,29 @@ function okDelivery(): RunDelivery {
     stateStatus: "updated"
   };
 }
+
+describe("inspect runs", () => {
+  it("lists runs newest first and keeps only failed ones for failures", async () => {
+    const root = mkdtempSync(join(tmpdir(), "rss-summary-inspect-runs-"));
+    roots.push(root);
+    const failed = saveRunArtifact(root, audit("1", "2026-08-09T12:34:56.000Z"), failedDelivery(), "# a");
+    const ok = saveRunArtifact(root, audit("2", "2026-08-09T13:34:56.000Z"), okDelivery(), "# b");
+    const sourceFailure = saveRunArtifact(
+      root,
+      { ...audit("3", "2026-08-09T14:34:56.000Z"), sources: [sourceResult("failed")] },
+      okDelivery(),
+      "# c"
+    );
+
+    const runs = await run(listRuns(root));
+    expect(runs.map(({ path }) => path)).toEqual([sourceFailure.jsonPath, ok.jsonPath, failed.jsonPath]);
+
+    const failedRuns = await run(listFailedRuns(root));
+    expect(failedRuns.map(({ path }) => path)).toEqual([sourceFailure.jsonPath, failed.jsonPath]);
+
+    expect(await run(runArtifactForLabel(root, runArtifactLabel(ok.jsonPath)))).toBe(ok.jsonPath);
+    expect(await run(runArtifactForLabel(root, "missing-label"))).toBeUndefined();
+
+    expect((await run(readRunArtifact(failed.jsonPath))).delivery.status).toBe("failed");
+  });
+});

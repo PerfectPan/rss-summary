@@ -43,6 +43,29 @@ type RestoreOptions = {
   normalize: (provider: string) => string;
 };
 
+function validatePersisted(
+  state: BudgetState,
+  timezoneOffset: string,
+  options: RestoreOptions
+): NewsSearchError | undefined {
+  if (state.timezoneOffset !== timezoneOffset) {
+    return new NewsSearchError(
+      "local_budget_state",
+      "Local search budget timezone differs from the configured timezone."
+    );
+  }
+  for (const [key, entry] of Object.entries(state.cache)) {
+    if (
+      key !== cacheKey(entry.request, options.hash) ||
+      entry.request.sinceDay > entry.request.day ||
+      options.normalize(entry.request.provider) !== entry.request.provider
+    ) {
+      return new NewsSearchError("local_budget_state", "Invalid local search cache entry.");
+    }
+  }
+  return undefined;
+}
+
 /**
  * Persisted search allowance. Construction stays private so every change goes
  * through `restore` or `reserve`, which either return the next state plus
@@ -178,27 +201,4 @@ export class SearchBudget {
       value: undefined
     });
   }
-}
-
-function validatePersisted(
-  state: BudgetState,
-  timezoneOffset: string,
-  options: RestoreOptions
-): NewsSearchError | undefined {
-  if (state.timezoneOffset !== timezoneOffset) {
-    return new NewsSearchError(
-      "local_budget_state",
-      "Local search budget timezone differs from the configured timezone."
-    );
-  }
-  for (const [key, entry] of Object.entries(state.cache)) {
-    if (
-      key !== cacheKey(entry.request, options.hash) ||
-      entry.request.sinceDay > entry.request.day ||
-      options.normalize(entry.request.provider) !== entry.request.provider
-    ) {
-      return new NewsSearchError("local_budget_state", "Invalid local search cache entry.");
-    }
-  }
-  return undefined;
 }

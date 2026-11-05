@@ -19,21 +19,9 @@ export type CandidateCopyOptions = {
   editorialSummary?: string;
 };
 
-export function candidateCopy(candidate: CandidateProject, options: CandidateCopyOptions = {}): CandidateCopy {
-  const label = candidate.label ?? candidate.repo;
-  const url = candidate.url ?? candidate.repository?.htmlUrl ?? `https://github.com/${candidate.repo}`;
-  const source = candidate.actors.join(", ") || candidate.events[0]?.sourceName || "未知来源";
-  const facts = repositoryFactsForCandidate(candidate);
-  const oneLine = oneLineFor(candidate, label, facts);
-  const fallback = candidate.repository?.description ?? oneLine;
-  return {
-    facts,
-    label,
-    url,
-    source,
-    oneLine,
-    summary: boundedText(options.editorialSummary ?? candidate.description ?? fallback, 220)
-  };
+function boundedText(value: string, limit: number): string {
+  const normalized = value.replace(/\s+/gu, " ").trim();
+  return normalized.length <= limit ? normalized : `${normalized.slice(0, limit - 1)}…`;
 }
 
 function oneLineFor(candidate: CandidateProject, label: string, facts: string[]): string {
@@ -57,9 +45,21 @@ function oneLineFor(candidate: CandidateProject, label: string, facts: string[])
     : `${candidate.repo} 有一条新的项目动态。`;
 }
 
-function boundedText(value: string, limit: number): string {
-  const normalized = value.replace(/\s+/gu, " ").trim();
-  return normalized.length <= limit ? normalized : `${normalized.slice(0, limit - 1)}…`;
+export function candidateCopy(candidate: CandidateProject, options: CandidateCopyOptions = {}): CandidateCopy {
+  const label = candidate.label ?? candidate.repo;
+  const url = candidate.url ?? candidate.repository?.htmlUrl ?? `https://github.com/${candidate.repo}`;
+  const source = candidate.actors.join(", ") || candidate.events[0]?.sourceName || "未知来源";
+  const facts = repositoryFactsForCandidate(candidate);
+  const oneLine = oneLineFor(candidate, label, facts);
+  const fallback = candidate.repository?.description ?? oneLine;
+  return {
+    facts,
+    label,
+    url,
+    source,
+    oneLine,
+    summary: boundedText(options.editorialSummary ?? candidate.description ?? fallback, 220)
+  };
 }
 
 export type CandidateBriefLayoutOptions = {
@@ -74,6 +74,29 @@ export type CandidateBriefLayoutOptions = {
   summaryLimit?: number;
   summaries?: ReadonlyMap<string, string>;
 };
+
+function featuredItem(candidate: CandidateProject, summaries?: ReadonlyMap<string, string>): ViewItem {
+  const copy = candidateCopy(candidate, {
+    editorialSummary: summaries?.get(subscriptionEvidenceId(candidate))
+  });
+  return {
+    shape: "featured",
+    headline: copy.label,
+    links: [{ text: copy.label, url: copy.url }],
+    notes: [...(copy.facts.length > 0 ? [copy.facts.join(" · ")] : []), copy.summary],
+    sourceLabel: copy.source
+  };
+}
+
+function bulletItem(candidate: CandidateProject): ViewItem {
+  const copy = candidateCopy(candidate);
+  return {
+    shape: "bullet",
+    headline: copy.oneLine,
+    links: [{ text: `${copy.source} ↗`, url: copy.url }],
+    notes: []
+  };
+}
 
 /** Lay a subscription/frontier candidate selection out as a View IR brief. */
 export function candidateBriefView(options: CandidateBriefLayoutOptions): ViewDocument {
@@ -115,28 +138,5 @@ export function candidateBriefView(options: CandidateBriefLayoutOptions): ViewDo
     sections: viewSections,
     trailing,
     variant: "brief"
-  };
-}
-
-function featuredItem(candidate: CandidateProject, summaries?: ReadonlyMap<string, string>): ViewItem {
-  const copy = candidateCopy(candidate, {
-    editorialSummary: summaries?.get(subscriptionEvidenceId(candidate))
-  });
-  return {
-    shape: "featured",
-    headline: copy.label,
-    links: [{ text: copy.label, url: copy.url }],
-    notes: [...(copy.facts.length > 0 ? [copy.facts.join(" · ")] : []), copy.summary],
-    sourceLabel: copy.source
-  };
-}
-
-function bulletItem(candidate: CandidateProject): ViewItem {
-  const copy = candidateCopy(candidate);
-  return {
-    shape: "bullet",
-    headline: copy.oneLine,
-    links: [{ text: `${copy.source} ↗`, url: copy.url }],
-    notes: []
   };
 }

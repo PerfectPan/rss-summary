@@ -7,6 +7,21 @@ import type {
 } from "../value-objects/news-audit.js";
 import type { NewsHitDecision, NewsHitRejectionReason, NewsStoryDecision } from "../value-objects/news.js";
 
+function rejectionCounts(decisions: NewsHitDecision[]): Partial<Record<NewsHitRejectionReason, number>> {
+  const counts: Partial<Record<NewsHitRejectionReason, number>> = {};
+  for (const decision of decisions) {
+    if (decision.status !== "rejected" || !decision.reason) {
+      continue;
+    }
+    counts[decision.reason] = (counts[decision.reason] ?? 0) + 1;
+  }
+  return counts;
+}
+
+function countStoryReason(decisions: NewsStoryDecision[], reason: NonNullable<NewsStoryDecision["reason"]>): number {
+  return decisions.filter((decision) => decision.reason === reason).length;
+}
+
 export function buildNewsAudit(
   requests: NewsAuditRequest[],
   settled: readonly NewsQuerySettlement[],
@@ -70,21 +85,6 @@ export function buildNewsAudit(
       briefCapFilteredStories: countStoryReason(storyDecisions, "brief-cap")
     }
   };
-}
-
-function rejectionCounts(decisions: NewsHitDecision[]): Partial<Record<NewsHitRejectionReason, number>> {
-  const counts: Partial<Record<NewsHitRejectionReason, number>> = {};
-  for (const decision of decisions) {
-    if (decision.status !== "rejected" || !decision.reason) {
-      continue;
-    }
-    counts[decision.reason] = (counts[decision.reason] ?? 0) + 1;
-  }
-  return counts;
-}
-
-function countStoryReason(decisions: NewsStoryDecision[], reason: NonNullable<NewsStoryDecision["reason"]>): number {
-  return decisions.filter((decision) => decision.reason === reason).length;
 }
 
 export function summarizeNewsSources(

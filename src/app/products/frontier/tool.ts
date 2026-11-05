@@ -31,6 +31,42 @@ type RivusIndustryBriefDependencies = {
   env?: NodeJS.ProcessEnv;
 };
 
+function optionalString(value: unknown, name: string): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error(`${name} must be a non-empty string.`);
+  }
+  return value;
+}
+
+function optionalBoolean(value: unknown, name: string): boolean | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "boolean") {
+    throw new Error(`${name} must be a boolean.`);
+  }
+  return value;
+}
+
+function parseInput(value: unknown): RivusIndustryBriefInput {
+  if (value === undefined) {
+    return {};
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Rivus industry brief input must be an object.");
+  }
+
+  const input = value as Record<string, unknown>;
+  return {
+    day: optionalString(input.day, "day"),
+    occurrence: optionalString(input.occurrence, "occurrence"),
+    onlyNew: optionalBoolean(input.onlyNew, "onlyNew")
+  };
+}
+
 /** Observe-only frontier Tool: first-party sources only, never writes state or sends webhooks. */
 export async function generateRivusIndustryBrief(
   value: unknown,
@@ -71,42 +107,6 @@ export async function generateRivusIndustryBrief(
     ...(document.windowLabel ? { windowLabel: document.windowLabel } : {}),
     ...(document.audit ? { audit: document.audit } : {})
   };
-}
-
-function parseInput(value: unknown): RivusIndustryBriefInput {
-  if (value === undefined) {
-    return {};
-  }
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("Rivus industry brief input must be an object.");
-  }
-
-  const input = value as Record<string, unknown>;
-  return {
-    day: optionalString(input.day, "day"),
-    occurrence: optionalString(input.occurrence, "occurrence"),
-    onlyNew: optionalBoolean(input.onlyNew, "onlyNew")
-  };
-}
-
-function optionalString(value: unknown, name: string): string | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (typeof value !== "string" || value.length === 0) {
-    throw new Error(`${name} must be a non-empty string.`);
-  }
-  return value;
-}
-
-function optionalBoolean(value: unknown, name: string): boolean | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (typeof value !== "boolean") {
-    throw new Error(`${name} must be a boolean.`);
-  }
-  return value;
 }
 
 export const frontierToolDescriptor: Pick<

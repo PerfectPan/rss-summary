@@ -32,6 +32,73 @@ const input: SearchInput = {
   sourcePolicy: "news"
 };
 
+function restore(state: BudgetState, limits: BudgetLimits, hash: (material: string) => string) {
+  const restored = SearchBudget.restore(state, limits, {
+    hash,
+    normalize: normalizeProvider
+  });
+  if (restored._tag === "Err") {
+    throw restored.error;
+  }
+  return restored.value.state;
+}
+
+async function rateLimitedSearch(options: {
+  emitsRateLimit: boolean;
+  create: (next: () => ProviderStep) => ProviderHandle | Promise<ProviderHandle>;
+}): Promise<(input: SearchInput) => Promise<SearchPage>> {
+  if (options.emitsRateLimit) {
+    const steps: ProviderStep[] = ["http_429", "http_429", "ok"];
+    let index = 0;
+    const handle = await Promise.resolve(options.create(() => steps[index++] ?? "ok"));
+    return (value) => Effect.runPromise(handle.search(value));
+  }
+  const handle = await Promise.resolve(options.create(() => "ok"));
+  let injected = 0;
+  return async (value) => {
+    if (injected < 2) {
+      injected += 1;
+      throw new NewsSearchError("http_429", "injected");
+    }
+    return Effect.runPromise(handle.search(value));
+  };
+}
+
+function memoryDriver(dailyLimit: number, cacheable: boolean): BudgetDriver {
+  const limits: BudgetLimits = {
+    dailyLimit,
+    monthlyLimit: dailyLimit,
+    timezoneOffset: "+08:00",
+    cacheTtlMs: 60_000
+  };
+  const hash = (material: string) => material;
+  let budget = SearchBudget.empty(limits);
+  return {
+    stateFile: "memory.json",
+    limits,
+    provider: "https://suite.example/search",
+    now: () => new Date("2026-08-16T04:00:00.000Z"),
+    hash,
+    normalize: normalizeProvider,
+    isCacheable: (page) => cacheable && cacheablePage(page),
+    presentCache: presentCachedPage,
+    decodePage: (page) =>
+      ({
+        ...(page.provider === "doubao" || page.provider === "grok" ? { provider: page.provider } : {}),
+        ...(page.logId === undefined ? {} : { logId: page.logId }),
+        resultCount: page.resultCount,
+        ...(page.timeCostMs === undefined ? {} : { timeCostMs: page.timeCostMs }),
+        results: page.results.map((result) => ({ ...result }))
+      }) as CachedPage,
+    load: () => Effect.succeed(budget),
+    save: (state) =>
+      Effect.sync(() => {
+        budget = restore(state, limits, hash);
+      }),
+    withLock: (effect) => effect
+  };
+}
+
 export function describeSearchProvider(options: {
   name: string;
   emitsRateLimit: boolean;
@@ -118,71 +185,4 @@ export function describeSearchProvider(options: {
       });
     });
   });
-}
-
-async function rateLimitedSearch(options: {
-  emitsRateLimit: boolean;
-  create: (next: () => ProviderStep) => ProviderHandle | Promise<ProviderHandle>;
-}): Promise<(input: SearchInput) => Promise<SearchPage>> {
-  if (options.emitsRateLimit) {
-    const steps: ProviderStep[] = ["http_429", "http_429", "ok"];
-    let index = 0;
-    const handle = await Promise.resolve(options.create(() => steps[index++] ?? "ok"));
-    return (value) => Effect.runPromise(handle.search(value));
-  }
-  const handle = await Promise.resolve(options.create(() => "ok"));
-  let injected = 0;
-  return async (value) => {
-    if (injected < 2) {
-      injected += 1;
-      throw new NewsSearchError("http_429", "injected");
-    }
-    return Effect.runPromise(handle.search(value));
-  };
-}
-
-function memoryDriver(dailyLimit: number, cacheable: boolean): BudgetDriver {
-  const limits: BudgetLimits = {
-    dailyLimit,
-    monthlyLimit: dailyLimit,
-    timezoneOffset: "+08:00",
-    cacheTtlMs: 60_000
-  };
-  const hash = (material: string) => material;
-  let budget = SearchBudget.empty(limits);
-  return {
-    stateFile: "memory.json",
-    limits,
-    provider: "https://suite.example/search",
-    now: () => new Date("2026-08-16T04:00:00.000Z"),
-    hash,
-    normalize: normalizeProvider,
-    isCacheable: (page) => cacheable && cacheablePage(page),
-    presentCache: presentCachedPage,
-    decodePage: (page) =>
-      ({
-        ...(page.provider === "doubao" || page.provider === "grok" ? { provider: page.provider } : {}),
-        ...(page.logId === undefined ? {} : { logId: page.logId }),
-        resultCount: page.resultCount,
-        ...(page.timeCostMs === undefined ? {} : { timeCostMs: page.timeCostMs }),
-        results: page.results.map((result) => ({ ...result }))
-      }) as CachedPage,
-    load: () => Effect.succeed(budget),
-    save: (state) =>
-      Effect.sync(() => {
-        budget = restore(state, limits, hash);
-      }),
-    withLock: (effect) => effect
-  };
-}
-
-function restore(state: BudgetState, limits: BudgetLimits, hash: (material: string) => string) {
-  const restored = SearchBudget.restore(state, limits, {
-    hash,
-    normalize: normalizeProvider
-  });
-  if (restored._tag === "Err") {
-    throw restored.error;
-  }
-  return restored.value.state;
 }

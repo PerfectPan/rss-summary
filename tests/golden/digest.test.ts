@@ -19,6 +19,25 @@ vi.mock("node:crypto", async (importOriginal) => {
 const harness = useGoldenHarness();
 const windowArgs = ["--since", WINDOW_SINCE, "--until", WINDOW_UNTIL, "--pages", "1"];
 
+function installDigestFetch(): void {
+  installFetch((url) => {
+    if (url === PERSONAL_FEED_URL) {
+      return textResponse(PERSONAL_RSS);
+    }
+    if (url.includes("/received_events")) {
+      const page = new URL(url).searchParams.get("page");
+      return jsonResponse(page === "1" ? [GITHUB_WATCH_EVENT] : []);
+    }
+    if (url === "https://api.github.com/repos/example/project") {
+      return jsonResponse(GITHUB_REPOSITORY);
+    }
+    if (url.includes("/user/following")) {
+      return jsonResponse([]);
+    }
+    throw new Error(`Unexpected fetch ${url}`);
+  });
+}
+
 describe("golden digest", () => {
   it("snapshots rss-only JSON", async () => {
     installDigestFetch();
@@ -57,22 +76,3 @@ describe("golden digest", () => {
     await matchSnapshot("digest-dry-run.txt", capture, [context.root]);
   });
 });
-
-function installDigestFetch(): void {
-  installFetch((url) => {
-    if (url === PERSONAL_FEED_URL) {
-      return textResponse(PERSONAL_RSS);
-    }
-    if (url.includes("/received_events")) {
-      const page = new URL(url).searchParams.get("page");
-      return jsonResponse(page === "1" ? [GITHUB_WATCH_EVENT] : []);
-    }
-    if (url === "https://api.github.com/repos/example/project") {
-      return jsonResponse(GITHUB_REPOSITORY);
-    }
-    if (url.includes("/user/following")) {
-      return jsonResponse([]);
-    }
-    throw new Error(`Unexpected fetch ${url}`);
-  });
-}

@@ -28,91 +28,48 @@ export function publicationFitsWindow(publishedAt: string | undefined, window: N
   return publication !== undefined && publication.since >= window.since && publication.until <= window.until;
 }
 
-export function buildNewsStories(hits: NewsSearchHit[], window: NewsTimeWindow): NewsStory[] {
-  return buildNewsStoriesWithAudit(hits, window).stories;
+function normalizeSearchText(value: string): string {
+  return value.normalize("NFKC").toLowerCase().replace(/\s+/gu, " ").trim();
 }
 
-export function buildNewsStoriesWithAudit(hits: NewsSearchHit[], window: NewsTimeWindow): NewsStoryBuildResult {
-  const groups = new Map<string, NewsSearchHit[]>();
-  const decisions: NewsHitDecision[] = [];
-  for (const hit of hits) {
-    const reason = rejectionReasonForHit(hit, window);
-    if (reason) {
-      decisions.push({ hit, status: "rejected", reason });
-      continue;
-    }
-    const canonicalUrl = canonicalizeUrl(hit.url);
-    if (!canonicalUrl) {
-      decisions.push({ hit, status: "rejected", reason: "invalid-url" });
-      continue;
-    }
-    decisions.push({ hit, status: "accepted", canonicalUrl });
-    const current = groups.get(canonicalUrl) ?? [];
-    current.push(hit);
-    groups.set(canonicalUrl, current);
+function containsSearchTerm(content: string, term: string): boolean {
+  const normalizedTerm = normalizeSearchText(term);
+  if (!normalizedTerm) {
+    return false;
   }
-
-  return {
-    stories: [...groups.entries()]
-      .map(([canonicalUrl, matches]) => toStory(canonicalUrl, matches, window))
-      .sort((left, right) => right.score - left.score || right.publishTime.localeCompare(left.publishTime)),
-    decisions
-  };
-}
-
-export function selectNewsStories(stories: NewsStory[], topics: readonly NewsTopic[]): SelectedNewsStory[] {
-  return selectNewsStoriesWithAudit(stories, topics).stories;
-}
-
-export function selectNewsStoriesWithAudit(
-  stories: NewsStory[],
-  topics: readonly NewsTopic[]
-): NewsStorySelectionResult {
-  const selected: SelectedNewsStory[] = [];
-  const selectedUrls = new Set<string>();
-  for (const topic of topics.filter(({ enabled }) => enabled)) {
-    if (selected.length >= maxNewsBriefItems) {
-      break;
-    }
-    const matches = stories.filter(
-      (story) => story.topicIds.includes(topic.id) && !selectedUrls.has(story.canonicalUrl)
-    );
-    let count = 0;
-    for (const story of matches) {
-      if (count >= topic.maxItems || selected.length >= maxNewsBriefItems) {
-        break;
-      }
-      if (selectedUrls.has(story.canonicalUrl)) {
-        continue;
-      }
-      if (selected.some((candidate) => isSameTitleEvent(candidate, story))) {
-        continue;
-      }
-      selected.push({ ...story, selectedTopicId: topic.id });
-      selectedUrls.add(story.canonicalUrl);
-      count += 1;
-    }
+  if (/\p{Script=Han}/u.test(normalizedTerm) || normalizedTerm.endsWith("-")) {
+    return content.includes(normalizedTerm);
   }
-  const enabledTopicIds = new Set(topics.filter(({ enabled }) => enabled).map(({ id }) => id));
-  return {
-    stories: selected,
-    decisions: stories.map((story) => {
-      if (selectedUrls.has(story.canonicalUrl)) {
-        return { story, status: "selected" };
-      }
-      if (selected.some((candidate) => isSameTitleEvent(candidate, story))) {
-        return { story, status: "filtered", reason: "duplicate-title" };
-      }
-      if (!story.topicIds.some((id) => enabledTopicIds.has(id))) {
-        return { story, status: "filtered", reason: "no-enabled-topic" };
-      }
-      return {
-        story,
-        status: "filtered",
-        reason: selected.length >= maxNewsBriefItems ? "brief-cap" : "topic-quota"
-      };
-    })
+  // Normalize only inflections of known event words, not product names or arbitrary suffixes.
+  const eventForms: Record<string, string> = {
+    releases: "release",
+    released: "release",
+    releasing: "release",
+    changes: "change",
+    announcements: "announcement",
+    vulnerabilities: "vulnerability",
+    updates: "update",
+    launched: "launch",
+    launches: "launch",
+    outages: "outage",
+    deprecations: "deprecation",
+    deprecated: "deprecation"
   };
+  const fold = (value: string) => value.replace(/\b[a-z]+\b/gu, (word) => eventForms[word] ?? word);
+  content = fold(content);
+  const escaped = fold(normalizedTerm).replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  return new RegExp(`(?:^|[^a-z0-9])${escaped}(?=$|[^a-z0-9])`, "u").test(content);
+}
+
+function rejectsForAuthority(hit: NewsSearchHit): boolean {
+  if (hit.sourcePolicy === "news") {
+    return false;
+  }
+  const tier = hit.credibility.tier;
+  if (hit.sourcePolicy === "official") {
+    return tier !== "official";
+  }
+  return tier !== "official" && tier !== "authoritative";
 }
 
 function rejectionReasonForHit(hit: NewsSearchHit, window: NewsTimeWindow): NewsHitRejectionReason | undefined {
@@ -153,17 +110,6 @@ function rejectionReasonForHit(hit: NewsSearchHit, window: NewsTimeWindow): News
     return "intent-mismatch";
   }
   return undefined;
-}
-
-function rejectsForAuthority(hit: NewsSearchHit): boolean {
-  if (hit.sourcePolicy === "news") {
-    return false;
-  }
-  const tier = hit.credibility.tier;
-  if (hit.sourcePolicy === "official") {
-    return tier !== "official";
-  }
-  return tier !== "official" && tier !== "authoritative";
 }
 
 function toStory(canonicalUrl: string, matches: NewsSearchHit[], window: NewsTimeWindow): NewsStory {
@@ -221,35 +167,89 @@ function toStory(canonicalUrl: string, matches: NewsSearchHit[], window: NewsTim
   };
 }
 
-function normalizeSearchText(value: string): string {
-  return value.normalize("NFKC").toLowerCase().replace(/\s+/gu, " ").trim();
+export function buildNewsStoriesWithAudit(hits: NewsSearchHit[], window: NewsTimeWindow): NewsStoryBuildResult {
+  const groups = new Map<string, NewsSearchHit[]>();
+  const decisions: NewsHitDecision[] = [];
+  for (const hit of hits) {
+    const reason = rejectionReasonForHit(hit, window);
+    if (reason) {
+      decisions.push({ hit, status: "rejected", reason });
+      continue;
+    }
+    const canonicalUrl = canonicalizeUrl(hit.url);
+    if (!canonicalUrl) {
+      decisions.push({ hit, status: "rejected", reason: "invalid-url" });
+      continue;
+    }
+    decisions.push({ hit, status: "accepted", canonicalUrl });
+    const current = groups.get(canonicalUrl) ?? [];
+    current.push(hit);
+    groups.set(canonicalUrl, current);
+  }
+
+  return {
+    stories: [...groups.entries()]
+      .map(([canonicalUrl, matches]) => toStory(canonicalUrl, matches, window))
+      .sort((left, right) => right.score - left.score || right.publishTime.localeCompare(left.publishTime)),
+    decisions
+  };
 }
 
-function containsSearchTerm(content: string, term: string): boolean {
-  const normalizedTerm = normalizeSearchText(term);
-  if (!normalizedTerm) {
-    return false;
+export function buildNewsStories(hits: NewsSearchHit[], window: NewsTimeWindow): NewsStory[] {
+  return buildNewsStoriesWithAudit(hits, window).stories;
+}
+
+export function selectNewsStoriesWithAudit(
+  stories: NewsStory[],
+  topics: readonly NewsTopic[]
+): NewsStorySelectionResult {
+  const selected: SelectedNewsStory[] = [];
+  const selectedUrls = new Set<string>();
+  for (const topic of topics.filter(({ enabled }) => enabled)) {
+    if (selected.length >= maxNewsBriefItems) {
+      break;
+    }
+    const matches = stories.filter(
+      (story) => story.topicIds.includes(topic.id) && !selectedUrls.has(story.canonicalUrl)
+    );
+    let count = 0;
+    for (const story of matches) {
+      if (count >= topic.maxItems || selected.length >= maxNewsBriefItems) {
+        break;
+      }
+      if (selectedUrls.has(story.canonicalUrl)) {
+        continue;
+      }
+      if (selected.some((candidate) => isSameTitleEvent(candidate, story))) {
+        continue;
+      }
+      selected.push({ ...story, selectedTopicId: topic.id });
+      selectedUrls.add(story.canonicalUrl);
+      count += 1;
+    }
   }
-  if (/\p{Script=Han}/u.test(normalizedTerm) || normalizedTerm.endsWith("-")) {
-    return content.includes(normalizedTerm);
-  }
-  // Normalize only inflections of known event words, not product names or arbitrary suffixes.
-  const eventForms: Record<string, string> = {
-    releases: "release",
-    released: "release",
-    releasing: "release",
-    changes: "change",
-    announcements: "announcement",
-    vulnerabilities: "vulnerability",
-    updates: "update",
-    launched: "launch",
-    launches: "launch",
-    outages: "outage",
-    deprecations: "deprecation",
-    deprecated: "deprecation"
+  const enabledTopicIds = new Set(topics.filter(({ enabled }) => enabled).map(({ id }) => id));
+  return {
+    stories: selected,
+    decisions: stories.map((story) => {
+      if (selectedUrls.has(story.canonicalUrl)) {
+        return { story, status: "selected" };
+      }
+      if (selected.some((candidate) => isSameTitleEvent(candidate, story))) {
+        return { story, status: "filtered", reason: "duplicate-title" };
+      }
+      if (!story.topicIds.some((id) => enabledTopicIds.has(id))) {
+        return { story, status: "filtered", reason: "no-enabled-topic" };
+      }
+      return {
+        story,
+        status: "filtered",
+        reason: selected.length >= maxNewsBriefItems ? "brief-cap" : "topic-quota"
+      };
+    })
   };
-  const fold = (value: string) => value.replace(/\b[a-z]+\b/gu, (word) => eventForms[word] ?? word);
-  content = fold(content);
-  const escaped = fold(normalizedTerm).replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
-  return new RegExp(`(?:^|[^a-z0-9])${escaped}(?=$|[^a-z0-9])`, "u").test(content);
+}
+
+export function selectNewsStories(stories: NewsStory[], topics: readonly NewsTopic[]): SelectedNewsStory[] {
+  return selectNewsStoriesWithAudit(stories, topics).stories;
 }

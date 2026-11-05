@@ -33,6 +33,40 @@ function post(id: string, publishedAt: string): XAccountPosts["posts"][number] {
   };
 }
 
+function officialDocument(): IndustryBriefDocument {
+  return {
+    generatedAt: "2026-08-11T01:00:00Z",
+    candidates: [
+      {
+        repo: "rss:openai",
+        source: "rss" as const,
+        category: "release" as const,
+        score: 80,
+        actors: ["OpenAI"],
+        eventTypes: ["release"],
+        reasons: [],
+        events: [
+          {
+            id: "rss-1",
+            type: "release" as const,
+            source: "rss" as const,
+            actor: "OpenAI",
+            repo: "rss:openai",
+            createdAt: "2026-08-10T02:00:00Z",
+            title: "OpenAI 发布 Codex 2.0",
+            summary: "更可靠的工具调用",
+            htmlUrl: "https://openai.com/codex-2",
+            sourceName: "OpenAI"
+          }
+        ],
+        label: "OpenAI 发布 Codex 2.0",
+        url: "https://openai.com/codex-2",
+        description: "更可靠的工具调用"
+      }
+    ]
+  };
+}
+
 describe("Daily AI subscriptions", () => {
   it("excludes paper sources before fetching while retaining official research sources", async () => {
     const sources = [
@@ -90,8 +124,8 @@ describe("Daily AI subscriptions", () => {
   });
 
   it("uses one rolling window for official sources and the default ClaudeDevs account", async () => {
-    const xAccounts = vi.fn(emptyAccounts);
-    const industry = vi.fn(async () => officialDocument());
+    const xAccounts = vi.fn<() => Promise<XAccountPosts>>(emptyAccounts);
+    const industry = vi.fn<() => Promise<IndustryBriefDocument>>(async () => officialDocument());
     const env = { FEED_TIMEZONE_OFFSET: "+08:00" };
     const result = await generateDailyAiDigest({ occurrence }, { env, xAccounts, industry });
     const window = { since: "2026-08-10T01:00:00.000Z", until: occurrence };
@@ -124,7 +158,7 @@ describe("Daily AI subscriptions", () => {
   });
 
   it("passes configured accounts without imposing a newsworthiness filter", async () => {
-    const xAccounts = vi.fn(
+    const xAccounts = vi.fn<(_value: { handles: string[] }) => Promise<XAccountPosts>>(
       async (_value: { handles: string[] }): Promise<XAccountPosts> => ({
         posts: [post("experience", "2026-08-10T03:00:00Z")],
         audit: []
@@ -255,37 +289,3 @@ describe("Daily AI subscriptions", () => {
     expect(result.warnings).toContain("官方来源采集不完整：xAI News（HTTP 403）");
   });
 });
-
-function officialDocument(): IndustryBriefDocument {
-  return {
-    generatedAt: "2026-08-11T01:00:00Z",
-    candidates: [
-      {
-        repo: "rss:openai",
-        source: "rss" as const,
-        category: "release" as const,
-        score: 80,
-        actors: ["OpenAI"],
-        eventTypes: ["release"],
-        reasons: [],
-        events: [
-          {
-            id: "rss-1",
-            type: "release" as const,
-            source: "rss" as const,
-            actor: "OpenAI",
-            repo: "rss:openai",
-            createdAt: "2026-08-10T02:00:00Z",
-            title: "OpenAI 发布 Codex 2.0",
-            summary: "更可靠的工具调用",
-            htmlUrl: "https://openai.com/codex-2",
-            sourceName: "OpenAI"
-          }
-        ],
-        label: "OpenAI 发布 Codex 2.0",
-        url: "https://openai.com/codex-2",
-        description: "更可靠的工具调用"
-      }
-    ]
-  };
-}

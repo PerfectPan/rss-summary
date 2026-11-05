@@ -2,6 +2,16 @@ import { describe, expect, it } from "vite-plus/test";
 
 import { createEmptyFeedState, markDelivered } from "../index.js";
 
+type TestCandidate = { repo: string; events: Array<{ id: string }> };
+
+function candidate(repo: string, eventIds: string[]): TestCandidate {
+  return { repo, events: eventIds.map((id) => ({ id })) };
+}
+
+function eventIdsOf(candidate: TestCandidate): string[] {
+  return candidate.events.map((event) => event.id);
+}
+
 describe("delivery ledger", () => {
   it("marks candidate events as seen in the returned state", () => {
     const next = markDelivered(
@@ -39,13 +49,3 @@ describe("delivery ledger", () => {
     expect(markDelivered(state, [""], "2026-06-24T08:00:00Z").seen).toEqual({});
   });
 });
-
-type TestCandidate = { repo: string; events: Array<{ id: string }> };
-
-function candidate(repo: string, eventIds: string[]): TestCandidate {
-  return { repo, events: eventIds.map((id) => ({ id })) };
-}
-
-function eventIdsOf(candidate: TestCandidate): string[] {
-  return candidate.events.map((event) => event.id);
-}

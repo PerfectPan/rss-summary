@@ -38,6 +38,61 @@ type DailyAiDigestDependencies = {
   draft?: unknown;
 };
 
+function formatInstant(instant: number, timezoneOffset: string): string {
+  return new Date(instant + parseOffsetMilliseconds(timezoneOffset)).toISOString().slice(0, 16).replace("T", " ");
+}
+
+function formatWindowLabel(since: number, until: number, timezoneOffset: string): string {
+  return `${formatInstant(since, timezoneOffset)}–${formatInstant(until, timezoneOffset)} ${timezoneOffset}`;
+}
+
+function isWithinWindow(publishedAt: string, since: number, until: number): boolean {
+  const instant = Date.parse(publishedAt);
+  return Number.isFinite(instant) && instant >= since && instant < until;
+}
+
+function xEvidence(result: XAccountPosts): DailyAiEvidence[] {
+  return result.posts.map((post) => ({
+    id: `x:${post.id}`,
+    title: cleanDailyAiTitle(post.title),
+    url: post.url,
+    publishedAt: post.publishedAt,
+    excerpt: post.summary,
+    tier: "unverified",
+    sourceName: `@${post.author} · X（Grok 整理）`
+  }));
+}
+
+async function defaultIndustry(window: DailyAiWindow, env: NodeJS.ProcessEnv): Promise<IndustryBriefDocument> {
+  const timezoneOffset = env.FEED_TIMEZONE_OFFSET ?? "+08:00";
+  const base = await runPluginEffect(loadEnvConfig(env));
+  const config = {
+    ...base,
+    since: window.since,
+    until: window.until,
+    timezoneOffset,
+    dryRun: true
+  };
+  return runPluginEffect(
+    buildIndustryDocument({
+      ...config,
+      // Daily AI cannot publish paper candidates, so exclude their sources before fetching.
+      industrySources: config.industrySources.filter((source) => !isDailyAiPaperSource(source))
+    })
+  );
+}
+
+function parseInput(value: unknown): { occurrence: string } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Daily AI input must be an object.");
+  }
+  const occurrence = (value as Record<string, unknown>).occurrence;
+  if (typeof occurrence !== "string" || !Number.isFinite(Date.parse(occurrence))) {
+    throw new Error("occurrence must be a valid date-time.");
+  }
+  return { occurrence };
+}
+
 export async function generateDailyAiDigest(
   value: unknown,
   dependencies: DailyAiDigestDependencies = {}
@@ -89,59 +144,4 @@ export async function generateDailyAiDigest(
       digest.items.flatMap(({ refs }) => refs)
     )
   };
-}
-
-function isWithinWindow(publishedAt: string, since: number, until: number): boolean {
-  const instant = Date.parse(publishedAt);
-  return Number.isFinite(instant) && instant >= since && instant < until;
-}
-
-function formatWindowLabel(since: number, until: number, timezoneOffset: string): string {
-  return `${formatInstant(since, timezoneOffset)}–${formatInstant(until, timezoneOffset)} ${timezoneOffset}`;
-}
-
-function formatInstant(instant: number, timezoneOffset: string): string {
-  return new Date(instant + parseOffsetMilliseconds(timezoneOffset)).toISOString().slice(0, 16).replace("T", " ");
-}
-
-function xEvidence(result: XAccountPosts): DailyAiEvidence[] {
-  return result.posts.map((post) => ({
-    id: `x:${post.id}`,
-    title: cleanDailyAiTitle(post.title),
-    url: post.url,
-    publishedAt: post.publishedAt,
-    excerpt: post.summary,
-    tier: "unverified",
-    sourceName: `@${post.author} · X（Grok 整理）`
-  }));
-}
-
-async function defaultIndustry(window: DailyAiWindow, env: NodeJS.ProcessEnv): Promise<IndustryBriefDocument> {
-  const timezoneOffset = env.FEED_TIMEZONE_OFFSET ?? "+08:00";
-  const base = await runPluginEffect(loadEnvConfig(env));
-  const config = {
-    ...base,
-    since: window.since,
-    until: window.until,
-    timezoneOffset,
-    dryRun: true
-  };
-  return runPluginEffect(
-    buildIndustryDocument({
-      ...config,
-      // Daily AI cannot publish paper candidates, so exclude their sources before fetching.
-      industrySources: config.industrySources.filter((source) => !isDailyAiPaperSource(source))
-    })
-  );
-}
-
-function parseInput(value: unknown): { occurrence: string } {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("Daily AI input must be an object.");
-  }
-  const occurrence = (value as Record<string, unknown>).occurrence;
-  if (typeof occurrence !== "string" || !Number.isFinite(Date.parse(occurrence))) {
-    throw new Error("occurrence must be a valid date-time.");
-  }
-  return { occurrence };
 }
