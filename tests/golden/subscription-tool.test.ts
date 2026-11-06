@@ -22,6 +22,41 @@ vi.mock("node:crypto", async (importOriginal) => {
 const harness = useGoldenHarness();
 const occurrence = "2026-08-16T01:00:00.000Z";
 
+function installPersonalFeed(): void {
+  installFetch((url) => {
+    if (url === PERSONAL_FEED_URL) {
+      return textResponse(PERSONAL_RSS);
+    }
+    throw new Error(`Unexpected fetch ${url}`);
+  });
+}
+
+function evidenceOf(value: unknown): Array<{ id: string; summaryPolicy: string; title: string; url: string }> {
+  if (!value || typeof value !== "object" || !("evidence" in value) || !Array.isArray(value.evidence)) {
+    throw new Error("collect phase did not return evidence");
+  }
+  return value.evidence.map((item) => {
+    if (!item || typeof item !== "object") {
+      throw new Error("evidence item is invalid");
+    }
+    const record = item as Record<string, unknown>;
+    if (
+      typeof record.id !== "string" ||
+      typeof record.summaryPolicy !== "string" ||
+      typeof record.title !== "string" ||
+      typeof record.url !== "string"
+    ) {
+      throw new Error("evidence item is missing id, summaryPolicy, title, or url");
+    }
+    return {
+      id: record.id,
+      summaryPolicy: record.summaryPolicy,
+      title: record.title,
+      url: record.url
+    };
+  });
+}
+
 describe("golden subscription tool", () => {
   it("runs collect, select, and render", async () => {
     installPersonalFeed();
@@ -170,38 +205,3 @@ describe("golden subscription tool", () => {
     );
   });
 });
-
-function installPersonalFeed(): void {
-  installFetch((url) => {
-    if (url === PERSONAL_FEED_URL) {
-      return textResponse(PERSONAL_RSS);
-    }
-    throw new Error(`Unexpected fetch ${url}`);
-  });
-}
-
-function evidenceOf(value: unknown): Array<{ id: string; summaryPolicy: string; title: string; url: string }> {
-  if (!value || typeof value !== "object" || !("evidence" in value) || !Array.isArray(value.evidence)) {
-    throw new Error("collect phase did not return evidence");
-  }
-  return value.evidence.map((item) => {
-    if (!item || typeof item !== "object") {
-      throw new Error("evidence item is invalid");
-    }
-    const record = item as Record<string, unknown>;
-    if (
-      typeof record.id !== "string" ||
-      typeof record.summaryPolicy !== "string" ||
-      typeof record.title !== "string" ||
-      typeof record.url !== "string"
-    ) {
-      throw new Error("evidence item is missing id, summaryPolicy, title, or url");
-    }
-    return {
-      id: record.id,
-      summaryPolicy: record.summaryPolicy,
-      title: record.title,
-      url: record.url
-    };
-  });
-}

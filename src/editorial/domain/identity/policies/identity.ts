@@ -1,39 +1,3 @@
-export function isSameTitleEvent(left: { title: string }, right: { title: string }): boolean {
-  const leftFeatures = titleFeatures(left.title);
-  const rightFeatures = titleFeatures(right.title);
-  const smallerSize = Math.min(leftFeatures.size, rightFeatures.size);
-  if (smallerSize < 4) {
-    return false;
-  }
-
-  let shared = 0;
-  for (const feature of leftFeatures) {
-    if (rightFeatures.has(feature)) {
-      shared += 1;
-    }
-  }
-  return shared >= 4 && shared / smallerSize >= 0.6;
-}
-
-/** Daily AI headline equality. Distinct from title-feature overlap. */
-export function isSameHeadline(left: string, right: string): boolean {
-  return normalizeHeadline(left) === normalizeHeadline(right);
-}
-
-export function isSameEntityEvent(
-  left: { url: string; title: string },
-  right: { url: string; title: string }
-): boolean {
-  if (left.url === right.url) {
-    return true;
-  }
-  return isSameHeadline(left.title, right.title);
-}
-
-export function normalizeHeadline(value: string): string {
-  return cleanText(value).normalize("NFKC").toLowerCase();
-}
-
 function cleanText(value: string): string {
   return value.replace(/\s+/gu, " ").trim();
 }
@@ -78,4 +42,40 @@ function titleFeatures(value: string): Set<string> {
     }
   }
   return features;
+}
+
+export function normalizeHeadline(value: string): string {
+  return cleanText(value).normalize("NFKC").toLowerCase();
+}
+
+export function isSameTitleEvent(left: { title: string }, right: { title: string }): boolean {
+  const leftFeatures = titleFeatures(left.title);
+  const rightFeatures = titleFeatures(right.title);
+  const smallerSize = Math.min(leftFeatures.size, rightFeatures.size);
+  if (smallerSize < 4) {
+    return false;
+  }
+
+  let shared = 0;
+  for (const feature of leftFeatures) {
+    if (rightFeatures.has(feature)) {
+      shared += 1;
+    }
+  }
+  return shared >= 4 && shared / smallerSize >= 0.6;
+}
+
+/** Daily AI headline equality. Distinct from title-feature overlap. */
+export function isSameHeadline(left: string, right: string): boolean {
+  return normalizeHeadline(left) === normalizeHeadline(right);
+}
+
+export function isSameEntityEvent(
+  left: { url: string; title: string },
+  right: { url: string; title: string }
+): boolean {
+  if (left.url === right.url) {
+    return true;
+  }
+  return isSameHeadline(left.title, right.title);
 }

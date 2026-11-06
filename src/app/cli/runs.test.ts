@@ -7,6 +7,18 @@ import type { RunAudit } from "../../delivery/index.js";
 import { runArtifactLabel, saveRunArtifact } from "../../delivery/index.js";
 import { runRunsCommand } from "./runs.js";
 
+function audit(): RunAudit {
+  return {
+    version: 1,
+    runId: "12345678-abcd-4000-8000-123456789abc",
+    product: "frontier",
+    generatedAt: "2026-08-09T12:34:56.000Z",
+    sources: [],
+    counts: { fetched: 1, inWindow: 1, ranked: 1, selected: 1, researchPending: 0 },
+    candidates: []
+  };
+}
+
 describe("runs CLI", () => {
   it("lists and filters stored runs", async () => {
     const root = mkdtempSync(join(tmpdir(), "rss-summary-runs-cli-"));
@@ -69,15 +81,3 @@ describe("runs CLI", () => {
     }
   });
 });
-
-function audit(): RunAudit {
-  return {
-    version: 1,
-    runId: "12345678-abcd-4000-8000-123456789abc",
-    product: "frontier",
-    generatedAt: "2026-08-09T12:34:56.000Z",
-    sources: [],
-    counts: { fetched: 1, inWindow: 1, ranked: 1, selected: 1, researchPending: 0 },
-    candidates: []
-  };
-}

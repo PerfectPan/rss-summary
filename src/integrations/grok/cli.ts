@@ -28,6 +28,10 @@ const messages = {
   grok_cli_failed: "Grok CLI failed. Check the CLI installation and login."
 } as const;
 
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 /** Shared native X transport; news and account collectors supply their own selection policy. */
 export class GrokXClient {
   constructor(private readonly options: GrokOptions = {}) {}
@@ -189,7 +193,3 @@ export class GrokSearchClient {
 }
 
 export type { GrokOptions, GrokSearchOptions };
-
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
-}

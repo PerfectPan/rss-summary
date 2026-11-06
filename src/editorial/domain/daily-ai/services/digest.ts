@@ -38,6 +38,22 @@ export function industryEvidence(candidates: readonly CandidateProject[]): Daily
   });
 }
 
+function cleanText(value: string): string {
+  return value.replace(/\s+/gu, " ").trim();
+}
+
+function normalizeEvidence(input: DailyAiEvidence[]): DailyAiEvidence[] {
+  const ids = new Set<string>();
+  return input.flatMap((item) => {
+    const url = canonicalizeUrl(item.url);
+    if (!item.id || ids.has(item.id) || !url || !/^https?:$/u.test(new URL(url).protocol)) {
+      return [];
+    }
+    ids.add(item.id);
+    return [{ ...item, title: cleanText(item.title), excerpt: cleanText(item.excerpt), url }];
+  });
+}
+
 export function buildDailyAiDigest(inputEvidence: DailyAiEvidence[], options: { draft?: unknown } = {}): DailyAiDigest {
   const evidence = normalizeEvidence(inputEvidence);
   const groups: DailyAiEvidence[][] = [];
@@ -83,20 +99,4 @@ export function buildDailyAiDigest(inputEvidence: DailyAiEvidence[], options: { 
     }
   }
   return { evidence, items, audit: { decisions, editorialIssues } };
-}
-
-function normalizeEvidence(input: DailyAiEvidence[]): DailyAiEvidence[] {
-  const ids = new Set<string>();
-  return input.flatMap((item) => {
-    const url = canonicalizeUrl(item.url);
-    if (!item.id || ids.has(item.id) || !url || !/^https?:$/u.test(new URL(url).protocol)) {
-      return [];
-    }
-    ids.add(item.id);
-    return [{ ...item, title: cleanText(item.title), excerpt: cleanText(item.excerpt), url }];
-  });
-}
-
-function cleanText(value: string): string {
-  return value.replace(/\s+/gu, " ").trim();
 }

@@ -16,6 +16,33 @@ export type NewsBriefDocument = {
   windowLabel: string;
 };
 
+function cardItem(story: SelectedNewsStory, number: number): ViewItem {
+  const time = /^\d{4}-\d{2}-\d{2}$/u.test(story.publishTime)
+    ? `${story.publishTime}（仅日期）`
+    : (displayTime(story.publishTime) ?? story.publishTime);
+  return {
+    shape: "card",
+    number,
+    headline: markdownLinkText(story.title),
+    links: [{ text: markdownLinkText(story.title), url: story.canonicalUrl }],
+    notes: [story.summary, `${story.siteName} · ${time}`]
+  };
+}
+
+function emptyNewsMessage(sourceStatus: NewsSourceStatus | undefined): string {
+  if (sourceStatus?.state === "unavailable") {
+    return "本期资讯采集未完成，无法判断是否有新增。";
+  }
+  if (sourceStatus?.state === "partial") {
+    return "已完成采集的范围内未发现符合条件的新资讯；部分来源尚未完成。";
+  }
+  return "本期未发现符合条件的新资讯。";
+}
+
+function shortTopicLabel(value: string): string {
+  return value.replace(/新闻$/u, "");
+}
+
 /** Lay a noon/evening news brief out as a View IR document. */
 export function newsView(document: NewsBriefDocument): ViewDocument {
   const title = document.edition === "noon" ? "午间热点" : "晚间热点";
@@ -48,31 +75,4 @@ export function newsView(document: NewsBriefDocument): ViewDocument {
     trailing,
     variant: "news"
   };
-}
-
-function cardItem(story: SelectedNewsStory, number: number): ViewItem {
-  const time = /^\d{4}-\d{2}-\d{2}$/u.test(story.publishTime)
-    ? `${story.publishTime}（仅日期）`
-    : (displayTime(story.publishTime) ?? story.publishTime);
-  return {
-    shape: "card",
-    number,
-    headline: markdownLinkText(story.title),
-    links: [{ text: markdownLinkText(story.title), url: story.canonicalUrl }],
-    notes: [story.summary, `${story.siteName} · ${time}`]
-  };
-}
-
-function emptyNewsMessage(sourceStatus: NewsSourceStatus | undefined): string {
-  if (sourceStatus?.state === "unavailable") {
-    return "本期资讯采集未完成，无法判断是否有新增。";
-  }
-  if (sourceStatus?.state === "partial") {
-    return "已完成采集的范围内未发现符合条件的新资讯；部分来源尚未完成。";
-  }
-  return "本期未发现符合条件的新资讯。";
-}
-
-function shortTopicLabel(value: string): string {
-  return value.replace(/新闻$/u, "");
 }

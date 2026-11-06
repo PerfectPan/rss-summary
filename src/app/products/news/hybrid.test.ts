@@ -42,10 +42,10 @@ const article: ResearchPage = {
 };
 const empty: NewsSearchPage = { resultCount: 0, results: [] };
 const candidate = { title: "TypeScript release", url, snippet: "TypeScript release" };
-function setup(search = vi.fn(async (): Promise<NewsSearchPage> => empty)) {
+function setup(search = vi.fn<() => Promise<NewsSearchPage>>(async (): Promise<NewsSearchPage> => empty)) {
   const glm = {
-    search: vi.fn(async () => [candidate]),
-    read: vi.fn(async (_url: string) => article)
+    search: vi.fn<() => Promise<{ title: string; url: string; snippet: string }[]>>(async () => [candidate]),
+    read: vi.fn<(url: string) => Promise<ResearchPage>>(async (_url: string) => article)
   };
   return {
     search,
@@ -177,8 +177,10 @@ describe("hybrid news search", () => {
 
   it("bounds searches and reads for the entire brief, and does not refetch failed URLs", async () => {
     const glm = {
-      search: vi.fn(async (_query: string, _domains: string[]) => [candidate, { ...candidate, url: `${url}-2` }]),
-      read: vi.fn(async (): Promise<ResearchPage> => {
+      search: vi.fn<(_query: string, _domains: string[]) => Promise<{ title: string; url: string; snippet: string }[]>>(
+        async (_query: string, _domains: string[]) => [candidate, { ...candidate, url: `${url}-2` }]
+      ),
+      read: vi.fn<() => Promise<ResearchPage>>(async (): Promise<ResearchPage> => {
         throw new Error("unavailable");
       })
     };
@@ -227,8 +229,10 @@ describe("hybrid news search", () => {
 it("reserves every query a source search and Reader slot before a greedy first query", async () => {
   const ids = ["a", "b", "c"];
   const glm = {
-    search: vi.fn(async (_query: string, _domains: string[]) => [candidate, { ...candidate, url: `${url}-2` }]),
-    read: vi.fn(async (url: string) => ({ ...article, url }))
+    search: vi.fn<(_query: string, _domains: string[]) => Promise<{ title: string; url: string; snippet: string }[]>>(
+      async (_query: string, _domains: string[]) => [candidate, { ...candidate, url: `${url}-2` }]
+    ),
+    read: vi.fn<(url: string) => Promise<ResearchPage>>(async (url: string) => ({ ...article, url }))
   };
   const execute = createHybridNewsSearch({
     search: async () => empty,
@@ -298,7 +302,9 @@ it("combined mode collects complementary evidence even after a valid primary hit
     rankPosition: 1
   };
   const glm = {
-    search: vi.fn(async () => [{ ...candidate, url: `${url}-new` }]),
+    search: vi.fn<() => Promise<{ title: string; url: string; snippet: string }[]>>(async () => [
+      { ...candidate, url: `${url}-new` }
+    ]),
     read: async () => ({ ...article, url: `${url}-new` })
   };
   const execute = createHybridNewsSearch({
@@ -317,7 +323,9 @@ it("combined mode collects complementary evidence even after a valid primary hit
 it("admits a media article in general news without domain restriction or invented authority", async () => {
   const mediaUrl = "https://news.example.com/technology/typescript-release";
   const glm = {
-    search: vi.fn(async (_query: string, _domains: string[]) => [{ ...candidate, url: mediaUrl }]),
+    search: vi.fn<(_query: string, _domains: string[]) => Promise<{ title: string; url: string; snippet: string }[]>>(
+      async (_query: string, _domains: string[]) => [{ ...candidate, url: mediaUrl }]
+    ),
     read: async () => ({ ...article, url: mediaUrl })
   };
   const execute = createHybridNewsSearch({

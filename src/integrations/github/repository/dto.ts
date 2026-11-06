@@ -25,6 +25,40 @@ const accountSchema = Schema.Struct({
   login: Schema.optional(nullable)
 });
 
+const objectCtorString = Function.prototype.toString.call(Object);
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+  if (Object.prototype.toString.call(value) !== "[object Object]") {
+    return false;
+  }
+  const proto: object | null = Object.getPrototypeOf(value);
+  if (proto === null) {
+    return true;
+  }
+  const ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
+  return (
+    typeof ctor === "function" && ctor instanceof ctor && Function.prototype.toString.call(ctor) === objectCtorString
+  );
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return isPlainObject(value) ? value : {};
+}
+
+function stringOrNull(value: unknown): string | null {
+  if (typeof value === "string") {
+    return value;
+  }
+  return null;
+}
+
+function asNullableString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
 /** Repository metadata, soft-casting fields the schema rejects. */
 export function repositoryMetadata(input: unknown): RepositoryMetadata {
   const decoded = decodeSchema(repositorySchema, input);
@@ -59,38 +93,4 @@ export function followingLogins(input: unknown): string[] {
   return rows
     .map((row) => asRecord(row).login)
     .filter((login): login is string => typeof login === "string" && Boolean(login));
-}
-
-function stringOrNull(value: unknown): string | null {
-  if (typeof value === "string") {
-    return value;
-  }
-  return null;
-}
-
-function asNullableString(value: unknown): string | undefined {
-  return typeof value === "string" ? value : undefined;
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return isPlainObject(value) ? value : {};
-}
-
-const objectCtorString = Function.prototype.toString.call(Object);
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== "object") {
-    return false;
-  }
-  if (Object.prototype.toString.call(value) !== "[object Object]") {
-    return false;
-  }
-  const proto: object | null = Object.getPrototypeOf(value);
-  if (proto === null) {
-    return true;
-  }
-  const ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
-  return (
-    typeof ctor === "function" && ctor instanceof ctor && Function.prototype.toString.call(ctor) === objectCtorString
-  );
 }

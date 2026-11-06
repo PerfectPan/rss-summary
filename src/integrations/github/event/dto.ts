@@ -26,21 +26,42 @@ type RawEvent = {
 
 export type DecodedEvent = ActivityCardDto;
 
-export function decodeEventCard(input: unknown): Result<DecodedEvent, DecodeFailure> {
-  const decoded = decodeSchema(rawEventSchema, input);
-  if (decoded._tag === "Err") {
-    return decoded;
+function asString(value: unknown): string {
+  if (typeof value !== "string") {
+    return "";
   }
-  return ok(cardFromRaw(decoded.value));
+  return value;
 }
 
-/** Preserves the historical soft cast: a payload that fails decoding becomes an empty card. */
-export function normalizeEvent(input: unknown): ActivityCardDto {
-  const decoded = decodeEventCard(input);
-  if (decoded._tag === "Err") {
-    return cardFromRaw({});
+function optionalString(value: unknown): string | undefined {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function optionalNumber(value: unknown): number | undefined {
+  return typeof value === "number" ? value : undefined;
+}
+
+const objectCtorString = Function.prototype.toString.call(Object);
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== "object") {
+    return false;
   }
-  return decoded.value;
+  if (Object.prototype.toString.call(value) !== "[object Object]") {
+    return false;
+  }
+  const proto: object | null = Object.getPrototypeOf(value);
+  if (proto === null) {
+    return true;
+  }
+  const ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
+  return (
+    typeof ctor === "function" && ctor instanceof ctor && Function.prototype.toString.call(ctor) === objectCtorString
+  );
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return isPlainObject(value) ? value : {};
 }
 
 export function cardFromRaw(raw: RawEvent): ActivityCardDto {
@@ -98,40 +119,19 @@ export function cardFromRaw(raw: RawEvent): ActivityCardDto {
   return { ...base, type: "other" };
 }
 
-function asRecord(value: unknown): Record<string, unknown> {
-  return isPlainObject(value) ? value : {};
+export function decodeEventCard(input: unknown): Result<DecodedEvent, DecodeFailure> {
+  const decoded = decodeSchema(rawEventSchema, input);
+  if (decoded._tag === "Err") {
+    return decoded;
+  }
+  return ok(cardFromRaw(decoded.value));
 }
 
-const objectCtorString = Function.prototype.toString.call(Object);
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== "object") {
-    return false;
+/** Preserves the historical soft cast: a payload that fails decoding becomes an empty card. */
+export function normalizeEvent(input: unknown): ActivityCardDto {
+  const decoded = decodeEventCard(input);
+  if (decoded._tag === "Err") {
+    return cardFromRaw({});
   }
-  if (Object.prototype.toString.call(value) !== "[object Object]") {
-    return false;
-  }
-  const proto: object | null = Object.getPrototypeOf(value);
-  if (proto === null) {
-    return true;
-  }
-  const ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
-  return (
-    typeof ctor === "function" && ctor instanceof ctor && Function.prototype.toString.call(ctor) === objectCtorString
-  );
-}
-
-function asString(value: unknown): string {
-  if (typeof value !== "string") {
-    return "";
-  }
-  return value;
-}
-
-function optionalString(value: unknown): string | undefined {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
-
-function optionalNumber(value: unknown): number | undefined {
-  return typeof value === "number" ? value : undefined;
+  return decoded.value;
 }

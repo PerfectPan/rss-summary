@@ -17,6 +17,14 @@ export function sha256(material: string): string {
   return createHash("sha256").update(material).digest("hex");
 }
 
+function hasCode(cause: unknown, code: string): boolean {
+  return typeof cause === "object" && cause !== null && "code" in cause && (cause as { code?: unknown }).code === code;
+}
+
+function stateError(message: string): NewsSearchError {
+  return new NewsSearchError("local_budget_state", message);
+}
+
 export function loadSearchBudget(
   path: string,
   limits: BudgetLimits,
@@ -55,73 +63,6 @@ export function loadSearchBudget(
   });
 }
 
-export function saveSearchBudget(path: string, state: BudgetState): Effect.Effect<void, NewsSearchError> {
-  return Effect.uninterruptible(
-    Effect.tryPromise({
-      try: () => writeState(path, state),
-      catch: (cause) =>
-        cause instanceof NewsSearchError ? cause : stateError("Cannot persist local search budget state.")
-    })
-  );
-}
-
-/**
- * The release error replaces the operation error, matching the historical lock.
- * `acquireUseRelease` runs the release on success, failure and interruption.
- */
-export function withSearchBudgetLock<A, E>(
-  path: string,
-  operation: Effect.Effect<A, E>
-): Effect.Effect<A, E | NewsSearchError> {
-  return Effect.acquireUseRelease(
-    acquireLock(path),
-    () => operation,
-    (lock) =>
-      Effect.tryPromise({
-        try: async () => {
-          await lock.close();
-          await unlink(`${path}.lock`);
-        },
-        catch: () => stateError("Cannot release local search budget lock.")
-      })
-  );
-}
-
-export const SearchBudgetRepositoryLive: Layer.Layer<SearchBudgetRepository> = Layer.succeed(SearchBudgetRepository, {
-  load: (path, limits) => loadSearchBudget(path, limits),
-  save: (path, state) => saveSearchBudget(path, state),
-  withLock: (path, effect) => withSearchBudgetLock(path, effect)
-});
-
-function acquireLock(path: string): Effect.Effect<FileHandle, NewsSearchError> {
-  const lockPath = `${path}.lock`;
-  return Effect.gen(function* () {
-    yield* Effect.tryPromise({
-      try: () => mkdir(dirname(path), { recursive: true, mode: 0o700 }),
-      catch: () => stateError("Cannot create local search budget directory.")
-    });
-    const deadline = Date.now() + lockTimeoutMs;
-    while (true) {
-      const opened = yield* Effect.result(
-        Effect.tryPromise({
-          try: () => open(lockPath, "wx", 0o600),
-          catch: (cause) => cause
-        })
-      );
-      if (opened._tag === "Success") {
-        return opened.success;
-      }
-      if (!hasCode(opened.failure, "EEXIST")) {
-        return yield* Effect.fail(stateError("Cannot lock local search budget state."));
-      }
-      if (Date.now() >= deadline) {
-        return yield* Effect.fail(stateError("Local search budget lock timed out; preserve the lock for recovery."));
-      }
-      yield* Effect.sleep(`${lockRetryMs} millis`);
-    }
-  });
-}
-
 async function writeState(path: string, state: BudgetState): Promise<void> {
   const temporary = `${path}.${randomUUID()}.tmp`;
   // Parallel providers complete in any order; sorting the cache keys keeps the
@@ -152,10 +93,69 @@ async function writeState(path: string, state: BudgetState): Promise<void> {
   }
 }
 
-function hasCode(cause: unknown, code: string): boolean {
-  return typeof cause === "object" && cause !== null && "code" in cause && (cause as { code?: unknown }).code === code;
+export function saveSearchBudget(path: string, state: BudgetState): Effect.Effect<void, NewsSearchError> {
+  return Effect.uninterruptible(
+    Effect.tryPromise({
+      try: () => writeState(path, state),
+      catch: (cause) =>
+        cause instanceof NewsSearchError ? cause : stateError("Cannot persist local search budget state.")
+    })
+  );
 }
 
-function stateError(message: string): NewsSearchError {
-  return new NewsSearchError("local_budget_state", message);
+function acquireLock(path: string): Effect.Effect<FileHandle, NewsSearchError> {
+  const lockPath = `${path}.lock`;
+  return Effect.gen(function* () {
+    yield* Effect.tryPromise({
+      try: () => mkdir(dirname(path), { recursive: true, mode: 0o700 }),
+      catch: () => stateError("Cannot create local search budget directory.")
+    });
+    const deadline = Date.now() + lockTimeoutMs;
+    while (true) {
+      const opened = yield* Effect.result(
+        Effect.tryPromise({
+          try: () => open(lockPath, "wx", 0o600),
+          catch: (cause) => cause
+        })
+      );
+      if (opened._tag === "Success") {
+        return opened.success;
+      }
+      if (!hasCode(opened.failure, "EEXIST")) {
+        return yield* Effect.fail(stateError("Cannot lock local search budget state."));
+      }
+      if (Date.now() >= deadline) {
+        return yield* Effect.fail(stateError("Local search budget lock timed out; preserve the lock for recovery."));
+      }
+      yield* Effect.sleep(`${lockRetryMs} millis`);
+    }
+  });
 }
+
+/**
+ * The release error replaces the operation error, matching the historical lock.
+ * `acquireUseRelease` runs the release on success, failure and interruption.
+ */
+export function withSearchBudgetLock<A, E>(
+  path: string,
+  operation: Effect.Effect<A, E>
+): Effect.Effect<A, E | NewsSearchError> {
+  return Effect.acquireUseRelease(
+    acquireLock(path),
+    () => operation,
+    (lock) =>
+      Effect.tryPromise({
+        try: async () => {
+          await lock.close();
+          await unlink(`${path}.lock`);
+        },
+        catch: () => stateError("Cannot release local search budget lock.")
+      })
+  );
+}
+
+export const SearchBudgetRepositoryLive: Layer.Layer<SearchBudgetRepository> = Layer.succeed(SearchBudgetRepository, {
+  load: (path, limits) => loadSearchBudget(path, limits),
+  save: (path, state) => saveSearchBudget(path, state),
+  withLock: (path, effect) => withSearchBudgetLock(path, effect)
+});

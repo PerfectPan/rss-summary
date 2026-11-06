@@ -37,40 +37,125 @@ const labeledSignals = new Set<SignalType>([
   "change-merged"
 ]);
 
-export function scoreAcquired(acquired: readonly Acquired[], options: ScoreOptions): CandidateProject[] {
-  const groups = new Map<string, Acquired[]>();
-  for (const entry of acquired) {
-    if (entry.card.type === "other") {
-      continue;
-    }
-    const key = entry.item.routing?.groupKey;
-    if (!key) {
-      continue;
-    }
-    const group = groups.get(key);
-    if (group) {
-      group.push(entry);
-    } else {
-      groups.set(key, [entry]);
-    }
+function repositoryText(entry: Acquired): string | undefined {
+  const profile = entry.item.subject.profile;
+  if (!profile) {
+    return undefined;
   }
-  return [...groups.values()]
-    .map((group) => scoreGroup(group, options))
-    .sort((left, right) => right.score - left.score || left.repo.localeCompare(right.repo));
+  return [entry.item.subject.name, profile.description ?? "", ...profile.keywords].join(" ");
 }
 
-/**
- * Keep papers as a bounded research queue. A paper must match configured interests in its
- * abstract; title-only matches are intentionally insufficient for entering the queue.
- */
-export function selectResearchCandidates(candidates: CandidateProject[], maxPapers: number): CandidateProject[] {
-  const selectedPapers = new Set(
-    candidates
-      .filter((candidate) => candidate.category === "paper")
-      .filter((candidate) => candidate.reasons.some((reason) => reason.startsWith("matches paper abstract: ")))
-      .slice(0, maxPapers)
+function tokenize(value: string): Set<string> {
+  return new Set(
+    value
+      .toLowerCase()
+      .split(/[^a-z0-9]+/u)
+      .map((token) => token.trim())
+      .filter(Boolean)
   );
-  return candidates.filter((candidate) => candidate.category !== "paper" || selectedPapers.has(candidate));
+}
+
+function matchTokens(value: string, interests: readonly string[]): string[] {
+  const tokens = tokenize(value);
+  return interests.filter((interest) => {
+    const interestTokens = [...tokenize(interest)];
+    return interestTokens.length > 0 && interestTokens.every((token) => tokens.has(token));
+  });
+}
+
+function paperAbstract(items: readonly Acquired[]): string {
+  return items
+    .filter((entry) => entry.card.type === "paper")
+    .map((entry) => entry.item.content.excerpt ?? "")
+    .join(" ");
+}
+
+function eventText(entry: Acquired): string {
+  const content = entry.item.content;
+  return [content.title ?? "", content.excerpt ?? "", content.url ?? "", ...(content.keywords ?? [])].join(" ");
+}
+
+function daysSince(isoDate: string, now: number): number {
+  return (now - new Date(isoDate).getTime()) / 86_400_000;
+}
+
+function strongestChannel(items: readonly Acquired[]): ActivitySource {
+  let best = items[0]!.item.routing!;
+  for (const entry of items) {
+    const routing = entry.item.routing!;
+    if (routing.channelRank > best.channelRank) {
+      best = routing;
+    }
+  }
+  return best.channel as ActivitySource;
+}
+
+function categoryFor(types: readonly ActivityType[]): CandidateProject["category"] {
+  if (types.includes("paper")) {
+    return "paper";
+  }
+  if (types.includes("article")) {
+    return "article";
+  }
+  if (
+    types.includes("watch") ||
+    types.includes("fork") ||
+    types.includes("create") ||
+    types.includes("trending") ||
+    types.includes("recommendation") ||
+    types.includes("follow")
+  ) {
+    return "discovery";
+  }
+  if (types.includes("release")) {
+    return "release";
+  }
+  return "activity";
+}
+
+function labelFor(
+  repo: string,
+  strippedRepo: string,
+  publication: Acquired | undefined,
+  change: Acquired | undefined
+): string | undefined {
+  const published = publication?.item.routing;
+  if (published) {
+    return "titleLabel" in published ? published.titleLabel : strippedRepo;
+  }
+  const pull = change?.item.routing;
+  if (pull && "prSuffix" in pull) {
+    return `${repo}${pull.prSuffix ?? ""}`;
+  }
+  return undefined;
+}
+
+function urlFor(first: Acquired, publication: Acquired | undefined, change: Acquired | undefined): string | undefined {
+  const published = publication?.item.routing;
+  if (published && "directUrl" in published && published.directUrl !== undefined) {
+    return published.directUrl;
+  }
+  const pull = change?.item.routing;
+  if (pull && "directUrl" in pull && pull.directUrl !== undefined) {
+    return pull.directUrl;
+  }
+  const record = first.item.routing?.record;
+  if (record) {
+    return record.htmlUrl;
+  }
+  return first.item.routing?.fallbackUrl;
+}
+
+function descriptionFor(publication: Acquired | undefined, change: Acquired | undefined): string | undefined {
+  const published = publication?.item.routing;
+  if (published && "description" in published) {
+    return published.description;
+  }
+  const pull = change?.item.routing;
+  if (pull && "description" in pull) {
+    return pull.description;
+  }
+  return undefined;
 }
 
 function scoreGroup(inserted: Acquired[], options: ScoreOptions): CandidateProject {
@@ -153,123 +238,38 @@ function scoreGroup(inserted: Acquired[], options: ScoreOptions): CandidateProje
   };
 }
 
-function strongestChannel(items: readonly Acquired[]): ActivitySource {
-  let best = items[0]!.item.routing!;
-  for (const entry of items) {
-    const routing = entry.item.routing!;
-    if (routing.channelRank > best.channelRank) {
-      best = routing;
+export function scoreAcquired(acquired: readonly Acquired[], options: ScoreOptions): CandidateProject[] {
+  const groups = new Map<string, Acquired[]>();
+  for (const entry of acquired) {
+    if (entry.card.type === "other") {
+      continue;
+    }
+    const key = entry.item.routing?.groupKey;
+    if (!key) {
+      continue;
+    }
+    const group = groups.get(key);
+    if (group) {
+      group.push(entry);
+    } else {
+      groups.set(key, [entry]);
     }
   }
-  return best.channel as ActivitySource;
+  return [...groups.values()]
+    .map((group) => scoreGroup(group, options))
+    .sort((left, right) => right.score - left.score || left.repo.localeCompare(right.repo));
 }
 
-function categoryFor(types: readonly ActivityType[]): CandidateProject["category"] {
-  if (types.includes("paper")) {
-    return "paper";
-  }
-  if (types.includes("article")) {
-    return "article";
-  }
-  if (
-    types.includes("watch") ||
-    types.includes("fork") ||
-    types.includes("create") ||
-    types.includes("trending") ||
-    types.includes("recommendation") ||
-    types.includes("follow")
-  ) {
-    return "discovery";
-  }
-  if (types.includes("release")) {
-    return "release";
-  }
-  return "activity";
-}
-
-function eventText(entry: Acquired): string {
-  const content = entry.item.content;
-  return [content.title ?? "", content.excerpt ?? "", content.url ?? "", ...(content.keywords ?? [])].join(" ");
-}
-
-function paperAbstract(items: readonly Acquired[]): string {
-  return items
-    .filter((entry) => entry.card.type === "paper")
-    .map((entry) => entry.item.content.excerpt ?? "")
-    .join(" ");
-}
-
-function repositoryText(entry: Acquired): string | undefined {
-  const profile = entry.item.subject.profile;
-  if (!profile) {
-    return undefined;
-  }
-  return [entry.item.subject.name, profile.description ?? "", ...profile.keywords].join(" ");
-}
-
-function matchTokens(value: string, interests: readonly string[]): string[] {
-  const tokens = tokenize(value);
-  return interests.filter((interest) => {
-    const interestTokens = [...tokenize(interest)];
-    return interestTokens.length > 0 && interestTokens.every((token) => tokens.has(token));
-  });
-}
-
-function tokenize(value: string): Set<string> {
-  return new Set(
-    value
-      .toLowerCase()
-      .split(/[^a-z0-9]+/u)
-      .map((token) => token.trim())
-      .filter(Boolean)
+/**
+ * Keep papers as a bounded research queue. A paper must match configured interests in its
+ * abstract; title-only matches are intentionally insufficient for entering the queue.
+ */
+export function selectResearchCandidates(candidates: CandidateProject[], maxPapers: number): CandidateProject[] {
+  const selectedPapers = new Set(
+    candidates
+      .filter((candidate) => candidate.category === "paper")
+      .filter((candidate) => candidate.reasons.some((reason) => reason.startsWith("matches paper abstract: ")))
+      .slice(0, maxPapers)
   );
-}
-
-function daysSince(isoDate: string, now: number): number {
-  return (now - new Date(isoDate).getTime()) / 86_400_000;
-}
-
-function labelFor(
-  repo: string,
-  strippedRepo: string,
-  publication: Acquired | undefined,
-  change: Acquired | undefined
-): string | undefined {
-  const published = publication?.item.routing;
-  if (published) {
-    return "titleLabel" in published ? published.titleLabel : strippedRepo;
-  }
-  const pull = change?.item.routing;
-  if (pull && "prSuffix" in pull) {
-    return `${repo}${pull.prSuffix ?? ""}`;
-  }
-  return undefined;
-}
-
-function urlFor(first: Acquired, publication: Acquired | undefined, change: Acquired | undefined): string | undefined {
-  const published = publication?.item.routing;
-  if (published && "directUrl" in published && published.directUrl !== undefined) {
-    return published.directUrl;
-  }
-  const pull = change?.item.routing;
-  if (pull && "directUrl" in pull && pull.directUrl !== undefined) {
-    return pull.directUrl;
-  }
-  const record = first.item.routing?.record;
-  if (record) {
-    return record.htmlUrl;
-  }
-  return first.item.routing?.fallbackUrl;
-}
-
-function descriptionFor(publication: Acquired | undefined, change: Acquired | undefined): string | undefined {
-  const published = publication?.item.routing;
-  if (published && "description" in published) {
-    return published.description;
-  }
-  const pull = change?.item.routing;
-  if (pull && "description" in pull) {
-    return pull.description;
-  }
-  return undefined;
+  return candidates.filter((candidate) => candidate.category !== "paper" || selectedPapers.has(candidate));
 }

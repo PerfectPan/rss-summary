@@ -15,6 +15,84 @@ const window = {
   until: Date.parse("2026-07-29T12:30:00+08:00")
 };
 
+function query(overrides: Partial<NewsTopicQuery> = {}): NewsTopicQuery {
+  return {
+    id: "agent-release",
+    text: "AI Agent 正式发布",
+    intent: "model-release",
+    subjectAny: ["AI Agent"],
+    eventAny: ["正式发布"],
+    excludedAny: ["评测"],
+    ...overrides
+  };
+}
+
+function topic(overrides: Partial<NewsTopic>): NewsTopic {
+  return {
+    id: "technology",
+    label: "科技新闻",
+    icon: "💻",
+    enabled: true,
+    sourcePolicy: "authoritative",
+    maxItems: 5,
+    queries: [query()],
+    ...overrides
+  };
+}
+
+function hit(
+  overrides: Partial<NewsSearchHit> & {
+    authInfoLevel?: number;
+    sourceVerification?: {
+      method: "configured-domain" | "article-read";
+      domain: string;
+      policy: "official" | "news";
+    };
+  } = {}
+): NewsSearchHit {
+  const merged = {
+    id: "result",
+    title: "产品正式发布",
+    url: "https://example.com/update",
+    summary: "官方正式发布一项重要产品更新。",
+    siteName: "Example News",
+    publishTime: "2026-07-29T09:30:00+08:00",
+    rankScore: 0.8,
+    rankPosition: 1,
+    authInfoLevel: 2 as number | undefined,
+    authInfoDescription: "正常权威",
+    topicId: "technology",
+    topicLabel: "科技新闻",
+    sourcePolicy: "authoritative" as const,
+    queryId: "agent-release",
+    queryText: "AI Agent 正式发布",
+    subjectAny: ["产品"],
+    eventAny: ["正式发布"],
+    excludedAny: ["评测"],
+    ...overrides
+  };
+  const resolved = resolveNewsCredibility({
+    url: merged.url,
+    authInfoLevel: merged.authInfoLevel,
+    sourceVerification: merged.sourceVerification
+  });
+  const {
+    authInfoLevel: _authInfoLevel,
+    sourceVerification: _sourceVerification,
+    credibility: _credibility,
+    authorityRank: _authorityRank,
+    ...rest
+  } = merged;
+  return {
+    ...rest,
+    credibility: {
+      tier: resolved.tier,
+      ...(resolved.method ? { method: resolved.method } : {})
+    },
+    authorityRank: resolved.rank
+  };
+}
+
 describe("news domain", () => {
   it("interprets timezone-free publisher timestamps in the configured news timezone", () => {
     expect(parsePublishTime("2026-07-29 09:30:00", "+08:00")).toBe(Date.parse("2026-07-29T09:30:00+08:00"));
@@ -216,84 +294,6 @@ describe("news domain", () => {
     expect(selection.decisions.filter(({ reason }) => reason === "brief-cap")).toHaveLength(2);
   });
 });
-
-function topic(overrides: Partial<NewsTopic>): NewsTopic {
-  return {
-    id: "technology",
-    label: "科技新闻",
-    icon: "💻",
-    enabled: true,
-    sourcePolicy: "authoritative",
-    maxItems: 5,
-    queries: [query()],
-    ...overrides
-  };
-}
-
-function query(overrides: Partial<NewsTopicQuery> = {}): NewsTopicQuery {
-  return {
-    id: "agent-release",
-    text: "AI Agent 正式发布",
-    intent: "model-release",
-    subjectAny: ["AI Agent"],
-    eventAny: ["正式发布"],
-    excludedAny: ["评测"],
-    ...overrides
-  };
-}
-
-function hit(
-  overrides: Partial<NewsSearchHit> & {
-    authInfoLevel?: number;
-    sourceVerification?: {
-      method: "configured-domain" | "article-read";
-      domain: string;
-      policy: "official" | "news";
-    };
-  } = {}
-): NewsSearchHit {
-  const merged = {
-    id: "result",
-    title: "产品正式发布",
-    url: "https://example.com/update",
-    summary: "官方正式发布一项重要产品更新。",
-    siteName: "Example News",
-    publishTime: "2026-07-29T09:30:00+08:00",
-    rankScore: 0.8,
-    rankPosition: 1,
-    authInfoLevel: 2 as number | undefined,
-    authInfoDescription: "正常权威",
-    topicId: "technology",
-    topicLabel: "科技新闻",
-    sourcePolicy: "authoritative" as const,
-    queryId: "agent-release",
-    queryText: "AI Agent 正式发布",
-    subjectAny: ["产品"],
-    eventAny: ["正式发布"],
-    excludedAny: ["评测"],
-    ...overrides
-  };
-  const resolved = resolveNewsCredibility({
-    url: merged.url,
-    authInfoLevel: merged.authInfoLevel,
-    sourceVerification: merged.sourceVerification
-  });
-  const {
-    authInfoLevel: _authInfoLevel,
-    sourceVerification: _sourceVerification,
-    credibility: _credibility,
-    authorityRank: _authorityRank,
-    ...rest
-  } = merged;
-  return {
-    ...rest,
-    credibility: {
-      tier: resolved.tier,
-      ...(resolved.method ? { method: resolved.method } : {})
-    },
-    authorityRank: resolved.rank
-  };
-}
 
 it("accepts event inflections and does not confuse a migration instruction with a review article", () => {
   const base = hit({

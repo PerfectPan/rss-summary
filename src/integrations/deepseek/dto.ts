@@ -37,6 +37,30 @@ const resultSchema = Schema.Struct({
   rerank_score: Schema.optional(Schema.Number.check(Schema.isBetween({ minimum: 0, maximum: 3 })))
 });
 
+function deepSeekResult(hit: typeof resultSchema.Type, rankPosition: number): SearchResult {
+  const url = hit.url;
+  const canonical = canonicalizeUrl(url) ?? url;
+  const siteName = hit.site_name ?? undefined;
+  const publishDay = hit.date ? deepSeekPublicationDay(hit.date) : undefined;
+  return {
+    id: `deepseek:${canonical}`,
+    title: hit.title,
+    url,
+    ...(siteName !== undefined ? { siteName } : {}),
+    ...(hit.snippet !== undefined ? { snippet: hit.snippet } : {}),
+    ...(hit.summary !== undefined ? { summary: hit.summary } : {}),
+    ...(hit.date ? { publishTime: publishDay ? publishDay.day : hit.date } : {}),
+    ...(publishDay !== undefined ? { publishDay } : {}),
+    ...(hit.rerank_score !== undefined ? { rankScore: hit.rerank_score } : {}),
+    ...(hit.authority !== undefined ? { authority: hit.authority } : {}),
+    rankPosition
+  };
+}
+
+function causeText(value: unknown): string {
+  return value instanceof Error ? value.message : String(value);
+}
+
 export function parseDeepSeekResponse(value: unknown, retryAfterMs?: number): DeepSeekAcquired {
   let response: { results: readonly unknown[] };
   try {
@@ -61,28 +85,4 @@ export function parseDeepSeekResponse(value: unknown, retryAfterMs?: number): De
     },
     items: parsed.map(({ item }) => item)
   };
-}
-
-function deepSeekResult(hit: typeof resultSchema.Type, rankPosition: number): SearchResult {
-  const url = hit.url;
-  const canonical = canonicalizeUrl(url) ?? url;
-  const siteName = hit.site_name ?? undefined;
-  const publishDay = hit.date ? deepSeekPublicationDay(hit.date) : undefined;
-  return {
-    id: `deepseek:${canonical}`,
-    title: hit.title,
-    url,
-    ...(siteName !== undefined ? { siteName } : {}),
-    ...(hit.snippet !== undefined ? { snippet: hit.snippet } : {}),
-    ...(hit.summary !== undefined ? { summary: hit.summary } : {}),
-    ...(hit.date ? { publishTime: publishDay ? publishDay.day : hit.date } : {}),
-    ...(publishDay !== undefined ? { publishDay } : {}),
-    ...(hit.rerank_score !== undefined ? { rankScore: hit.rerank_score } : {}),
-    ...(hit.authority !== undefined ? { authority: hit.authority } : {}),
-    rankPosition
-  };
-}
-
-function causeText(value: unknown): string {
-  return value instanceof Error ? value.message : String(value);
 }

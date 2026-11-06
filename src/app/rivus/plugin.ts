@@ -26,6 +26,10 @@ type RssSummaryPluginDependencies = {
 
 type RivusDailyAiToolResult = Awaited<ReturnType<ReturnType<typeof createDailyAiToolExecutor>>>;
 
+function presentationAutomation(template: PresentationAutomation): PresentationAutomation {
+  return template;
+}
+
 export function createRssSummaryPlugin(dependencies: RssSummaryPluginDependencies = {}): RivusPlugin {
   const executeDigest = createSubscriptionsToolExecutor({
     ...(dependencies.generateDigest ? { generateDigest: dependencies.generateDigest } : {})
@@ -100,10 +104,6 @@ export function createRssSummaryPlugin(dependencies: RssSummaryPluginDependencie
       }
     }
   };
-}
-
-function presentationAutomation(template: PresentationAutomation): PresentationAutomation {
-  return template;
 }
 
 // The plugin module keeps the historical constant surface for hosts.

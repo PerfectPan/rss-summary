@@ -13,21 +13,6 @@ export type PullRequestAcquired = {
   item: Item;
 };
 
-export function acquireRepository(input: unknown): RepositoryAcquired {
-  const metadata = repositoryMetadata(input);
-  return { metadata, item: repositoryItem(metadata) };
-}
-
-export function acquirePullRequest(input: unknown, fullName: string, number: number): PullRequestAcquired {
-  const details = pullRequestDetails(input);
-  return { details, item: pullRequestItem(details, fullName, number) };
-}
-
-export function acquireFollowing(input: unknown): { logins: string[]; items: Item[] } {
-  const logins = followingLogins(input);
-  return { logins, items: logins.map(followedAccount) };
-}
-
 function repositoryItem(metadata: RepositoryMetadata): Item {
   const keywords = [...metadata.topics, ...(metadata.language ? [metadata.language] : [])];
   return {
@@ -99,4 +84,19 @@ function followedAccount(login: string): Item {
     signals: [{ type: "relationship", label: "follow relationship from GitHub Home" }],
     display: { label: login, reference: url, facts: [] }
   };
+}
+
+export function acquireRepository(input: unknown): RepositoryAcquired {
+  const metadata = repositoryMetadata(input);
+  return { metadata, item: repositoryItem(metadata) };
+}
+
+export function acquirePullRequest(input: unknown, fullName: string, number: number): PullRequestAcquired {
+  const details = pullRequestDetails(input);
+  return { details, item: pullRequestItem(details, fullName, number) };
+}
+
+export function acquireFollowing(input: unknown): { logins: string[]; items: Item[] } {
+  const logins = followingLogins(input);
+  return { logins, items: logins.map(followedAccount) };
 }

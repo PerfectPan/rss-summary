@@ -3,6 +3,52 @@ import { Effect, Layer } from "effect";
 
 import { deliver, Notifier, RunArchive, type RunAudit, type RunDelivery } from "../../index.js";
 
+function audit(): RunAudit {
+  return {
+    version: 1,
+    runId: "run-1",
+    product: "subscriptions",
+    generatedAt: "2026-08-09T01:00:00.000Z",
+    sources: [],
+    counts: { fetched: 0, inWindow: 0, ranked: 0, selected: 0, researchPending: 0 },
+    candidates: []
+  };
+}
+
+function runDeliver(
+  notifier: {
+    channel: "stdout" | "webhook";
+    send: (markdown: string) => Effect.Effect<void, Error>;
+  },
+  deliveries: RunDelivery[],
+  extra: { dryRun?: boolean; afterSend?: Effect.Effect<void, Error> },
+  output: string
+): Promise<void> {
+  return Effect.runPromise(
+    Effect.provide(
+      deliver({
+        runLogDir: ".state/runs",
+        audit: audit(),
+        output,
+        dryRun: extra.dryRun ?? false,
+        ...(extra.afterSend ? { afterSend: extra.afterSend } : {})
+      }),
+      Layer.mergeAll(
+        Layer.succeed(Notifier, notifier),
+        Layer.succeed(RunArchive, {
+          save: (_root: string, _audit: RunAudit, delivery: RunDelivery) => {
+            deliveries.push(delivery);
+            return Effect.succeed({ jsonPath: "run.json", markdownPath: "run.md" });
+          },
+          list: () => Effect.succeed([]),
+          load: () => Effect.die(new Error("unused in this test")),
+          label: (path: string) => path
+        })
+      )
+    )
+  );
+}
+
 describe("audited delivery", () => {
   it("records a dry run after successful output", async () => {
     const sends: string[] = [];
@@ -117,49 +163,3 @@ describe("audited delivery", () => {
     expect(deliveries[0]).toMatchObject({ status: "delivered", stateStatus: "updated" });
   });
 });
-
-function runDeliver(
-  notifier: {
-    channel: "stdout" | "webhook";
-    send: (markdown: string) => Effect.Effect<void, Error>;
-  },
-  deliveries: RunDelivery[],
-  extra: { dryRun?: boolean; afterSend?: Effect.Effect<void, Error> },
-  output: string
-): Promise<void> {
-  return Effect.runPromise(
-    Effect.provide(
-      deliver({
-        runLogDir: ".state/runs",
-        audit: audit(),
-        output,
-        dryRun: extra.dryRun ?? false,
-        ...(extra.afterSend ? { afterSend: extra.afterSend } : {})
-      }),
-      Layer.mergeAll(
-        Layer.succeed(Notifier, notifier),
-        Layer.succeed(RunArchive, {
-          save: (_root: string, _audit: RunAudit, delivery: RunDelivery) => {
-            deliveries.push(delivery);
-            return Effect.succeed({ jsonPath: "run.json", markdownPath: "run.md" });
-          },
-          list: () => Effect.succeed([]),
-          load: () => Effect.die(new Error("unused in this test")),
-          label: (path: string) => path
-        })
-      )
-    )
-  );
-}
-
-function audit(): RunAudit {
-  return {
-    version: 1,
-    runId: "run-1",
-    product: "subscriptions",
-    generatedAt: "2026-08-09T01:00:00.000Z",
-    sources: [],
-    counts: { fetched: 0, inWindow: 0, ranked: 0, selected: 0, researchPending: 0 },
-    candidates: []
-  };
-}

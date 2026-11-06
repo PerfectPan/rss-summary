@@ -2,6 +2,7 @@ import { access, readFile } from "node:fs/promises";
 
 import { describe, expect, it, vi } from "vite-plus/test";
 
+import type { DocumentMaterials, VideoVisuals } from "../../reading/index.js";
 import { transcriptEvidence, videoVisualEvidence } from "./evidence.js";
 import { VideoResearchClient } from "./reader.js";
 
@@ -42,7 +43,7 @@ function createVideoClient(options: Partial<ConstructorParameters<typeof VideoRe
 describe("video research", () => {
   it("fuses image-derived facts into bounded evidence and passes the full transcript to storage", async () => {
     const content = "Spoken explanation. ".repeat(1000);
-    const captureFrames = vi.fn(async () => ({
+    const captureFrames = vi.fn<() => Promise<{ visuals: VideoVisuals; materials: DocumentMaterials }>>(async () => ({
       visuals: {
         status: "analyzed" as const,
         frames: [
@@ -88,7 +89,7 @@ describe("video research", () => {
   });
 
   it("extracts actual captions without invoking a summary model", async () => {
-    const runCommand = vi.fn(async () => output());
+    const runCommand = vi.fn<() => Promise<{ stdout: string }>>(async () => output());
     const result = await createVideoClient({ runCommand }).research({ ref: "video:1", url });
     expect(result).toMatchObject({
       status: "ok",
@@ -149,8 +150,8 @@ describe("video research", () => {
   it.each(["https://example.com/post", "http://127.0.0.1/video.mp4"])(
     "rejects unsupported or private inputs before any IO: %s",
     async (input) => {
-      const runCommand = vi.fn();
-      const fetch = vi.fn();
+      const runCommand = vi.fn<NonNullable<ConstructorParameters<typeof VideoResearchClient>[0]["runCommand"]>>();
+      const fetch = vi.fn<NonNullable<ConstructorParameters<typeof VideoResearchClient>[0]["fetch"]>>();
       const client = createVideoClient({ runCommand, fetch });
       expect(await client.research({ ref: "video:1", url: input })).toMatchObject({
         status: "failed"
@@ -185,7 +186,9 @@ describe("video research", () => {
 
   it("downloads direct MP4 once, transcribes locally and cleans up the temporary file", async () => {
     let mediaPath = "";
-    const fetch = vi.fn(async () => new Response("media bytes", { headers: { "content-type": "video/mp4" } }));
+    const fetch = vi.fn<() => Promise<Response>>(
+      async () => new Response("media bytes", { headers: { "content-type": "video/mp4" } })
+    );
     const client = createVideoClient({
       fetch,
       runCommand: async (_command, args) => {
@@ -231,8 +234,8 @@ describe("video research", () => {
     { status: 302 },
     { status: 302, location: "http://127.0.0.1/video.mp4" }
   ])("rejects denied, invalid or oversized media: %j", async ({ status, type, size, body, location }) => {
-    const runCommand = vi.fn();
-    const fetch = vi.fn(
+    const runCommand = vi.fn<NonNullable<ConstructorParameters<typeof VideoResearchClient>[0]["runCommand"]>>();
+    const fetch = vi.fn<() => Promise<Response>>(
       async () =>
         new Response(body ?? "", {
           status,
@@ -253,7 +256,7 @@ describe("video research", () => {
 
   it("follows bounded public redirects", async () => {
     const fetch = vi
-      .fn()
+      .fn<NonNullable<ConstructorParameters<typeof VideoResearchClient>[0]["fetch"]>>()
       .mockResolvedValueOnce(
         new Response(null, {
           status: 302,
@@ -288,7 +291,7 @@ describe("video research", () => {
 
 describe("RSS_VIDEO_* settings", () => {
   it("maps RSS_VIDEO_* settings onto the vision frame inspection", async () => {
-    const captureFrames = vi.fn(async () => ({
+    const captureFrames = vi.fn<() => Promise<{ visuals: VideoVisuals }>>(async () => ({
       visuals: { status: "unavailable" as const, frames: [], reason: "none" }
     }));
     const client = new VideoResearchClient({

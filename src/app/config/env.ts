@@ -88,6 +88,71 @@ const envString = (name: string): Config.Config<string | undefined> =>
 
 const asError = (cause: unknown): Error => (cause instanceof Error ? cause : new Error(String(cause)));
 
+function parseGithubFeedSource(value: string | undefined): GithubFeedSource {
+  if (!value) {
+    return "home";
+  }
+  if (value === "home" || value === "events") {
+    return value;
+  }
+  throw new Error("GITHUB_FEED_SOURCE must be either 'home' or 'events'.");
+}
+
+function parseGithubHomeFetch(value: string | undefined): GithubHomeFetch {
+  if (!value) {
+    return "conduit";
+  }
+  if (value === "conduit" || value === "browser") {
+    return value;
+  }
+  throw new Error("GITHUB_HOME_FETCH must be either 'conduit' or 'browser'.");
+}
+
+function numberFrom(value: string | undefined, fallback: number): number {
+  const parsed = value ? Number(value) : Number.NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function parseList(value: string | undefined): string[] | undefined {
+  if (!value) {
+    return undefined;
+  }
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function articleBrowserTimeoutMs(value: string | undefined): number {
+  const parsed = value === undefined ? Number.NaN : Number(value);
+  return Number.isFinite(parsed) && parsed >= 5_000 ? parsed : 30_000;
+}
+
+function loadFeedSubscriptions(
+  inlineFeeds: string | undefined,
+  configuredFile: string | undefined
+): FeedSubscription[] {
+  if (inlineFeeds) {
+    return decodeFeedsJson(inlineFeeds);
+  }
+
+  const feedsFile = configuredFile ?? "feeds.json";
+  if (!existsSync(feedsFile)) {
+    return [];
+  }
+  return decodeFeedsJson(readFileSync(feedsFile, "utf8"));
+}
+
+function loadIndustrySources(inlineSources: string | undefined, configuredFile: string): IndustrySource[] {
+  if (inlineSources) {
+    return decodeIndustryJson(inlineSources);
+  }
+  if (!existsSync(configuredFile)) {
+    throw new Error(`Industry source configuration file does not exist: ${configuredFile}`);
+  }
+  return decodeIndustryJson(readFileSync(configuredFile, "utf8"));
+}
+
 /**
  * Parse the environment into {@link AppConfig} through `effect/Config`.
  * Empty strings are preserved so the historical `??` chains behave identically.
@@ -241,69 +306,4 @@ export function applyCliArgs(config: AppConfig, args: CliArgs): AppConfig {
     industryStateFile: args.industryStateFile ?? env.INDUSTRY_STATE_FILE ?? defaultIndustryStateFile,
     runLogDir: args.runLogDir ?? env.FEED_RUN_LOG_DIR ?? defaultRunLogDir
   };
-}
-
-function parseGithubFeedSource(value: string | undefined): GithubFeedSource {
-  if (!value) {
-    return "home";
-  }
-  if (value === "home" || value === "events") {
-    return value;
-  }
-  throw new Error("GITHUB_FEED_SOURCE must be either 'home' or 'events'.");
-}
-
-function parseGithubHomeFetch(value: string | undefined): GithubHomeFetch {
-  if (!value) {
-    return "conduit";
-  }
-  if (value === "conduit" || value === "browser") {
-    return value;
-  }
-  throw new Error("GITHUB_HOME_FETCH must be either 'conduit' or 'browser'.");
-}
-
-function numberFrom(value: string | undefined, fallback: number): number {
-  const parsed = value ? Number(value) : Number.NaN;
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
-
-function parseList(value: string | undefined): string[] | undefined {
-  if (!value) {
-    return undefined;
-  }
-  return value
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function articleBrowserTimeoutMs(value: string | undefined): number {
-  const parsed = value === undefined ? Number.NaN : Number(value);
-  return Number.isFinite(parsed) && parsed >= 5_000 ? parsed : 30_000;
-}
-
-function loadFeedSubscriptions(
-  inlineFeeds: string | undefined,
-  configuredFile: string | undefined
-): FeedSubscription[] {
-  if (inlineFeeds) {
-    return decodeFeedsJson(inlineFeeds);
-  }
-
-  const feedsFile = configuredFile ?? "feeds.json";
-  if (!existsSync(feedsFile)) {
-    return [];
-  }
-  return decodeFeedsJson(readFileSync(feedsFile, "utf8"));
-}
-
-function loadIndustrySources(inlineSources: string | undefined, configuredFile: string): IndustrySource[] {
-  if (inlineSources) {
-    return decodeIndustryJson(inlineSources);
-  }
-  if (!existsSync(configuredFile)) {
-    throw new Error(`Industry source configuration file does not exist: ${configuredFile}`);
-  }
-  return decodeIndustryJson(readFileSync(configuredFile, "utf8"));
 }

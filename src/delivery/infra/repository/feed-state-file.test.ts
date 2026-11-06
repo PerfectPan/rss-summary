@@ -17,6 +17,16 @@ afterEach(() => {
   }
 });
 
+function run<A, E>(effect: Effect.Effect<A, E, FeedStateStore>): Promise<A> {
+  return Effect.runPromise(Effect.provide(effect, FeedStateFileLive));
+}
+
+function newRoot(): string {
+  const root = mkdtempSync(join(tmpdir(), "rss-summary-feed-state-"));
+  roots.push(root);
+  return root;
+}
+
 describe("feed state file repository", () => {
   it("roundtrips the state fixtures byte for byte", async () => {
     for (const fixture of ["feed-state.json", "industry-state.json"]) {
@@ -74,13 +84,3 @@ describe("feed state file repository", () => {
     expect(state).toEqual({ seen: {}, researched: {} });
   });
 });
-
-function run<A, E>(effect: Effect.Effect<A, E, FeedStateStore>): Promise<A> {
-  return Effect.runPromise(Effect.provide(effect, FeedStateFileLive));
-}
-
-function newRoot(): string {
-  const root = mkdtempSync(join(tmpdir(), "rss-summary-feed-state-"));
-  roots.push(root);
-  return root;
-}

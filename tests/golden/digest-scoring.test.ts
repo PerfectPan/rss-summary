@@ -11,6 +11,97 @@ vi.mock("node:crypto", async (importOriginal) => {
 
 const harness = useGoldenHarness();
 const at = "2026-08-15T02:00:00Z";
+function repo(
+  name: string,
+  stars: number,
+  pushedAt: string,
+  extra: { description?: string; language?: string; topics?: string[] } = {}
+): Record<string, unknown> {
+  return {
+    full_name: name,
+    html_url: `https://github.com/${name}`,
+    description: extra.description ?? "plain",
+    language: extra.language ?? null,
+    stargazers_count: stars,
+    topics: extra.topics ?? [],
+    pushed_at: pushedAt
+  };
+}
+
+function pull(name: string, number: number, title: string, body: string): Record<string, unknown> {
+  return {
+    title,
+    html_url: `https://github.com/${name}/pull/${number}`,
+    body
+  };
+}
+
+function watch(id: string, actor: string, name: string) {
+  return {
+    id,
+    type: "WatchEvent",
+    actor: { login: actor },
+    repo: { name },
+    created_at: at,
+    payload: { action: "started" }
+  };
+}
+
+function release(id: string, actor: string, name: string) {
+  return {
+    id,
+    type: "ReleaseEvent",
+    actor: { login: actor },
+    repo: { name },
+    created_at: at,
+    payload: {
+      action: "published",
+      release: {
+        name: "v1",
+        tag_name: "v1",
+        html_url: `https://github.com/${name}/releases/v1`,
+        body: "Release notes"
+      }
+    }
+  };
+}
+
+function pullEvent(id: string, actor: string, name: string, action: string, number: number) {
+  return {
+    id,
+    type: "PullRequestEvent",
+    actor: { login: actor },
+    repo: { name },
+    created_at: at,
+    payload: {
+      action,
+      number,
+      pull_request: {
+        title: "placeholder",
+        html_url: `https://github.com/${name}/pull/${number}`,
+        body: "placeholder"
+      }
+    }
+  };
+}
+
+function feed(name: string, link: string, title: string, description: string): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>${name}</title>
+    <item>
+      <title>${title}</title>
+      <link>${link}</link>
+      <guid>${link}</guid>
+      <pubDate>Sat, 15 Aug 2026 02:00:00 GMT</pubDate>
+      <description>${description}</description>
+    </item>
+  </channel>
+</rss>
+`;
+}
+
 const repositories: Record<string, Record<string, unknown>> = {
   "alpha/watch-one": repo("alpha/watch-one", 1_000, "2026-08-15T00:00:00Z", {
     language: "RustLang"
@@ -154,94 +245,3 @@ describe("golden digest scoring", () => {
     await matchSnapshot("digest-events-scoring-json.txt", capture, [context.root]);
   });
 });
-
-function repo(
-  name: string,
-  stars: number,
-  pushedAt: string,
-  extra: { description?: string; language?: string; topics?: string[] } = {}
-): Record<string, unknown> {
-  return {
-    full_name: name,
-    html_url: `https://github.com/${name}`,
-    description: extra.description ?? "plain",
-    language: extra.language ?? null,
-    stargazers_count: stars,
-    topics: extra.topics ?? [],
-    pushed_at: pushedAt
-  };
-}
-
-function pull(name: string, number: number, title: string, body: string): Record<string, unknown> {
-  return {
-    title,
-    html_url: `https://github.com/${name}/pull/${number}`,
-    body
-  };
-}
-
-function watch(id: string, actor: string, name: string) {
-  return {
-    id,
-    type: "WatchEvent",
-    actor: { login: actor },
-    repo: { name },
-    created_at: at,
-    payload: { action: "started" }
-  };
-}
-
-function release(id: string, actor: string, name: string) {
-  return {
-    id,
-    type: "ReleaseEvent",
-    actor: { login: actor },
-    repo: { name },
-    created_at: at,
-    payload: {
-      action: "published",
-      release: {
-        name: "v1",
-        tag_name: "v1",
-        html_url: `https://github.com/${name}/releases/v1`,
-        body: "Release notes"
-      }
-    }
-  };
-}
-
-function pullEvent(id: string, actor: string, name: string, action: string, number: number) {
-  return {
-    id,
-    type: "PullRequestEvent",
-    actor: { login: actor },
-    repo: { name },
-    created_at: at,
-    payload: {
-      action,
-      number,
-      pull_request: {
-        title: "placeholder",
-        html_url: `https://github.com/${name}/pull/${number}`,
-        body: "placeholder"
-      }
-    }
-  };
-}
-
-function feed(name: string, link: string, title: string, description: string): string {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0">
-  <channel>
-    <title>${name}</title>
-    <item>
-      <title>${title}</title>
-      <link>${link}</link>
-      <guid>${link}</guid>
-      <pubDate>Sat, 15 Aug 2026 02:00:00 GMT</pubDate>
-      <description>${description}</description>
-    </item>
-  </channel>
-</rss>
-`;
-}

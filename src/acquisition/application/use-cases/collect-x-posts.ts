@@ -77,6 +77,14 @@ export type CollectXAccountOptions = {
   openBudget: OpenSearchBudget;
 };
 
+function boundedInteger(value: string | undefined, fallback: number, min: number, max: number): number {
+  const parsed = value === undefined ? fallback : Number(value);
+  if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
+    throw new Error(`Numeric configuration must be an integer between ${min} and ${max}.`);
+  }
+  return parsed;
+}
+
 /** Account subscriptions use caller-owned windows and do not apply news-topic ranking. */
 export function collectXAccountPosts(
   value: typeof inputSchema.Type,
@@ -190,12 +198,4 @@ export function collectXAccountPosts(
     }
     return result;
   });
-}
-
-function boundedInteger(value: string | undefined, fallback: number, min: number, max: number): number {
-  const parsed = value === undefined ? fallback : Number(value);
-  if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
-    throw new Error(`Numeric configuration must be an integer between ${min} and ${max}.`);
-  }
-  return parsed;
 }

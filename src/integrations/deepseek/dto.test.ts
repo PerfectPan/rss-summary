@@ -2,12 +2,6 @@ import { describe, expect, it } from "vite-plus/test";
 
 import { DeepSeekSearchError, parseDeepSeekResponse } from "./dto.js";
 
-function payload(overrides: Record<string, unknown> = {}, results: unknown[] = [defaultResult()]) {
-  return {
-    results: results.map((result) => ({ ...(result as Record<string, unknown>), ...overrides }))
-  };
-}
-
 function defaultResult(): Record<string, unknown> {
   return {
     rerank_score: 2.4,
@@ -20,6 +14,12 @@ function defaultResult(): Record<string, unknown> {
     site_icon: null,
     date: "2026-08-16T02:00:00Z",
     authority: 3
+  };
+}
+
+function payload(overrides: Record<string, unknown> = {}, results: unknown[] = [defaultResult()]) {
+  return {
+    results: results.map((result) => ({ ...(result as Record<string, unknown>), ...overrides }))
   };
 }
 

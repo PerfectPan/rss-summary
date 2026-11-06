@@ -5,6 +5,68 @@ import { buildNewsAudit, summarizeNewsSources } from "./news-audit.js";
 import type { NewsAuditRequest } from "../value-objects/news-audit.js";
 import type { NewsHitDecision, NewsSearchHit, NewsStory, NewsStoryDecision } from "../value-objects/news.js";
 
+function request(id: string): NewsAuditRequest {
+  return {
+    query: {
+      id,
+      text: `${id} query`,
+      intent: "model-release",
+      subjectAny: ["product"],
+      eventAny: ["release"],
+      excludedAny: []
+    },
+    topic: {
+      id: "technology",
+      label: "科技",
+      icon: "💻",
+      enabled: true,
+      sourcePolicy: "authoritative",
+      maxItems: 2,
+      queries: []
+    }
+  };
+}
+
+function hit(id: string): NewsSearchHit {
+  return {
+    id,
+    title: "Product release",
+    url: `https://example.com/${id}`,
+    publishTime: "2026-08-09T09:00:00+08:00",
+    credibility: { tier: "authoritative" },
+    authorityRank: 2,
+    topicId: "technology",
+    topicLabel: "科技",
+    sourcePolicy: "authoritative",
+    queryId: "working",
+    queryText: "working query",
+    subjectAny: ["product"],
+    eventAny: ["release"],
+    excludedAny: [],
+    rankPosition: 1
+  };
+}
+
+function story(id: string): NewsStory {
+  return {
+    id,
+    title: `${id} story`,
+    canonicalUrl: `https://example.com/${id}`,
+    summary: "Summary.",
+    siteName: "Example",
+    publishTime: "2026-08-09T09:00:00+08:00",
+    rankScore: 0.8,
+    authInfoLevel: 2,
+    topicIds: ["technology"],
+    topicLabels: ["科技"],
+    queryIds: ["working"],
+    queries: ["working query"],
+    queryHits: 1,
+    scoreBreakdown: { rank: 16, authority: 8, freshness: 5, crossQuery: 0 },
+    score: 29
+  };
+}
+
 describe("news audit", () => {
   it("explains query failures and every stage of the selection funnel", () => {
     const requests = [request("working"), request("failed")];
@@ -77,68 +139,6 @@ describe("news audit", () => {
     });
   });
 });
-
-function request(id: string): NewsAuditRequest {
-  return {
-    query: {
-      id,
-      text: `${id} query`,
-      intent: "model-release",
-      subjectAny: ["product"],
-      eventAny: ["release"],
-      excludedAny: []
-    },
-    topic: {
-      id: "technology",
-      label: "科技",
-      icon: "💻",
-      enabled: true,
-      sourcePolicy: "authoritative",
-      maxItems: 2,
-      queries: []
-    }
-  };
-}
-
-function hit(id: string): NewsSearchHit {
-  return {
-    id,
-    title: "Product release",
-    url: `https://example.com/${id}`,
-    publishTime: "2026-08-09T09:00:00+08:00",
-    credibility: { tier: "authoritative" },
-    authorityRank: 2,
-    topicId: "technology",
-    topicLabel: "科技",
-    sourcePolicy: "authoritative",
-    queryId: "working",
-    queryText: "working query",
-    subjectAny: ["product"],
-    eventAny: ["release"],
-    excludedAny: [],
-    rankPosition: 1
-  };
-}
-
-function story(id: string): NewsStory {
-  return {
-    id,
-    title: `${id} story`,
-    canonicalUrl: `https://example.com/${id}`,
-    summary: "Summary.",
-    siteName: "Example",
-    publishTime: "2026-08-09T09:00:00+08:00",
-    rankScore: 0.8,
-    authInfoLevel: 2,
-    topicIds: ["technology"],
-    topicLabels: ["科技"],
-    queryIds: ["working"],
-    queries: ["working query"],
-    queryHits: 1,
-    scoreBreakdown: { rank: 16, authority: 8, freshness: 5, crossQuery: 0 },
-    score: 29
-  };
-}
 
 it("separates empty success, recovery, budget sampling, missing coverage and outage", () => {
   const requests = [request("working")];

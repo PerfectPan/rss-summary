@@ -60,34 +60,6 @@ export function withBudget(search: (input: SearchInput) => Promise<SearchPage>, 
   // the attempt settles so the next call reserves again.
   const pending = new Map<string, Deferred.Deferred<BudgetedSearchPage, unknown>>();
 
-  const run = (input: SearchInput): Effect.Effect<BudgetedSearchPage, unknown> => {
-    const request = parseCacheRequest(input, provider);
-    const key = cacheKey(request, driver.hash);
-    return Effect.gen(function* () {
-      let deferred = pending.get(key);
-      if (!deferred) {
-        deferred = yield* Deferred.make<BudgetedSearchPage, unknown>();
-        pending.set(key, deferred);
-        const entry = deferred;
-        yield* Effect.forkDetach(
-          Effect.exit(execute(input, request)).pipe(
-            Effect.flatMap((exit) => Deferred.done(entry, exit)),
-            Effect.ignore,
-            Effect.ensuring(Effect.sync(() => pending.delete(key)))
-          )
-        );
-      }
-      return yield* Deferred.await(deferred);
-    });
-  };
-
-  return Object.assign(run, {
-    cachedSearch: (input: SearchInput): Effect.Effect<BudgetedSearchPage | undefined, NewsSearchError> => {
-      const request = parseCacheRequest(input, provider);
-      return Effect.map(inspect(request, false), (value) => value.cached as BudgetedSearchPage | undefined);
-    }
-  });
-
   function inspect(request: CacheRequest, commit: boolean) {
     return driver.withLock(
       Effect.gen(function* () {
@@ -149,4 +121,32 @@ export function withBudget(search: (input: SearchInput) => Promise<SearchPage>, 
       };
     });
   }
+
+  const run = (input: SearchInput): Effect.Effect<BudgetedSearchPage, unknown> => {
+    const request = parseCacheRequest(input, provider);
+    const key = cacheKey(request, driver.hash);
+    return Effect.gen(function* () {
+      let deferred = pending.get(key);
+      if (!deferred) {
+        deferred = yield* Deferred.make<BudgetedSearchPage, unknown>();
+        pending.set(key, deferred);
+        const entry = deferred;
+        yield* Effect.forkDetach(
+          Effect.exit(execute(input, request)).pipe(
+            Effect.flatMap((exit) => Deferred.done(entry, exit)),
+            Effect.ignore,
+            Effect.ensuring(Effect.sync(() => pending.delete(key)))
+          )
+        );
+      }
+      return yield* Deferred.await(deferred);
+    });
+  };
+
+  return Object.assign(run, {
+    cachedSearch: (input: SearchInput): Effect.Effect<BudgetedSearchPage | undefined, NewsSearchError> => {
+      const request = parseCacheRequest(input, provider);
+      return Effect.map(inspect(request, false), (value) => value.cached as BudgetedSearchPage | undefined);
+    }
+  });
 }

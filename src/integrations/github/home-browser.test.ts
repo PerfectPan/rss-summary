@@ -10,6 +10,12 @@ import { extractHomeFeedSnapshotsFromHtml, hasGitHubHomeFeedMarkup } from "./hom
 import { normalizeHomeCardSnapshot, normalizeHomeCardSnapshots } from "./home/mapper.js";
 import { readConduitSnapshots, readHomeEvents, readRenderedSnapshots, saveLoginStorageState } from "./home-browser.js";
 
+function createStorageState(): string {
+  const file = join(mkdtempSync(join(tmpdir(), "rss-summary-github-home-")), "storage.json");
+  writeFileSync(file, "{}");
+  return file;
+}
+
 describe("GitHub Home feed source", () => {
   it("normalizes a rendered Home merged pull request card", () => {
     const card = normalizeHomeCardSnapshot({
@@ -265,12 +271,6 @@ describe("GitHub Home feed source", () => {
     expect(conduitCalls).toBe(0);
   });
 });
-
-function createStorageState(): string {
-  const file = join(mkdtempSync(join(tmpdir(), "rss-summary-github-home-")), "storage.json");
-  writeFileSync(file, "{}");
-  return file;
-}
 
 describe("browser adapter", () => {
   it("keeps Playwright behind the session boundary", () => {

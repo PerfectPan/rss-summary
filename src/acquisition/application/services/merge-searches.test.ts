@@ -22,6 +22,10 @@ function page(results: SearchResult[], overrides: Partial<SearchPage> = {}): Sea
 
 const failure = (code: string) => new NewsSearchError(code, `failure ${code}`);
 
+function isSearchFailureCode(error: unknown): string | false {
+  return error instanceof NewsSearchError ? error.code : false;
+}
+
 describe("mergeSearches", () => {
   it("merges concurrent successes, deduplicates by canonical URL and keeps per-source order", async () => {
     const primary: SearchSource = {
@@ -150,7 +154,3 @@ describe("mergeSearches", () => {
     );
   });
 });
-
-function isSearchFailureCode(error: unknown): string | false {
-  return error instanceof NewsSearchError ? error.code : false;
-}

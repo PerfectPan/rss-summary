@@ -93,29 +93,6 @@ export type CommandCapture = {
 
 let current: GoldenContext | undefined;
 
-export function useGoldenHarness(): {
-  context: () => GoldenContext;
-} {
-  beforeEach(async () => {
-    current = await createContext();
-  });
-  afterEach(async () => {
-    const context = current;
-    current = undefined;
-    if (context) {
-      await destroyContext(context);
-    }
-  });
-  return {
-    context: () => {
-      if (!current) {
-        throw new Error("Golden harness is not active.");
-      }
-      return current;
-    }
-  };
-}
-
 export async function createContext(): Promise<GoldenContext> {
   resetUuid();
   const root = await mkdtemp(join(tmpdir(), "rss-summary-golden-"));
@@ -188,6 +165,29 @@ export async function destroyContext(context: GoldenContext): Promise<void> {
   await rm(context.root, { force: true, recursive: true });
 }
 
+export function useGoldenHarness(): {
+  context: () => GoldenContext;
+} {
+  beforeEach(async () => {
+    current = await createContext();
+  });
+  afterEach(async () => {
+    const context = current;
+    current = undefined;
+    if (context) {
+      await destroyContext(context);
+    }
+  });
+  return {
+    context: () => {
+      if (!current) {
+        throw new Error("Golden harness is not active.");
+      }
+      return current;
+    }
+  };
+}
+
 export function installFetch(respond: (url: string, init?: RequestInit) => Response | Promise<Response>): void {
   vi.stubGlobal("fetch", async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
@@ -225,6 +225,38 @@ export function grokInvocationCount(executable: string): number {
   return readFileSync(counter, "utf8").split("\n").filter(Boolean).length;
 }
 
+export function readTree(root: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  const walk = (dir: string) => {
+    if (!existsSync(dir)) {
+      return;
+    }
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+        continue;
+      }
+      if (!entry.isFile() || entry.name.endsWith(".lock") || entry.name.includes(".tmp")) {
+        continue;
+      }
+      if (entry.name.endsWith(".count")) {
+        continue;
+      }
+      out[relative(root, full).split(sep).join("/")] = readFileSync(full, "utf8");
+    }
+  };
+  walk(root);
+  return out;
+}
+
+export function currentContext(): GoldenContext {
+  if (!current) {
+    throw new Error("Golden harness is not active.");
+  }
+  return current;
+}
+
 export async function runCommand(argv: string[], context = currentContext()): Promise<CommandCapture> {
   context.processStdout.length = 0;
   context.consoleError.length = 0;
@@ -251,31 +283,6 @@ export async function runCommand(argv: string[], context = currentContext()): Pr
     consoleError: context.consoleError.join("\n"),
     state: readTree(context.root)
   };
-}
-
-export function readTree(root: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  const walk = (dir: string) => {
-    if (!existsSync(dir)) {
-      return;
-    }
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const full = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        walk(full);
-        continue;
-      }
-      if (!entry.isFile() || entry.name.endsWith(".lock") || entry.name.includes(".tmp")) {
-        continue;
-      }
-      if (entry.name.endsWith(".count")) {
-        continue;
-      }
-      out[relative(root, full).split(sep).join("/")] = readFileSync(full, "utf8");
-    }
-  };
-  walk(root);
-  return out;
 }
 
 export function redact(value: string, roots: string[]): string {
@@ -368,11 +375,4 @@ export async function executeTool(
     toolVersion: tool.version
   };
   return tool.createExecutor(toolContext).execute(input, toolContext);
-}
-
-export function currentContext(): GoldenContext {
-  if (!current) {
-    throw new Error("Golden harness is not active.");
-  }
-  return current;
 }

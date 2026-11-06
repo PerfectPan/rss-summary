@@ -46,6 +46,26 @@ const windowArgs = ["--since", WINDOW_SINCE, "--until", WINDOW_UNTIL];
 const runJson = "runs/2026-08-16/subscriptions-040000-00000000.json";
 const runMarkdown = "runs/2026-08-16/subscriptions-040000-00000000.md";
 
+function installIndustryFetch(): void {
+  installFetch((url) => {
+    if (url === INDUSTRY_FEED_URL) {
+      return textResponse(INDUSTRY_ATOM, 200, "application/atom+xml");
+    }
+    if (url === INDUSTRY_PAGE_URL) {
+      return textResponse(INDUSTRY_PAGE_HTML, 200, "text/html");
+    }
+    throw new Error(`Unexpected fetch ${url}`);
+  });
+}
+
+function readFixture(path: string): string {
+  return readFileSync(join(fixtureRoot, path), "utf8");
+}
+
+function readGenerated(root: string, path: string): string {
+  return readFileSync(join(root, path), "utf8");
+}
+
 describe("state fixtures", () => {
   it("roundtrips feed state and the subscription run record", async () => {
     installFetch((url) => {
@@ -147,23 +167,3 @@ describe("state fixtures", () => {
     expect(written).toEqual([readFixture(fixtureName)]);
   });
 });
-
-function installIndustryFetch(): void {
-  installFetch((url) => {
-    if (url === INDUSTRY_FEED_URL) {
-      return textResponse(INDUSTRY_ATOM, 200, "application/atom+xml");
-    }
-    if (url === INDUSTRY_PAGE_URL) {
-      return textResponse(INDUSTRY_PAGE_HTML, 200, "text/html");
-    }
-    throw new Error(`Unexpected fetch ${url}`);
-  });
-}
-
-function readFixture(path: string): string {
-  return readFileSync(join(fixtureRoot, path), "utf8");
-}
-
-function readGenerated(root: string, path: string): string {
-  return readFileSync(join(root, path), "utf8");
-}

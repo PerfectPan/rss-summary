@@ -1,5 +1,34 @@
 /** Shared JSON and environment validators with the historical error messages. */
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && Object.prototype.toString.call(value) === "[object Object]";
+}
+
+function stringValue(value: unknown): string | undefined {
+  // Primitive strings and boxed String objects; arrays are not strings.
+  if (typeof value === "string") {
+    return value;
+  }
+  if (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.prototype.toString.call(value) === "[object String]"
+  ) {
+    return String(value);
+  }
+  return undefined;
+}
+
+function isBooleanValue(value: unknown): value is boolean {
+  // Primitive booleans and boxed Boolean objects.
+  return (
+    value === true ||
+    value === false ||
+    (value !== null && typeof value === "object" && Object.prototype.toString.call(value) === "[object Boolean]")
+  );
+}
+
 export function boundedInteger(value: string | undefined, fallback: number, min: number, max: number): number {
   const parsed = value === undefined ? fallback : Number(value);
   if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
@@ -99,33 +128,4 @@ export function requireStringList(value: unknown, label: string): string[] {
     }
     return text.trim();
   });
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && Object.prototype.toString.call(value) === "[object Object]";
-}
-
-function stringValue(value: unknown): string | undefined {
-  // Primitive strings and boxed String objects; arrays are not strings.
-  if (typeof value === "string") {
-    return value;
-  }
-  if (
-    value !== null &&
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    Object.prototype.toString.call(value) === "[object String]"
-  ) {
-    return String(value);
-  }
-  return undefined;
-}
-
-function isBooleanValue(value: unknown): value is boolean {
-  // Primitive booleans and boxed Boolean objects.
-  return (
-    value === true ||
-    value === false ||
-    (value !== null && typeof value === "object" && Object.prototype.toString.call(value) === "[object Boolean]")
-  );
 }

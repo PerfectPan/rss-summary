@@ -11,6 +11,10 @@ export type DeepSeekSearchClientOptions = {
   timeoutMs?: number;
 };
 
+function errorText(value: unknown): string {
+  return value instanceof Error ? value.message : String(value);
+}
+
 export const DeepSeekSearchLive = (options: DeepSeekSearchClientOptions): Layer.Layer<SearchProvider> => {
   const client = new DeepSeekSearchClient(options);
   return Layer.succeed(SearchProvider, {
@@ -21,7 +25,3 @@ export const DeepSeekSearchLive = (options: DeepSeekSearchClientOptions): Layer.
       })
   });
 };
-
-function errorText(value: unknown): string {
-  return value instanceof Error ? value.message : String(value);
-}

@@ -23,6 +23,68 @@ export function activityGroupKey(
   return `github-repository:${card.repo}`;
 }
 
+function channelFor(card: ActivityCardDto): { name: string; rank: number } {
+  if (card.source === "web") {
+    return { name: "web", rank: 3 };
+  }
+  if (card.source === "rss" || card.type === "article") {
+    return { name: "rss", rank: 2 };
+  }
+  return { name: "github", rank: 1 };
+}
+
+function isPublication(card: ActivityCardDto): boolean {
+  return card.source === "rss" || card.source === "web" || card.type === "article" || card.type === "paper";
+}
+
+function pullSuffix(card: ActivityCardDto): string {
+  const number = card.prNumber ? ` #${card.prNumber}` : "";
+  const title = card.title ? ` · ${card.title}` : "";
+  return `${number}${title}`;
+}
+
+function routingFor(card: ActivityCardDto): ItemRouting {
+  const publication = isPublication(card);
+  const change = card.type === "pull_request";
+  const channel = channelFor(card);
+  const directUrl = publication
+    ? card.htmlUrl !== undefined || card.sourceUrl !== undefined
+      ? (card.htmlUrl ?? card.sourceUrl)
+      : undefined
+    : change
+      ? card.htmlUrl
+      : undefined;
+  return {
+    groupKey: activityGroupKey(card),
+    channel: channel.name,
+    channelRank: channel.rank,
+    contentResearch: publication || card.type === "article" || card.type === "paper",
+    feedPrefix: "rss",
+    sitePrefix: "web",
+    catalogResearchKey: `github:${card.repo}`,
+    role: publication ? "publication" : change ? "change" : "other",
+    ...(publication && card.title !== undefined ? { titleLabel: card.title } : {}),
+    ...(change ? { prSuffix: pullSuffix(card) } : {}),
+    strippedRepo: card.repo.replace(/^(?:rss|web):/u, ""),
+    ...(directUrl !== undefined ? { directUrl } : {}),
+    ...((publication || change) && card.summary !== undefined ? { description: card.summary } : {}),
+    fallbackUrl: `https://github.com/${card.repo}`
+  };
+}
+
+function withRouting(item: Item, card: ActivityCardDto): Item {
+  const routing = routingFor(card);
+  return {
+    ...item,
+    subject: { ...item.subject, key: routing.groupKey },
+    content: {
+      ...item.content,
+      keywords: [...(card.tags ?? []), ...(card.sourceName ? [card.sourceName] : [])]
+    },
+    routing
+  };
+}
+
 export function acquireActivityCard(card: ActivityCardDto): Acquired {
   // Article and paper signals are not on the repository card. A web or feed
   // source still changes grouping for every other type, without replacing its signal.
@@ -31,10 +93,6 @@ export function acquireActivityCard(card: ActivityCardDto): Acquired {
       ? publicationAcquired(card)
       : { card, item: itemFromGitHubCard(card) };
   return { card, item: withRouting(base.item, card) };
-}
-
-export function projectActivity(card: ActivityCardDto, context: ScoringContext): Acquired {
-  return applyScoringContext(acquireActivityCard(card), context);
 }
 
 export function applyScoringContext(acquired: Acquired, context: ScoringContext): Acquired {
@@ -70,6 +128,10 @@ export function applyScoringContext(acquired: Acquired, context: ScoringContext)
   };
 }
 
+export function projectActivity(card: ActivityCardDto, context: ScoringContext): Acquired {
+  return applyScoringContext(acquireActivityCard(card), context);
+}
+
 /** Rebuild routing after a card's title, summary, or URL was filled in. */
 export function refreshRouting(acquired: Acquired): Acquired {
   const next = acquireActivityCard(acquired.card);
@@ -89,66 +151,4 @@ export function refreshRouting(acquired: Acquired): Acquired {
       ...(routing && record ? { routing: { ...routing, record } } : {})
     }
   };
-}
-
-function withRouting(item: Item, card: ActivityCardDto): Item {
-  const routing = routingFor(card);
-  return {
-    ...item,
-    subject: { ...item.subject, key: routing.groupKey },
-    content: {
-      ...item.content,
-      keywords: [...(card.tags ?? []), ...(card.sourceName ? [card.sourceName] : [])]
-    },
-    routing
-  };
-}
-
-function routingFor(card: ActivityCardDto): ItemRouting {
-  const publication = isPublication(card);
-  const change = card.type === "pull_request";
-  const channel = channelFor(card);
-  const directUrl = publication
-    ? card.htmlUrl !== undefined || card.sourceUrl !== undefined
-      ? (card.htmlUrl ?? card.sourceUrl)
-      : undefined
-    : change
-      ? card.htmlUrl
-      : undefined;
-  return {
-    groupKey: activityGroupKey(card),
-    channel: channel.name,
-    channelRank: channel.rank,
-    contentResearch: publication || card.type === "article" || card.type === "paper",
-    feedPrefix: "rss",
-    sitePrefix: "web",
-    catalogResearchKey: `github:${card.repo}`,
-    role: publication ? "publication" : change ? "change" : "other",
-    ...(publication && card.title !== undefined ? { titleLabel: card.title } : {}),
-    ...(change ? { prSuffix: pullSuffix(card) } : {}),
-    strippedRepo: card.repo.replace(/^(?:rss|web):/u, ""),
-    ...(directUrl !== undefined ? { directUrl } : {}),
-    ...((publication || change) && card.summary !== undefined ? { description: card.summary } : {}),
-    fallbackUrl: `https://github.com/${card.repo}`
-  };
-}
-
-function channelFor(card: ActivityCardDto): { name: string; rank: number } {
-  if (card.source === "web") {
-    return { name: "web", rank: 3 };
-  }
-  if (card.source === "rss" || card.type === "article") {
-    return { name: "rss", rank: 2 };
-  }
-  return { name: "github", rank: 1 };
-}
-
-function isPublication(card: ActivityCardDto): boolean {
-  return card.source === "rss" || card.source === "web" || card.type === "article" || card.type === "paper";
-}
-
-function pullSuffix(card: ActivityCardDto): string {
-  const number = card.prNumber ? ` #${card.prNumber}` : "";
-  const title = card.title ? ` · ${card.title}` : "";
-  return `${number}${title}`;
 }

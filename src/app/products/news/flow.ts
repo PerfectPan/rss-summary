@@ -112,6 +112,11 @@ type NewsBriefDependencies = {
 const noonCutoffMinutes = 12 * 60 + 30;
 const newsSearchConcurrency = 2;
 
+function timeAtOffset(instant: number, timezoneOffset: string): string {
+  const shifted = new Date(instant + parseOffsetMilliseconds(timezoneOffset));
+  return shifted.toISOString().slice(11, 16);
+}
+
 export function resolveNewsEditionWindow(
   occurrence: string,
   timezoneOffset: string,
@@ -136,6 +141,157 @@ export function resolveNewsEditionWindow(
     label: `${edition === "noon" ? "00:00" : "12:30"}–${timeAtOffset(windowEnd, timezoneOffset)}`,
     timezoneOffset
   };
+}
+
+function sleep(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function parseInput(value: unknown): RivusNewsBriefInput {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Rivus news brief input must be an object.");
+  }
+  const input = value as Record<string, unknown>;
+  if (input.edition !== "noon" && input.edition !== "evening") {
+    throw new Error("edition must be noon or evening.");
+  }
+  if (typeof input.occurrence !== "string" || input.occurrence.trim() === "") {
+    throw new Error("occurrence must be a non-empty date-time string.");
+  }
+  let since: string | undefined;
+  if (input.since !== undefined) {
+    if (typeof input.since !== "string" || !Number.isFinite(Date.parse(input.since))) {
+      throw new Error("since must be an ISO date-time.");
+    }
+    const duration = Date.parse(input.occurrence) - Date.parse(input.since);
+    if (!(duration > 0 && duration <= 72 * 3_600_000)) {
+      throw new Error("Catch-up window must be within 72 hours of occurrence.");
+    }
+    since = input.since;
+  }
+  let reportedUrls: string[] | undefined;
+  if (input.reportedUrls !== undefined) {
+    if (
+      !Array.isArray(input.reportedUrls) ||
+      input.reportedUrls.length > 1000 ||
+      input.reportedUrls.some((url) => typeof url !== "string" || !canonicalizeUrl(url))
+    ) {
+      throw new Error("reportedUrls must contain at most 1000 valid URLs.");
+    }
+    reportedUrls = input.reportedUrls.map((url) => canonicalizeUrl(url as string)!);
+  }
+  return { edition: input.edition, occurrence: input.occurrence, since, reportedUrls };
+}
+
+function createSearch(
+  env: NodeJS.ProcessEnv,
+  mode: string,
+  now?: () => Date
+): ReturnType<typeof createBudgetedNewsSearch> {
+  if (mode === "grok") {
+    const model = env.NEWS_GROK_MODEL?.trim() || undefined;
+    if (model && !/^[a-zA-Z0-9._-]+$/u.test(model)) {
+      throw new Error("Invalid NEWS_GROK_MODEL.");
+    }
+    const client = new GrokSearchClient({
+      executable: env.NEWS_GROK_EXECUTABLE?.trim() || undefined,
+      model,
+      timeoutMs: boundedInteger(env.NEWS_GROK_TIMEOUT_MS, 120_000, 1_000, 180_000),
+      timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00"
+    });
+    return createBudgetedNewsSearch({
+      search: (input) => client.search(input),
+      provider: `grok://cli/v1/${model ?? "default"}`,
+      normalize: normalizeProvider,
+      stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || searchBudgetDefaults.stateFile,
+      dailyLimit: boundedInteger(env.NEWS_SEARCH_DAILY_LIMIT, searchBudgetDefaults.grok.dailyLimit, 0, 100_000),
+      monthlyLimit: boundedInteger(env.NEWS_SEARCH_MONTHLY_LIMIT, searchBudgetDefaults.grok.monthlyLimit, 0, 1_000_000),
+      timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00",
+      cacheTtlMs:
+        boundedInteger(env.NEWS_SEARCH_CACHE_TTL_MINUTES, searchBudgetDefaults.cacheTtlMinutes, 0, 43_200) * 60_000,
+      now
+    });
+  }
+  const apiKey = env.DOUBAO_SEARCH_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error("DOUBAO_SEARCH_API_KEY is required for news briefs.");
+  }
+  const client = new DoubaoSearchClient({
+    apiKey,
+    baseUrl: env.DOUBAO_SEARCH_BASE_URL?.trim() || undefined,
+    timeoutMs: boundedInteger(env.NEWS_SEARCH_TIMEOUT_MS, 15_000, 1_000, 60_000)
+  });
+  return createBudgetedNewsSearch({
+    search: (input) => client.search(input),
+    stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || searchBudgetDefaults.stateFile,
+    provider: env.DOUBAO_SEARCH_BASE_URL?.trim() || "https://open.feedcoopapi.com/search_api/web_search",
+    dailyLimit: boundedInteger(env.NEWS_SEARCH_DAILY_LIMIT, searchBudgetDefaults.doubao.dailyLimit, 0, 100_000),
+    monthlyLimit: boundedInteger(env.NEWS_SEARCH_MONTHLY_LIMIT, searchBudgetDefaults.doubao.monthlyLimit, 0, 1_000_000),
+    timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00",
+    cacheTtlMs:
+      boundedInteger(env.NEWS_SEARCH_CACHE_TTL_MINUTES, searchBudgetDefaults.cacheTtlMinutes, 0, 43_200) * 60_000,
+    now
+  });
+}
+
+/**
+ * DeepSeek keeps its own ledger beside the primary's state file, so supplement
+ * and fallback spending can never exhaust the primary's budget (and vice
+ * versa). Deployments override the location with DEEPSEEK_SEARCH_STATE_FILE.
+ */
+function deepSeekStateFile(env: NodeJS.ProcessEnv): string {
+  const override = env.DEEPSEEK_SEARCH_STATE_FILE?.trim();
+  if (override) {
+    return override;
+  }
+  const primary = env.NEWS_SEARCH_STATE_FILE?.trim() || searchBudgetDefaults.stateFile;
+  return join(dirname(primary), "deepseek-search.json");
+}
+
+/**
+ * The DeepSeek search behind both the fallback and the supplement: budgeted
+ * with its own ledger, limits and provider identity (the endpoint URL), then
+ * retried like the primary.
+ */
+function createDeepSeekSearch(
+  env: NodeJS.ProcessEnv,
+  retry: { now?: () => Date; random: () => number; sleep: (milliseconds: number) => Promise<void> }
+) {
+  const apiKey = env.DEEPSEEK_API_KEY?.trim();
+  if (!apiKey) {
+    throw new Error("DEEPSEEK_API_KEY is required for news briefs.");
+  }
+  const baseUrl = env.DEEPSEEK_SEARCH_BASE_URL?.trim() || "https://api.deepseek.com/v1/tools/search";
+  const client = new DeepSeekSearchClient({
+    apiKey,
+    baseUrl,
+    timeoutMs: boundedInteger(env.DEEPSEEK_SEARCH_TIMEOUT_MS, 15_000, 1_000, 60_000)
+  });
+  const budgeted = createBudgetedNewsSearch({
+    search: (input) => client.search(input),
+    stateFile: deepSeekStateFile(env),
+    provider: baseUrl,
+    dailyLimit: boundedInteger(env.DEEPSEEK_SEARCH_DAILY_LIMIT, searchBudgetDefaults.deepseek.dailyLimit, 0, 100_000),
+    monthlyLimit: boundedInteger(
+      env.DEEPSEEK_SEARCH_MONTHLY_LIMIT,
+      searchBudgetDefaults.deepseek.monthlyLimit,
+      0,
+      1_000_000
+    ),
+    timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00",
+    cacheTtlMs:
+      boundedInteger(env.NEWS_SEARCH_CACHE_TTL_MINUTES, searchBudgetDefaults.cacheTtlMinutes, 0, 43_200) * 60_000,
+    now: retry.now
+  });
+  return (input: NewsSearchInput) => retrySearchEffect(budgeted(input), { random: retry.random, sleep: retry.sleep });
+}
+
+/** The fallback flavor of the DeepSeek search: only policies it can serve. */
+function createDeepSeekFallback(
+  env: NodeJS.ProcessEnv,
+  retry: { now?: () => Date; random: () => number; sleep: (milliseconds: number) => Promise<void> }
+): FallbackSearchProvider {
+  return { sourcePolicies: deepSeekSourcePolicies, search: createDeepSeekSearch(env, retry) };
 }
 
 export function generateRivusNewsBrief(
@@ -407,160 +563,4 @@ export function generateRivusNewsBrief(
       topics
     };
   });
-}
-
-function sleep(milliseconds: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, milliseconds));
-}
-
-function parseInput(value: unknown): RivusNewsBriefInput {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("Rivus news brief input must be an object.");
-  }
-  const input = value as Record<string, unknown>;
-  if (input.edition !== "noon" && input.edition !== "evening") {
-    throw new Error("edition must be noon or evening.");
-  }
-  if (typeof input.occurrence !== "string" || input.occurrence.trim() === "") {
-    throw new Error("occurrence must be a non-empty date-time string.");
-  }
-  let since: string | undefined;
-  if (input.since !== undefined) {
-    if (typeof input.since !== "string" || !Number.isFinite(Date.parse(input.since))) {
-      throw new Error("since must be an ISO date-time.");
-    }
-    const duration = Date.parse(input.occurrence) - Date.parse(input.since);
-    if (!(duration > 0 && duration <= 72 * 3_600_000)) {
-      throw new Error("Catch-up window must be within 72 hours of occurrence.");
-    }
-    since = input.since;
-  }
-  let reportedUrls: string[] | undefined;
-  if (input.reportedUrls !== undefined) {
-    if (
-      !Array.isArray(input.reportedUrls) ||
-      input.reportedUrls.length > 1000 ||
-      input.reportedUrls.some((url) => typeof url !== "string" || !canonicalizeUrl(url))
-    ) {
-      throw new Error("reportedUrls must contain at most 1000 valid URLs.");
-    }
-    reportedUrls = input.reportedUrls.map((url) => canonicalizeUrl(url as string)!);
-  }
-  return { edition: input.edition, occurrence: input.occurrence, since, reportedUrls };
-}
-
-function createSearch(
-  env: NodeJS.ProcessEnv,
-  mode: string,
-  now?: () => Date
-): ReturnType<typeof createBudgetedNewsSearch> {
-  if (mode === "grok") {
-    const model = env.NEWS_GROK_MODEL?.trim() || undefined;
-    if (model && !/^[a-zA-Z0-9._-]+$/u.test(model)) {
-      throw new Error("Invalid NEWS_GROK_MODEL.");
-    }
-    const client = new GrokSearchClient({
-      executable: env.NEWS_GROK_EXECUTABLE?.trim() || undefined,
-      model,
-      timeoutMs: boundedInteger(env.NEWS_GROK_TIMEOUT_MS, 120_000, 1_000, 180_000),
-      timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00"
-    });
-    return createBudgetedNewsSearch({
-      search: (input) => client.search(input),
-      provider: `grok://cli/v1/${model ?? "default"}`,
-      normalize: normalizeProvider,
-      stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || searchBudgetDefaults.stateFile,
-      dailyLimit: boundedInteger(env.NEWS_SEARCH_DAILY_LIMIT, searchBudgetDefaults.grok.dailyLimit, 0, 100_000),
-      monthlyLimit: boundedInteger(env.NEWS_SEARCH_MONTHLY_LIMIT, searchBudgetDefaults.grok.monthlyLimit, 0, 1_000_000),
-      timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00",
-      cacheTtlMs:
-        boundedInteger(env.NEWS_SEARCH_CACHE_TTL_MINUTES, searchBudgetDefaults.cacheTtlMinutes, 0, 43_200) * 60_000,
-      now
-    });
-  }
-  const apiKey = env.DOUBAO_SEARCH_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error("DOUBAO_SEARCH_API_KEY is required for news briefs.");
-  }
-  const client = new DoubaoSearchClient({
-    apiKey,
-    baseUrl: env.DOUBAO_SEARCH_BASE_URL?.trim() || undefined,
-    timeoutMs: boundedInteger(env.NEWS_SEARCH_TIMEOUT_MS, 15_000, 1_000, 60_000)
-  });
-  return createBudgetedNewsSearch({
-    search: (input) => client.search(input),
-    stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || searchBudgetDefaults.stateFile,
-    provider: env.DOUBAO_SEARCH_BASE_URL?.trim() || "https://open.feedcoopapi.com/search_api/web_search",
-    dailyLimit: boundedInteger(env.NEWS_SEARCH_DAILY_LIMIT, searchBudgetDefaults.doubao.dailyLimit, 0, 100_000),
-    monthlyLimit: boundedInteger(env.NEWS_SEARCH_MONTHLY_LIMIT, searchBudgetDefaults.doubao.monthlyLimit, 0, 1_000_000),
-    timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00",
-    cacheTtlMs:
-      boundedInteger(env.NEWS_SEARCH_CACHE_TTL_MINUTES, searchBudgetDefaults.cacheTtlMinutes, 0, 43_200) * 60_000,
-    now
-  });
-}
-
-function timeAtOffset(instant: number, timezoneOffset: string): string {
-  const shifted = new Date(instant + parseOffsetMilliseconds(timezoneOffset));
-  return shifted.toISOString().slice(11, 16);
-}
-
-/**
- * DeepSeek keeps its own ledger beside the primary's state file, so supplement
- * and fallback spending can never exhaust the primary's budget (and vice
- * versa). Deployments override the location with DEEPSEEK_SEARCH_STATE_FILE.
- */
-function deepSeekStateFile(env: NodeJS.ProcessEnv): string {
-  const override = env.DEEPSEEK_SEARCH_STATE_FILE?.trim();
-  if (override) {
-    return override;
-  }
-  const primary = env.NEWS_SEARCH_STATE_FILE?.trim() || searchBudgetDefaults.stateFile;
-  return join(dirname(primary), "deepseek-search.json");
-}
-
-/**
- * The DeepSeek search behind both the fallback and the supplement: budgeted
- * with its own ledger, limits and provider identity (the endpoint URL), then
- * retried like the primary.
- */
-function createDeepSeekSearch(
-  env: NodeJS.ProcessEnv,
-  retry: { now?: () => Date; random: () => number; sleep: (milliseconds: number) => Promise<void> }
-) {
-  const apiKey = env.DEEPSEEK_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error("DEEPSEEK_API_KEY is required for news briefs.");
-  }
-  const baseUrl = env.DEEPSEEK_SEARCH_BASE_URL?.trim() || "https://api.deepseek.com/v1/tools/search";
-  const client = new DeepSeekSearchClient({
-    apiKey,
-    baseUrl,
-    timeoutMs: boundedInteger(env.DEEPSEEK_SEARCH_TIMEOUT_MS, 15_000, 1_000, 60_000)
-  });
-  const budgeted = createBudgetedNewsSearch({
-    search: (input) => client.search(input),
-    stateFile: deepSeekStateFile(env),
-    provider: baseUrl,
-    dailyLimit: boundedInteger(env.DEEPSEEK_SEARCH_DAILY_LIMIT, searchBudgetDefaults.deepseek.dailyLimit, 0, 100_000),
-    monthlyLimit: boundedInteger(
-      env.DEEPSEEK_SEARCH_MONTHLY_LIMIT,
-      searchBudgetDefaults.deepseek.monthlyLimit,
-      0,
-      1_000_000
-    ),
-    timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00",
-    cacheTtlMs:
-      boundedInteger(env.NEWS_SEARCH_CACHE_TTL_MINUTES, searchBudgetDefaults.cacheTtlMinutes, 0, 43_200) * 60_000,
-    now: retry.now
-  });
-  return (input: NewsSearchInput) => retrySearchEffect(budgeted(input), { random: retry.random, sleep: retry.sleep });
-}
-
-/** The fallback flavor of the DeepSeek search: only policies it can serve. */
-function createDeepSeekFallback(
-  env: NodeJS.ProcessEnv,
-  retry: { now?: () => Date; random: () => number; sleep: (milliseconds: number) => Promise<void> }
-): FallbackSearchProvider {
-  return { sourcePolicies: deepSeekSourcePolicies, search: createDeepSeekSearch(env, retry) };
 }

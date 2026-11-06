@@ -32,6 +32,68 @@ export function decodeEntry(entry: WebPageEntry): WebPageEntry | undefined {
   return decoded._tag === "Ok" ? decoded.value : undefined;
 }
 
+function matchesPath(url: string, prefixes: string[]): boolean {
+  const path = new URL(url).pathname;
+  return prefixes.some((prefix) => path.startsWith(prefix));
+}
+
+function isSameHost(value: string, sourceUrl: string): boolean {
+  return new URL(value).hostname === new URL(sourceUrl).hostname;
+}
+
+function canonicalUrl(value: string | undefined, base: string): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+  try {
+    const url = new URL(value, base);
+    url.hash = "";
+    url.search = "";
+    return url.toString().replace(/\/$/u, "");
+  } catch {
+    return undefined;
+  }
+}
+
+function cleanText(value: string | undefined): string | undefined {
+  const cleaned = value?.replace(/\s+/gu, " ").trim();
+  return cleaned || undefined;
+}
+
+function normalizedDate(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const isoDay = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(value.trim());
+  if (isoDay) {
+    return `${isoDay[1]}-${isoDay[2]}-${isoDay[3]}T12:00:00.000Z`;
+  }
+  const englishDay = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2}),\s+(\d{4})$/iu.exec(value.trim());
+  if (englishDay) {
+    const month = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"].indexOf(
+      englishDay[1]!.toLowerCase()
+    );
+    return new Date(Date.UTC(Number(englishDay[3]), month, Number(englishDay[2]), 12)).toISOString();
+  }
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? new Date(time).toISOString() : undefined;
+}
+
+function cleanTitle(value: string | undefined): string | undefined {
+  const cleaned = cleanText(value);
+  return cleaned && !normalizedDate(cleaned) ? cleaned : undefined;
+}
+
+function betterSummary(current: string | undefined, candidate: string | undefined): string | undefined {
+  if (!candidate) {
+    return current;
+  }
+  if (!current) {
+    return candidate;
+  }
+  return candidate.length > current.length ? candidate : current;
+}
+
 export function extractWebPageEntries(html: string, source: WebPageSubscription): WebPageEntry[] {
   const $ = load(html);
   const entries = new Map<string, PendingEntry>();
@@ -99,66 +161,4 @@ export function extractWebPageEntries(html: string, source: WebPageSubscription)
         ]
       : []
   );
-}
-
-function matchesPath(url: string, prefixes: string[]): boolean {
-  const path = new URL(url).pathname;
-  return prefixes.some((prefix) => path.startsWith(prefix));
-}
-
-function isSameHost(value: string, sourceUrl: string): boolean {
-  return new URL(value).hostname === new URL(sourceUrl).hostname;
-}
-
-function canonicalUrl(value: string | undefined, base: string): string | undefined {
-  if (!value) {
-    return undefined;
-  }
-  try {
-    const url = new URL(value, base);
-    url.hash = "";
-    url.search = "";
-    return url.toString().replace(/\/$/u, "");
-  } catch {
-    return undefined;
-  }
-}
-
-function cleanTitle(value: string | undefined): string | undefined {
-  const cleaned = cleanText(value);
-  return cleaned && !normalizedDate(cleaned) ? cleaned : undefined;
-}
-
-function cleanText(value: string | undefined): string | undefined {
-  const cleaned = value?.replace(/\s+/gu, " ").trim();
-  return cleaned || undefined;
-}
-
-function betterSummary(current: string | undefined, candidate: string | undefined): string | undefined {
-  if (!candidate) {
-    return current;
-  }
-  if (!current) {
-    return candidate;
-  }
-  return candidate.length > current.length ? candidate : current;
-}
-
-function normalizedDate(value: string | undefined): string | undefined {
-  if (!value) {
-    return undefined;
-  }
-  const isoDay = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(value.trim());
-  if (isoDay) {
-    return `${isoDay[1]}-${isoDay[2]}-${isoDay[3]}T12:00:00.000Z`;
-  }
-  const englishDay = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2}),\s+(\d{4})$/iu.exec(value.trim());
-  if (englishDay) {
-    const month = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"].indexOf(
-      englishDay[1]!.toLowerCase()
-    );
-    return new Date(Date.UTC(Number(englishDay[3]), month, Number(englishDay[2]), 12)).toISOString();
-  }
-  const time = Date.parse(value);
-  return Number.isFinite(time) ? new Date(time).toISOString() : undefined;
 }

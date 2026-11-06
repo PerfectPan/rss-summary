@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vite-plus/test";
 
-import { createArticleResearchExecutor } from "./tool.js";
+import { createArticleResearchExecutor, type ArticleResearchToolDependencies } from "./tool.js";
 
 describe("article research Tool", () => {
   it("preserves visual provenance and material links in the scheduled research result", async () => {
@@ -42,7 +42,17 @@ describe("article research Tool", () => {
   });
 
   it("validates the Agent request and returns structured research evidence", async () => {
-    const research = vi.fn(async ({ ref, url }: { ref: string; url: string }) => ({
+    const research = vi.fn<
+      ({ ref, url }: { ref: string; url: string }) => Promise<{
+        content: string;
+        fetchedUrl: string;
+        ref: string;
+        retrievedAt: string;
+        status: "ok";
+        title: string;
+        url: string;
+      }>
+    >(async ({ ref, url }: { ref: string; url: string }) => ({
       content: "A sufficiently long article body for a grounded summary.",
       fetchedUrl: url,
       ref,
@@ -63,7 +73,7 @@ describe("article research Tool", () => {
   });
 
   it("rejects an incomplete request before invoking the client", async () => {
-    const research = vi.fn();
+    const research = vi.fn<NonNullable<ArticleResearchToolDependencies["client"]>["research"]>();
     const execute = createArticleResearchExecutor({ client: { research } });
 
     await expect(execute({ url: "https://example.com/article" })).rejects.toThrow("Article research requires ref");
@@ -73,9 +83,20 @@ describe("article research Tool", () => {
   it.each(["auto", "browser", "http"])(
     "routes videos to transcript research instead of browser, HTTP or GLM in %s mode",
     async (mode) => {
-      const research = vi.fn();
-      const read = vi.fn();
-      const video = vi.fn(async ({ ref, url }: { ref: string; url: string }) => ({
+      const research = vi.fn<NonNullable<ArticleResearchToolDependencies["client"]>["research"]>();
+      const read = vi.fn<NonNullable<ArticleResearchToolDependencies["glmClient"]>["read"]>();
+      const video = vi.fn<
+        ({ ref, url }: { ref: string; url: string }) => Promise<{
+          content: string;
+          fetchedUrl: string;
+          method: "captions";
+          ref: string;
+          retrievedAt: string;
+          status: "ok";
+          title: string;
+          url: string;
+        }>
+      >(async ({ ref, url }: { ref: string; url: string }) => ({
         ref,
         url,
         fetchedUrl: url,
@@ -107,7 +128,17 @@ describe("article research Tool", () => {
   );
 
   it("uses browser research first in auto mode and skips HTTP on success", async () => {
-    const browser = vi.fn(async ({ ref, url }: { ref: string; url: string }) => ({
+    const browser = vi.fn<
+      ({ ref, url }: { ref: string; url: string }) => Promise<{
+        content: string;
+        fetchedUrl: string;
+        ref: string;
+        retrievedAt: string;
+        status: "ok";
+        title: string;
+        url: string;
+      }>
+    >(async ({ ref, url }: { ref: string; url: string }) => ({
       content: "Rendered browser content with enough detail for a grounded single-item summary.",
       fetchedUrl: url,
       ref,
@@ -116,7 +147,7 @@ describe("article research Tool", () => {
       title: "Rendered title",
       url
     }));
-    const http = vi.fn();
+    const http = vi.fn<NonNullable<ArticleResearchToolDependencies["client"]>["research"]>();
     const execute = createArticleResearchExecutor({
       browserClient: { research: browser },
       client: { research: http }
@@ -130,14 +161,32 @@ describe("article research Tool", () => {
   });
 
   it("falls back to HTTP when browser research fails in auto mode", async () => {
-    const browser = vi.fn(async () => ({
+    const browser = vi.fn<
+      () => Promise<{
+        error: string;
+        ref: string;
+        retrievedAt: string;
+        status: "failed";
+        url: string;
+      }>
+    >(async () => ({
       error: "browser timeout",
       ref: "article:1",
       retrievedAt: "2026-08-17T01:00:00.000Z",
       status: "failed" as const,
       url: "https://example.com/article"
     }));
-    const http = vi.fn(async ({ ref, url }: { ref: string; url: string }) => ({
+    const http = vi.fn<
+      ({ ref, url }: { ref: string; url: string }) => Promise<{
+        content: string;
+        fetchedUrl: string;
+        ref: string;
+        retrievedAt: string;
+        status: "ok";
+        title: string;
+        url: string;
+      }>
+    >(async ({ ref, url }: { ref: string; url: string }) => ({
       content: "HTTP fallback content with enough detail for a grounded single-item summary.",
       fetchedUrl: url,
       ref,
@@ -166,8 +215,15 @@ it("uses opt-in GLM Reader only after browser and HTTP failures", async () => {
     status: "failed" as const,
     url: "https://example.com/article"
   };
-  const research = vi.fn(async () => failed);
-  const read = vi.fn(async () => ({
+  const research = vi.fn<() => Promise<typeof failed>>(async () => failed);
+  const read = vi.fn<
+    () => Promise<{
+      content: string;
+      title: string;
+      truncated: boolean;
+      url: string;
+    }>
+  >(async () => ({
     title: "Article",
     url: failed.url,
     content: "Source content. ".repeat(10),

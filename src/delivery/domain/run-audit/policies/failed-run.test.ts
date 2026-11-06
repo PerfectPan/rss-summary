@@ -2,19 +2,6 @@ import { describe, expect, it } from "vite-plus/test";
 
 import { isFailedRun, type RunSourceResult, type StoredRunAudit } from "../index.js";
 
-describe("failed run detection", () => {
-  it("marks a run failed when delivery failed, state failed, or a source failed", () => {
-    expect(isFailedRun(stored({ delivery: { status: "failed", stateStatus: "skipped" } }))).toBe(true);
-    expect(isFailedRun(stored({ delivery: { status: "delivered", stateStatus: "failed" } }))).toBe(true);
-    expect(isFailedRun(stored({ sources: [source("failed")] }))).toBe(true);
-  });
-
-  it("keeps a fully successful run out of the failures list", () => {
-    expect(isFailedRun(stored({}))).toBe(false);
-    expect(isFailedRun(stored({ sources: [source("ok"), source("skipped")] }))).toBe(false);
-  });
-});
-
 function stored(
   overrides: {
     delivery?: Partial<StoredRunAudit["delivery"]>;
@@ -42,3 +29,16 @@ function stored(
 function source(status: RunSourceResult["status"]): RunSourceResult {
   return { id: "feed", kind: "rss", name: "Feed", status, itemCount: 0 };
 }
+
+describe("failed run detection", () => {
+  it("marks a run failed when delivery failed, state failed, or a source failed", () => {
+    expect(isFailedRun(stored({ delivery: { status: "failed", stateStatus: "skipped" } }))).toBe(true);
+    expect(isFailedRun(stored({ delivery: { status: "delivered", stateStatus: "failed" } }))).toBe(true);
+    expect(isFailedRun(stored({ sources: [source("failed")] }))).toBe(true);
+  });
+
+  it("keeps a fully successful run out of the failures list", () => {
+    expect(isFailedRun(stored({}))).toBe(false);
+    expect(isFailedRun(stored({ sources: [source("ok"), source("skipped")] }))).toBe(false);
+  });
+});

@@ -36,6 +36,23 @@ type Options = {
   recency?: "noLimit" | "oneWeek";
 };
 
+function toHit(result: NewsSearchPage["results"][number], { query, topic }: NewsSearchRequest): NewsSearchHit {
+  return projectNewsHit(
+    result,
+    {
+      topicId: topic.id,
+      topicLabel: topic.label,
+      sourcePolicy: topic.sourcePolicy,
+      queryId: query.id,
+      queryText: query.text,
+      subjectAny: query.subjectAny,
+      eventAny: query.eventAny,
+      excludedAny: query.excludedAny
+    },
+    resolveNewsCredibility(result)
+  );
+}
+
 /** A brief owns its quota circuit and cache. Reserve budgets before any provider runs. */
 export function createHybridNewsSearch(options: Options) {
   let quotaExhausted = false;
@@ -236,21 +253,4 @@ export function createHybridNewsSearch(options: Options) {
     result.resultCount = result.results.length;
     return result;
   };
-}
-
-function toHit(result: NewsSearchPage["results"][number], { query, topic }: NewsSearchRequest): NewsSearchHit {
-  return projectNewsHit(
-    result,
-    {
-      topicId: topic.id,
-      topicLabel: topic.label,
-      sourcePolicy: topic.sourcePolicy,
-      queryId: query.id,
-      queryText: query.text,
-      subjectAny: query.subjectAny,
-      eventAny: query.eventAny,
-      excludedAny: query.excludedAny
-    },
-    resolveNewsCredibility(result)
-  );
 }

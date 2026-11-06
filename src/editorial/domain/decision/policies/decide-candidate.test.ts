@@ -4,6 +4,20 @@ import { candidateIdentity } from "../../../../integrations/shared/index.js";
 import { decideCandidate } from "./decide-candidate.js";
 import type { CandidateProject } from "../../../index.js";
 
+function candidate(repo: string, score: number, matchedInterests: string[] = []): CandidateProject {
+  return {
+    repo,
+    source: "rss",
+    category: "article",
+    score,
+    actors: ["Example"],
+    eventTypes: ["article"],
+    reasons: [],
+    matchedInterests,
+    events: []
+  };
+}
+
 describe("run audit candidate decisions", () => {
   it("records selected output depth and explicit filter reasons", () => {
     const selected = candidate("selected", 70, ["agent"]);
@@ -28,17 +42,3 @@ describe("run audit candidate decisions", () => {
     });
   });
 });
-
-function candidate(repo: string, score: number, matchedInterests: string[] = []): CandidateProject {
-  return {
-    repo,
-    source: "rss",
-    category: "article",
-    score,
-    actors: ["Example"],
-    eventTypes: ["article"],
-    reasons: [],
-    matchedInterests,
-    events: []
-  };
-}

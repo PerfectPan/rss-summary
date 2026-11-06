@@ -27,6 +27,37 @@ vi.mock("node:crypto", async (importOriginal) => {
 
 const harness = useGoldenHarness();
 
+/** Counts as an invocation, then outlives NEWS_GROK_TIMEOUT_MS so the CLI kills it. */
+async function writeHangingGrokExecutable(path: string): Promise<void> {
+  mkdirSync(dirname(path), { recursive: true });
+  const counter = `${path}.count`;
+  const script = `#!${process.execPath}\nconst fs = require("node:fs");\nfs.appendFileSync(${JSON.stringify(counter)}, "1\\n");\nsetInterval(() => {}, 60000);\n`;
+  await writeFile(path, script, { mode: 0o755 });
+  process.env.NEWS_GROK_EXECUTABLE = path;
+}
+
+async function matchDoubao(
+  name: string,
+  input: { edition: "noon" | "evening"; occurrence: string; publishTime: string; since?: string }
+): Promise<void> {
+  const context = harness.context();
+  process.env.NEWS_SEARCH_MODE = "doubao";
+  process.env.DOUBAO_SEARCH_API_KEY = "golden-key";
+  installFetch((url) => {
+    if (url === DOUBAO_URL) {
+      return jsonResponse(JSON.parse(doubaoPayload(input.publishTime)));
+    }
+    throw new Error(`Unexpected fetch ${url}`);
+  });
+  const { tools } = registerPlugin();
+  const result = await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, {
+    edition: input.edition,
+    occurrence: input.occurrence,
+    ...(input.since ? { since: input.since } : {})
+  });
+  await matchSnapshot(name, { result, state: readTree(context.root) }, [context.root]);
+}
+
 describe("golden news tool", () => {
   it("snapshots a Doubao noon brief", async () => {
     await matchDoubao("news-doubao-noon.txt", {
@@ -267,37 +298,6 @@ describe("golden news tool", () => {
     );
   });
 });
-
-/** Counts as an invocation, then outlives NEWS_GROK_TIMEOUT_MS so the CLI kills it. */
-async function writeHangingGrokExecutable(path: string): Promise<void> {
-  mkdirSync(dirname(path), { recursive: true });
-  const counter = `${path}.count`;
-  const script = `#!${process.execPath}\nconst fs = require("node:fs");\nfs.appendFileSync(${JSON.stringify(counter)}, "1\\n");\nsetInterval(() => {}, 60000);\n`;
-  await writeFile(path, script, { mode: 0o755 });
-  process.env.NEWS_GROK_EXECUTABLE = path;
-}
-
-async function matchDoubao(
-  name: string,
-  input: { edition: "noon" | "evening"; occurrence: string; publishTime: string; since?: string }
-): Promise<void> {
-  const context = harness.context();
-  process.env.NEWS_SEARCH_MODE = "doubao";
-  process.env.DOUBAO_SEARCH_API_KEY = "golden-key";
-  installFetch((url) => {
-    if (url === DOUBAO_URL) {
-      return jsonResponse(JSON.parse(doubaoPayload(input.publishTime)));
-    }
-    throw new Error(`Unexpected fetch ${url}`);
-  });
-  const { tools } = registerPlugin();
-  const result = await executeTool(tools, RSS_SUMMARY_NEWS_TOOL_ID, {
-    edition: input.edition,
-    occurrence: input.occurrence,
-    ...(input.since ? { since: input.since } : {})
-  });
-  await matchSnapshot(name, { result, state: readTree(context.root) }, [context.root]);
-}
 
 describe("golden news tool DeepSeek supplement", () => {
   function deepSeekResults(results: Array<{ title: string; url: string; date?: string | null }>): string {

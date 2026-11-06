@@ -51,13 +51,6 @@ export default defineConfig({
           assertFunctionNames: ["expect", "expectFileMessage", "expectTypedNodeCause", "matchSnapshot", "matchDoubao"]
         }
       ],
-      // TEMPORARY, mirroring rivus-agent's staged adoption of this preset: the
-      // function-declaration reorder (792 sites) is its own task. The
-      // const/let/class ordering rule stays active.
-      "no-use-before-define": ["error", { functions: false }],
-      // TEMPORARY: vi.fn/vi.mock call sites need per-site signatures (~116
-      // sites); track the mock-typing campaign separately.
-      "vitest/require-mock-type-parameters": "off",
       "vite-plus/prefer-vite-plus-imports": "error"
     },
     jsPlugins: [

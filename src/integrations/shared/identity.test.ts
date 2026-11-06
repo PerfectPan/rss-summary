@@ -102,6 +102,52 @@ describe("candidate identity keys", () => {
   });
 });
 
+// The product entry (app/products/subscriptions/output.ts) records research
+// under the ledger key; the tests rebuild that one-liner to stay inside the
+// acquisition boundary.
+function markCandidateResearched(
+  state: { researched: Record<string, { at: string; decision?: string; reason?: string }> },
+  candidate: CandidateProject,
+  record: { at: string; decision?: string; reason?: string }
+): void {
+  state.researched[researchKeyForCandidate(candidate)] = record;
+}
+
+function eventIdsOf(candidate: CandidateProject): string[] {
+  return candidate.events.map((event) => event.id);
+}
+
+function candidate(
+  repo: string,
+  eventIds: string[],
+  options: {
+    actor?: string;
+    source?: CandidateProject["source"];
+    category?: CandidateProject["category"];
+    eventTypes?: CandidateProject["eventTypes"];
+    eventType?: CandidateProject["events"][number]["type"];
+  } = {}
+): CandidateProject {
+  const actor = options.actor ?? "actor";
+  const eventType = options.eventType ?? "pull_request";
+  return {
+    repo,
+    source: options.source ?? "github",
+    category: options.category ?? "activity",
+    score: 10,
+    actors: [actor],
+    eventTypes: options.eventTypes ?? ["pull_request"],
+    reasons: ["test"],
+    events: eventIds.map((id) => ({
+      id,
+      type: eventType,
+      actor,
+      repo,
+      createdAt: "2026-06-24T08:00:00Z"
+    }))
+  };
+}
+
 describe("research keys", () => {
   it("uses canonical URLs as research keys for RSS article candidates", () => {
     expect(
@@ -156,49 +202,3 @@ describe("research keys", () => {
     expect(state.researched).toHaveProperty("github:owner/useful-tool");
   });
 });
-
-// The product entry (app/products/subscriptions/output.ts) records research
-// under the ledger key; the tests rebuild that one-liner to stay inside the
-// acquisition boundary.
-function markCandidateResearched(
-  state: { researched: Record<string, { at: string; decision?: string; reason?: string }> },
-  candidate: CandidateProject,
-  record: { at: string; decision?: string; reason?: string }
-): void {
-  state.researched[researchKeyForCandidate(candidate)] = record;
-}
-
-function eventIdsOf(candidate: CandidateProject): string[] {
-  return candidate.events.map((event) => event.id);
-}
-
-function candidate(
-  repo: string,
-  eventIds: string[],
-  options: {
-    actor?: string;
-    source?: CandidateProject["source"];
-    category?: CandidateProject["category"];
-    eventTypes?: CandidateProject["eventTypes"];
-    eventType?: CandidateProject["events"][number]["type"];
-  } = {}
-): CandidateProject {
-  const actor = options.actor ?? "actor";
-  const eventType = options.eventType ?? "pull_request";
-  return {
-    repo,
-    source: options.source ?? "github",
-    category: options.category ?? "activity",
-    score: 10,
-    actors: [actor],
-    eventTypes: options.eventTypes ?? ["pull_request"],
-    reasons: ["test"],
-    events: eventIds.map((id) => ({
-      id,
-      type: eventType,
-      actor,
-      repo,
-      createdAt: "2026-06-24T08:00:00Z"
-    }))
-  };
-}

@@ -17,6 +17,26 @@ afterEach(() => {
   }
 });
 
+function expectFileMessage(exit: Exit.Exit<unknown, unknown>, message: string): void {
+  expect(Exit.isFailure(exit)).toBe(true);
+  if (!Exit.isFailure(exit)) {
+    return;
+  }
+  expect(Cause.hasDies(exit.cause)).toBe(false);
+  const error = Cause.squash(exit.cause);
+  expect(error).toBeInstanceOf(Error);
+  expect((error as Error).message).toBe(message);
+}
+
+async function nodeMessage(readOrWrite: () => void | Promise<void>): Promise<string> {
+  try {
+    await readOrWrite();
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+  throw new Error("expected the Node filesystem call to fail");
+}
+
 describe("source catalog file", () => {
   it("reads a missing file as an empty list and writes the historical JSON document", async () => {
     const directory = mkdtempSync(join(tmpdir(), "acq-catalog-"));
@@ -83,23 +103,3 @@ describe("source catalog file", () => {
     );
   });
 });
-
-function expectFileMessage(exit: Exit.Exit<unknown, unknown>, message: string): void {
-  expect(Exit.isFailure(exit)).toBe(true);
-  if (!Exit.isFailure(exit)) {
-    return;
-  }
-  expect(Cause.hasDies(exit.cause)).toBe(false);
-  const error = Cause.squash(exit.cause);
-  expect(error).toBeInstanceOf(Error);
-  expect((error as Error).message).toBe(message);
-}
-
-async function nodeMessage(readOrWrite: () => void | Promise<void>): Promise<string> {
-  try {
-    await readOrWrite();
-  } catch (error) {
-    return error instanceof Error ? error.message : String(error);
-  }
-  throw new Error("expected the Node filesystem call to fail");
-}

@@ -25,6 +25,10 @@ export type CliArgs = {
   rssOnly?: boolean;
 };
 
+function camelCase(value: string): string {
+  return value.replace(/-([a-z])/gu, (_, char: string) => char.toUpperCase());
+}
+
 export function parseCliArgs(argv: string[]): CliArgs {
   const result: Record<string, string | boolean> = {};
   for (let index = 0; index < argv.length; index += 1) {
@@ -59,8 +63,4 @@ export function parseCliArgs(argv: string[]): CliArgs {
     }
   }
   return result as CliArgs;
-}
-
-function camelCase(value: string): string {
-  return value.replace(/-([a-z])/gu, (_, char: string) => char.toUpperCase());
 }

@@ -41,19 +41,51 @@ export type CollectedRivusDigest = {
   document: DigestDocument;
 };
 
-export async function generateRivusDigest(
-  value: unknown,
-  dependencies: RivusDigestDependencies = {}
-): Promise<RivusDigestResult> {
-  const { day, document } = await collectRivusDigest(value, dependencies);
-  const paperCandidateCount = document.candidates.filter((candidate) => candidate.category === "paper").length;
+function optionalString(value: unknown, name: string): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "string" || value.length === 0) {
+    throw new Error(`${name} must be a non-empty string.`);
+  }
+  return value;
+}
+
+function optionalBoolean(value: unknown, name: string): boolean | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "boolean") {
+    throw new Error(`${name} must be a boolean.`);
+  }
+  return value;
+}
+
+function optionalWindow(value: unknown): "previous-calendar-day" | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value !== "previous-calendar-day") {
+    throw new Error("window must be previous-calendar-day.");
+  }
+  return value;
+}
+
+function parseInput(value: unknown): RivusDigestInput {
+  if (value === undefined) {
+    return {};
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Rivus digest input must be an object.");
+  }
+
+  const input = value as Record<string, unknown>;
   return {
-    candidateCount: document.candidates.length - paperCandidateCount,
-    generatedAt: document.generatedAt,
-    markdown: renderViewMarkdown(digestView(day ? { ...document, displayDate: day } : document)),
-    paperCandidateCount,
-    ...(document.windowLabel ? { windowLabel: document.windowLabel } : {}),
-    ...(document.audit ? { audit: document.audit } : {})
+    day: optionalString(input.day, "day"),
+    occurrence: optionalString(input.occurrence, "occurrence"),
+    onlyNew: optionalBoolean(input.onlyNew, "onlyNew"),
+    rssOnly: optionalBoolean(input.rssOnly, "rssOnly"),
+    window: optionalWindow(input.window)
   };
 }
 
@@ -103,52 +135,20 @@ export async function collectRivusDigest(
   };
 }
 
-function parseInput(value: unknown): RivusDigestInput {
-  if (value === undefined) {
-    return {};
-  }
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("Rivus digest input must be an object.");
-  }
-
-  const input = value as Record<string, unknown>;
+export async function generateRivusDigest(
+  value: unknown,
+  dependencies: RivusDigestDependencies = {}
+): Promise<RivusDigestResult> {
+  const { day, document } = await collectRivusDigest(value, dependencies);
+  const paperCandidateCount = document.candidates.filter((candidate) => candidate.category === "paper").length;
   return {
-    day: optionalString(input.day, "day"),
-    occurrence: optionalString(input.occurrence, "occurrence"),
-    onlyNew: optionalBoolean(input.onlyNew, "onlyNew"),
-    rssOnly: optionalBoolean(input.rssOnly, "rssOnly"),
-    window: optionalWindow(input.window)
+    candidateCount: document.candidates.length - paperCandidateCount,
+    generatedAt: document.generatedAt,
+    markdown: renderViewMarkdown(digestView(day ? { ...document, displayDate: day } : document)),
+    paperCandidateCount,
+    ...(document.windowLabel ? { windowLabel: document.windowLabel } : {}),
+    ...(document.audit ? { audit: document.audit } : {})
   };
-}
-
-function optionalString(value: unknown, name: string): string | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (typeof value !== "string" || value.length === 0) {
-    throw new Error(`${name} must be a non-empty string.`);
-  }
-  return value;
-}
-
-function optionalBoolean(value: unknown, name: string): boolean | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (typeof value !== "boolean") {
-    throw new Error(`${name} must be a boolean.`);
-  }
-  return value;
-}
-
-function optionalWindow(value: unknown): "previous-calendar-day" | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (value !== "previous-calendar-day") {
-    throw new Error("window must be previous-calendar-day.");
-  }
-  return value;
 }
 
 export const subscriptionsToolDescriptor: Pick<

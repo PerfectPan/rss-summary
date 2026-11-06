@@ -32,38 +32,8 @@ type ResearchSuggestion = {
   reason?: string;
 };
 
-export async function runResearchCommand(
-  argv: string[] = process.argv.slice(2),
-  deps: ResearchCommandDeps = {}
-): Promise<number> {
-  if (argv[0] === "search" || argv[0] === "read") {
-    return runGlmResearchCommand(argv, { ...deps, client: deps.glmClient });
-  }
-  const stdout = deps.stdout ?? process.stdout;
-  const stderr = deps.stderr ?? process.stderr;
-
-  try {
-    const args = parseArgs(argv);
-    if (args.command === "add") {
-      const text = args.file ? readFileSync(args.file, "utf8") : await readStdin(deps.stdin);
-      const suggestions = parseResearchSuggestions(text);
-      if (suggestions.length === 0) {
-        stderr.write("No research suggestions found in input.\n");
-        return 1;
-      }
-      await runPluginEffect(recordResearch({ stateFile: args.stateFile, suggestions, at: new Date().toISOString() }));
-      stdout.write(
-        `Marked ${suggestions.length} research ${suggestions.length === 1 ? "decision" : "decisions"} in ${args.stateFile}\n`
-      );
-      return 0;
-    }
-
-    writeHelp(stdout);
-    return args.command === "help" ? 0 : 1;
-  } catch (error) {
-    stderr.write(`${errorMessage(error)}\n`);
-    return 1;
-  }
+function camelCase(value: string): string {
+  return value.replace(/-([a-z])/gu, (_, char: string) => char.toUpperCase());
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
@@ -124,10 +94,6 @@ function writeHelp(stdout: Writable): void {
   rss-summary research read --url <public-url>
   rss-summary research help
 `);
-}
-
-function camelCase(value: string): string {
-  return value.replace(/-([a-z])/gu, (_, char: string) => char.toUpperCase());
 }
 
 type GlmResearchDependencies = {
@@ -191,6 +157,40 @@ async function runGlmResearchCommand(argv: string[], dependencies: GlmResearchDe
   } catch (error) {
     const message = error instanceof Error ? error.message : "Research failed.";
     stderr.write(`${message}\n`);
+    return 1;
+  }
+}
+
+export async function runResearchCommand(
+  argv: string[] = process.argv.slice(2),
+  deps: ResearchCommandDeps = {}
+): Promise<number> {
+  if (argv[0] === "search" || argv[0] === "read") {
+    return runGlmResearchCommand(argv, { ...deps, client: deps.glmClient });
+  }
+  const stdout = deps.stdout ?? process.stdout;
+  const stderr = deps.stderr ?? process.stderr;
+
+  try {
+    const args = parseArgs(argv);
+    if (args.command === "add") {
+      const text = args.file ? readFileSync(args.file, "utf8") : await readStdin(deps.stdin);
+      const suggestions = parseResearchSuggestions(text);
+      if (suggestions.length === 0) {
+        stderr.write("No research suggestions found in input.\n");
+        return 1;
+      }
+      await runPluginEffect(recordResearch({ stateFile: args.stateFile, suggestions, at: new Date().toISOString() }));
+      stdout.write(
+        `Marked ${suggestions.length} research ${suggestions.length === 1 ? "decision" : "decisions"} in ${args.stateFile}\n`
+      );
+      return 0;
+    }
+
+    writeHelp(stdout);
+    return args.command === "help" ? 0 : 1;
+  } catch (error) {
+    stderr.write(`${errorMessage(error)}\n`);
     return 1;
   }
 }

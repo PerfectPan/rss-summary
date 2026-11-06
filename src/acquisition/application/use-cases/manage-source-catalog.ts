@@ -10,6 +10,10 @@ export const listCatalogFeeds = (path: string): Effect.Effect<FeedSubscription[]
     return yield* store.loadFeeds(path);
   });
 
+function asError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
 export const addCatalogFeed = (
   path: string,
   input: FeedSubscriptionInput
@@ -39,7 +43,3 @@ export const removeCatalogFeed = (
     yield* store.saveFeeds(path, next);
     return next;
   });
-
-function asError(error: unknown): Error {
-  return error instanceof Error ? error : new Error(String(error));
-}

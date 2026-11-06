@@ -23,7 +23,7 @@ const resultPayload = {
 
 describe("DeepSeek search source", () => {
   it("posts the query and count with the bearer key and a deepseek provider page", async () => {
-    const fetch = vi.fn(
+    const fetch = vi.fn<(_url: string | URL | Request, _init?: RequestInit) => Promise<Response>>(
       async (_url: string | URL | Request, _init?: RequestInit) =>
         new Response(JSON.stringify(resultPayload), { status: 200 })
     );
@@ -73,7 +73,7 @@ describe("DeepSeek search source", () => {
   });
 
   it("rejects an oversized query before any request leaves", async () => {
-    const fetch = vi.fn();
+    const fetch = vi.fn<NonNullable<ConstructorParameters<typeof DeepSeekSearchClient>[0]["fetch"]>>();
     const client = new DeepSeekSearchClient({ apiKey: "test-key", fetch });
     await expect(
       client.search({
@@ -144,7 +144,7 @@ describe("deepSeekOutgoingQuery", () => {
   });
 
   it("sends the outgoing query, not the raw input", async () => {
-    const fetch = vi.fn(
+    const fetch = vi.fn<(_url: string | URL | Request, _init?: RequestInit) => Promise<Response>>(
       async (_url: string | URL | Request, _init?: RequestInit) =>
         new Response(JSON.stringify(resultPayload), { status: 200 })
     );

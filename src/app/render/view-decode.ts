@@ -1,5 +1,42 @@
 import type { ViewDocument, ViewItem, ViewLink, ViewSection } from "./view.js";
 
+function readSectionTitle(line: string): { text: string; style: "strong" | "atx" } | undefined {
+  const markdownHeading = /^#{2,6}\s+(.+)$/u.exec(line)?.[1];
+  if (markdownHeading) {
+    return { text: markdownHeading, style: "atx" };
+  }
+  const strong = /^\*\*([^*]+)\*\*$/u.exec(line)?.[1];
+  return strong && !/^\d+\./u.test(strong) && !strong.startsWith("[") ? { text: strong, style: "strong" } : undefined;
+}
+
+function parseListItem(number: number | undefined, value: string): ViewItem {
+  const emphasizedLink = /^\*\*\[(.+?)\]\((https?:\/\/[^)]+)\)\*\*$/u.exec(value.trim());
+  if (emphasizedLink) {
+    return {
+      shape: "card",
+      headline: emphasizedLink[1]!,
+      links: [{ text: emphasizedLink[1]!, url: emphasizedLink[2]! }],
+      notes: []
+    };
+  }
+  const links: ViewLink[] = [];
+  const headline = value
+    .replace(/\[(.+?)\]\((https?:\/\/[^)]+)\)/gu, (_match, text: string, url: string) => {
+      links.push({ text, url });
+      return "";
+    })
+    .replace(/^\*\*(.+)\*\*$/u, "$1")
+    .replace(/\s+/gu, " ")
+    .trim();
+  return {
+    shape: number === undefined ? "bullet" : "numbered",
+    ...(number === undefined ? {} : { number }),
+    headline,
+    links,
+    notes: []
+  };
+}
+
 /**
  * Recover a View IR from canonical rss-summary Markdown. This is the
  * compatibility path for Automation replies the plugin did not render itself
@@ -105,42 +142,5 @@ export function decodeViewFromMarkdown(markdown: string): ViewDocument {
     sections: sections.filter((section) => section.items.length > 0),
     trailing: footnote === undefined ? [] : [{ kind: "status", text: footnote }],
     variant: "brief"
-  };
-}
-
-function readSectionTitle(line: string): { text: string; style: "strong" | "atx" } | undefined {
-  const markdownHeading = /^#{2,6}\s+(.+)$/u.exec(line)?.[1];
-  if (markdownHeading) {
-    return { text: markdownHeading, style: "atx" };
-  }
-  const strong = /^\*\*([^*]+)\*\*$/u.exec(line)?.[1];
-  return strong && !/^\d+\./u.test(strong) && !strong.startsWith("[") ? { text: strong, style: "strong" } : undefined;
-}
-
-function parseListItem(number: number | undefined, value: string): ViewItem {
-  const emphasizedLink = /^\*\*\[(.+?)\]\((https?:\/\/[^)]+)\)\*\*$/u.exec(value.trim());
-  if (emphasizedLink) {
-    return {
-      shape: "card",
-      headline: emphasizedLink[1]!,
-      links: [{ text: emphasizedLink[1]!, url: emphasizedLink[2]! }],
-      notes: []
-    };
-  }
-  const links: ViewLink[] = [];
-  const headline = value
-    .replace(/\[(.+?)\]\((https?:\/\/[^)]+)\)/gu, (_match, text: string, url: string) => {
-      links.push({ text, url });
-      return "";
-    })
-    .replace(/^\*\*(.+)\*\*$/u, "$1")
-    .replace(/\s+/gu, " ")
-    .trim();
-  return {
-    shape: number === undefined ? "bullet" : "numbered",
-    ...(number === undefined ? {} : { number }),
-    headline,
-    links,
-    notes: []
   };
 }

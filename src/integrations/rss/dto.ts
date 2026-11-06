@@ -15,23 +15,27 @@ const parser = new XMLParser({
 
 const xmlRootSchema = Schema.Record(Schema.String, Schema.Unknown);
 
-/** A parsed feed document: RSS channel items or Atom entries, never both. */
-export function xmlFeed(xml: string): { channelItems: XmlRecord[]; atomEntries: XmlRecord[] } {
-  const parsed: unknown = parser.parse(xml);
-  const decoded = decodeSchema(xmlRootSchema, parsed);
-  // A document the schema rejects still follows the historical soft cast.
-  const root = decoded._tag === "Ok" ? decoded.value : asRecord(parsed);
-  const rssChannel = asRecord(asRecord(root.rss).channel);
-  if (Object.keys(rssChannel).length > 0) {
-    return { channelItems: xmlChildren(rssChannel.item).map(itemOf), atomEntries: [] };
-  }
+const objectCtorString = Function.prototype.toString.call(Object);
 
-  const atomFeed = asRecord(root.feed);
-  if (Object.keys(atomFeed).length > 0) {
-    return { channelItems: [], atomEntries: xmlChildren(atomFeed.entry).map(itemOf) };
+function isPlainObject(value: unknown): value is XmlRecord {
+  if (value === null || typeof value !== "object") {
+    return false;
   }
+  if (Object.prototype.toString.call(value) !== "[object Object]") {
+    return false;
+  }
+  const proto: object | null = Object.getPrototypeOf(value);
+  if (proto === null) {
+    return true;
+  }
+  const ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
+  return (
+    typeof ctor === "function" && ctor instanceof ctor && Function.prototype.toString.call(ctor) === objectCtorString
+  );
+}
 
-  return { channelItems: [], atomEntries: [] };
+export function asRecord(value: unknown): XmlRecord {
+  return isPlainObject(value) ? value : {};
 }
 
 function itemOf(value: unknown): XmlRecord {
@@ -58,25 +62,21 @@ export function text(value: unknown): string | undefined {
   return undefined;
 }
 
-export function asRecord(value: unknown): XmlRecord {
-  return isPlainObject(value) ? value : {};
-}
+/** A parsed feed document: RSS channel items or Atom entries, never both. */
+export function xmlFeed(xml: string): { channelItems: XmlRecord[]; atomEntries: XmlRecord[] } {
+  const parsed: unknown = parser.parse(xml);
+  const decoded = decodeSchema(xmlRootSchema, parsed);
+  // A document the schema rejects still follows the historical soft cast.
+  const root = decoded._tag === "Ok" ? decoded.value : asRecord(parsed);
+  const rssChannel = asRecord(asRecord(root.rss).channel);
+  if (Object.keys(rssChannel).length > 0) {
+    return { channelItems: xmlChildren(rssChannel.item).map(itemOf), atomEntries: [] };
+  }
 
-const objectCtorString = Function.prototype.toString.call(Object);
+  const atomFeed = asRecord(root.feed);
+  if (Object.keys(atomFeed).length > 0) {
+    return { channelItems: [], atomEntries: xmlChildren(atomFeed.entry).map(itemOf) };
+  }
 
-function isPlainObject(value: unknown): value is XmlRecord {
-  if (value === null || typeof value !== "object") {
-    return false;
-  }
-  if (Object.prototype.toString.call(value) !== "[object Object]") {
-    return false;
-  }
-  const proto: object | null = Object.getPrototypeOf(value);
-  if (proto === null) {
-    return true;
-  }
-  const ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
-  return (
-    typeof ctor === "function" && ctor instanceof ctor && Function.prototype.toString.call(ctor) === objectCtorString
-  );
+  return { channelItems: [], atomEntries: [] };
 }

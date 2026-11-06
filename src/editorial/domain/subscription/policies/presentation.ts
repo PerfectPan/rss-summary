@@ -39,14 +39,6 @@ const importantContentRules: Array<{
   }
 ];
 
-/** Decide how much space a candidate deserves without coupling ranking to Markdown. */
-export function presentationDepthForCandidate(
-  candidate: CandidateProject,
-  policy: PresentationPolicy = {}
-): PresentationDepth {
-  return presentationDecisionForCandidate(candidate, policy).depth;
-}
-
 export function presentationDecisionForCandidate(
   candidate: CandidateProject,
   policy: PresentationPolicy = {}
@@ -77,6 +69,14 @@ export function presentationDecisionForCandidate(
     return { depth: "summary", reasonCode: "semantic-summary" };
   }
   return { depth: "link", reasonCode: "ordinary-update" };
+}
+
+/** Decide how much space a candidate deserves without coupling ranking to Markdown. */
+export function presentationDepthForCandidate(
+  candidate: CandidateProject,
+  policy: PresentationPolicy = {}
+): PresentationDepth {
+  return presentationDecisionForCandidate(candidate, policy).depth;
 }
 
 export function repositoryFactsForCandidate(candidate: CandidateProject): string[] {

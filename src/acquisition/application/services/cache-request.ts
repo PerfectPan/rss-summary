@@ -3,6 +3,14 @@ import { Schema } from "effect";
 import type { CacheRequest } from "../../domain/budget/index.js";
 import type { SearchInput } from "../../domain/search/index.js";
 
+function isCalendarDay(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/u.test(value)) {
+    return false;
+  }
+  const timestamp = Date.parse(`${value}T00:00:00Z`);
+  return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === value;
+}
+
 const daySchema = Schema.String.check(Schema.makeFilter(isCalendarDay));
 const instantSchema = Schema.String.check(
   Schema.makeFilter((value: string) => /(?:Z|[+-]\d{2}:\d{2})$/u.test(value) && Number.isFinite(Date.parse(value)))
@@ -31,12 +39,4 @@ export function parseCacheRequest(input: SearchInput, provider: string): CacheRe
     throw new Error("Invalid search time window.");
   }
   return request;
-}
-
-function isCalendarDay(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/u.test(value)) {
-    return false;
-  }
-  const timestamp = Date.parse(`${value}T00:00:00Z`);
-  return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === value;
 }

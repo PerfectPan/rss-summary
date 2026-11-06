@@ -15,6 +15,59 @@ export type GrokAcquired = {
 
 const badge = "Grok 原生 X 搜索，内容经模型整理；未独立核验作者或原文";
 
+function itemFromGrok(result: SearchResult): Item {
+  return {
+    id: result.id,
+    kind: "post",
+    subject: {
+      key: result.url,
+      name: result.siteName ?? result.url,
+      url: result.url
+    },
+    content: {
+      title: result.title,
+      ...(result.summary ? { excerpt: result.summary } : {}),
+      url: result.url
+    },
+    publishedAt: { value: result.publishTime ?? "", precision: "instant" },
+    provenance: {
+      origin: result.url,
+      note: badge
+    },
+    credibility: { tier: "unrated" },
+    signals: [],
+    rank: { position: result.rankPosition },
+    display: {
+      label: result.siteName,
+      reference: result.url,
+      facts: []
+    }
+  };
+}
+
+function nonNegativeNumber(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
+const objectCtorString = Function.prototype.toString.call(Object);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== "object") {
+    return false;
+  }
+  if (Object.prototype.toString.call(value) !== "[object Object]") {
+    return false;
+  }
+  const proto: object | null = Object.getPrototypeOf(value);
+  if (proto === null) {
+    return true;
+  }
+  const ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
+  return (
+    typeof ctor === "function" && ctor instanceof ctor && Function.prototype.toString.call(ctor) === objectCtorString
+  );
+}
+
 export function parseGrokStream(
   stream: string,
   count: number,
@@ -134,57 +187,4 @@ export function parseGrokStream(
       "Grok response lacks a completed native X search receipt, valid completion or structured results."
     );
   }
-}
-
-function itemFromGrok(result: SearchResult): Item {
-  return {
-    id: result.id,
-    kind: "post",
-    subject: {
-      key: result.url,
-      name: result.siteName ?? result.url,
-      url: result.url
-    },
-    content: {
-      title: result.title,
-      ...(result.summary ? { excerpt: result.summary } : {}),
-      url: result.url
-    },
-    publishedAt: { value: result.publishTime ?? "", precision: "instant" },
-    provenance: {
-      origin: result.url,
-      note: badge
-    },
-    credibility: { tier: "unrated" },
-    signals: [],
-    rank: { position: result.rankPosition },
-    display: {
-      label: result.siteName,
-      reference: result.url,
-      facts: []
-    }
-  };
-}
-
-function nonNegativeNumber(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
-}
-
-const objectCtorString = Function.prototype.toString.call(Object);
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== "object") {
-    return false;
-  }
-  if (Object.prototype.toString.call(value) !== "[object Object]") {
-    return false;
-  }
-  const proto: object | null = Object.getPrototypeOf(value);
-  if (proto === null) {
-    return true;
-  }
-  const ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
-  return (
-    typeof ctor === "function" && ctor instanceof ctor && Function.prototype.toString.call(ctor) === objectCtorString
-  );
 }

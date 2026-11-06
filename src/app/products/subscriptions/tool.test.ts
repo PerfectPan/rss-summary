@@ -1,11 +1,13 @@
 import { Effect } from "effect";
 import { describe, expect, it, vi } from "vite-plus/test";
 
+import type { AppConfig } from "../../config/env.js";
+import type { DigestDocument } from "./output.js";
 import { generateRivusDigest } from "./tool.js";
 
 describe("Rivus digest Tool adapter", () => {
   it("maps a scheduled occurrence to the configured local day without delivery or state writes", async () => {
-    const buildDigestDocument = vi.fn((config) =>
+    const buildDigestDocument = vi.fn<(config: AppConfig) => Effect.Effect<DigestDocument, Error>>((config) =>
       Effect.succeed({
         generatedAt: "2026-07-16T18:00:00.000Z",
         username: config.username,
@@ -42,7 +44,7 @@ describe("Rivus digest Tool adapter", () => {
   });
 
   it("maps the morning Automation occurrence to the previous local calendar day", async () => {
-    const buildDigestDocument = vi.fn((config) =>
+    const buildDigestDocument = vi.fn<(config: AppConfig) => Effect.Effect<DigestDocument, Error>>((config) =>
       Effect.succeed({
         generatedAt: "2026-07-29T01:00:00.000Z",
         username: config.username,
@@ -68,7 +70,7 @@ describe("Rivus digest Tool adapter", () => {
   });
 
   it("rejects ambiguous or malformed date input before running the digest", async () => {
-    const buildDigestDocument = vi.fn();
+    const buildDigestDocument = vi.fn<(config: AppConfig) => Effect.Effect<DigestDocument, Error>>();
 
     await expect(
       generateRivusDigest(
@@ -83,7 +85,7 @@ describe("Rivus digest Tool adapter", () => {
   });
 
   it("lets explicit false Tool input override deployment environment defaults", async () => {
-    const buildDigestDocument = vi.fn((config) =>
+    const buildDigestDocument = vi.fn<(config: AppConfig) => Effect.Effect<DigestDocument, Error>>((config) =>
       Effect.succeed({
         generatedAt: "2026-07-17T02:00:00.000Z",
         username: config.username,
@@ -105,7 +107,7 @@ describe("Rivus digest Tool adapter", () => {
 
 describe("Rivus digest Tool onlyNew default", () => {
   it("requests only-new when the Tool input omits onlyNew", async () => {
-    const buildDigestDocument = vi.fn((config) =>
+    const buildDigestDocument = vi.fn<(config: AppConfig) => Effect.Effect<DigestDocument, Error>>((config) =>
       Effect.succeed({
         generatedAt: "2026-07-16T18:00:00.000Z",
         username: config.username,

@@ -1,5 +1,13 @@
 import { Schema } from "effect";
 
+function isCalendarDay(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/u.test(value)) {
+    return false;
+  }
+  const timestamp = Date.parse(`${value}T00:00:00Z`);
+  return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === value;
+}
+
 const daySchema = Schema.String.check(Schema.makeFilter(isCalendarDay));
 const countSchema = Schema.Int.check(
   Schema.isGreaterThanOrEqualTo(0),
@@ -90,11 +98,3 @@ export const newsSearchStateSchema = Schema.Struct({
 });
 
 export type NewsSearchStateFile = typeof newsSearchStateSchema.Type;
-
-function isCalendarDay(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/u.test(value)) {
-    return false;
-  }
-  const timestamp = Date.parse(`${value}T00:00:00Z`);
-  return Number.isFinite(timestamp) && new Date(timestamp).toISOString().slice(0, 10) === value;
-}

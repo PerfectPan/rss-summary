@@ -3,156 +3,6 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import type { DigestDocument } from "../products/subscriptions/output.js";
 import { createRivusSubscriptionExecutor } from "./phases.js";
 
-describe("subscription Tool editorial workflow", () => {
-  it("reuses collected evidence, applies AI selection, and renders grounded summaries", async () => {
-    const collect = vi.fn(async () => ({ day: "2026-08-15", document: fixture() }));
-    const execute = createRivusSubscriptionExecutor({ collect });
-    const request = {
-      occurrence: "2026-08-16T01:00:00.000Z",
-      window: "previous-calendar-day"
-    };
-
-    const collected = await execute({ ...request, phase: "collect" });
-    expect(collected).toMatchObject({
-      phase: "collect",
-      evidence: [
-        expect.objectContaining({ kind: "repository", summaryPolicy: "none" }),
-        expect.objectContaining({ kind: "article", summaryPolicy: "required" })
-      ]
-    });
-
-    if (!("evidence" in collected)) {
-      throw new Error("collect phase did not return evidence");
-    }
-    const selection = collected.evidence.map((item) => ({
-      reason: item.kind === "article" ? "新版本文章有明确技术变化" : "普通活动不值得推送",
-      ref: item.id,
-      selected: item.kind === "article"
-    }));
-    const selected = await execute({ ...request, phase: "select", selection });
-    expect(selected).toMatchObject({ phase: "select", selectedCount: 1 });
-
-    const rendered = await execute({
-      ...request,
-      phase: "render",
-      selection,
-      research: [
-        {
-          content:
-            "正文解释 Deno 2.4 的运行时更新，并说明 TypeScript 工作流的变化；同时列出运行时、工具链和兼容性方面的具体变化，方便读者判断升级影响。".repeat(
-              2
-            ),
-          ref: "publication:https://deno.com/blog/v2.4",
-          status: "ok",
-          title: "Deno 2.4 正文",
-          url: "https://deno.com/blog/v2.4"
-        }
-      ],
-      draft: [
-        {
-          ref: "publication:https://deno.com/blog/v2.4",
-          summary: "正文解释 Deno 2.4 的运行时更新，并说明 TypeScript 工作流的变化。"
-        }
-      ]
-    });
-
-    expect(collect).toHaveBeenCalledTimes(1);
-    expect(rendered).toMatchObject({ phase: "render", candidateCount: 1, selectedCount: 1 });
-    expect(rendered).toMatchObject({
-      audit: { counts: { selected: 1 }, editorialSelection: { selectedCount: 1 } }
-    });
-    expect("markdown" in rendered ? rendered.markdown : "").not.toContain("⭐ 12.3k · TypeScript");
-    expect("markdown" in rendered ? rendered.markdown : "").toContain("正文解释 Deno 2.4 的运行时更新");
-  });
-
-  it("suppresses a selected item when both research paths fail", async () => {
-    const collect = vi.fn(async () => ({ day: "2026-08-15", document: fixture() }));
-    const execute = createRivusSubscriptionExecutor({ collect });
-    const request = {
-      occurrence: "2026-08-16T01:00:00.000Z",
-      window: "previous-calendar-day"
-    };
-    const collected = await execute({ ...request, phase: "collect" });
-    if (!("evidence" in collected)) {
-      throw new Error("collect phase did not return evidence");
-    }
-    const selection = collected.evidence.map((item) => ({
-      reason: "文章有明确技术变化",
-      ref: item.id,
-      selected: item.kind === "article"
-    }));
-
-    const rendered = await execute({
-      ...request,
-      phase: "render",
-      selection,
-      research: [
-        {
-          error: "browser: timeout; http: 403",
-          ref: "publication:https://deno.com/blog/v2.4",
-          status: "failed",
-          url: "https://deno.com/blog/v2.4"
-        }
-      ]
-    });
-
-    expect(rendered).toMatchObject({ candidateCount: 0, phase: "render", selectedCount: 0 });
-    expect("selection" in rendered ? rendered.selection : []).toContainEqual(
-      expect.objectContaining({
-        reason: "研究正文缺失或抓取失败，已取消推送",
-        ref: "publication:https://deno.com/blog/v2.4",
-        selected: false
-      })
-    );
-  });
-
-  it("surfaces invalid summaries so the Agent can retry render", async () => {
-    const collect = vi.fn(async () => ({ day: "2026-08-15", document: fixture() }));
-    const execute = createRivusSubscriptionExecutor({ collect });
-    const request = {
-      occurrence: "2026-08-16T02:00:00.000Z",
-      window: "previous-calendar-day"
-    };
-    const collected = await execute({ ...request, phase: "collect" });
-    if (!("evidence" in collected)) {
-      throw new Error("collect phase did not return evidence");
-    }
-    const selection = collected.evidence.map((item) => ({
-      reason: item.kind === "article" ? "有明确技术变化" : "普通活动",
-      ref: item.id,
-      selected: item.kind === "article"
-    }));
-
-    try {
-      await execute({
-        ...request,
-        phase: "render",
-        selection,
-        research: [
-          {
-            content: "正文说明 Deno 2.4 的运行时更新，并解释 TypeScript 工作流的变化。".repeat(20),
-            ref: "publication:https://deno.com/blog/v2.4",
-            status: "ok",
-            url: "https://deno.com/blog/v2.4"
-          }
-        ],
-        draft: [
-          {
-            ref: "publication:https://deno.com/blog/v2.4",
-            summary: "a".repeat(181)
-          }
-        ]
-      });
-      throw new Error("expected validation error");
-    } catch (error) {
-      expect(error).toMatchObject({ code: "SUBSCRIPTION_SUMMARY_VALIDATION_FAILED" });
-      expect((error as { issues: Array<{ message: string }> }).issues).toEqual(
-        expect.arrayContaining([expect.objectContaining({ message: expect.stringContaining("too long") })])
-      );
-    }
-  });
-});
-
 function fixture(): DigestDocument {
   return {
     audit: {
@@ -224,8 +74,196 @@ function fixture(): DigestDocument {
   };
 }
 
+describe("subscription Tool editorial workflow", () => {
+  it("reuses collected evidence, applies AI selection, and renders grounded summaries", async () => {
+    const collect = vi.fn<() => Promise<{ day: string; document: DigestDocument }>>(async () => ({
+      day: "2026-08-15",
+      document: fixture()
+    }));
+    const execute = createRivusSubscriptionExecutor({ collect });
+    const request = {
+      occurrence: "2026-08-16T01:00:00.000Z",
+      window: "previous-calendar-day"
+    };
+
+    const collected = await execute({ ...request, phase: "collect" });
+    expect(collected).toMatchObject({
+      phase: "collect",
+      evidence: [
+        expect.objectContaining({ kind: "repository", summaryPolicy: "none" }),
+        expect.objectContaining({ kind: "article", summaryPolicy: "required" })
+      ]
+    });
+
+    if (!("evidence" in collected)) {
+      throw new Error("collect phase did not return evidence");
+    }
+    const selection = collected.evidence.map((item) => ({
+      reason: item.kind === "article" ? "新版本文章有明确技术变化" : "普通活动不值得推送",
+      ref: item.id,
+      selected: item.kind === "article"
+    }));
+    const selected = await execute({ ...request, phase: "select", selection });
+    expect(selected).toMatchObject({ phase: "select", selectedCount: 1 });
+
+    const rendered = await execute({
+      ...request,
+      phase: "render",
+      selection,
+      research: [
+        {
+          content:
+            "正文解释 Deno 2.4 的运行时更新，并说明 TypeScript 工作流的变化；同时列出运行时、工具链和兼容性方面的具体变化，方便读者判断升级影响。".repeat(
+              2
+            ),
+          ref: "publication:https://deno.com/blog/v2.4",
+          status: "ok",
+          title: "Deno 2.4 正文",
+          url: "https://deno.com/blog/v2.4"
+        }
+      ],
+      draft: [
+        {
+          ref: "publication:https://deno.com/blog/v2.4",
+          summary: "正文解释 Deno 2.4 的运行时更新，并说明 TypeScript 工作流的变化。"
+        }
+      ]
+    });
+
+    expect(collect).toHaveBeenCalledTimes(1);
+    expect(rendered).toMatchObject({ phase: "render", candidateCount: 1, selectedCount: 1 });
+    expect(rendered).toMatchObject({
+      audit: { counts: { selected: 1 }, editorialSelection: { selectedCount: 1 } }
+    });
+    expect("markdown" in rendered ? rendered.markdown : "").not.toContain("⭐ 12.3k · TypeScript");
+    expect("markdown" in rendered ? rendered.markdown : "").toContain("正文解释 Deno 2.4 的运行时更新");
+  });
+
+  it("suppresses a selected item when both research paths fail", async () => {
+    const collect = vi.fn<() => Promise<{ day: string; document: DigestDocument }>>(async () => ({
+      day: "2026-08-15",
+      document: fixture()
+    }));
+    const execute = createRivusSubscriptionExecutor({ collect });
+    const request = {
+      occurrence: "2026-08-16T01:00:00.000Z",
+      window: "previous-calendar-day"
+    };
+    const collected = await execute({ ...request, phase: "collect" });
+    if (!("evidence" in collected)) {
+      throw new Error("collect phase did not return evidence");
+    }
+    const selection = collected.evidence.map((item) => ({
+      reason: "文章有明确技术变化",
+      ref: item.id,
+      selected: item.kind === "article"
+    }));
+
+    const rendered = await execute({
+      ...request,
+      phase: "render",
+      selection,
+      research: [
+        {
+          error: "browser: timeout; http: 403",
+          ref: "publication:https://deno.com/blog/v2.4",
+          status: "failed",
+          url: "https://deno.com/blog/v2.4"
+        }
+      ]
+    });
+
+    expect(rendered).toMatchObject({ candidateCount: 0, phase: "render", selectedCount: 0 });
+    expect("selection" in rendered ? rendered.selection : []).toContainEqual(
+      expect.objectContaining({
+        reason: "研究正文缺失或抓取失败，已取消推送",
+        ref: "publication:https://deno.com/blog/v2.4",
+        selected: false
+      })
+    );
+  });
+
+  it("surfaces invalid summaries so the Agent can retry render", async () => {
+    const collect = vi.fn<() => Promise<{ day: string; document: DigestDocument }>>(async () => ({
+      day: "2026-08-15",
+      document: fixture()
+    }));
+    const execute = createRivusSubscriptionExecutor({ collect });
+    const request = {
+      occurrence: "2026-08-16T02:00:00.000Z",
+      window: "previous-calendar-day"
+    };
+    const collected = await execute({ ...request, phase: "collect" });
+    if (!("evidence" in collected)) {
+      throw new Error("collect phase did not return evidence");
+    }
+    const selection = collected.evidence.map((item) => ({
+      reason: item.kind === "article" ? "有明确技术变化" : "普通活动",
+      ref: item.id,
+      selected: item.kind === "article"
+    }));
+
+    try {
+      await execute({
+        ...request,
+        phase: "render",
+        selection,
+        research: [
+          {
+            content: "正文说明 Deno 2.4 的运行时更新，并解释 TypeScript 工作流的变化。".repeat(20),
+            ref: "publication:https://deno.com/blog/v2.4",
+            status: "ok",
+            url: "https://deno.com/blog/v2.4"
+          }
+        ],
+        draft: [
+          {
+            ref: "publication:https://deno.com/blog/v2.4",
+            summary: "a".repeat(181)
+          }
+        ]
+      });
+      throw new Error("expected validation error");
+    } catch (error) {
+      expect(error).toMatchObject({ code: "SUBSCRIPTION_SUMMARY_VALIDATION_FAILED" });
+      expect((error as { issues: Array<{ message: string }> }).issues).toEqual(
+        expect.arrayContaining([expect.objectContaining({ message: expect.stringContaining("too long") })])
+      );
+    }
+  });
+});
+
 import type { DailyAiDigestResult } from "../products/daily-ai/flow.js";
 import { createRivusDailyAiDigestExecutor } from "./phases.js";
+
+function collectedFixture() {
+  return {
+    day: "2026-08-11",
+    windowLabel: "2026-08-10 09:00–2026-08-11 09:00 +08:00",
+    generatedAt: "2026-08-11T01:00:00Z",
+    evidence: [
+      {
+        id: "official:openai-codex-2",
+        title: "Codex 2.0",
+        url: "https://openai.com/news/codex-2",
+        publishedAt: "2026-08-10T03:00:00Z",
+        excerpt: "Codex 2.0 tool calling changes.",
+        tier: "official" as const,
+        sourceName: "OpenAI"
+      }
+    ],
+    items: [],
+    warnings: [],
+    sourceAudit: { xAccounts: [] },
+    audit: { decisions: [], editorialIssues: [] },
+    deliveryReceipt: {
+      id: "daily-ai:2026-08-11",
+      occurrence: "2026-08-11T01:00:00Z",
+      evidenceIds: [],
+      committed: false as const
+    }
+  };
+}
 
 describe("Rivus Daily AI Tool", () => {
   it("keeps every evidence item while storing bulky audits outside model messages", async () => {
@@ -253,7 +291,7 @@ describe("Rivus Daily AI Tool", () => {
         reason: "Not publishable"
       }))
     };
-    const saveDiagnostics = vi.fn(async () => {});
+    const saveDiagnostics = vi.fn<() => Promise<void>>(async () => {});
     const execute = createRivusDailyAiDigestExecutor({
       collect: async () => fixture,
       saveDiagnostics
@@ -302,7 +340,7 @@ describe("Rivus Daily AI Tool", () => {
   });
 
   it("renders an intentionally empty selection without forcing release noise into delivery", async () => {
-    const collect = vi.fn(async () => collectedFixture());
+    const collect = vi.fn<() => Promise<ReturnType<typeof collectedFixture>>>(async () => collectedFixture());
     const execute = createRivusDailyAiDigestExecutor({ collect, saveDiagnostics: async () => {} });
     const occurrence = "2026-08-11T01:00:00Z";
     await execute({ occurrence, phase: "collect" });
@@ -317,7 +355,7 @@ describe("Rivus Daily AI Tool", () => {
   });
 
   it("collects evidence before validating and rendering an editorial draft", async () => {
-    const collect = vi.fn(async () => ({
+    const collect = vi.fn<() => Promise<DailyAiDigestResult>>(async () => ({
       day: "2026-08-10",
       windowLabel: "2026-08-09 09:00–2026-08-10 09:00 +08:00",
       generatedAt: "2026-08-11T01:00:00Z",
@@ -370,7 +408,7 @@ describe("Rivus Daily AI Tool", () => {
   });
 
   it("renders valid items while reporting invalid siblings", async () => {
-    const collect = vi.fn(async () => collectedFixture());
+    const collect = vi.fn<() => Promise<ReturnType<typeof collectedFixture>>>(async () => collectedFixture());
     const execute = createRivusDailyAiDigestExecutor({ collect, saveDiagnostics: async () => {} });
 
     await execute({ occurrence: "2026-08-11T01:00:00Z", phase: "collect" });
@@ -398,7 +436,7 @@ describe("Rivus Daily AI Tool", () => {
   });
 
   it("keeps the collected snapshot when an all-invalid draft is retried", async () => {
-    const collect = vi.fn(async () => collectedFixture());
+    const collect = vi.fn<() => Promise<ReturnType<typeof collectedFixture>>>(async () => collectedFixture());
     const execute = createRivusDailyAiDigestExecutor({ collect, saveDiagnostics: async () => {} });
     const occurrence = "2026-08-11T01:00:00Z";
 
@@ -427,32 +465,3 @@ describe("Rivus Daily AI Tool", () => {
     expect(collect).toHaveBeenCalledTimes(1);
   });
 });
-
-function collectedFixture() {
-  return {
-    day: "2026-08-11",
-    windowLabel: "2026-08-10 09:00–2026-08-11 09:00 +08:00",
-    generatedAt: "2026-08-11T01:00:00Z",
-    evidence: [
-      {
-        id: "official:openai-codex-2",
-        title: "Codex 2.0",
-        url: "https://openai.com/news/codex-2",
-        publishedAt: "2026-08-10T03:00:00Z",
-        excerpt: "Codex 2.0 tool calling changes.",
-        tier: "official" as const,
-        sourceName: "OpenAI"
-      }
-    ],
-    items: [],
-    warnings: [],
-    sourceAudit: { xAccounts: [] },
-    audit: { decisions: [], editorialIssues: [] },
-    deliveryReceipt: {
-      id: "daily-ai:2026-08-11",
-      occurrence: "2026-08-11T01:00:00Z",
-      evidenceIds: [],
-      committed: false as const
-    }
-  };
-}

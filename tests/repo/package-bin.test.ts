@@ -4,6 +4,18 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vite-plus/test";
 
+function checkLocalArchive(digest: string) {
+  return spawnSync(process.execPath, [fileURLToPath(new URL("../../scripts/check-package.mjs", import.meta.url))], {
+    cwd: fileURLToPath(new URL("../../", import.meta.url)),
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      RIVUS_CORE_PACKAGE_TGZ: fileURLToPath(new URL("../../package.json", import.meta.url)),
+      RIVUS_CORE_PACKAGE_SHA256: digest
+    }
+  });
+}
+
 describe("package CLI metadata", () => {
   it("exposes a built rss-summary bin entry", () => {
     const buildConfig = JSON.parse(readFileSync(new URL("../../tsconfig.build.json", import.meta.url), "utf8")) as {
@@ -60,15 +72,3 @@ describe("package CLI metadata", () => {
     expect(result.stderr).toContain("RIVUS_CORE_PACKAGE_TGZ SHA256 mismatch");
   });
 });
-
-function checkLocalArchive(digest: string) {
-  return spawnSync(process.execPath, [fileURLToPath(new URL("../../scripts/check-package.mjs", import.meta.url))], {
-    cwd: fileURLToPath(new URL("../../", import.meta.url)),
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      RIVUS_CORE_PACKAGE_TGZ: fileURLToPath(new URL("../../package.json", import.meta.url)),
-      RIVUS_CORE_PACKAGE_SHA256: digest
-    }
-  });
-}

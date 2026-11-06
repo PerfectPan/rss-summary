@@ -10,15 +10,6 @@ export function timeoutFetch(fetchImpl: typeof fetch, timeoutMs: number): typeof
   };
 }
 
-export function provideHttp<A, E, R>(
-  effect: Effect.Effect<A, E, R>,
-  fetchImpl: typeof fetch
-): Effect.Effect<A, E, Exclude<R, HttpClient.HttpClient>> {
-  return effect.pipe(
-    Effect.provide(Layer.succeed(HttpClient.HttpClient, makeFetchClient(fetchImpl))) as never
-  ) as Effect.Effect<A, E, Exclude<R, HttpClient.HttpClient>>;
-}
-
 function makeFetchClient(fetchImpl: typeof fetch): HttpClient.HttpClient {
   return HttpClient.make((request, url, signal) =>
     Effect.tryPromise({
@@ -36,9 +27,13 @@ function makeFetchClient(fetchImpl: typeof fetch): HttpClient.HttpClient {
   );
 }
 
-export function asError(error: unknown): Error {
-  const cause = unwrapTransport(error);
-  return cause instanceof Error ? cause : new Error(String(cause));
+export function provideHttp<A, E, R>(
+  effect: Effect.Effect<A, E, R>,
+  fetchImpl: typeof fetch
+): Effect.Effect<A, E, Exclude<R, HttpClient.HttpClient>> {
+  return effect.pipe(
+    Effect.provide(Layer.succeed(HttpClient.HttpClient, makeFetchClient(fetchImpl))) as never
+  ) as Effect.Effect<A, E, Exclude<R, HttpClient.HttpClient>>;
 }
 
 function unwrapTransport(error: unknown): unknown {
@@ -46,4 +41,9 @@ function unwrapTransport(error: unknown): unknown {
     return error.reason.cause ?? error;
   }
   return error;
+}
+
+export function asError(error: unknown): Error {
+  const cause = unwrapTransport(error);
+  return cause instanceof Error ? cause : new Error(String(cause));
 }

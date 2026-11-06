@@ -15,53 +15,6 @@ const evidenceIdentity = {
 const buildSubscriptionEvidence = (document: EvidenceDocument) =>
   assembleSubscriptionEvidence(document, evidenceIdentity);
 
-describe("subscription editorial contract", () => {
-  it("exposes deterministic repository facts and requests summaries only for PR/RSS evidence", () => {
-    const evidence = buildSubscriptionEvidence(document());
-
-    expect(evidence).toEqual([
-      expect.objectContaining({
-        id: "github-repository:example/project",
-        kind: "repository",
-        facts: ["⭐ 12.3k", "TypeScript"],
-        summaryPolicy: "none"
-      }),
-      expect.objectContaining({
-        id: "github-pull-request:example/project:41",
-        kind: "pull-request",
-        summaryPolicy: "required"
-      }),
-      expect.objectContaining({
-        id: "publication:https://deno.com/blog/v2.4",
-        kind: "article",
-        summaryPolicy: "required"
-      })
-    ]);
-  });
-
-  it("exposes only candidates that fit the rendered subscription sections", () => {
-    const base = document();
-    const articles = Array.from({ length: 25 }, (_, index) => ({
-      ...base.candidates[2]!,
-      repo: `rss:https://example.com/${index}`,
-      events: [
-        {
-          ...base.candidates[2]!.events[0]!,
-          id: `rss-${index}`,
-          repo: `rss:https://example.com/${index}`,
-          htmlUrl: `https://example.com/${index}`
-        }
-      ],
-      url: `https://example.com/${index}`
-    }));
-
-    const evidence = buildSubscriptionEvidence({ ...base, candidates: articles });
-
-    expect(evidence).toHaveLength(20);
-    expect(evidence.every(({ summaryPolicy }) => summaryPolicy === "required")).toBe(true);
-  });
-});
-
 type Document = EvidenceDocument & {
   generatedAt: string;
   username: string;
@@ -152,3 +105,50 @@ function document(): Document {
     ]
   };
 }
+
+describe("subscription editorial contract", () => {
+  it("exposes deterministic repository facts and requests summaries only for PR/RSS evidence", () => {
+    const evidence = buildSubscriptionEvidence(document());
+
+    expect(evidence).toEqual([
+      expect.objectContaining({
+        id: "github-repository:example/project",
+        kind: "repository",
+        facts: ["⭐ 12.3k", "TypeScript"],
+        summaryPolicy: "none"
+      }),
+      expect.objectContaining({
+        id: "github-pull-request:example/project:41",
+        kind: "pull-request",
+        summaryPolicy: "required"
+      }),
+      expect.objectContaining({
+        id: "publication:https://deno.com/blog/v2.4",
+        kind: "article",
+        summaryPolicy: "required"
+      })
+    ]);
+  });
+
+  it("exposes only candidates that fit the rendered subscription sections", () => {
+    const base = document();
+    const articles = Array.from({ length: 25 }, (_, index) => ({
+      ...base.candidates[2]!,
+      repo: `rss:https://example.com/${index}`,
+      events: [
+        {
+          ...base.candidates[2]!.events[0]!,
+          id: `rss-${index}`,
+          repo: `rss:https://example.com/${index}`,
+          htmlUrl: `https://example.com/${index}`
+        }
+      ],
+      url: `https://example.com/${index}`
+    }));
+
+    const evidence = buildSubscriptionEvidence({ ...base, candidates: articles });
+
+    expect(evidence).toHaveLength(20);
+    expect(evidence.every(({ summaryPolicy }) => summaryPolicy === "required")).toBe(true);
+  });
+});

@@ -12,6 +12,26 @@ export function displayTime(value: string | undefined): string | undefined {
   return match?.[1];
 }
 
+function itemLines(item: ViewItem): string[] {
+  const primary = item.links[0];
+  if (item.shape === "featured") {
+    return [
+      `**[${item.headline}](${primary?.url ?? ""})**`,
+      ...item.notes,
+      ...(item.sourceLabel === undefined ? [] : [`来源：${item.sourceLabel}`]),
+      ""
+    ];
+  }
+  if (item.shape === "card") {
+    return [`**${item.number}. [${item.headline}](${primary?.url ?? ""})**`, ...item.notes, ""];
+  }
+  const badges = item.links.map((link) => `[${link.text}](${link.url})`).join(" ");
+  if (item.shape === "bullet") {
+    return [`- ${item.headline}${badges}`];
+  }
+  return [`${item.number}. ${item.headline}${badges ? ` ${badges}` : ""}`];
+}
+
 /**
  * Render a View IR document back to the canonical Markdown every consumer
  * (CLI, run archive, Rivus Tool output) expects. Blank-line placement follows
@@ -45,24 +65,4 @@ export function renderViewMarkdown(view: ViewDocument): string {
   }
   const joined = lines.join("\n").trim();
   return view.variant === "daily-ai" ? joined : `${joined}\n`;
-}
-
-function itemLines(item: ViewItem): string[] {
-  const primary = item.links[0];
-  if (item.shape === "featured") {
-    return [
-      `**[${item.headline}](${primary?.url ?? ""})**`,
-      ...item.notes,
-      ...(item.sourceLabel === undefined ? [] : [`来源：${item.sourceLabel}`]),
-      ""
-    ];
-  }
-  if (item.shape === "card") {
-    return [`**${item.number}. [${item.headline}](${primary?.url ?? ""})**`, ...item.notes, ""];
-  }
-  const badges = item.links.map((link) => `[${link.text}](${link.url})`).join(" ");
-  if (item.shape === "bullet") {
-    return [`- ${item.headline}${badges}`];
-  }
-  return [`${item.number}. ${item.headline}${badges ? ` ${badges}` : ""}`];
 }

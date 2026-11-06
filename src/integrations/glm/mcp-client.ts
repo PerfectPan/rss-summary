@@ -13,6 +13,64 @@ export type McpToolOptions = {
   toolFailedMessage: string;
 };
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+async function readMessage(response: Response, id: number): Promise<Record<string, unknown>> {
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error("GLM MCP returned an empty response.");
+  }
+  const decoder = new TextDecoder();
+  const sse = response.headers.get("content-type")?.includes("text/event-stream");
+  let buffer = "";
+  let bytes = 0;
+  try {
+    while (true) {
+      const chunk = await reader.read();
+      bytes += chunk.value?.byteLength ?? 0;
+      if (bytes > 2_000_000) {
+        throw new Error("GLM MCP response exceeded the size limit.");
+      }
+      buffer += decoder.decode(chunk.value, { stream: !chunk.done });
+      if (sse) {
+        let boundary: RegExpExecArray | null;
+        while ((boundary = /\r?\n\r?\n/u.exec(buffer))) {
+          const event = buffer.slice(0, boundary.index);
+          buffer = buffer.slice(boundary.index + boundary[0].length);
+          const data = event
+            .split(/\r?\n/u)
+            .filter((line) => line.startsWith("data:"))
+            .map((line) => line.slice(5).trimStart())
+            .join("\n");
+          if (!data) {
+            continue;
+          }
+          const message = asRecord(JSON.parse(data));
+          if (message.id === id) {
+            return message;
+          }
+        }
+      }
+      if (chunk.done) {
+        break;
+      }
+    }
+    if (!sse) {
+      const message = asRecord(JSON.parse(buffer));
+      if (message.id === id) {
+        return message;
+      }
+    }
+    throw new Error("missing response");
+  } catch {
+    throw new Error("GLM MCP response could not be read within the size/time limits or was invalid.");
+  } finally {
+    await reader.cancel().catch(() => undefined);
+  }
+}
+
 export async function callMcpTool(
   options: McpToolOptions,
   name: string,
@@ -93,62 +151,4 @@ export async function callMcpTool(
     throw new Error("GLM MCP returned invalid tool JSON.");
   }
   return value;
-}
-
-async function readMessage(response: Response, id: number): Promise<Record<string, unknown>> {
-  const reader = response.body?.getReader();
-  if (!reader) {
-    throw new Error("GLM MCP returned an empty response.");
-  }
-  const decoder = new TextDecoder();
-  const sse = response.headers.get("content-type")?.includes("text/event-stream");
-  let buffer = "";
-  let bytes = 0;
-  try {
-    while (true) {
-      const chunk = await reader.read();
-      bytes += chunk.value?.byteLength ?? 0;
-      if (bytes > 2_000_000) {
-        throw new Error("GLM MCP response exceeded the size limit.");
-      }
-      buffer += decoder.decode(chunk.value, { stream: !chunk.done });
-      if (sse) {
-        let boundary: RegExpExecArray | null;
-        while ((boundary = /\r?\n\r?\n/u.exec(buffer))) {
-          const event = buffer.slice(0, boundary.index);
-          buffer = buffer.slice(boundary.index + boundary[0].length);
-          const data = event
-            .split(/\r?\n/u)
-            .filter((line) => line.startsWith("data:"))
-            .map((line) => line.slice(5).trimStart())
-            .join("\n");
-          if (!data) {
-            continue;
-          }
-          const message = asRecord(JSON.parse(data));
-          if (message.id === id) {
-            return message;
-          }
-        }
-      }
-      if (chunk.done) {
-        break;
-      }
-    }
-    if (!sse) {
-      const message = asRecord(JSON.parse(buffer));
-      if (message.id === id) {
-        return message;
-      }
-    }
-    throw new Error("missing response");
-  } catch {
-    throw new Error("GLM MCP response could not be read within the size/time limits or was invalid.");
-  } finally {
-    await reader.cancel().catch(() => undefined);
-  }
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }

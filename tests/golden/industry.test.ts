@@ -19,6 +19,18 @@ vi.mock("node:crypto", async (importOriginal) => {
 const harness = useGoldenHarness();
 const windowArgs = ["--since", WINDOW_SINCE, "--until", WINDOW_UNTIL, "--only-new"];
 
+function installIndustryFetch(): void {
+  installFetch((url) => {
+    if (url === INDUSTRY_FEED_URL) {
+      return textResponse(INDUSTRY_ATOM, 200, "application/atom+xml");
+    }
+    if (url === INDUSTRY_PAGE_URL) {
+      return textResponse(INDUSTRY_PAGE_HTML, 200, "text/html");
+    }
+    throw new Error(`Unexpected fetch ${url}`);
+  });
+}
+
 describe("golden industry", () => {
   it("snapshots the Markdown brief", async () => {
     installIndustryFetch();
@@ -34,15 +46,3 @@ describe("golden industry", () => {
     await matchSnapshot("industry-json.txt", json, [context.root]);
   });
 });
-
-function installIndustryFetch(): void {
-  installFetch((url) => {
-    if (url === INDUSTRY_FEED_URL) {
-      return textResponse(INDUSTRY_ATOM, 200, "application/atom+xml");
-    }
-    if (url === INDUSTRY_PAGE_URL) {
-      return textResponse(INDUSTRY_PAGE_HTML, 200, "text/html");
-    }
-    throw new Error(`Unexpected fetch ${url}`);
-  });
-}

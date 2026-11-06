@@ -3,6 +3,15 @@ import { Effect } from "effect";
 
 import { Notifier, NotifierLive } from "../../index.js";
 
+function send(options: Parameters<typeof NotifierLive>[0], markdown: string): Promise<void> {
+  return Effect.runPromise(
+    Effect.provide(
+      Notifier.use((notifier) => notifier.send(markdown)),
+      NotifierLive(options)
+    )
+  );
+}
+
 describe("notifier", () => {
   it("posts digest markdown to a generic webhook", async () => {
     const calls: Array<{ url: string; body: unknown }> = [];
@@ -65,12 +74,3 @@ describe("notifier", () => {
     ).rejects.toThrow(/500 boom/);
   });
 });
-
-function send(options: Parameters<typeof NotifierLive>[0], markdown: string): Promise<void> {
-  return Effect.runPromise(
-    Effect.provide(
-      Notifier.use((notifier) => notifier.send(markdown)),
-      NotifierLive(options)
-    )
-  );
-}

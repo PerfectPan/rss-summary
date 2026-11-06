@@ -16,43 +16,6 @@ const evidenceIdentity = {
 const buildSubscriptionEditorial = (document: EvidenceDocument, draft?: unknown, research?: unknown) =>
   assembleSubscriptionEditorial(document, evidenceIdentity, draft, research);
 
-describe("subscription editorial contract", () => {
-  it("returns a retryable error when a draft item is invalid", () => {
-    expect(() =>
-      buildSubscriptionEditorial(document(), [
-        {
-          ref: "github-pull-request:example/project:41",
-          summary: "为上传流程增加断点续传。网络中断后可从检查点继续。"
-        },
-        {
-          ref: "publication:https://deno.com/blog/v2.4",
-          summary: "文章声称包含 99 项来源中不存在的变化。"
-        }
-      ])
-    ).toThrow(SubscriptionDraftValidationError);
-
-    try {
-      buildSubscriptionEditorial(document(), [
-        {
-          ref: "publication:https://deno.com/blog/v2.4",
-          summary: "文章声称包含 99 项来源中不存在的变化。"
-        }
-      ]);
-      throw new Error("expected validation error");
-    } catch (error) {
-      expect(error).toMatchObject({ code: "SUBSCRIPTION_SUMMARY_VALIDATION_FAILED" });
-      expect((error as SubscriptionDraftValidationError).issues).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            message: expect.stringContaining("numeric claim 99"),
-            ref: "publication:https://deno.com/blog/v2.4"
-          })
-        ])
-      );
-    }
-  });
-});
-
 type Document = EvidenceDocument & {
   generatedAt: string;
   username: string;
@@ -143,3 +106,40 @@ function document(): Document {
     ]
   };
 }
+
+describe("subscription editorial contract", () => {
+  it("returns a retryable error when a draft item is invalid", () => {
+    expect(() =>
+      buildSubscriptionEditorial(document(), [
+        {
+          ref: "github-pull-request:example/project:41",
+          summary: "为上传流程增加断点续传。网络中断后可从检查点继续。"
+        },
+        {
+          ref: "publication:https://deno.com/blog/v2.4",
+          summary: "文章声称包含 99 项来源中不存在的变化。"
+        }
+      ])
+    ).toThrow(SubscriptionDraftValidationError);
+
+    try {
+      buildSubscriptionEditorial(document(), [
+        {
+          ref: "publication:https://deno.com/blog/v2.4",
+          summary: "文章声称包含 99 项来源中不存在的变化。"
+        }
+      ]);
+      throw new Error("expected validation error");
+    } catch (error) {
+      expect(error).toMatchObject({ code: "SUBSCRIPTION_SUMMARY_VALIDATION_FAILED" });
+      expect((error as SubscriptionDraftValidationError).issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            message: expect.stringContaining("numeric claim 99"),
+            ref: "publication:https://deno.com/blog/v2.4"
+          })
+        ])
+      );
+    }
+  });
+});

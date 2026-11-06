@@ -6,6 +6,19 @@ import {
   type CandidateProject
 } from "../../../index.js";
 
+function presented(overrides: Partial<CandidateProject> & Pick<CandidateProject, "score">): CandidateProject {
+  return {
+    repo: "rss:https://example.com/post",
+    source: "rss",
+    category: "article",
+    actors: ["Example"],
+    eventTypes: ["article"],
+    reasons: [],
+    events: [],
+    ...overrides
+  };
+}
+
 describe("candidate presentation depth", () => {
   it("keeps ordinary trusted-source updates compact", () => {
     expect(presentationDepthForCandidate(presented({ category: "release", eventTypes: ["release"], score: 30 }))).toBe(
@@ -197,16 +210,3 @@ describe("candidate presentation depth", () => {
     ).toEqual({ depth: "summary", reasonCode: "interest-match", evidence: "agent" });
   });
 });
-
-function presented(overrides: Partial<CandidateProject> & Pick<CandidateProject, "score">): CandidateProject {
-  return {
-    repo: "rss:https://example.com/post",
-    source: "rss",
-    category: "article",
-    actors: ["Example"],
-    eventTypes: ["article"],
-    reasons: [],
-    events: [],
-    ...overrides
-  };
-}

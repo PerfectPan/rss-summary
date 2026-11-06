@@ -27,6 +27,54 @@ import rssSummaryPlugin, {
 } from "./plugin.js";
 import type { RssAutomationPresentation } from "../render/automation.js";
 
+function presentationTemplate(template: RivusAutomationTemplate): RivusAutomationTemplate & {
+  createPresentation(output: { occurrence: string; text: string }): RssAutomationPresentation;
+} {
+  if (!("createPresentation" in template)) {
+    throw new Error("Automation presentation adapter is missing");
+  }
+  return template as RivusAutomationTemplate & {
+    createPresentation(output: { occurrence: string; text: string }): RssAutomationPresentation;
+  };
+}
+
+function register(plugin: { register(registry: RivusPluginRegistry): void }): {
+  automations: Map<string, RivusAutomationTemplate>;
+  profile: RivusAgentProfile;
+  tools: Map<string, RivusToolDescriptor>;
+} {
+  const profiles: RivusAgentProfile[] = [];
+  const tools: RivusToolDescriptor[] = [];
+  const automations: RivusAutomationTemplate[] = [];
+  plugin.register({
+    registerAgentProfile: (profile) => profiles.push(profile),
+    registerAutomation: (automation) => automations.push(automation),
+    registerSkill: () => undefined,
+    registerTool: (tool) => tools.push(tool)
+  });
+  if (!profiles[0] || !tools[0] || !automations[0]) {
+    throw new Error("Plugin registration is incomplete");
+  }
+  return {
+    automations: new Map(automations.map((automation) => [automation.id, automation])),
+    profile: profiles[0],
+    tools: new Map(tools.map((tool) => [tool.id, tool]))
+  };
+}
+
+function executionContext(toolId = RSS_SUMMARY_TOOL_ID): RivusToolExecutionContext {
+  return {
+    agentId: "rss-digest",
+    callId: "call-1",
+    instanceId: "rss-digest:cli",
+    policyEpoch: 1,
+    runId: "run-1",
+    sessionKey: "local:rss-digest:test",
+    toolId,
+    toolVersion: "1.0.0"
+  };
+}
+
 describe("rss-summary Rivus Plugin", () => {
   it("conforms as an external Plugin with five narrow read-only Tools", async () => {
     await expect(
@@ -63,7 +111,15 @@ describe("rss-summary Rivus Plugin", () => {
   });
 
   it("delegates Tool execution to the rss-summary application adapter", async () => {
-    const generateDigest = vi.fn(async () => ({
+    const generateDigest = vi.fn<
+      () => Promise<{
+        candidateCount: number;
+        generatedAt: string;
+        markdown: string;
+        paperCandidateCount: number;
+        windowLabel: string;
+      }>
+    >(async () => ({
       candidateCount: 1,
       generatedAt: "2026-07-17T02:00:00.000Z",
       markdown: "# Feed Digest\n",
@@ -86,7 +142,33 @@ describe("rss-summary Rivus Plugin", () => {
   });
 
   it("delegates news Tool execution to the bounded Doubao search adapter", async () => {
-    const generateNewsBrief = vi.fn(async () => ({
+    const generateNewsBrief = vi.fn<
+      () => Promise<{
+        audit: {
+          queries: never[];
+          counts: {
+            fetched: number;
+            acceptedHits: number;
+            rejectedHits: number;
+            canonicalDuplicates: number;
+            deduplicatedStories: number;
+            selectedStories: number;
+            duplicateTitleStories: number;
+            topicQuotaFilteredStories: number;
+            briefCapFilteredStories: number;
+          };
+        };
+        day: string;
+        edition: "noon";
+        generatedAt: string;
+        itemCount: number;
+        markdown: string;
+        warnings: never[];
+        windowLabel: string;
+        stories: never[];
+        topics: never[];
+      }>
+    >(async () => ({
       audit: {
         queries: [],
         counts: {
@@ -130,7 +212,18 @@ describe("rss-summary Rivus Plugin", () => {
   });
 
   it("delegates article research to the bounded page extractor", async () => {
-    const researchArticle = vi.fn(async () => ({
+    const researchArticle = vi.fn<
+      () => Promise<{
+        content: string;
+        fetchedUrl: string;
+        ref: string;
+        retrievedAt: string;
+        status: "ok";
+        title: string;
+        url: string;
+        tool: "article-research";
+      }>
+    >(async () => ({
       content: "正文内容足够长，用于验证 Agent 会拿到真正的文章内容，而不是 RSS 宣传语。",
       fetchedUrl: "https://example.com/article",
       ref: "article:1",
@@ -170,7 +263,7 @@ describe("rss-summary Rivus Plugin", () => {
     vi.stubEnv("NEWS_SEARCH_MODE", "doubao");
     vi.stubEnv("GLM_CODING_API_KEY", "");
     vi.stubEnv("NEWS_SEARCH_STATE_FILE", join(directory, "budget.json"));
-    const fetch = vi.fn(
+    const fetch = vi.fn<(_url: string | URL | Request, _init?: RequestInit) => Promise<Response>>(
       async (_url: string | URL | Request, _init?: RequestInit) =>
         new Response(JSON.stringify({ ResponseMetadata: {}, Result: { WebResults: [] } }), {
           status: 200
@@ -204,7 +297,14 @@ describe("rss-summary Rivus Plugin", () => {
   });
 
   it("delegates industry Tool execution to the first-party source adapter", async () => {
-    const generateIndustryBrief = vi.fn(async () => ({
+    const generateIndustryBrief = vi.fn<
+      () => Promise<{
+        candidateCount: number;
+        generatedAt: string;
+        markdown: string;
+        paperCandidateCount: number;
+      }>
+    >(async () => ({
       candidateCount: 3,
       generatedAt: "2026-08-09T01:00:00.000Z",
       markdown: "# 行业简报 · 2026-08-09\n",
@@ -290,51 +390,3 @@ describe("rss-summary Rivus Plugin", () => {
     });
   });
 });
-
-function presentationTemplate(template: RivusAutomationTemplate): RivusAutomationTemplate & {
-  createPresentation(output: { occurrence: string; text: string }): RssAutomationPresentation;
-} {
-  if (!("createPresentation" in template)) {
-    throw new Error("Automation presentation adapter is missing");
-  }
-  return template as RivusAutomationTemplate & {
-    createPresentation(output: { occurrence: string; text: string }): RssAutomationPresentation;
-  };
-}
-
-function register(plugin: { register(registry: RivusPluginRegistry): void }): {
-  automations: Map<string, RivusAutomationTemplate>;
-  profile: RivusAgentProfile;
-  tools: Map<string, RivusToolDescriptor>;
-} {
-  const profiles: RivusAgentProfile[] = [];
-  const tools: RivusToolDescriptor[] = [];
-  const automations: RivusAutomationTemplate[] = [];
-  plugin.register({
-    registerAgentProfile: (profile) => profiles.push(profile),
-    registerAutomation: (automation) => automations.push(automation),
-    registerSkill: () => undefined,
-    registerTool: (tool) => tools.push(tool)
-  });
-  if (!profiles[0] || !tools[0] || !automations[0]) {
-    throw new Error("Plugin registration is incomplete");
-  }
-  return {
-    automations: new Map(automations.map((automation) => [automation.id, automation])),
-    profile: profiles[0],
-    tools: new Map(tools.map((tool) => [tool.id, tool]))
-  };
-}
-
-function executionContext(toolId = RSS_SUMMARY_TOOL_ID): RivusToolExecutionContext {
-  return {
-    agentId: "rss-digest",
-    callId: "call-1",
-    instanceId: "rss-digest:cli",
-    policyEpoch: 1,
-    runId: "run-1",
-    sessionKey: "local:rss-digest:test",
-    toolId,
-    toolVersion: "1.0.0"
-  };
-}

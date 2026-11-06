@@ -1,21 +1,5 @@
 const objectCtorString = Function.prototype.toString.call(Object);
 
-/** Soft cast: plain object → record, anything else → `{}`. */
-export function asRecord(value: unknown): Record<string, unknown> {
-  return isPlainObject(value) ? value : {};
-}
-
-export function text(value: unknown): string | undefined {
-  if (isStringValue(value)) {
-    const normalized = value.trim();
-    return normalized === "" ? undefined : normalized;
-  }
-  if (isFiniteNumber(value)) {
-    return finiteNumberText(value);
-  }
-  return undefined;
-}
-
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   // Equivalent plain-object check: `[object Object]`, then a null prototype or a prototype whose constructor is Object.
   if (value === null || typeof value !== "object") {
@@ -32,6 +16,15 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return (
     typeof ctor === "function" && ctor instanceof ctor && Function.prototype.toString.call(ctor) === objectCtorString
   );
+}
+
+/** Soft cast: plain object → record, anything else → `{}`. */
+export function asRecord(value: unknown): Record<string, unknown> {
+  return isPlainObject(value) ? value : {};
+}
+
+function isObjectLike(value: unknown): value is object {
+  return value !== null && typeof value === "object";
 }
 
 function isStringValue(value: unknown): value is string {
@@ -52,6 +45,13 @@ function finiteNumberText(value: number): string {
   return Object.is(value, -0) ? "-0" : String(value);
 }
 
-function isObjectLike(value: unknown): value is object {
-  return value !== null && typeof value === "object";
+export function text(value: unknown): string | undefined {
+  if (isStringValue(value)) {
+    const normalized = value.trim();
+    return normalized === "" ? undefined : normalized;
+  }
+  if (isFiniteNumber(value)) {
+    return finiteNumberText(value);
+  }
+  return undefined;
 }
