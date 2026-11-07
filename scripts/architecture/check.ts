@@ -1,7 +1,10 @@
 import { isBuiltin } from "node:module";
 import { posix } from "node:path";
 
-import ts from "typescript";
+// TypeScript 7's package root only exports a version; the full compiler API lives
+// in the `@typescript/compiler-api` alias (npm:typescript@6.0.3), mirroring the
+// typescript6 catalog convention in PerfectPan/agent-kit.
+import ts from "@typescript/compiler-api";
 
 import {
   applicationRootDirs,
