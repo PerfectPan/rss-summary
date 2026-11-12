@@ -39,7 +39,7 @@ describe("package CLI metadata", () => {
     });
     expect(pkg.peerDependencies?.["@rivus/agent"]).toBe("*");
     expect(pkg.devDependencies?.["@rivus/agent"]).toBe("0.18.0");
-    expect(pkg.engines?.node).toBe("^24.11.0");
+    expect(pkg.engines?.node).toBe("^24.11.0 || ^26.13.1");
     expect(pkg.files).toEqual([
       "dist",
       "docs/development/rivus-plugin.md",

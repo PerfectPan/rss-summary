@@ -6,7 +6,7 @@
 Do not copy this Markdown document directly into `.env`. Adjust the values and
 keep the file out of Git (`gitignore` already excludes it).
 
-To load that file explicitly with the supported Node 24 runtime, run from the
+To load that file explicitly with the supported Node runtime, run from the
 repository root after `pnpm build`:
 
 ```bash
