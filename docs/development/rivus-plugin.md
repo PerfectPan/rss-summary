@@ -32,7 +32,7 @@ Public GitHub Repository Search and Hacker News discovery are intentionally abse
 
 ## Install
 
-Development and CI use Node.js 26.13.1 from `.node-version`. The packaged plugin also supports Node.js 24.11+ within Node 24 and 26.13.1+ within Node 26. Build the package before installing it into Rivus:
+Development and CI use Node.js `^26.13.1` (`>=26.13.1 <27`). The packaged plugin also supports Node.js 24.11+ within Node 24 and 26.13.1+ within Node 26. `.node-version` selects major 26 and `devEngines.runtime` enforces the development security floor; CI resolves the latest matching release with `check-latest: true`. Build the package before installing it into Rivus:
 
 ```bash
 cd /path/to/rss-summary

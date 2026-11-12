@@ -68,5 +68,12 @@
   },
   "peerDependencies": {
     "@rivus/agent": "*"
+  },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "^26.13.1",
+      "onFail": "error"
+    }
   }
 }

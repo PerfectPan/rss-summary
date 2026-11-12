@@ -14,7 +14,7 @@ pnpm exec rss-summary digest --help
 pnpm exec rss-summary feeds list
 ```
 
-Development and CI use Node.js 26.13.1 from `.node-version` and pnpm 11.7.0 from `packageManager`. The packaged CLI and Rivus plugin continue to support Node 24.11+ within Node 24 as well as Node 26.13.1+ within Node 26; Node 24 types preserve that compatibility baseline.
+Development and CI use Node.js `^26.13.1` (`>=26.13.1 <27`) and pnpm 11.7.0 from `packageManager`. The packaged CLI and Rivus plugin continue to support Node 24.11+ within Node 24 as well as Node 26.13.1+ within Node 26; Node 24 types preserve that compatibility baseline. `.node-version` selects major 26; `devEngines.runtime` rejects unsupported development installs. CI resolves the latest matching release with `check-latest: true`.
 
 ## Contribution Flow
 
