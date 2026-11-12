@@ -41,8 +41,8 @@ importers:
         version: 1.61.1
     devDependencies:
       '@perfectpan/lint-config':
-        specifier: github:PerfectPan/lint-config#v0.6.0
-        version: https://codeload.github.com/PerfectPan/lint-config/tar.gz/28be8c1e152dde6a44fce9e43fdb282957959cc0(oxfmt@0.60.0(vite-plus@0.2.7(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.10)(@voidzero-dev/vite-plus-core@0.2.7(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0)))(oxlint-tsgolint@7.0.2001)(typescript@7.0.2)(vite-plus@0.2.7(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.10)(@voidzero-dev/vite-plus-core@0.2.7(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))
+        specifier: github:PerfectPan/lint-config#v0.7.1
+        version: https://codeload.github.com/PerfectPan/lint-config/tar.gz/5b361c053389ac978dfec1121d11731c904ec1d0(oxfmt@0.60.0(vite-plus@0.2.7(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.10)(@voidzero-dev/vite-plus-core@0.2.7(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0)))(oxlint-tsgolint@7.0.2001)(typescript@7.0.2)(vite-plus@0.2.7(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.10)(@voidzero-dev/vite-plus-core@0.2.7(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))
       '@rivus/agent':
         specifier: 0.18.0
         version: 0.18.0(ws@8.22.0)
@@ -874,16 +874,19 @@ packages:
     resolution: {integrity: sha512-OhgMQeMmZA0dcFcX4/priaJZWdFECxiClgq6mRX6aatZEcV9PbKC3P3/v8U1hVjviT1i5U+vR8lAtBV6m4FXAA==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
 
-  '@perfectpan/lint-config@https://codeload.github.com/PerfectPan/lint-config/tar.gz/28be8c1e152dde6a44fce9e43fdb282957959cc0':
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/PerfectPan/lint-config/tar.gz/28be8c1e152dde6a44fce9e43fdb282957959cc0}
-    version: 0.6.0
+  '@perfectpan/lint-config@https://codeload.github.com/PerfectPan/lint-config/tar.gz/5b361c053389ac978dfec1121d11731c904ec1d0':
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/PerfectPan/lint-config/tar.gz/5b361c053389ac978dfec1121d11731c904ec1d0}
+    version: 0.7.1
     peerDependencies:
+      eslint-plugin-better-tailwindcss: '>=4.10.0'
       oxfmt: '>=0.57.0'
       oxlint: '>=1.79.0'
       oxlint-tsgolint: '>=0.24.0'
-      typescript: '>=6.0.0'
+      typescript: '>=6.0.2'
       vite-plus: '>=0.2.4'
     peerDependenciesMeta:
+      eslint-plugin-better-tailwindcss:
+        optional: true
       oxfmt:
         optional: true
       oxlint:
@@ -1069,7 +1072,9 @@ packages:
   '@smithy/core@3.35.1':
     resolution: {integrity: sha512-i4YPS4B6ts7bjn7UwLnGjiZdprOvHvgGobFZsYK3GIY3E5hIqtj0rReU69BcTpGp+fvtraSNXeG1l+jtJvF55w==}
     engines: {node: '>=18.0.0'}
-    deprecated: Deprecated due to a bug in custom logger data redaction. See https://github.com/aws/aws-sdk-js-v3/issues/8393.
+    deprecated: |-
+      Deprecated due to a bug in custom logger data redaction. Upgrade to the latest version. If you used a custom logger with this
+        version, review your logs and rotate any credentials or other secrets. See https://github.com/aws/aws-sdk-js-v3/issues/8393.
 
   '@smithy/credential-provider-imds@4.5.2':
     resolution: {integrity: sha512-A9uSdn72ozbRUSit0eib0TW7nXuNPlaeM0zcGkJ+nE6tFcSDbnmtwoxbTCFBukVQcszDAyvsd7+rTduPTXpygg==}
@@ -3217,7 +3222,7 @@ snapshots:
 
   '@oxlint/plugins@1.73.0': {}
 
-  '@perfectpan/lint-config@https://codeload.github.com/PerfectPan/lint-config/tar.gz/28be8c1e152dde6a44fce9e43fdb282957959cc0(oxfmt@0.60.0(vite-plus@0.2.7(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.10)(@voidzero-dev/vite-plus-core@0.2.7(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0)))(oxlint-tsgolint@7.0.2001)(typescript@7.0.2)(vite-plus@0.2.7(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.10)(@voidzero-dev/vite-plus-core@0.2.7(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))':
+  '@perfectpan/lint-config@https://codeload.github.com/PerfectPan/lint-config/tar.gz/5b361c053389ac978dfec1121d11731c904ec1d0(oxfmt@0.60.0(vite-plus@0.2.7(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.10)(@voidzero-dev/vite-plus-core@0.2.7(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0)))(oxlint-tsgolint@7.0.2001)(typescript@7.0.2)(vite-plus@0.2.7(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.10)(@voidzero-dev/vite-plus-core@0.2.7(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))':
     optionalDependencies:
       oxfmt: 0.60.0(vite-plus@0.2.7(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.10)(@voidzero-dev/vite-plus-core@0.2.7(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))
       oxlint-tsgolint: 7.0.2001
