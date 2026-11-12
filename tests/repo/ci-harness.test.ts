@@ -25,7 +25,9 @@ describe("CI harness", () => {
     expect(workflow).toContain("pull_request:");
     expect(workflow).toContain("push:");
     expect(workflow).toContain("branches: [main]");
-    expect(workflow).toContain("node-version: 24.x");
+    expect(workflow).toContain('node-version: "^26.13.1"');
+    expect(workflow).toContain("check-latest: true");
+    expect(readFileSync(new URL("../../.node-version", import.meta.url), "utf8").trim()).toBe("26");
     expect(workflow).toContain("pnpm install --frozen-lockfile");
     expect(workflow).toContain("pnpm verify");
     expect(workflow).toContain("pnpm test:layout && pnpm test:coverage");
