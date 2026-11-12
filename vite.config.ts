@@ -40,9 +40,6 @@ export default defineConfig({
       "unicorn/no-useless-spread": "off",
       // The CLI reports diagnostics on stderr only; info goes through the renderers.
       "no-console": ["error", { allow: ["error", "warn"] }],
-      // Effect.catch is a typed Effect combinator, not Promise#catch; the promise
-      // plugin misreads it as a two-argument Promise.catch.
-      "promise/valid-params": "off",
       // The typed-exit assertion helpers and the golden snapshot matchers
       // centralize expectations; count them as assertions.
       "vitest/expect-expect": [
