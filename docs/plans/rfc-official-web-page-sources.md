@@ -57,12 +57,18 @@ Example:
 - Anthropic Engineering: `https://www.anthropic.com/engineering`, articles under `/engineering/`.
 - Cursor Changelog: `https://cursor.com/changelog`, entries under `/changelog/`.
 - Cursor Blog: `https://cursor.com/blog`, entries under `/blog/`.
+- Framer Blog: `https://www.framer.com/blog/`, entries under `/blog/`. Cards put the title in an
+  `<h5>`, so the heading selector covers `h5`/`h6`, and they repeat category and author as short
+  unpunctuated paragraphs, which `isDescription` drops: a card without a description reports no
+  summary instead of one built from its labels.
 
 These listing routes allow automated access in their robots policies. Production-client and CLI
 dry-run checks cover dated links, canonical URLs and source health. Blog card titles omit author and
 reading-time labels. Changelog paragraphs are retained only when the enclosing article identifies
-one update, so summaries cannot borrow a neighboring entry's changes. xAI remains excluded while
-its direct fetch returns HTTP 403.
+one update, so summaries cannot borrow a neighboring entry's changes. Framer serves `/blog` with a
+308 to `/blog/` and answers `/blog/<slug>` with a 404, so the registered URL keeps its trailing slash
+and article links resolve under `/blog/`. xAI remains excluded while its direct fetch returns HTTP
+403.
 
 ## Operational Consequences
 

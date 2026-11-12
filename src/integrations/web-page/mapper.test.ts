@@ -30,6 +30,45 @@ describe("web page sources", () => {
     ]);
   });
 
+  it("reads a heading title and drops card labels from the summary", () => {
+    const entries = extractWebPageEntries(
+      `<a href="/news/harness">
+        <div><p>Engineering</p><p><time datetime="2026-11-02">Nov 2, 2026</time></p></div>
+        <h5>Executing agent code as it streams</h5>
+        <p>We rebuilt the agent harness to run whole workflows in a single program.</p>
+        <div><p>Adam</p><div>0 min</div></div>
+      </a>`,
+      source
+    );
+    expect(entries).toEqual([
+      {
+        url: "https://example.com/news/harness",
+        title: "Executing agent code as it streams",
+        publishedAt: "2026-11-02T12:00:00.000Z",
+        summary: "We rebuilt the agent harness to run whole workflows in a single program."
+      }
+    ]);
+  });
+
+  it("reports no summary when a card only repeats category and author labels", () => {
+    const entries = extractWebPageEntries(
+      `<a href="/news/labels">
+        <p>Engineering</p>
+        <p><time datetime="2026-11-03">Nov 3, 2026</time></p>
+        <h5>Lighthouse accuracy</h5>
+        <p>Ivan , Jurre</p>
+      </a>`,
+      source
+    );
+    expect(entries).toEqual([
+      {
+        url: "https://example.com/news/labels",
+        title: "Lighthouse accuracy",
+        publishedAt: "2026-11-03T12:00:00.000Z"
+      }
+    ]);
+  });
+
   it("keeps the body of each changelog entry with its own dated links", () => {
     const entries = extractWebPageEntries(
       `<article>

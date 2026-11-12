@@ -79,6 +79,20 @@ function normalizedDate(value: string | undefined): string | undefined {
   return Number.isFinite(time) ? new Date(time).toISOString() : undefined;
 }
 
+const SENTENCE_END = /[.!?。！？…]["'”’)\]]*$/u;
+/** Longer than a category or author label, so a short card stays description-less. */
+const MIN_DESCRIPTION_WORDS = 4;
+
+/** A card repeats its category and author as unpunctuated one- or two-word paragraphs next to
+ * the real description. Requiring prose keeps the body and drops the labels, so a card without a
+ * description reports no summary instead of "Engineering Ivan , Jurre". */
+function isDescription(text: string): boolean {
+  if (SENTENCE_END.test(text)) {
+    return true;
+  }
+  return text.split(/\s+/u).filter(Boolean).length >= MIN_DESCRIPTION_WORDS;
+}
+
 function cleanTitle(value: string | undefined): string | undefined {
   const cleaned = cleanText(value);
   return cleaned && !normalizedDate(cleaned) ? cleaned : undefined;
@@ -109,7 +123,7 @@ export function extractWebPageEntries(html: string, source: WebPageSubscription)
     const time = element.find("time").first();
     const publishedAt = normalizedDate(time.attr("datetime") ?? cleanText(time.text()));
     const titleElement = element
-      .find("h1, h2, h3, h4, [role='heading'], [class*='title'], [class*='headline']")
+      .find("h1, h2, h3, h4, h5, h6, [role='heading'], [class*='title'], [class*='headline']")
       .first();
     const ariaTitle = cleanTitle(element.attr("aria-label"));
     const structuredTitle = cleanTitle(titleElement.text()) ?? cleanTitle(element.find("article p").first().text());
@@ -137,7 +151,8 @@ export function extractWebPageEntries(html: string, source: WebPageSubscription)
         .toArray()
         .filter((paragraph) => $(paragraph).find("time").length === 0)
         .map((paragraph) => cleanText($(paragraph).text()))
-        .filter((text) => text && text !== title)
+        .filter((text): text is string => Boolean(text) && text !== title)
+        .filter(isDescription)
         .join(" ")
     )?.slice(0, 4000);
 

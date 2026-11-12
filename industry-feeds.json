@@ -40,6 +40,13 @@
     "tags": ["Articles", "Developer Tools"]
   },
   {
+    "type": "page",
+    "name": "Framer Blog",
+    "url": "https://www.framer.com/blog/",
+    "pathPrefixes": ["/blog/"],
+    "tags": ["Articles", "Design", "Frontend"]
+  },
+  {
     "name": "Hugging Face Blog",
     "url": "https://huggingface.co/blog/feed.xml",
     "tags": ["Articles", "Blog"]
