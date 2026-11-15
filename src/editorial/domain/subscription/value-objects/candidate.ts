@@ -5,7 +5,7 @@ import type {
   RepositoryMetadata
 } from "../../../../acquisition/index.js";
 
-export type ActivityCard = ActivityCardDto;
+type ActivityCard = ActivityCardDto;
 
 export type CandidateProject = {
   repo: string;

@@ -1,1 +1,1 @@
-export { browserArticleResearch, type BrowserPageFetcher, type BrowserReaderOptions } from "./reader.js";
+export { browserArticleResearch, type BrowserPageFetcher } from "./reader.js";

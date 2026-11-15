@@ -4,15 +4,15 @@
  * the acquisition and editorial sides, so `RunSourceResult` is parameterized
  * over its `kind` instead of naming sources here.
  */
-export type RunProduct = "subscriptions" | "frontier";
+type RunProduct = "subscriptions" | "frontier";
 
 /**
  * Storage-format mirrors of editorial's presentation types, kept literal so
  * the persisted run record does not change shape when editorial refines them.
  */
-export type RunPresentationDepth = "link" | "summary" | "research";
+type RunPresentationDepth = "link" | "summary" | "research";
 
-export type RunPresentationReasonCode =
+type RunPresentationReasonCode =
   | "ordinary-update"
   | "semantic-summary"
   | "interest-match"
@@ -33,7 +33,7 @@ export type RunSourceResult<Kind extends string = string> = {
   error?: string;
 };
 
-export type RunCandidateDecision = {
+type RunCandidateDecision = {
   key: string;
   label: string;
   url?: string;
@@ -45,7 +45,7 @@ export type RunCandidateDecision = {
   reason: string;
 };
 
-export type RunEditorialSelectionDecision = {
+type RunEditorialSelectionDecision = {
   ref: string;
   selected: boolean;
   reason: string;

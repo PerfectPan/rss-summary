@@ -1,70 +1,38 @@
 import { Effect } from "effect";
 import type { RivusToolDescriptor } from "@rivus/agent";
 
-import type { RunAudit } from "../../../delivery/index.js";
-import { calendarDayAtOffset } from "../../../kernel/index.js";
 import { runPluginEffect } from "../../runtime.js";
 import { loadEnvConfig, type AppConfig } from "../../config/env.js";
 import { buildIndustryDocument, type IndustryBriefDocument } from "../shared/industry.js";
 import { industryView } from "../../render/layouts/industry.js";
 import { renderViewMarkdown } from "../../render/markdown.js";
+import {
+  assertCalendarDay,
+  assertNotBothDayAndOccurrence,
+  briefBaseInput,
+  occurrenceDayOf,
+  optionalToolInput,
+  rivusToolResult,
+  type RivusToolResult
+} from "../shared/tool.js";
 
 export const RSS_SUMMARY_INDUSTRY_TOOL_ID = "rss-summary/generate-industry-brief";
 
-export type RivusIndustryBriefInput = {
+type RivusIndustryBriefInput = {
   day?: string;
   occurrence?: string;
   onlyNew?: boolean;
 };
 
-export type RivusIndustryBriefResult = {
-  candidateCount: number;
-  generatedAt: string;
-  markdown: string;
-  paperCandidateCount: number;
-  windowLabel?: string;
-  audit?: RunAudit;
-};
+export type RivusIndustryBriefResult = RivusToolResult;
 
 type RivusIndustryBriefDependencies = {
   buildIndustryDocument?: (config: AppConfig) => Effect.Effect<IndustryBriefDocument, Error>;
   env?: NodeJS.ProcessEnv;
 };
 
-function optionalString(value: unknown, name: string): string | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (typeof value !== "string" || value.length === 0) {
-    throw new Error(`${name} must be a non-empty string.`);
-  }
-  return value;
-}
-
-function optionalBoolean(value: unknown, name: string): boolean | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (typeof value !== "boolean") {
-    throw new Error(`${name} must be a boolean.`);
-  }
-  return value;
-}
-
 function parseInput(value: unknown): RivusIndustryBriefInput {
-  if (value === undefined) {
-    return {};
-  }
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("Rivus industry brief input must be an object.");
-  }
-
-  const input = value as Record<string, unknown>;
-  return {
-    day: optionalString(input.day, "day"),
-    occurrence: optionalString(input.occurrence, "occurrence"),
-    onlyNew: optionalBoolean(input.onlyNew, "onlyNew")
-  };
+  return briefBaseInput(optionalToolInput(value, "Rivus industry brief"));
 }
 
 /** Observe-only frontier Tool: first-party sources only, never writes state or sends webhooks. */
@@ -73,17 +41,12 @@ export async function generateRivusIndustryBrief(
   dependencies: RivusIndustryBriefDependencies = {}
 ): Promise<RivusIndustryBriefResult> {
   const input = parseInput(value);
-  if (input.day && input.occurrence) {
-    throw new Error("day and occurrence cannot be used together.");
-  }
+  assertNotBothDayAndOccurrence(input);
 
   const env = dependencies.env ?? process.env;
   const timezoneOffset = env.FEED_TIMEZONE_OFFSET ?? "+08:00";
-  const occurrenceDay = input.occurrence ? calendarDayAtOffset(input.occurrence, timezoneOffset) : undefined;
-  const day = input.day ?? occurrenceDay;
-  if (day && !/^\d{4}-\d{2}-\d{2}$/u.test(day)) {
-    throw new Error("day must use YYYY-MM-DD format.");
-  }
+  const day = input.day ?? occurrenceDayOf(input, timezoneOffset);
+  assertCalendarDay(day);
 
   const base = await runPluginEffect(loadEnvConfig(env));
   // An explicit `onlyNew: false` falls back to the environment; anything else
@@ -98,15 +61,10 @@ export async function generateRivusIndustryBrief(
     onlyNew
   };
   const document = await runPluginEffect((dependencies.buildIndustryDocument ?? buildIndustryDocument)(config));
-  const paperCandidateCount = document.candidates.filter((candidate) => candidate.category === "paper").length;
-  return {
-    candidateCount: document.candidates.length - paperCandidateCount,
-    generatedAt: document.generatedAt,
-    markdown: renderViewMarkdown(industryView(day ? { ...document, displayDate: day } : document)),
-    paperCandidateCount,
-    ...(document.windowLabel ? { windowLabel: document.windowLabel } : {}),
-    ...(document.audit ? { audit: document.audit } : {})
-  };
+  return rivusToolResult(
+    document,
+    renderViewMarkdown(industryView(day ? { ...document, displayDate: day } : document))
+  );
 }
 
 export const frontierToolDescriptor: Pick<

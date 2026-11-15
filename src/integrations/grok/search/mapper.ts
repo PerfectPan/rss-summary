@@ -3,10 +3,10 @@ import { Schema } from "effect";
 import { NewsSearchError, type SearchResult } from "../../../acquisition/index.js";
 import type { Item } from "../../../acquisition/index.js";
 
-import type { AuditedSearchPage, GrokSearchAudit } from "../audit.js";
-import { isNativeCall, isNativeReceipt, postSchema, responseSchema } from "./dto.js";
-
-export type { GrokSearchAudit };
+import { isPlainObject } from "../../shared/json-record.js";
+import { itemFromSearchResult } from "../../shared/search-item.js";
+import type { AuditedSearchPage } from "../audit.js";
+import { postSchema, responseSchema, trackNativeSearchEvent } from "./dto.js";
 
 export type GrokAcquired = {
   page: AuditedSearchPage;
@@ -16,56 +16,17 @@ export type GrokAcquired = {
 const badge = "Grok 原生 X 搜索，内容经模型整理；未独立核验作者或原文";
 
 function itemFromGrok(result: SearchResult): Item {
-  return {
-    id: result.id,
+  return itemFromSearchResult(result, {
     kind: "post",
-    subject: {
-      key: result.url,
-      name: result.siteName ?? result.url,
-      url: result.url
-    },
-    content: {
-      title: result.title,
-      ...(result.summary ? { excerpt: result.summary } : {}),
-      url: result.url
-    },
+    excerpt: result.summary,
     publishedAt: { value: result.publishTime ?? "", precision: "instant" },
-    provenance: {
-      origin: result.url,
-      note: badge
-    },
-    credibility: { tier: "unrated" },
-    signals: [],
-    rank: { position: result.rankPosition },
-    display: {
-      label: result.siteName,
-      reference: result.url,
-      facts: []
-    }
-  };
+    provenance: { origin: result.url, note: badge },
+    credibility: { tier: "unrated" }
+  });
 }
 
 function nonNegativeNumber(value: unknown): number | undefined {
   return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
-}
-
-const objectCtorString = Function.prototype.toString.call(Object);
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== "object") {
-    return false;
-  }
-  if (Object.prototype.toString.call(value) !== "[object Object]") {
-    return false;
-  }
-  const proto: object | null = Object.getPrototypeOf(value);
-  if (proto === null) {
-    return true;
-  }
-  const ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
-  return (
-    typeof ctor === "function" && ctor instanceof ctor && Function.prototype.toString.call(ctor) === objectCtorString
-  );
 }
 
 export function parseGrokStream(
@@ -82,17 +43,15 @@ export function parseGrokStream(
     let end: Record<string, unknown> | undefined;
     for (const line of stream.split(/\r?\n/u).filter((line) => line.trim())) {
       const event: unknown = JSON.parse(line);
-      if (!isRecord(event)) {
+      if (!isPlainObject(event)) {
         throw new Error("Invalid event");
       }
       if (end) {
         throw new Error("Events after completion");
       }
-      if (isNativeCall(event)) {
-        calls.add(event.toolCallId);
-      }
-      if (isNativeReceipt(event, calls)) {
-        nativeTools.add(event.rawOutput.name);
+      const receipt = trackNativeSearchEvent(event, calls);
+      if (receipt !== undefined) {
+        nativeTools.add(receipt);
         finalText = "";
       }
       if (event.type === "text" && typeof event.data === "string") {
@@ -161,7 +120,7 @@ export function parseGrokStream(
         rejectedResults += 1;
       }
     }
-    const usage = isRecord(end.usage) ? end.usage : {};
+    const usage = isPlainObject(end.usage) ? end.usage : {};
     const page = {
       provider: "grok" as const,
       resultCount: results.length,

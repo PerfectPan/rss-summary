@@ -21,7 +21,8 @@ export type SourceVerification = {
   policy: "official" | "news";
 };
 
-export type SearchResult = {
+/** The hit fields every provider reports and editorial's news hits carry unchanged. */
+export type SearchHitFields = {
   id: string;
   title: string;
   siteName?: string;
@@ -36,6 +37,9 @@ export type SearchResult = {
   publishDay?: PublicationDay;
   rankScore?: number;
   authInfoDescription?: string;
+};
+
+export type SearchResult = SearchHitFields & {
   authInfoLevel?: number;
   /**
    * Provider authority score on a 0–4 scale where 3 and above is high
@@ -47,6 +51,19 @@ export type SearchResult = {
   source?: string;
   rankPosition: number;
   sourceVerification?: SourceVerification;
+};
+
+/** The native-search receipt a provider copies onto its page and onto its failure. */
+export type NativeSearchReceipt = {
+  nativeTools: string[];
+  nativeCallCount?: number;
+  elapsedMs?: number;
+  rejectedResults: number;
+  costUsd?: number;
+  totalTokens?: number;
+  inputTokens?: number;
+  cachedInputTokens?: number;
+  outputTokens?: number;
 };
 
 export type SearchUsage = {

@@ -1,14 +1,13 @@
 import { Effect, Schema } from "effect";
 
+import { boundedInteger } from "../../../kernel/index.js";
 import { calendarDayAtOffset } from "../../../kernel/time.js";
 import { type GrokProcessRequest } from "../ports.js";
 import { isSearchFailure, type NewsSearchError, type SearchPage, type SearchUsage } from "../../domain/search/index.js";
 import { searchBudgetDefaults } from "../services/budget-defaults.js";
+import { instantSchema } from "../services/cache-request.js";
 import type { BudgetedSearch } from "../services/with-budget.js";
 
-const instantSchema = Schema.String.check(
-  Schema.makeFilter((value: string) => /(?:Z|[+-]\d{2}:\d{2})$/u.test(value) && Number.isFinite(Date.parse(value)))
-);
 const inputSchema = Schema.Struct({
   handles: Schema.Array(Schema.String.check(Schema.isPattern(/^@?[a-zA-Z0-9_]{1,15}$/u))),
   since: instantSchema,
@@ -54,7 +53,7 @@ export type XAccountPosts = {
   }>;
 };
 
-export type XAccountClient = {
+type XAccountClient = {
   search: (value: GrokProcessRequest) => Promise<SearchPage>;
 };
 
@@ -76,14 +75,6 @@ export type CollectXAccountOptions = {
   openClient?: () => XAccountClient;
   openBudget: OpenSearchBudget;
 };
-
-function boundedInteger(value: string | undefined, fallback: number, min: number, max: number): number {
-  const parsed = value === undefined ? fallback : Number(value);
-  if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
-    throw new Error(`Numeric configuration must be an integer between ${min} and ${max}.`);
-  }
-  return parsed;
-}
 
 /** Account subscriptions use caller-owned windows and do not apply news-topic ranking. */
 export function collectXAccountPosts(

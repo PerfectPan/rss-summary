@@ -3,7 +3,7 @@
  * URL names one installed CLI model and is kept verbatim; HTTP identities
  * (other providers) drop credentials, queries, and trailing slashes.
  */
-export const cliIdentity = /^grok:\/\/cli\/v1\/[a-zA-Z0-9._-]+$/u;
+const cliIdentity = /^grok:\/\/cli\/v1\/[a-zA-Z0-9._-]+$/u;
 
 export function normalizeProvider(value: string): string {
   if (cliIdentity.test(value)) {

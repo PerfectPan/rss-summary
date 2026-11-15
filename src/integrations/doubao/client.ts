@@ -1,5 +1,6 @@
 import type { SearchInput, SearchPage } from "../../acquisition/index.js";
 
+import { postSearchJson } from "../shared/search-plumbing.js";
 import { DoubaoSearchError, parseDoubaoResponse } from "./dto.js";
 
 type DoubaoSearchClientOptions = {
@@ -32,25 +33,6 @@ export function validateDoubaoInput(input: SearchInputContract): void {
   }
 }
 
-function errorText(value: unknown): string {
-  return value instanceof Error ? value.message : String(value);
-}
-
-function parseRetryAfter(value: string | null): number | undefined {
-  if (!value) {
-    return undefined;
-  }
-  const seconds = Number(value);
-  if (Number.isFinite(seconds) && seconds >= 0) {
-    return Math.round(seconds * 1_000);
-  }
-  const date = Date.parse(value);
-  if (!Number.isFinite(date)) {
-    return undefined;
-  }
-  return Math.max(0, date - Date.now());
-}
-
 export class DoubaoSearchClient {
   private readonly apiKey: string;
   private readonly baseUrl: string;
@@ -74,37 +56,24 @@ export class DoubaoSearchClient {
       filter.AuthInfoLevel = 1;
     }
 
-    let response: Response;
-    try {
-      response = await this.fetchImpl(this.baseUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          Query: input.query,
-          SearchType: "web",
-          Count: input.count,
-          Filter: filter,
-          TimeRange: `${input.sinceDay ?? input.day}..${input.day}`,
-          // Topic queries already encode one bounded event intent. Rewriting broadens them back
-          // into generic discovery queries and lowers precision.
-          QueryControl: { QueryRewrite: false },
-          ContentFormats: "markdown"
-        }),
-        signal: AbortSignal.timeout(this.timeoutMs)
-      });
-    } catch (cause) {
-      throw new DoubaoSearchError("network_error", errorText(cause));
-    }
-    const retryAfterMs = parseRetryAfter(response.headers.get("Retry-After"));
-    if (!response.ok) {
-      if (response.status === 429) {
-        throw new DoubaoSearchError("http_429", "HTTP 429", { retryAfterMs });
-      }
-      throw new DoubaoSearchError(`http_${response.status}`, `HTTP ${response.status}`);
-    }
+    const { response, retryAfterMs } = await postSearchJson({
+      url: this.baseUrl,
+      apiKey: this.apiKey,
+      timeoutMs: this.timeoutMs,
+      body: {
+        Query: input.query,
+        SearchType: "web",
+        Count: input.count,
+        Filter: filter,
+        TimeRange: `${input.sinceDay ?? input.day}..${input.day}`,
+        // Topic queries already encode one bounded event intent. Rewriting broadens them back
+        // into generic discovery queries and lowers precision.
+        QueryControl: { QueryRewrite: false },
+        ContentFormats: "markdown"
+      },
+      fetchImpl: this.fetchImpl,
+      error: (code, message, options) => new DoubaoSearchError(code, message, options)
+    });
 
     return parseDoubaoResponse(await response.json(), retryAfterMs).page;
   }

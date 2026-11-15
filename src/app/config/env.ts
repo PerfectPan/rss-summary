@@ -17,8 +17,8 @@ import {
   defaultStateFile
 } from "./state-root.js";
 
-export type GithubFeedSource = "home" | "events";
-export type GithubHomeFetch = "conduit" | "browser";
+type GithubFeedSource = "home" | "events";
+type GithubHomeFetch = "conduit" | "browser";
 
 /**
  * Strongly-typed configuration for the digest/frontier products. Values come

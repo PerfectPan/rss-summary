@@ -1,19 +1,12 @@
 import type { RivusToolDescriptor } from "@rivus/agent";
 
-import {
-  generateRivusNewsBrief,
-  type RivusNewsBriefInput,
-  type RivusNewsBriefOutput,
-  type RivusNewsBriefResult
-} from "./flow.js";
+import { generateRivusNewsBrief, type RivusNewsBriefOutput, type RivusNewsBriefResult } from "./flow.js";
 import { newsView } from "../../render/layouts/news.js";
 import { renderViewMarkdown } from "../../render/markdown.js";
 import { runPluginEffect } from "../../runtime.js";
 
 export const RSS_SUMMARY_NEWS_TOOL_ID = "rss-summary/generate-news-brief";
-
-export { generateRivusNewsBrief };
-export type { RivusNewsBriefInput, RivusNewsBriefOutput, RivusNewsBriefResult };
+export type { RivusNewsBriefOutput };
 
 function withNewsMarkdown(result: RivusNewsBriefResult): RivusNewsBriefOutput {
   return {

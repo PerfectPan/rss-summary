@@ -12,7 +12,7 @@ const pageRecordSchema = Schema.Struct({
   tags: Schema.optional(Schema.Array(Schema.String))
 });
 
-export const industryFeedsFileSchema = Schema.Array(Schema.Union([Schema.String, feedRecordSchema, pageRecordSchema]));
+const industryFeedsFileSchema = Schema.Array(Schema.Union([Schema.String, feedRecordSchema, pageRecordSchema]));
 
 /** Same split as decodeFeedsJson: parser messages stay authoritative. */
 export function decodeIndustryJson(value: string): IndustrySource[] {

@@ -128,7 +128,7 @@ function validateSubscriptionEditorialItemsForRender(
 }
 
 /** Replace shallow feed excerpts with the Agent's fetched article evidence. */
-export function mergeSubscriptionResearch(evidence: SubscriptionEvidence[], value: unknown): SubscriptionEvidence[] {
+function mergeSubscriptionResearch(evidence: SubscriptionEvidence[], value: unknown): SubscriptionEvidence[] {
   const entries = validateSubscriptionResearch(value, evidence);
   if (entries.length === 0) {
     return evidence;

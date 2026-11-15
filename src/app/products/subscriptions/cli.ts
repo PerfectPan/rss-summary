@@ -1,34 +1,3 @@
-import { Effect } from "effect";
-
-import { parseCliArgs } from "../../config/argv.js";
-import { applyCliArgs, loadEnvConfig } from "../../config/env.js";
-import { appLayerFromConfig } from "../../layers.js";
-import { runCliEffect } from "../../runtime.js";
-import { digestView, renderJsonDigest } from "../../render/layouts/digest.js";
-import { renderViewMarkdown } from "../../render/markdown.js";
-import { runSubscriptionFlow } from "./flow.js";
-
-type Writable = {
-  write(chunk: string): unknown;
-};
-
-/** `rss-summary digest [--rss-only] [digest options]` */
-export async function runDigestCommand(
-  argv: string[],
-  deps: { stdout?: Writable; stderr?: Writable } = {}
-): Promise<number> {
-  const stderr = deps.stderr ?? process.stderr;
-  const config = Effect.map(loadEnvConfig(), (base) => applyCliArgs(base, parseCliArgs(argv)));
-  return runCliEffect(
-    Effect.flatMap(config, (resolved) =>
-      runSubscriptionFlow(resolved, (document, format) =>
-        format === "json" ? renderJsonDigest(document) : renderViewMarkdown(digestView(document))
-      )
-    ),
-    { stderr, layer: appLayerFromConfig(config) }
-  );
-}
-
 import type { Acquired, FeedSubscription } from "../../../acquisition/index.js";
 import {
   addCatalogFeed,
@@ -37,8 +6,23 @@ import {
   removeCatalogFeed,
   RssFeed
 } from "../../../acquisition/index.js";
-import { errorMessage } from "../../../kernel/index.js";
 import { runPluginEffect } from "../../runtime.js";
+import { digestView, renderJsonDigest } from "../../render/layouts/digest.js";
+import { renderViewMarkdown } from "../../render/markdown.js";
+import { parseCommandOptions, runCliCommand, runProductCommand, type Writable } from "../shared/cli.js";
+import { runSubscriptionFlow } from "./flow.js";
+
+/** `rss-summary digest [--rss-only] [digest options]` */
+export async function runDigestCommand(
+  argv: string[],
+  deps: { stdout?: Writable; stderr?: Writable } = {}
+): Promise<number> {
+  return runProductCommand(argv, deps, (resolved) =>
+    runSubscriptionFlow(resolved, (document, format) =>
+      format === "json" ? renderJsonDigest(document) : renderViewMarkdown(digestView(document))
+    )
+  );
+}
 
 type FeedsCommandDeps = {
   stdout?: Writable;
@@ -54,10 +38,6 @@ type ParsedArgs = {
   tags: string[];
 };
 
-function camelCase(value: string): string {
-  return value.replace(/-([a-z])/gu, (_, char: string) => char.toUpperCase());
-}
-
 function parseTags(value: string | undefined): string[] {
   if (!value) {
     return [];
@@ -69,22 +49,7 @@ function parseTags(value: string | undefined): string[] {
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
-  const command = argv[0] ?? "help";
-  const options: Record<string, string> = {};
-
-  for (let index = 1; index < argv.length; index += 1) {
-    const arg = argv[index];
-    if (arg === undefined || !arg.startsWith("--")) {
-      continue;
-    }
-    const value = argv[index + 1];
-    if (!value || value.startsWith("--")) {
-      throw new Error(`${arg} requires a value.`);
-    }
-    options[camelCase(arg.slice(2))] = value;
-    index += 1;
-  }
-
+  const { command, options } = parseCommandOptions(argv);
   return {
     command,
     file: options.file ?? "feeds.json",
@@ -163,10 +128,7 @@ export async function runFeedsCommand(
   argv: string[] = process.argv.slice(2),
   deps: FeedsCommandDeps = {}
 ): Promise<number> {
-  const stdout = deps.stdout ?? process.stdout;
-  const stderr = deps.stderr ?? process.stderr;
-
-  try {
+  return runCliCommand(deps, async (stdout) => {
     const args = parseArgs(argv);
     if (args.command === "add") {
       const feeds = await runPluginEffect(addCatalogFeed(args.file, requireFeedInput(args)));
@@ -196,8 +158,5 @@ export async function runFeedsCommand(
 
     writeHelp(stdout);
     return args.command === "help" ? 0 : 1;
-  } catch (error) {
-    stderr.write(`${errorMessage(error)}\n`);
-    return 1;
-  }
+  });
 }

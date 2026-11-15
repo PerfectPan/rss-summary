@@ -4,7 +4,8 @@ import type { Acquired, ActivityCardDto } from "../../acquisition/index.js";
 import type { FeedSubscription } from "../../acquisition/index.js";
 
 import { publicationAcquired } from "../shared/activity-card.js";
-import { asRecord, text, xmlChildren, xmlFeed, type XmlRecord } from "./dto.js";
+import { asRecord } from "../shared/json-record.js";
+import { text, xmlChildren, xmlFeed, type XmlRecord } from "./dto.js";
 
 function hostIsAcademic(value: string | undefined): boolean {
   if (!value) {

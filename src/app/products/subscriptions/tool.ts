@@ -1,8 +1,7 @@
 import { Effect } from "effect";
 
-import type { RunAudit } from "../../../delivery/index.js";
 import type { DigestDocument } from "./output.js";
-import { calendarDayAtOffset, shiftCalendarDay } from "../../../kernel/index.js";
+import { shiftCalendarDay } from "../../../kernel/index.js";
 import { runPluginEffect } from "../../runtime.js";
 import { loadEnvConfig, type AppConfig } from "../../config/env.js";
 import { buildDigestDocument } from "./flow.js";
@@ -11,10 +10,20 @@ import type { RivusToolDescriptor } from "@rivus/agent";
 import { createRivusSubscriptionExecutor } from "../../rivus/phases.js";
 import { digestView } from "../../render/layouts/digest.js";
 import { renderViewMarkdown } from "../../render/markdown.js";
+import {
+  assertCalendarDay,
+  assertNotBothDayAndOccurrence,
+  briefBaseInput,
+  occurrenceDayOf,
+  optionalBoolean,
+  optionalToolInput,
+  rivusToolResult,
+  type RivusToolResult
+} from "../shared/tool.js";
 
 export const RSS_SUMMARY_TOOL_ID = "rss-summary/generate-digest";
 
-export type RivusDigestInput = {
+type RivusDigestInput = {
   day?: string;
   occurrence?: string;
   onlyNew?: boolean;
@@ -22,14 +31,7 @@ export type RivusDigestInput = {
   window?: "previous-calendar-day";
 };
 
-export type RivusDigestResult = {
-  candidateCount: number;
-  generatedAt: string;
-  markdown: string;
-  paperCandidateCount: number;
-  windowLabel?: string;
-  audit?: RunAudit;
-};
+export type RivusDigestResult = RivusToolResult;
 
 type RivusDigestDependencies = {
   buildDigestDocument?: (config: AppConfig) => Effect.Effect<DigestDocument, Error>;
@@ -40,26 +42,6 @@ export type CollectedRivusDigest = {
   day?: string;
   document: DigestDocument;
 };
-
-function optionalString(value: unknown, name: string): string | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (typeof value !== "string" || value.length === 0) {
-    throw new Error(`${name} must be a non-empty string.`);
-  }
-  return value;
-}
-
-function optionalBoolean(value: unknown, name: string): boolean | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  if (typeof value !== "boolean") {
-    throw new Error(`${name} must be a boolean.`);
-  }
-  return value;
-}
 
 function optionalWindow(value: unknown): "previous-calendar-day" | undefined {
   if (value === undefined) {
@@ -72,18 +54,9 @@ function optionalWindow(value: unknown): "previous-calendar-day" | undefined {
 }
 
 function parseInput(value: unknown): RivusDigestInput {
-  if (value === undefined) {
-    return {};
-  }
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("Rivus digest input must be an object.");
-  }
-
-  const input = value as Record<string, unknown>;
+  const input = optionalToolInput(value, "Rivus digest");
   return {
-    day: optionalString(input.day, "day"),
-    occurrence: optionalString(input.occurrence, "occurrence"),
-    onlyNew: optionalBoolean(input.onlyNew, "onlyNew"),
+    ...briefBaseInput(input),
     rssOnly: optionalBoolean(input.rssOnly, "rssOnly"),
     window: optionalWindow(input.window)
   };
@@ -99,22 +72,18 @@ export async function collectRivusDigest(
   dependencies: RivusDigestDependencies = {}
 ): Promise<CollectedRivusDigest> {
   const input = parseInput(value);
-  if (input.day && input.occurrence) {
-    throw new Error("day and occurrence cannot be used together.");
-  }
+  assertNotBothDayAndOccurrence(input);
 
   const env = dependencies.env ?? process.env;
   const timezoneOffset = env.FEED_TIMEZONE_OFFSET ?? "+08:00";
   if (input.window && !input.occurrence) {
     throw new Error("window requires occurrence.");
   }
-  const occurrenceDay = input.occurrence ? calendarDayAtOffset(input.occurrence, timezoneOffset) : undefined;
+  const occurrenceDay = occurrenceDayOf(input, timezoneOffset);
   const day =
     input.day ??
     (input.window === "previous-calendar-day" && occurrenceDay ? shiftCalendarDay(occurrenceDay, -1) : occurrenceDay);
-  if (day && !/^\d{4}-\d{2}-\d{2}$/u.test(day)) {
-    throw new Error("day must use YYYY-MM-DD format.");
-  }
+  assertCalendarDay(day);
 
   const base = await runPluginEffect(loadEnvConfig(env));
   const onlyNew = input.onlyNew ?? true;
@@ -140,15 +109,7 @@ export async function generateRivusDigest(
   dependencies: RivusDigestDependencies = {}
 ): Promise<RivusDigestResult> {
   const { day, document } = await collectRivusDigest(value, dependencies);
-  const paperCandidateCount = document.candidates.filter((candidate) => candidate.category === "paper").length;
-  return {
-    candidateCount: document.candidates.length - paperCandidateCount,
-    generatedAt: document.generatedAt,
-    markdown: renderViewMarkdown(digestView(day ? { ...document, displayDate: day } : document)),
-    paperCandidateCount,
-    ...(document.windowLabel ? { windowLabel: document.windowLabel } : {}),
-    ...(document.audit ? { audit: document.audit } : {})
-  };
+  return rivusToolResult(document, renderViewMarkdown(digestView(day ? { ...document, displayDate: day } : document)));
 }
 
 export const subscriptionsToolDescriptor: Pick<

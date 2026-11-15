@@ -9,7 +9,7 @@ import {
   selectedSubscriptionCandidates
 } from "../../../editorial/index.js";
 
-import type { CandidateProject, PresentationDepth, PresentationReasonCode } from "../../../editorial/index.js";
+import type { CandidateDecision, CandidateProject } from "../../../editorial/index.js";
 
 /**
  * External JSON projections for the subscriptions product. The digest document
@@ -26,7 +26,7 @@ export type DigestDocument = {
   audit?: DigestAudit;
 };
 
-export type DigestAudit = {
+type DigestAudit = {
   version: 1 | 2;
   runId: string;
   product: "subscriptions" | "frontier";
@@ -48,17 +48,7 @@ export type DigestAudit = {
     selected: number;
     researchPending: number;
   };
-  candidates: Array<{
-    key: string;
-    label: string;
-    url?: string;
-    score: number;
-    depth: PresentationDepth;
-    presentationReasonCode?: PresentationReasonCode;
-    presentationEvidence?: string;
-    status: "selected" | "research-pending" | "filtered";
-    reason: string;
-  }>;
+  candidates: CandidateDecision[];
   editorialSelection?: {
     selectedCount: number;
     decisions: Array<{ ref: string; selected: boolean; reason: string }>;
@@ -92,7 +82,7 @@ export function applySubscriptionSelection<T extends DigestDocument>(
   };
 }
 
-export { candidateIdentity, researchKeyForCandidate } from "../../../integrations/shared/index.js";
+export { candidateIdentity } from "../../../integrations/shared/index.js";
 
 /** Record a research decision under the historical ledger key. */
 export function markCandidateResearched(

@@ -3,10 +3,10 @@ import { randomUUID } from "node:crypto";
 import { Effect } from "effect";
 
 import { collectIndustrySources, RssFeed, WebPage } from "../../../acquisition/index.js";
-import { applyScoringContext, refreshRouting, researchKeyForCandidate } from "../../../integrations/shared/index.js";
-import { scoreAcquired, selectResearchCandidates, type CandidateProject } from "../../../editorial/index.js";
-import { candidateDecision } from "./candidate-decision.js";
+import { researchKeyForCandidate } from "../../../integrations/shared/index.js";
+import { type CandidateProject } from "../../../editorial/index.js";
 import { isWithinEventWindow, resolveEventWindow } from "../../../kernel/index.js";
+import { auditReasonWhenFiltered, runAuditCounts, runAuditDecisions, scoreAcquiredCandidates } from "./candidates.js";
 import {
   DiagnosticsStore,
   FeedStateStore,
@@ -49,16 +49,14 @@ export function collectIndustryBrief(
         const eventWindow = resolveEventWindow(config);
         const acquired = sourceEvents.filter((entry) => isWithinEventWindow(entry.card, eventWindow));
 
-        const rankedCandidates = scoreAcquired(
-          acquired.map((entry) =>
-            applyScoringContext(refreshRouting(entry), {
-              followees: new Set<string>(),
-              repositories: new Map()
-            })
-          ),
-          { interests: config.interests, now: Date.now() }
+        const { rankedCandidates, allCandidates } = scoreAcquiredCandidates(
+          acquired,
+          {
+            followees: new Set<string>(),
+            repositories: new Map()
+          },
+          config
         );
-        const allCandidates = selectResearchCandidates(rankedCandidates, config.maxPapers);
 
         const state = loadFeedState(config.industryStateFile);
         const candidates = config.onlyNew
@@ -79,25 +77,23 @@ export function collectIndustryBrief(
           generatedAt,
           windowLabel: eventWindow.label,
           sources: sourceCollection.sources,
-          counts: {
+          counts: runAuditCounts({
             fetched: sourceEvents.length,
             inWindow: acquired.length,
             ranked: rankedCandidates.length,
-            selected: candidates.filter((candidate) => candidate.category !== "paper").length,
-            researchPending: candidates.filter((candidate) => candidate.category === "paper").length
-          },
-          candidates: rankedCandidates.map((candidate) =>
-            candidateDecision(candidate, candidates, (value) => {
-              if (!researchSet.has(value)) {
-                return "paper abstract did not pass interest or quota";
-              }
+            candidates
+          }),
+          candidates: runAuditDecisions(
+            rankedCandidates,
+            candidates,
+            auditReasonWhenFiltered(researchSet, (value) => {
               if (config.onlyNew && state.researched[researchKeyForCandidate(value)]) {
                 return "candidate was already researched";
               }
               if (config.onlyNew && !selectedSet.has(value)) {
                 return "all events were already delivered";
               }
-              return "not selected";
+              return undefined;
             })
           )
         };

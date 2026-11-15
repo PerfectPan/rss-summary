@@ -1,7 +1,7 @@
 export const dailyAiCategories = ["概览/要闻", "模型发布", "开发生态", "产品应用", "行业动态", "技术与洞察"] as const;
 
 export type DailyAiCategory = (typeof dailyAiCategories)[number];
-export type DailyAiSourceTier = "official" | "authoritative" | "aggregator" | "unverified";
+type DailyAiSourceTier = "official" | "authoritative" | "aggregator" | "unverified";
 
 export type DailyAiEvidence = {
   id: string;
@@ -26,7 +26,7 @@ export type DailyAiDecision = {
   reason: string;
 };
 
-export type DailyAiEditorialIssueReason =
+type DailyAiEditorialIssueReason =
   | "invalid-draft"
   | "invalid-item"
   | "invalid-category"

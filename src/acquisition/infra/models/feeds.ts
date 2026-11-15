@@ -11,7 +11,7 @@ export const feedRecordSchema = Schema.Struct({
   type: Schema.optional(Schema.String)
 });
 
-export const feedsFileSchema = Schema.Array(Schema.Union([Schema.String, feedRecordSchema]));
+const feedsFileSchema = Schema.Array(Schema.Union([Schema.String, feedRecordSchema]));
 
 /**
  * Hand parser owns the error text. The schema documents the file and is applied

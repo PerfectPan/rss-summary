@@ -15,45 +15,26 @@ export {
   filterUndelivered,
   filterUnresearched,
   markDelivered,
-  markResearched,
-  type FeedState,
-  type ResearchRecord
+  type FeedState
 } from "./domain/ledger/index.js";
-export {
-  commitDailyAiDeliveryReceipt,
-  createDailyAiDeliveryReceipt,
-  type DailyAiDeliveryReceipt
-} from "./domain/receipt/index.js";
-export {
-  isFailedRun,
-  type RunAudit,
-  type RunCandidateDecision,
-  type RunDelivery,
-  type RunEditorialSelectionDecision,
-  type RunPresentationDepth,
-  type RunPresentationReasonCode,
-  type RunProduct,
-  type RunSourceResult,
-  type StoredRunAudit
-} from "./domain/run-audit/index.js";
+export { createDailyAiDeliveryReceipt, type DailyAiDeliveryReceipt } from "./domain/receipt/index.js";
+export { type RunAudit, type RunDelivery, type RunSourceResult } from "./domain/run-audit/index.js";
 export {
   Notifier,
   FeedStateStore,
   RunArchive,
   DiagnosticsStore,
-  type DailyAiDiagnosticSnapshot,
-  type SavedRunArtifact
+  type DailyAiDiagnosticSnapshot
 } from "./application/ports.js";
-export { deliver, type DeliveryOrder } from "./application/use-cases/deliver.js";
-export { recordResearch, type ResearchSuggestion } from "./application/use-cases/record-research.js";
+export { deliver } from "./application/use-cases/deliver.js";
+export { recordResearch } from "./application/use-cases/record-research.js";
 export {
   listRuns,
   listFailedRuns,
   runArtifactForLabel,
-  readRunArtifact,
-  type RunSummary
+  readRunArtifact
 } from "./application/use-cases/inspect-runs.js";
-export { NotifierLive, type NotifierOptions } from "./infra/notifier/notifier.js";
+export { NotifierLive } from "./infra/notifier/notifier.js";
 export { loadFeedState, saveFeedState, FeedStateFileLive } from "./infra/repository/feed-state-file.js";
 export {
   listRunArtifacts,
@@ -62,7 +43,7 @@ export {
   saveRunArtifact,
   RunArchiveFilesLive
 } from "./infra/repository/run-archive-files.js";
-export { saveDailyAiDiagnostics, DiagnosticsFileLive } from "./infra/repository/diagnostics-file.js";
+export { saveDailyAiDiagnostics } from "./infra/repository/diagnostics-file.js";
 
 export type DeliveryOptions = NotifierOptions & {
   /** Environment used to resolve the diagnostics directory. */

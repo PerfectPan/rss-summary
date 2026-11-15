@@ -8,7 +8,6 @@ import {
   validateBudgetOptions,
   type BudgetLimits,
   type BudgetState,
-  type BudgetUsage,
   type CachedPage,
   type CacheRequest,
   type HashText,
@@ -17,16 +16,11 @@ import {
 } from "../../domain/budget/index.js";
 import { NewsSearchError, type SearchInput, type SearchPage, type SearchUsage } from "../../domain/search/index.js";
 
-export type BudgetedSearchPage = SearchPage & { searchUsage: SearchUsage };
+type BudgetedSearchPage = SearchPage & { searchUsage: SearchUsage };
 
 export type BudgetedSearch = {
   (input: SearchInput): Effect.Effect<BudgetedSearchPage, unknown>;
   cachedSearch: (input: SearchInput) => Effect.Effect<BudgetedSearchPage | undefined, NewsSearchError>;
-};
-
-export type BudgetInspection = {
-  usage: BudgetUsage;
-  cached?: SearchPage;
 };
 
 /** File and hash details stay outside this service. The driver closes over them. */

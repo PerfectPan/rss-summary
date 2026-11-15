@@ -25,7 +25,7 @@ export type DailyAiDigestResult = DailyAiDigest & {
   deliveryReceipt: DailyAiDeliveryReceipt;
 };
 
-export type DailyAiWindow = { since: string; until: string };
+type DailyAiWindow = { since: string; until: string };
 
 type DailyAiDigestDependencies = {
   env?: NodeJS.ProcessEnv;

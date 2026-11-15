@@ -177,13 +177,6 @@ export function acquireHomeCard(input: unknown): Acquired {
   return { card, item: itemFromGitHubCard(card) };
 }
 
-export function acquireHomeCards(inputs: readonly unknown[]): Acquired[] {
-  return inputs.flatMap((input) => {
-    const acquired = acquireHomeCard(input);
-    return acquired.card.type === "other" ? [] : [acquired];
-  });
-}
-
 export function normalizeHomeCardSnapshots(cards: HomeFeedCardSnapshot[]): ActivityCardDto[] {
   return cards.map(normalizeHomeCardSnapshot).filter((card) => card.type !== "other");
 }

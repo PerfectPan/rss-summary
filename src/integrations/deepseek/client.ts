@@ -1,5 +1,6 @@
 import type { SearchInput, SearchPage } from "../../acquisition/index.js";
 
+import { errorText, postSearchJson } from "../shared/search-plumbing.js";
 import { DeepSeekSearchError, parseDeepSeekResponse } from "./dto.js";
 
 type DeepSeekSearchClientOptions = {
@@ -47,25 +48,6 @@ export function deepSeekOutgoingQuery(query: string, sinceDay?: string): string 
   return `${keywords} ${operator}`;
 }
 
-function errorText(value: unknown): string {
-  return value instanceof Error ? value.message : String(value);
-}
-
-function parseRetryAfter(value: string | null): number | undefined {
-  if (!value) {
-    return undefined;
-  }
-  const seconds = Number(value);
-  if (Number.isFinite(seconds) && seconds >= 0) {
-    return Math.round(seconds * 1_000);
-  }
-  const date = Date.parse(value);
-  if (!Number.isFinite(date)) {
-    return undefined;
-  }
-  return Math.max(0, date - Date.now());
-}
-
 export class DeepSeekSearchClient {
   private readonly apiKey: string;
   private readonly baseUrl: string;
@@ -87,27 +69,14 @@ export class DeepSeekSearchClient {
     // The `after:` operator only narrows results; callers still re-check
     // publication times against their exact window when consuming the page.
     const outgoingQuery = deepSeekOutgoingQuery(input.query, input.sinceDay);
-    let response: Response;
-    try {
-      response = await this.fetchImpl(this.baseUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.apiKey}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ query: outgoingQuery, count: input.count }),
-        signal: AbortSignal.timeout(this.timeoutMs)
-      });
-    } catch (cause) {
-      throw new DeepSeekSearchError("network_error", errorText(cause));
-    }
-    const retryAfterMs = parseRetryAfter(response.headers.get("Retry-After"));
-    if (!response.ok) {
-      if (response.status === 429) {
-        throw new DeepSeekSearchError("http_429", "HTTP 429", { retryAfterMs });
-      }
-      throw new DeepSeekSearchError(`http_${response.status}`, `HTTP ${response.status}`);
-    }
+    const { response, retryAfterMs } = await postSearchJson({
+      url: this.baseUrl,
+      apiKey: this.apiKey,
+      timeoutMs: this.timeoutMs,
+      body: { query: outgoingQuery, count: input.count },
+      fetchImpl: this.fetchImpl,
+      error: (code, message, options) => new DeepSeekSearchError(code, message, options)
+    });
     let body: unknown;
     try {
       body = await response.json();

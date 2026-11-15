@@ -2,6 +2,7 @@ import { Schema } from "effect";
 import { XMLParser } from "fast-xml-parser";
 
 import { decodeSchema } from "../shared/decode.js";
+import { asRecord } from "../shared/json-record.js";
 
 export type XmlRecord = Record<string, unknown>;
 
@@ -14,29 +15,6 @@ const parser = new XMLParser({
 });
 
 const xmlRootSchema = Schema.Record(Schema.String, Schema.Unknown);
-
-const objectCtorString = Function.prototype.toString.call(Object);
-
-function isPlainObject(value: unknown): value is XmlRecord {
-  if (value === null || typeof value !== "object") {
-    return false;
-  }
-  if (Object.prototype.toString.call(value) !== "[object Object]") {
-    return false;
-  }
-  const proto: object | null = Object.getPrototypeOf(value);
-  if (proto === null) {
-    return true;
-  }
-  const ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
-  return (
-    typeof ctor === "function" && ctor instanceof ctor && Function.prototype.toString.call(ctor) === objectCtorString
-  );
-}
-
-export function asRecord(value: unknown): XmlRecord {
-  return isPlainObject(value) ? value : {};
-}
 
 function itemOf(value: unknown): XmlRecord {
   return asRecord(value);

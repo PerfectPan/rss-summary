@@ -5,12 +5,12 @@ import { itemFromGitHubCard } from "../../shared/activity-card.js";
 import type { DecodeFailure } from "../../shared/decode.js";
 import { cardFromRaw, decodeEventCard } from "./dto.js";
 
-export type GitHubAcquired = {
+type GitHubAcquired = {
   item: Item;
   card: import("../../../acquisition/index.js").ActivityCardDto;
 };
 
-export function decodeGitHubEvent(input: unknown): Result<GitHubAcquired, DecodeFailure> {
+function decodeGitHubEvent(input: unknown): Result<GitHubAcquired, DecodeFailure> {
   const decoded = decodeEventCard(input);
   if (decoded._tag === "Err") {
     return decoded;

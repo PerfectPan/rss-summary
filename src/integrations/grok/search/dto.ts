@@ -1,5 +1,7 @@
 import { Schema } from "effect";
 
+import { isPlainObject } from "../../shared/json-record.js";
+
 /** One native-search post as the CLI contract requires it. */
 export const postSchema = Schema.Struct({
   url: Schema.String,
@@ -29,31 +31,12 @@ export type GrokRequest = typeof grokRequestSchema.Type;
 
 export { responseSchema };
 
-const objectCtorString = Function.prototype.toString.call(Object);
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== "object") {
-    return false;
-  }
-  if (Object.prototype.toString.call(value) !== "[object Object]") {
-    return false;
-  }
-  const proto: object | null = Object.getPrototypeOf(value);
-  if (proto === null) {
-    return true;
-  }
-  const ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
-  return (
-    typeof ctor === "function" && ctor instanceof ctor && Function.prototype.toString.call(ctor) === objectCtorString
-  );
-}
-
 export function isNativeCall(
   event: Record<string, unknown>
 ): event is Record<string, unknown> & { toolCallId: string } {
   return (
     event.type === "tool_call" &&
-    isRecord(event.rawInput) &&
+    isPlainObject(event.rawInput) &&
     event.rawInput.variant === "XSearch" &&
     event.rawInput.backend === true &&
     typeof event.toolCallId === "string"
@@ -69,8 +52,22 @@ export function isNativeReceipt(
     typeof event.toolCallId === "string" &&
     calls.has(event.toolCallId) &&
     event.status === "completed" &&
-    isRecord(event.rawOutput) &&
+    isPlainObject(event.rawOutput) &&
     typeof event.rawOutput.name === "string" &&
     nativeToolNames.has(event.rawOutput.name)
   );
+}
+
+/**
+ * The native-search bookkeeping one stream event contributes: its call id, and the tool name of a completed native
+ * receipt, which the stream readers reset their text buffer on.
+ */
+export function trackNativeSearchEvent(event: Record<string, unknown>, calls: Set<string>): string | undefined {
+  if (isNativeCall(event)) {
+    calls.add(event.toolCallId);
+  }
+  if (isNativeReceipt(event, calls)) {
+    return event.rawOutput.name;
+  }
+  return undefined;
 }

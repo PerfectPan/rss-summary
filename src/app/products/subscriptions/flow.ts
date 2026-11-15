@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 
 import { Effect } from "effect";
 
-import { applyScoringContext, refreshRouting } from "../../../integrations/shared/index.js";
 import {
   GitHubActivity,
   GitHubCatalog,
@@ -12,22 +11,26 @@ import {
   type ActivityCardDto,
   type RepositoryMetadata
 } from "../../../acquisition/index.js";
-import { scoreAcquired, selectResearchCandidates, type CandidateProject } from "../../../editorial/index.js";
+import { type CandidateProject } from "../../../editorial/index.js";
 import type { DigestDocument } from "./output.js";
-import { candidateDecision } from "../shared/candidate-decision.js";
 import { errorMessage, isWithinEventWindow, resolveEventWindow } from "../../../kernel/index.js";
 import {
-  deliver,
   FeedStateStore,
   filterUndelivered,
   loadFeedState,
-  markDelivered,
   type FeedState,
   type RunAudit,
   type RunSourceResult
 } from "../../../delivery/index.js";
 import type { AppConfig } from "../../config/env.js";
 import type { AppServices } from "../../layers.js";
+import { runProductFlow } from "../shared/flow.js";
+import {
+  auditReasonWhenFiltered,
+  runAuditCounts,
+  runAuditDecisions,
+  scoreAcquiredCandidates
+} from "../shared/candidates.js";
 
 export type { DigestDocument };
 
@@ -157,11 +160,11 @@ function collectDigest(
         );
         const events = acquired.map((entry) => entry.card);
 
-        const rankedCandidates = scoreAcquired(
-          acquired.map((entry) => applyScoringContext(refreshRouting(entry), { followees, repositories })),
-          { interests: config.interests, now: Date.now() }
+        const { rankedCandidates, allCandidates } = scoreAcquiredCandidates(
+          acquired,
+          { followees, repositories },
+          config
         );
-        const allCandidates = selectResearchCandidates(rankedCandidates, config.maxPapers);
         const state = loadFeedState(config.stateFile);
         const candidates = config.onlyNew ? filterUndelivered(allCandidates, deliveredEventIds, state) : allCandidates;
 
@@ -190,28 +193,22 @@ function collectDigest(
           generatedAt,
           windowLabel: eventWindow.label,
           sources: [githubSource, ...rssCollection.sources],
-          counts: {
+          counts: runAuditCounts({
             fetched: githubEvents.length + rssEvents.length,
             inWindow: events.length,
             ranked: rankedCandidates.length,
-            selected: candidates.filter((candidate) => candidate.category !== "paper").length,
-            researchPending: candidates.filter((candidate) => candidate.category === "paper").length
-          },
-          candidates: rankedCandidates.map((candidate) =>
-            candidateDecision(
-              candidate,
-              candidates,
-              (value) => {
-                if (!researchSet.has(value)) {
-                  return "paper abstract did not pass interest or quota";
-                }
-                if (config.onlyNew && !selectedSet.has(value)) {
-                  return "all events were already delivered";
-                }
-                return "not selected";
-              },
-              { semanticSummaries: true }
-            )
+            candidates
+          }),
+          candidates: runAuditDecisions(
+            rankedCandidates,
+            candidates,
+            auditReasonWhenFiltered(researchSet, (value) => {
+              if (config.onlyNew && !selectedSet.has(value)) {
+                return "all events were already delivered";
+              }
+              return undefined;
+            }),
+            { semanticSummaries: true }
           )
         };
         document.audit = audit;
@@ -227,31 +224,7 @@ export function runSubscriptionFlow(
   config: AppConfig,
   render: (document: DigestDocument, format: AppConfig["outputFormat"]) => string
 ): Effect.Effect<void, Error, AppServices> {
-  return Effect.gen(function* () {
-    const { audit, document, state } = yield* collectDigest(config);
-    const output = render(document, config.outputFormat);
-
-    const deliveredCandidates =
-      config.outputFormat === "markdown"
-        ? document.candidates.filter((candidate) => candidate.category !== "paper")
-        : document.candidates;
-    yield* deliver({
-      runLogDir: config.runLogDir,
-      audit,
-      output,
-      dryRun: config.dryRun,
-      ...(config.onlyNew && !config.dryRun
-        ? {
-            afterSend: FeedStateStore.use((store) =>
-              store.save(
-                config.stateFile,
-                markDelivered(state, deliveredCandidates.flatMap(deliveredEventIds), document.generatedAt)
-              )
-            )
-          }
-        : {})
-    });
-  });
+  return runProductFlow(config, collectDigest(config), config.stateFile, deliveredEventIds, render);
 }
 
 export function buildDigestDocument(config: AppConfig): Effect.Effect<DigestDocument, Error, AppServices> {

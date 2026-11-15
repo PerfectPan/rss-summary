@@ -1,17 +1,7 @@
-import { type NewsSearchError, type SearchPage } from "../../acquisition/index.js";
+import { type NativeSearchReceipt, type NewsSearchError, type SearchPage } from "../../acquisition/index.js";
 
 /** Native-search receipt copied onto a page and onto a failure. */
-export type GrokSearchAudit = {
-  nativeTools: string[];
-  nativeCallCount?: number;
-  elapsedMs?: number;
-  rejectedResults: number;
-  costUsd?: number;
-  totalTokens?: number;
-  inputTokens?: number;
-  cachedInputTokens?: number;
-  outputTokens?: number;
-};
+export type GrokSearchAudit = NativeSearchReceipt;
 
 export type AuditedSearchPage = SearchPage & { grok?: GrokSearchAudit };
 

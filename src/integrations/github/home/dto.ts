@@ -2,6 +2,7 @@ import { Schema } from "effect";
 import { load } from "cheerio";
 
 import { decodeSchema } from "../../shared/decode.js";
+import { asRecord, asRecordOrNull } from "../../shared/json-record.js";
 
 export type HomeFeedLinkSnapshot = {
   text: string;
@@ -29,33 +30,6 @@ const snapshotSchema = Schema.Struct({
   links: Schema.optional(Schema.Array(linkSchema))
 });
 
-const objectCtorString = Function.prototype.toString.call(Object);
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== "object") {
-    return false;
-  }
-  if (Object.prototype.toString.call(value) !== "[object Object]") {
-    return false;
-  }
-  const proto: object | null = Object.getPrototypeOf(value);
-  if (proto === null) {
-    return true;
-  }
-  const ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
-  return (
-    typeof ctor === "function" && ctor instanceof ctor && Function.prototype.toString.call(ctor) === objectCtorString
-  );
-}
-
-function asRecordOrNull(value: unknown): Record<string, unknown> | null {
-  return isPlainObject(value) ? value : null;
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return isPlainObject(value) ? value : {};
-}
-
 function cleanText(text: string): string {
   return text.replace(/\s+/gu, " ").trim();
 }
@@ -73,7 +47,7 @@ function parseHydroFeedCard(value: string | undefined): Record<string, unknown> 
 }
 
 /** Resolve a scraped href against the Home origin; unparseable hrefs pass through. */
-export function absoluteGithubHref(href: string): string {
+function absoluteGithubHref(href: string): string {
   try {
     return new URL(href, githubHomeUrl).href;
   } catch {

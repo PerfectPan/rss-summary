@@ -12,11 +12,16 @@ function isCalendarDay(value: string): boolean {
 }
 
 const daySchema = Schema.String.check(Schema.makeFilter(isCalendarDay));
-const instantSchema = Schema.String.check(
+
+/** A YYYY-MM-DD day that exists on the calendar; the persisted state's daily ledger and page days speak it. */
+export const calendarDaySchema = daySchema;
+/** A date-time that names its zone, or ends in Z; the window bounds the search APIs take. */
+export const instantSchema = Schema.String.check(
   Schema.makeFilter((value: string) => /(?:Z|[+-]\d{2}:\d{2})$/u.test(value) && Number.isFinite(Date.parse(value)))
 );
 
-export const requestSchema = Schema.Struct({
+/** The request a search provider's budget validates and caches under. */
+export const cacheRequestSchema = Schema.Struct({
   provider: Schema.String,
   query: Schema.String.check(Schema.makeFilter((value: string) => value.trim() !== "" && value.length <= 100)),
   count: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 50 })),
@@ -27,7 +32,7 @@ export const requestSchema = Schema.Struct({
 });
 
 export function parseCacheRequest(input: SearchInput, provider: string): CacheRequest {
-  const request = Schema.decodeUnknownSync(requestSchema)({
+  const request = Schema.decodeUnknownSync(cacheRequestSchema)({
     ...input,
     provider,
     sinceDay: input.sinceDay ?? input.day

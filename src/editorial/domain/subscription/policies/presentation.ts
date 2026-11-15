@@ -8,8 +8,8 @@ import type {
   PresentationReasonCode
 } from "../value-objects/candidate.js";
 
-export const DEFAULT_LINK_SECTION_LIMIT = 20;
-export const DEFAULT_SUMMARY_SECTION_LIMIT = 8;
+const DEFAULT_LINK_SECTION_LIMIT = 20;
+const DEFAULT_SUMMARY_SECTION_LIMIT = 8;
 
 const importantContentRules: Array<{
   reasonCode: Exclude<PresentationReasonCode, "ordinary-update" | "interest-match" | "paper-research">;

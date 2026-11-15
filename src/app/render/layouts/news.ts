@@ -3,8 +3,6 @@ import type { NewsTopic } from "../../products/news/output.js";
 import { displayTime, markdownLinkText } from "../markdown.js";
 import type { ViewDocument, ViewItem } from "../view.js";
 
-export type { NewsBriefEdition };
-
 export type NewsBriefDocument = {
   day: string;
   edition: NewsBriefEdition;

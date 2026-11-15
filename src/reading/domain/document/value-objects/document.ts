@@ -39,12 +39,12 @@ export type ReadRequest = {
   url: string;
 };
 
-export type ReadSuccess = Document & {
+type ReadSuccess = Document & {
   ref: string;
   status: "ok";
 };
 
-export type ReadFailure = {
+type ReadFailure = {
   error: string;
   method?: DocumentMethod;
   ref: string;

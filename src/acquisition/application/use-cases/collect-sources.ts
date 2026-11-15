@@ -6,7 +6,7 @@ import { isWebPageSource, type FeedSubscription, type IndustrySource } from "../
 import { RssFeed, WebPage } from "../ports.js";
 
 /** Same field order as RunSourceResult. `error` is omitted when the fetch succeeds. */
-export type SourceHealth = {
+type SourceHealth = {
   id: string;
   kind: "rss" | "web-page";
   name: string;
