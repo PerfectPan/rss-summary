@@ -1,6 +1,6 @@
 const objectCtorString = Function.prototype.toString.call(Object);
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
+export function isPlainObject(value: unknown): value is Record<string, unknown> {
   // Equivalent plain-object check: `[object Object]`, then a null prototype or a prototype whose constructor is Object.
   if (value === null || typeof value !== "object") {
     return false;
@@ -23,6 +23,11 @@ export function asRecord(value: unknown): Record<string, unknown> {
   return isPlainObject(value) ? value : {};
 }
 
+/** Soft cast: plain object → record, anything else → `null`. */
+export function asRecordOrNull(value: unknown): Record<string, unknown> | null {
+  return isPlainObject(value) ? value : null;
+}
+
 function isObjectLike(value: unknown): value is object {
   return value !== null && typeof value === "object";
 }
@@ -38,6 +43,11 @@ function isStringValue(value: unknown): value is string {
 function isFiniteNumber(value: unknown): value is number {
   // Finite primitive numbers only, so a boxed Number fails.
   return typeof value === "number" && Number.isFinite(value);
+}
+
+/** A finite primitive number, or `undefined`. */
+export function number(value: unknown): number | undefined {
+  return isFiniteNumber(value) ? value : undefined;
 }
 
 function finiteNumberText(value: number): string {

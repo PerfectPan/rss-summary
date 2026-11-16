@@ -1,6 +1,6 @@
-export type ItemId = string;
+type ItemId = string;
 
-export type SubjectKey = string;
+type SubjectKey = string;
 
 export type ItemKind = "publication" | "paper" | "release" | "change" | "project" | "post";
 
@@ -28,7 +28,7 @@ export type CredibilityTier = "official" | "authoritative" | "aggregator" | "unr
 
 export type CredibilityMethod = "configured-domain" | "article-read";
 
-export type TimePrecision = "instant" | "date";
+type TimePrecision = "instant" | "date";
 
 export type Item = {
   id: ItemId;

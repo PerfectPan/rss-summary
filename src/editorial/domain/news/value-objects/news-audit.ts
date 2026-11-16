@@ -1,5 +1,6 @@
 import type {
   MergedSearchSource,
+  NativeSearchReceipt,
   ProviderFallback,
   SearchFallback,
   SearchUsage
@@ -7,17 +8,7 @@ import type {
 import type { NewsHitRejectionReason, NewsQueryIntent, NewsTopic, NewsTopicQuery } from "./news.js";
 
 /** Native-search receipt. The public audit key is applied by the module entry. */
-export type NewsNativeReceipt = {
-  nativeTools: string[];
-  nativeCallCount?: number;
-  elapsedMs?: number;
-  rejectedResults: number;
-  costUsd?: number;
-  totalTokens?: number;
-  inputTokens?: number;
-  cachedInputTokens?: number;
-  outputTokens?: number;
-};
+export type NewsNativeReceipt = NativeSearchReceipt;
 
 export type NewsQueryPage = {
   provider?: string;

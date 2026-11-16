@@ -7,15 +7,6 @@ type Stderr = {
   write(chunk: string): unknown;
 };
 
-/**
- * A plugin-scoped runtime over AppLive. One runtime per execution keeps
- * environment-derived layer options fresh; create one per plugin instance when
- * several executions share a session.
- */
-export function createPluginRuntime(): ManagedRuntime.ManagedRuntime<AppServices, Error> {
-  return ManagedRuntime.make(AppLiveFromEnv);
-}
-
 /** Run one plugin effect with a runtime assembled from the current environment. */
 export async function runPluginEffect<A, E, R = AppServices>(
   effect: Effect.Effect<A, E, R>,

@@ -1,6 +1,7 @@
 import type { CredibilityTier, Item, SearchSourcePolicy, SearchResult } from "../../acquisition/index.js";
 import type { PublicationDay } from "../../kernel/index.js";
 import { shiftCalendarDay } from "../../kernel/index.js";
+import { itemFromPublication } from "../shared/search-item.js";
 
 /**
  * A provider authority score (0–4, `-1` unknown): 3 and above is highly
@@ -38,34 +39,13 @@ export function deepSeekPublicationDay(publishTime: string): PublicationDay | un
 
 export function itemFromDeepSeek(result: SearchResult): Item {
   const published = result.publishTime;
-  return {
-    id: result.id,
-    kind: "publication",
-    subject: {
-      key: result.url,
-      name: result.siteName ?? result.url,
-      url: result.url
-    },
-    content: {
-      title: result.title,
-      ...(result.summary || result.snippet ? { excerpt: result.summary ?? result.snippet } : {}),
-      url: result.url
-    },
+  return itemFromPublication(result, {
     publishedAt: {
       value: published ?? "",
       precision: published ? (result.publishDay ? "date" : "instant") : "date"
     },
     provenance: { origin: result.url },
     credibility: credibilityForAuthority(result.authority),
-    signals: [],
-    rank: {
-      position: result.rankPosition,
-      ...(result.rankScore !== undefined ? { score: result.rankScore } : {})
-    },
-    display: {
-      ...(result.siteName ? { label: result.siteName } : {}),
-      reference: result.url,
-      facts: []
-    }
-  };
+    rankScore: result.rankScore
+  });
 }

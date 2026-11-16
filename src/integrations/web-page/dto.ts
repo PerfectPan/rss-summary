@@ -19,7 +19,7 @@ type PendingEntry = {
   summary?: string;
 };
 
-export const entrySchema = Schema.Struct({
+const entrySchema = Schema.Struct({
   url: Schema.String,
   title: Schema.String,
   publishedAt: Schema.String,

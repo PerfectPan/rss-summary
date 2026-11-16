@@ -29,14 +29,6 @@ function isBooleanValue(value: unknown): value is boolean {
   );
 }
 
-export function boundedInteger(value: string | undefined, fallback: number, min: number, max: number): number {
-  const parsed = value === undefined ? fallback : Number(value);
-  if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
-    throw new Error(`Numeric configuration must be an integer between ${min} and ${max}.`);
-  }
-  return parsed;
-}
-
 export function requireRecord(value: unknown, label: string): Record<string, unknown> {
   if (!isRecord(value)) {
     throw new Error(`${label} must be an object.`);
@@ -113,7 +105,7 @@ export function requirePositiveInteger(value: unknown, fallback: number, label: 
   return Number(value);
 }
 
-export function requireArray(value: unknown, label: string): unknown[] {
+function requireArray(value: unknown, label: string): unknown[] {
   if (!Array.isArray(value)) {
     throw new Error(`${label} must be an array.`);
   }

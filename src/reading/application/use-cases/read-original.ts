@@ -8,10 +8,10 @@ import {
 } from "../../domain/document/index.js";
 import { BrowserReader, GlmReader, HttpReader, VideoReader } from "../ports.js";
 
-export type ReadMode = "auto" | "browser" | "http";
+type ReadMode = "auto" | "browser" | "http";
 
 /** Reader name used only after the browser and HTTP readers both fail. */
-export type ReadMethod = DocumentMethod | "glm";
+type ReadMethod = DocumentMethod | "glm";
 
 export type ReadOriginalRequest = {
   glmFallback: boolean;

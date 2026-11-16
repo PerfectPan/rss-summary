@@ -1,6 +1,7 @@
 import { NewsSearchError, type SearchPage, type SearchResult } from "../../acquisition/index.js";
 import type { Item } from "../../acquisition/index.js";
 
+import { asRecord, number, text } from "../shared/json-record.js";
 import { itemFromDoubao } from "./mapper.js";
 
 export class DoubaoSearchError extends NewsSearchError {
@@ -15,52 +16,7 @@ export type DoubaoAcquired = {
   items: Item[];
 };
 
-const objectCtorString = Function.prototype.toString.call(Object);
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== "object") {
-    return false;
-  }
-  if (Object.prototype.toString.call(value) !== "[object Object]") {
-    return false;
-  }
-  const proto: object | null = Object.getPrototypeOf(value);
-  if (proto === null) {
-    return true;
-  }
-  const ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
-  return (
-    typeof ctor === "function" && ctor instanceof ctor && Function.prototype.toString.call(ctor) === objectCtorString
-  );
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return isPlainObject(value) ? value : {};
-}
-
-function isObjectLike(value: unknown): value is object {
-  return value !== null && typeof value === "object";
-}
-
-function text(value: unknown): string | undefined {
-  if (
-    typeof value === "string" ||
-    (isObjectLike(value) && !Array.isArray(value) && Object.prototype.toString.call(value) === "[object String]")
-  ) {
-    const normalized = value.toString().trim();
-    return normalized === "" ? undefined : normalized;
-  }
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return Object.is(value, -0) ? "-0" : String(value);
-  }
-  return undefined;
-}
-
-function number(value: unknown): number | undefined {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-export function parseDoubaoResult(
+function parseDoubaoResult(
   value: unknown,
   fallbackRankPosition: number
 ): { result: SearchResult; item: Item } | undefined {

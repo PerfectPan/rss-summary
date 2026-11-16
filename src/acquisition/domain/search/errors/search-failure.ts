@@ -5,7 +5,7 @@
  * promises expose `code`. Provider-specific fields travel in `options` and are
  * copied onto the instance so this concept file does not name a source.
  */
-export type SearchFailure = {
+type SearchFailure = {
   readonly _tag: "SearchFailure";
   readonly code: string;
   readonly message: string;

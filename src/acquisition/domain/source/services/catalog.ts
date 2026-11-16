@@ -88,72 +88,71 @@ export function formatFeedSubscriptions(feeds: readonly FeedSubscription[]): str
   return `${JSON.stringify(feeds, null, 2)}\n`;
 }
 
-export function parseFeedSubscriptions(value: string): FeedSubscription[] {
+/** The sources-file grammar both catalogs speak: a JSON array of URL strings or typed objects. */
+function parseSourceList<T>(
+  value: string,
+  messages: { array: string; item: string },
+  parseRecord: (record: Record<string, unknown>) => T
+): T[] {
   const parsed: unknown = JSON.parse(value);
   if (!Array.isArray(parsed)) {
-    throw new Error("RSS feed configuration must be a JSON array.");
+    throw new Error(messages.array);
   }
 
-  return parsed.map((item) => {
+  return parsed.map((item): T => {
+    // The URL-string shorthand builds the shape both domains give their entries.
     if (typeof item === "string") {
-      return {
-        name: hostnameOf(item),
-        url: item,
-        tags: []
-      };
+      return { name: hostnameOf(item), url: item, tags: [] } as T;
     }
-
     if (!item || typeof item !== "object") {
-      throw new Error("Each RSS feed must be a URL string or an object.");
+      throw new Error(messages.item);
     }
-
-    const record = item as Record<string, unknown>;
-    if (record.type !== undefined && record.type !== "rss") {
-      throw new Error("Personal feed configuration only supports RSS or Atom sources.");
-    }
-    return parseFeedSubscriptionRecord(record);
+    return parseRecord(item as Record<string, unknown>);
   });
 }
 
-export function parseIndustrySources(value: string): IndustrySource[] {
-  const parsed: unknown = JSON.parse(value);
-  if (!Array.isArray(parsed)) {
-    throw new Error("Industry source configuration must be a JSON array.");
-  }
-
-  return parsed.map((item) => {
-    if (typeof item === "string") {
-      return {
-        name: hostnameOf(item),
-        url: item,
-        tags: []
-      };
-    }
-    if (!item || typeof item !== "object") {
-      throw new Error("Each industry source must be a URL string or an object.");
-    }
-
-    const record = item as Record<string, unknown>;
-    if (record.type === undefined || record.type === "rss") {
+export function parseFeedSubscriptions(value: string): FeedSubscription[] {
+  return parseSourceList(
+    value,
+    { array: "RSS feed configuration must be a JSON array.", item: "Each RSS feed must be a URL string or an object." },
+    (record) => {
+      if (record.type !== undefined && record.type !== "rss") {
+        throw new Error("Personal feed configuration only supports RSS or Atom sources.");
+      }
       return parseFeedSubscriptionRecord(record);
     }
-    if (record.type !== "page") {
-      throw new Error("Industry source type must be either 'rss' or 'page'.");
-    }
+  );
+}
 
-    const url = requireString(record.url, "Web page source url");
-    ensureHttpUrl(url, "Web page source url");
-    const pathPrefixes = parseStringArray(record.pathPrefixes, "Web page source pathPrefixes");
-    if (pathPrefixes.length === 0 || pathPrefixes.some((prefix) => !prefix.startsWith("/"))) {
-      throw new Error("Web page source pathPrefixes must contain absolute path prefixes.");
-    }
+export function parseIndustrySources(value: string): IndustrySource[] {
+  return parseSourceList(
+    value,
+    {
+      array: "Industry source configuration must be a JSON array.",
+      item: "Each industry source must be a URL string or an object."
+    },
+    (record) => {
+      if (record.type === undefined || record.type === "rss") {
+        return parseFeedSubscriptionRecord(record);
+      }
+      if (record.type !== "page") {
+        throw new Error("Industry source type must be either 'rss' or 'page'.");
+      }
 
-    return {
-      type: "page",
-      name: optionalName(record.name, url),
-      url,
-      pathPrefixes,
-      tags: parseStringArray(record.tags, "Web page source tags", false)
-    };
-  });
+      const url = requireString(record.url, "Web page source url");
+      ensureHttpUrl(url, "Web page source url");
+      const pathPrefixes = parseStringArray(record.pathPrefixes, "Web page source pathPrefixes");
+      if (pathPrefixes.length === 0 || pathPrefixes.some((prefix) => !prefix.startsWith("/"))) {
+        throw new Error("Web page source pathPrefixes must contain absolute path prefixes.");
+      }
+
+      return {
+        type: "page",
+        name: optionalName(record.name, url),
+        url,
+        pathPrefixes,
+        tags: parseStringArray(record.tags, "Web page source tags", false)
+      };
+    }
+  );
 }

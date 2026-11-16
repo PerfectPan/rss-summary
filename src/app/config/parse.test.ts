@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vite-plus/test";
 
+import { boundedInteger } from "../../kernel/index.js";
 import {
-  boundedInteger,
   optionalBoolean,
   optionalString,
   requireBoundedInteger,

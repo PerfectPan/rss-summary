@@ -5,7 +5,7 @@ import { GitHubActivity } from "../../acquisition/index.js";
 import { acquireActivityCard } from "../shared/scoring-trace.js";
 import { acquireGitHubEvent } from "./event/mapper.js";
 import { readHomeEvents, type GithubHomeClientOptions } from "./home-browser.js";
-import { readReceivedEvents, type GitHubRestOptions } from "./client.js";
+import { readReceivedEvents } from "./client.js";
 
 /** The GitHubActivity port: Home feed first, received-events as the fallback source. */
 export const GitHubActivityLive = (options: {
@@ -30,4 +30,4 @@ export const GitHubActivityLive = (options: {
       )
   });
 
-export type { GitHubRestOptions, GithubHomeClientOptions };
+export type { GithubHomeClientOptions };

@@ -54,10 +54,6 @@ export function startOfCalendarDay(day: string, timezoneOffset: string): number 
   return instant;
 }
 
-export function endOfCalendarDay(day: string, timezoneOffset: string): number {
-  return startOfCalendarDay(day, timezoneOffset) + 86_400_000;
-}
-
 function resolveCalendarDayWindow(day: string, timezoneOffset: string): EventWindow {
   if (!dayPattern.test(day)) {
     throw new Error(`FEED_DAY/--day must use YYYY-MM-DD, received: ${day}`);

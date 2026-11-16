@@ -6,7 +6,7 @@ import { join } from "node:path";
  * only the Rivus-owned diagnostics store (delivery keeps the same formula:
  * `<root>/rss-summary/daily-ai` when the override is set).
  */
-export const defaultStateDir = ".state";
+const defaultStateDir = ".state";
 
 export const defaultStateFile = `${defaultStateDir}/feed-state.json`;
 export const defaultIndustryStateFile = `${defaultStateDir}/industry-state.json`;

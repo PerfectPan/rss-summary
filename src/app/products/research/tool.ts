@@ -28,7 +28,7 @@ export type ArticleResearchToolDependencies = {
   videoClient?: ResearchClient;
 };
 
-export type ArticleResearchMode = "auto" | "browser" | "http";
+type ArticleResearchMode = "auto" | "browser" | "http";
 
 function parseInput(value: unknown): { mode: ArticleResearchMode; ref: string; url: string } {
   if (!value || typeof value !== "object" || Array.isArray(value)) {

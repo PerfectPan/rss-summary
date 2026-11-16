@@ -20,7 +20,7 @@ import { dailyAiToolDescriptor } from "./daily-ai/tool.js";
 import { runResearchCommand } from "./research/cli.js";
 import { researchToolDescriptor } from "./research/tool.js";
 
-export type ProductCommand = {
+type ProductCommand = {
   name: string;
   run: (argv: string[], deps: { stdout?: Clow; stderr?: Clow }) => Promise<number>;
 };

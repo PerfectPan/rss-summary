@@ -17,8 +17,12 @@ import {
   type NewsSourceStatus,
   type NewsTopic
 } from "./output.js";
-import { calendarDayAtOffset, parseOffsetMilliseconds, startOfCalendarDay } from "../../../kernel/index.js";
-import { boundedInteger } from "../../config/parse.js";
+import {
+  boundedInteger,
+  calendarDayAtOffset,
+  parseOffsetMilliseconds,
+  startOfCalendarDay
+} from "../../../kernel/index.js";
 import { loadNewsTopics } from "./topics.js";
 import { createGlmResearch, type GlmResearch } from "../../../integrations/glm/index.js";
 import {
@@ -183,6 +187,23 @@ function parseInput(value: unknown): RivusNewsBriefInput {
   return { edition: input.edition, occurrence: input.occurrence, since, reportedUrls };
 }
 
+/** The budget options a search provider reads from the environment, against its defaults. */
+function searchBudgetOptions(
+  env: NodeJS.ProcessEnv,
+  defaults: (typeof searchBudgetDefaults)["grok" | "doubao"],
+  now?: () => Date
+) {
+  return {
+    stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || searchBudgetDefaults.stateFile,
+    dailyLimit: boundedInteger(env.NEWS_SEARCH_DAILY_LIMIT, defaults.dailyLimit, 0, 100_000),
+    monthlyLimit: boundedInteger(env.NEWS_SEARCH_MONTHLY_LIMIT, defaults.monthlyLimit, 0, 1_000_000),
+    timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00",
+    cacheTtlMs:
+      boundedInteger(env.NEWS_SEARCH_CACHE_TTL_MINUTES, searchBudgetDefaults.cacheTtlMinutes, 0, 43_200) * 60_000,
+    now
+  };
+}
+
 function createSearch(
   env: NodeJS.ProcessEnv,
   mode: string,
@@ -203,13 +224,7 @@ function createSearch(
       search: (input) => client.search(input),
       provider: `grok://cli/v1/${model ?? "default"}`,
       normalize: normalizeProvider,
-      stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || searchBudgetDefaults.stateFile,
-      dailyLimit: boundedInteger(env.NEWS_SEARCH_DAILY_LIMIT, searchBudgetDefaults.grok.dailyLimit, 0, 100_000),
-      monthlyLimit: boundedInteger(env.NEWS_SEARCH_MONTHLY_LIMIT, searchBudgetDefaults.grok.monthlyLimit, 0, 1_000_000),
-      timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00",
-      cacheTtlMs:
-        boundedInteger(env.NEWS_SEARCH_CACHE_TTL_MINUTES, searchBudgetDefaults.cacheTtlMinutes, 0, 43_200) * 60_000,
-      now
+      ...searchBudgetOptions(env, searchBudgetDefaults.grok, now)
     });
   }
   const apiKey = env.DOUBAO_SEARCH_API_KEY?.trim();
@@ -223,14 +238,8 @@ function createSearch(
   });
   return createBudgetedNewsSearch({
     search: (input) => client.search(input),
-    stateFile: env.NEWS_SEARCH_STATE_FILE?.trim() || searchBudgetDefaults.stateFile,
     provider: env.DOUBAO_SEARCH_BASE_URL?.trim() || "https://open.feedcoopapi.com/search_api/web_search",
-    dailyLimit: boundedInteger(env.NEWS_SEARCH_DAILY_LIMIT, searchBudgetDefaults.doubao.dailyLimit, 0, 100_000),
-    monthlyLimit: boundedInteger(env.NEWS_SEARCH_MONTHLY_LIMIT, searchBudgetDefaults.doubao.monthlyLimit, 0, 1_000_000),
-    timezoneOffset: env.FEED_TIMEZONE_OFFSET ?? "+08:00",
-    cacheTtlMs:
-      boundedInteger(env.NEWS_SEARCH_CACHE_TTL_MINUTES, searchBudgetDefaults.cacheTtlMinutes, 0, 43_200) * 60_000,
-    now
+    ...searchBudgetOptions(env, searchBudgetDefaults.doubao, now)
   });
 }
 

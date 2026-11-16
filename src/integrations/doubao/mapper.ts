@@ -1,5 +1,6 @@
 import type { CredibilityTier, Item } from "../../acquisition/index.js";
 import type { SearchResult } from "../../acquisition/index.js";
+import { itemFromPublication } from "../shared/search-item.js";
 
 /**
  * Authority levels follow the news score table: 1 is an official source,
@@ -17,19 +18,7 @@ export function credibilityForAuthLevel(level: number | undefined): { tier: Cred
 
 export function itemFromDoubao(result: SearchResult): Item {
   const published = result.publishTime;
-  return {
-    id: result.id,
-    kind: "publication",
-    subject: {
-      key: result.url,
-      name: result.siteName ?? result.url,
-      url: result.url
-    },
-    content: {
-      title: result.title,
-      ...(result.summary || result.snippet ? { excerpt: result.summary ?? result.snippet } : {}),
-      url: result.url
-    },
+  return itemFromPublication(result, {
     publishedAt: {
       value: published ?? "",
       precision: published && published.includes("T") ? "instant" : "date"
@@ -39,15 +28,6 @@ export function itemFromDoubao(result: SearchResult): Item {
       ...(result.authInfoDescription ? { note: result.authInfoDescription } : {})
     },
     credibility: credibilityForAuthLevel(result.authInfoLevel),
-    signals: [],
-    rank: {
-      position: result.rankPosition,
-      ...(result.rankScore !== undefined ? { score: result.rankScore } : {})
-    },
-    display: {
-      ...(result.siteName ? { label: result.siteName } : {}),
-      reference: result.url,
-      facts: []
-    }
-  };
+    rankScore: result.rankScore
+  });
 }

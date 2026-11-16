@@ -1,5 +1,5 @@
 import type { CredibilityMethod, CredibilityTier } from "../../../../acquisition/index.js";
-import type { PublicationDay } from "../../../../kernel/index.js";
+import type { SearchHitFields } from "../../../../acquisition/domain/search/index.js";
 
 export type NewsSourcePolicy = "authoritative" | "official" | "news";
 
@@ -39,18 +39,7 @@ export type NewsCredibility = {
   rank: number;
 };
 
-export type NewsSearchHit = {
-  id: string;
-  title: string;
-  siteName?: string;
-  url: string;
-  snippet?: string;
-  summary?: string;
-  publishTime?: string;
-  /** Day-granular publication in a known timezone; `publishTime` then holds the day. */
-  publishDay?: PublicationDay;
-  rankScore?: number;
-  authInfoDescription?: string;
+export type NewsSearchHit = SearchHitFields & {
   credibility: { tier: CredibilityTier; method?: CredibilityMethod };
   authorityRank: number;
   topicId: string;
@@ -94,7 +83,7 @@ export type SelectedNewsStory = NewsStory & {
   selectedTopicId: string;
 };
 
-export type NewsStorySelectionReason = "duplicate-title" | "topic-quota" | "brief-cap" | "no-enabled-topic";
+type NewsStorySelectionReason = "duplicate-title" | "topic-quota" | "brief-cap" | "no-enabled-topic";
 
 export type NewsStoryDecision = {
   story: NewsStory;

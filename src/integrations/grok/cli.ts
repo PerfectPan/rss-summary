@@ -9,7 +9,7 @@ import { NewsSearchError, type SearchInput } from "../../acquisition/index.js";
 import { startOfCalendarDay } from "../../kernel/time.js";
 
 import { pageAudit, type AuditedSearchPage } from "./audit.js";
-import { grokRequestSchema, isNativeCall, isNativeReceipt, type GrokRequest } from "./search/dto.js";
+import { grokRequestSchema, trackNativeSearchEvent, type GrokRequest } from "./search/dto.js";
 import { parseGrokStream } from "./search/mapper.js";
 
 const maxNativeCalls = 2;
@@ -134,11 +134,9 @@ export class GrokXClient {
             if (!isPlainRecord(event)) {
               return;
             }
-            if (isNativeCall(event)) {
-              calls.add(event.toolCallId);
-            }
-            if (isNativeReceipt(event, calls)) {
-              nativeTools.add(event.rawOutput.name);
+            const receipt = trackNativeSearchEvent(event, calls);
+            if (receipt !== undefined) {
+              nativeTools.add(receipt);
             }
             if (calls.size > maxNativeCalls && !callLimitExceeded) {
               callLimitExceeded = true;

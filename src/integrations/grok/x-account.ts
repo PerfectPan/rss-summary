@@ -1,5 +1,6 @@
 import type { Effect } from "effect";
 
+import { boundedInteger } from "../../kernel/index.js";
 import {
   collectXAccountPosts as collectAccountPosts,
   createBudgetedNewsSearch,
@@ -17,14 +18,6 @@ type Dependencies = {
 };
 
 export type { XAccountPosts };
-
-function boundedInteger(value: string | undefined, fallback: number, min: number, max: number): number {
-  const parsed = value === undefined ? fallback : Number(value);
-  if (!Number.isInteger(parsed) || parsed < min || parsed > max) {
-    throw new Error(`Numeric configuration must be an integer between ${min} and ${max}.`);
-  }
-  return parsed;
-}
 
 /** Preserves the historical default of the process environment for callers that omit `env`. */
 export function collectXAccountPosts(

@@ -12,7 +12,7 @@ export type BrowserLaunchOptions = {
   headless: boolean;
 };
 
-export async function launchChromium(
+async function launchChromium(
   playwright: typeof import("playwright"),
   options: BrowserLaunchOptions
 ): Promise<Awaited<ReturnType<(typeof import("playwright"))["chromium"]["launch"]>>> {

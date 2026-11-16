@@ -2,7 +2,7 @@ import { Clock, Duration, Effect, Random, Schedule } from "effect";
 
 import { isSearchFailure, type NewsSearchError, type SearchInput, type SearchPage } from "../../domain/search/index.js";
 
-export const searchRetryLimit = 3;
+const searchRetryLimit = 3;
 const retryBaseMs = 250;
 
 export type RetryDependencies = {
@@ -10,7 +10,7 @@ export type RetryDependencies = {
   sleep?: (milliseconds: number) => Promise<void>;
 };
 
-export function isTransientSearchError(error: unknown): error is NewsSearchError {
+function isTransientSearchError(error: unknown): error is NewsSearchError {
   return isSearchFailure(error) && (error.code === "rate_limit_exceeded" || error.code === "http_429");
 }
 
@@ -28,7 +28,7 @@ export function retryDelayMs(error: { retryAfterMs?: number }, attemptNumber: nu
  * sleep. That number is the historical attempt (`1` on the first failure).
  * `attemptBase` shifts it when a caller needs a different origin.
  */
-export function retrySchedule(attemptBase = 0) {
+function retrySchedule(attemptBase = 0) {
   return Schedule.recurs(searchRetryLimit - 1).pipe(
     Schedule.addDelay((metadata) =>
       Effect.gen(function* () {
@@ -52,7 +52,7 @@ export function retryEffect<A>(run: () => Promise<A>, attemptBase = 0) {
   );
 }
 
-export function provideRetryClock<A, E, R>(
+function provideRetryClock<A, E, R>(
   effect: Effect.Effect<A, E, R>,
   dependencies: RetryDependencies = {}
 ): Effect.Effect<A, E, R> {

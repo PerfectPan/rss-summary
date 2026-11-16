@@ -7,7 +7,6 @@ export {
 } from "./value-objects/subscription.js";
 export {
   addFeedSubscription,
-  formatFeedSubscriptions,
   parseFeedSubscriptions,
   parseIndustrySources,
   removeFeedSubscription

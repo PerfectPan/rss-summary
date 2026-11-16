@@ -13,9 +13,9 @@ import { normalizeHomeCardSnapshots } from "./home/mapper.js";
 const githubHomeUrl = "https://github.com/";
 const conduitFeedPath = "/conduit/for_you_feed?requested_from_filter_event=true";
 
-export type HomeFeedSnapshotReader = () => Effect.Effect<HomeFeedCardSnapshot[], Error>;
+type HomeFeedSnapshotReader = () => Effect.Effect<HomeFeedCardSnapshot[], Error>;
 
-export type GithubHomeFetchMode = "conduit" | "browser";
+type GithubHomeFetchMode = "conduit" | "browser";
 
 export type GithubHomeClientOptions = {
   storageState: string;

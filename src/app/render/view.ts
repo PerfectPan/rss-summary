@@ -21,7 +21,7 @@ export type ViewLink = {
  * render the headline as a bold link, `numbered` and `bullet` render it as a
  * plain list entry whose links are inline badges.
  */
-export type ViewItemShape = "featured" | "card" | "numbered" | "bullet";
+type ViewItemShape = "featured" | "card" | "numbered" | "bullet";
 
 export type ViewItem = {
   shape: ViewItemShape;
@@ -55,13 +55,13 @@ export type ViewSection = {
  * 采集说明) follow the legacy parser's routing into meta or the last item's
  * note depending on whether any item precedes them.
  */
-export type ViewTrailing = {
+type ViewTrailing = {
   kind: "plain" | "status";
   text: string;
 };
 
 /** Blank-line and terminator conventions inherited from the source renderers. */
-export type ViewVariant = "brief" | "news" | "daily-ai";
+type ViewVariant = "brief" | "news" | "daily-ai";
 
 export type ViewDocument = {
   /** Document title as written after the leading `#`. */

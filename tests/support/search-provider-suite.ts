@@ -99,6 +99,16 @@ function memoryDriver(dailyLimit: number, cacheable: boolean): BudgetDriver {
   };
 }
 
+/** The deterministic retry policy the suite asserts: fixed random, delays recorded for the backoff expectations. */
+function retryOptions(delays: number[]) {
+  return {
+    random: () => 0,
+    sleep: async (milliseconds: number) => {
+      delays.push(milliseconds);
+    }
+  };
+}
+
 export function describeSearchProvider(options: {
   name: string;
   emitsRateLimit: boolean;
@@ -120,12 +130,7 @@ export function describeSearchProvider(options: {
       const delays: number[] = [];
       await expect(
         Effect.runPromise(
-          searchWithRetry(input, (value) => Effect.runPromise(handle.search(value)), {
-            random: () => 0,
-            sleep: async (milliseconds) => {
-              delays.push(milliseconds);
-            }
-          })
+          searchWithRetry(input, (value) => Effect.runPromise(handle.search(value)), retryOptions(delays))
         )
       ).rejects.toBeTruthy();
       expect(handle.invocations()).toBe(1);
@@ -135,14 +140,7 @@ export function describeSearchProvider(options: {
     it("retries rate limits on the historical 125ms then 250ms backoff", async () => {
       const delays: number[] = [];
       const search = await rateLimitedSearch(options);
-      const page = await Effect.runPromise(
-        searchWithRetry(input, search, {
-          random: () => 0,
-          sleep: async (milliseconds) => {
-            delays.push(milliseconds);
-          }
-        })
-      );
+      const page = await Effect.runPromise(searchWithRetry(input, search, retryOptions(delays)));
       expect(delays).toEqual([125, 250]);
       expect(Array.isArray(page.results)).toBe(true);
     });
@@ -172,12 +170,7 @@ export function describeSearchProvider(options: {
       const search = await rateLimitedSearch(options);
       const budgeted = withBudget(search, memoryDriver(10, options.cacheable));
       const page = await Effect.runPromise(
-        searchWithRetry(input, (value) => Effect.runPromise(budgeted(value)), {
-          random: () => 0,
-          sleep: async (milliseconds) => {
-            delays.push(milliseconds);
-          }
-        })
+        searchWithRetry(input, (value) => Effect.runPromise(budgeted(value)), retryOptions(delays))
       );
       expect(delays).toEqual([125, 250]);
       expect(page).toMatchObject({

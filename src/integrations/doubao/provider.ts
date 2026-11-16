@@ -1,7 +1,8 @@
-import { Effect, Layer } from "effect";
+import type { Layer } from "effect";
 
-import { SearchProvider } from "../../acquisition/index.js";
+import type { SearchProvider } from "../../acquisition/index.js";
 
+import { searchProviderLayer } from "../shared/search-plumbing.js";
 import { DoubaoSearchClient } from "./client.js";
 
 export type DoubaoSearchClientOptions = {
@@ -11,17 +12,5 @@ export type DoubaoSearchClientOptions = {
   timeoutMs?: number;
 };
 
-function errorText(value: unknown): string {
-  return value instanceof Error ? value.message : String(value);
-}
-
-export const DoubaoSearchLive = (options: DoubaoSearchClientOptions): Layer.Layer<SearchProvider> => {
-  const client = new DoubaoSearchClient(options);
-  return Layer.succeed(SearchProvider, {
-    search: (input) =>
-      Effect.tryPromise({
-        try: () => client.search(input),
-        catch: (cause) => (cause instanceof Error ? cause : new Error(errorText(cause)))
-      })
-  });
-};
+export const DoubaoSearchLive = (options: DoubaoSearchClientOptions): Layer.Layer<SearchProvider> =>
+  searchProviderLayer(new DoubaoSearchClient(options));

@@ -1,4 +1,4 @@
-import type { SearchSettlement } from "../../../acquisition/index.js";
+import { isSearchFailure, type SearchSettlement } from "../../../acquisition/index.js";
 import {
   buildNewsAudit as buildNewsAuditDraft,
   summarizeNewsSources as summarizeNewsSourcesDraft,
@@ -41,7 +41,7 @@ export type NewsTopic = Omit<DomainNewsTopic, "queries"> & {
   queries: NewsTopicQuery[];
 };
 
-export type NewsQueryAudit = Omit<NewsQueryAuditDraft, "receipt"> & {
+type NewsQueryAudit = Omit<NewsQueryAuditDraft, "receipt"> & {
   grok?: NewsNativeReceipt;
 };
 
@@ -90,14 +90,6 @@ function publishQueryAudit(query: NewsQueryAuditDraft): NewsQueryAudit {
   };
 }
 
-function isTaggedFailure(value: unknown): value is { code: string; grok?: NewsNativeReceipt } {
-  if (typeof value !== "object" || value === null) {
-    return false;
-  }
-  const failure = value as { _tag?: unknown; code?: unknown };
-  return failure._tag === "SearchFailure" && typeof failure.code === "string";
-}
-
 function errorText(value: unknown): string {
   return Object.prototype.toString.call(value) === "[object Error]"
     ? (value as { message: string }).message
@@ -123,11 +115,12 @@ function normalizeSettlement(settlement: SearchSettlement): NewsQuerySettlement 
     return { _tag: "Fulfilled", value };
   }
   const reason = settlement.reason;
-  const tagged = isTaggedFailure(reason);
+  const tagged = isSearchFailure(reason);
+  const grokReceipt = tagged ? (reason as { grok?: NewsNativeReceipt }).grok : undefined;
   const failure: NewsQueryFailure = {
     ...(tagged ? { code: reason.code } : {}),
     message: errorText(reason),
-    ...(tagged && reason.grok ? { receipt: reason.grok } : {})
+    ...(grokReceipt ? { receipt: grokReceipt } : {})
   };
   return { _tag: "Rejected", reason: failure };
 }

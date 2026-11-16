@@ -2,12 +2,9 @@ export type {
   CredibilityMethod,
   CredibilityTier,
   Item,
-  ItemId,
   ItemKind,
   ItemRouting,
-  SignalType,
-  SubjectKey,
-  TimePrecision
+  SignalType
 } from "./value-objects/item.js";
 export type {
   Acquired,

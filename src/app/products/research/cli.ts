@@ -3,14 +3,10 @@ import { readFileSync } from "node:fs";
 import { Effect } from "effect";
 
 import { recordResearch } from "../../../delivery/index.js";
-import { errorMessage } from "../../../kernel/index.js";
 import { GlmReader } from "../../../reading/index.js";
 import { runPluginEffect } from "../../runtime.js";
 import { createGlmResearch, type GlmResearch } from "../../../integrations/glm/index.js";
-
-type Writable = {
-  write(chunk: string): unknown;
-};
+import { parseCommandOptions, runCliCommand, type Writable } from "../shared/cli.js";
 
 type ResearchCommandDeps = {
   env?: NodeJS.ProcessEnv;
@@ -32,27 +28,8 @@ type ResearchSuggestion = {
   reason?: string;
 };
 
-function camelCase(value: string): string {
-  return value.replace(/-([a-z])/gu, (_, char: string) => char.toUpperCase());
-}
-
 function parseArgs(argv: string[]): ParsedArgs {
-  const command = argv[0] ?? "help";
-  const options: Record<string, string> = {};
-
-  for (let index = 1; index < argv.length; index += 1) {
-    const arg = argv[index];
-    if (arg === undefined || !arg.startsWith("--")) {
-      continue;
-    }
-    const value = argv[index + 1];
-    if (!value || value.startsWith("--")) {
-      throw new Error(`${arg} requires a value.`);
-    }
-    options[camelCase(arg.slice(2))] = value;
-    index += 1;
-  }
-
+  const { command, options } = parseCommandOptions(argv);
   return {
     command,
     stateFile: options.stateFile ?? ".state/feed-state.json",
@@ -168,10 +145,7 @@ export async function runResearchCommand(
   if (argv[0] === "search" || argv[0] === "read") {
     return runGlmResearchCommand(argv, { ...deps, client: deps.glmClient });
   }
-  const stdout = deps.stdout ?? process.stdout;
-  const stderr = deps.stderr ?? process.stderr;
-
-  try {
+  return runCliCommand(deps, async (stdout, stderr) => {
     const args = parseArgs(argv);
     if (args.command === "add") {
       const text = args.file ? readFileSync(args.file, "utf8") : await readStdin(deps.stdin);
@@ -189,8 +163,5 @@ export async function runResearchCommand(
 
     writeHelp(stdout);
     return args.command === "help" ? 0 : 1;
-  } catch (error) {
-    stderr.write(`${errorMessage(error)}\n`);
-    return 1;
-  }
+  });
 }

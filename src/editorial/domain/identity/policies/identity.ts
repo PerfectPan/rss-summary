@@ -44,7 +44,7 @@ function titleFeatures(value: string): Set<string> {
   return features;
 }
 
-export function normalizeHeadline(value: string): string {
+function normalizeHeadline(value: string): string {
   return cleanText(value).normalize("NFKC").toLowerCase();
 }
 

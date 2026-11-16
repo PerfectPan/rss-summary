@@ -3,6 +3,7 @@ import { Schema } from "effect";
 import type { PullRequestDetails, RepositoryMetadata } from "../../../acquisition/index.js";
 
 import { decodeSchema } from "../../shared/decode.js";
+import { asRecord } from "../../shared/json-record.js";
 
 const nullable = Schema.NullOr(Schema.Unknown);
 const repositorySchema = Schema.Struct({
@@ -24,29 +25,6 @@ const pullRequestSchema = Schema.Struct({
 const accountSchema = Schema.Struct({
   login: Schema.optional(nullable)
 });
-
-const objectCtorString = Function.prototype.toString.call(Object);
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (value === null || typeof value !== "object") {
-    return false;
-  }
-  if (Object.prototype.toString.call(value) !== "[object Object]") {
-    return false;
-  }
-  const proto: object | null = Object.getPrototypeOf(value);
-  if (proto === null) {
-    return true;
-  }
-  const ctor = Object.prototype.hasOwnProperty.call(proto, "constructor") && proto.constructor;
-  return (
-    typeof ctor === "function" && ctor instanceof ctor && Function.prototype.toString.call(ctor) === objectCtorString
-  );
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return isPlainObject(value) ? value : {};
-}
 
 function stringOrNull(value: unknown): string | null {
   if (typeof value === "string") {

@@ -8,7 +8,7 @@ export const RSS_SUMMARY_MORNING_AUTOMATION_ID = "rss-summary/morning-feed-diges
 export const RSS_SUMMARY_AUTOMATION_SUPPRESSED = "RIVUS_AUTOMATION_SUPPRESSED: no high-value subscription updates";
 
 /** Automation presentations reuse the subscriptions renderer's section titles. */
-export const subscriptionsPresentation = (text: string): RssAutomationPresentation =>
+const subscriptionsPresentation = (text: string): RssAutomationPresentation =>
   automationPresentationForText(text, "subscriptions");
 
 export function subscriptionsAutomation(profileId: string): RivusAutomationTemplate & {
