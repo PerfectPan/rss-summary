@@ -69,6 +69,36 @@ describe("web page sources", () => {
     ]);
   });
 
+  it("reads a card that prints its date as plain text instead of a time element", () => {
+    const entries = extractWebPageEntries(
+      `<a href="/news/connectors">
+        <div><span>Article</span><span>Nov 10, 2026</span></div>
+        <h3>Your apps can now open in Claude</h3>
+        <p>Partners can now embed their apps directly in Claude, so both work in the same tool.</p>
+      </a>`,
+      source
+    );
+    expect(entries).toEqual([
+      {
+        url: "https://example.com/news/connectors",
+        title: "Your apps can now open in Claude",
+        publishedAt: "2026-11-10T12:00:00.000Z",
+        summary: "Partners can now embed their apps directly in Claude, so both work in the same tool."
+      }
+    ]);
+  });
+
+  it("does not read a date out of a headline or a longer sentence", () => {
+    const entries = extractWebPageEntries(
+      `<a href="/news/no-date">
+        <h3>What changed on Nov 10, 2026</h3>
+        <p>This release note mentions Nov 10, 2026 without declaring the entry date.</p>
+      </a>`,
+      source
+    );
+    expect(entries).toEqual([]);
+  });
+
   it("keeps the body of each changelog entry with its own dated links", () => {
     const entries = extractWebPageEntries(
       `<article>
