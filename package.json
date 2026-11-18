@@ -46,7 +46,7 @@
     "test:coverage": "vp test run --coverage",
     "test:layout": "node scripts/check-test-layout.mjs",
     "typecheck": "tsc --noEmit",
-    "verify": "pnpm test:layout && pnpm check && pnpm test && pnpm build && pnpm package:check"
+    "verify": "pnpm test:layout && pnpm check && pnpm duplicates && pnpm test && pnpm build && pnpm package:check"
   },
   "devDependencies": {
     "@rivus/agent": "0.18.0",

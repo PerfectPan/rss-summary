@@ -28,6 +28,8 @@ Useful focused commands:
 ```bash
 pnpm test
 pnpm typecheck
+pnpm duplicates        # Fails on any reported duplicate.
+pnpm duplicates:audit  # Reports duplicates without failing on findings.
 pnpm build
 ```
 
