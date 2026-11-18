@@ -15,7 +15,9 @@ export type {
   SignalType
 } from "./domain/item/index.js";
 export { resolveNewsCredibility } from "./domain/item/policies/news-credibility.js";
-export { addFeedSubscription, parseFeedSubscriptions, parseIndustrySources } from "./domain/source/index.js";
+export { addFeedSubscription } from "./domain/source/index.js";
+/** @internal */
+export { parseFeedSubscriptions, parseIndustrySources } from "./domain/source/index.js";
 export { listingPublicationType } from "./domain/source/policies/publication.js";
 export { type FeedSubscription, type IndustrySource, type WebPageSubscription } from "./domain/source/index.js";
 export {
@@ -40,13 +42,13 @@ export {
   shareSearchBudget,
   type NativeSearchReceipt,
   type NewsSearchInput,
-  type NewsSearchResult,
   type SearchInput,
   type SearchPage,
   type SearchResult,
-  type SearchUsage,
   type SearchSourcePolicy
 } from "./domain/search/index.js";
+/** @internal */
+export { type NewsSearchResult, type SearchUsage } from "./domain/search/index.js";
 export { searchBudgetDefaults } from "./application/services/budget-defaults.js";
 export { SearchBudgetRepository, SearchProvider } from "./application/ports.js";
 export { retrySearchEffect } from "./application/services/with-retry.js";

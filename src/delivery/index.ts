@@ -10,22 +10,16 @@ import { FeedStateFileLive } from "./infra/repository/feed-state-file.js";
 import { RunArchiveFilesLive } from "./infra/repository/run-archive-files.js";
 import { DiagnosticsFileLive } from "./infra/repository/diagnostics-file.js";
 
-export {
-  createEmptyFeedState,
-  filterUndelivered,
-  filterUnresearched,
-  markDelivered,
-  type FeedState
-} from "./domain/ledger/index.js";
+export { filterUndelivered, filterUnresearched, markDelivered, type FeedState } from "./domain/ledger/index.js";
+/** @internal */
+export { createEmptyFeedState } from "./domain/ledger/index.js";
 export { createDailyAiDeliveryReceipt, type DailyAiDeliveryReceipt } from "./domain/receipt/index.js";
-export { type RunAudit, type RunDelivery, type RunSourceResult } from "./domain/run-audit/index.js";
-export {
-  Notifier,
-  FeedStateStore,
-  RunArchive,
-  DiagnosticsStore,
-  type DailyAiDiagnosticSnapshot
-} from "./application/ports.js";
+export { type RunAudit, type RunSourceResult } from "./domain/run-audit/index.js";
+/** @internal */
+export { type RunDelivery } from "./domain/run-audit/index.js";
+export { Notifier, FeedStateStore, RunArchive, DiagnosticsStore } from "./application/ports.js";
+/** @internal */
+export { type DailyAiDiagnosticSnapshot } from "./application/ports.js";
 export { deliver } from "./application/use-cases/deliver.js";
 export { recordResearch } from "./application/use-cases/record-research.js";
 export {
@@ -34,8 +28,12 @@ export {
   runArtifactForLabel,
   readRunArtifact
 } from "./application/use-cases/inspect-runs.js";
+/** @internal */
 export { NotifierLive } from "./infra/notifier/notifier.js";
-export { loadFeedState, saveFeedState, FeedStateFileLive } from "./infra/repository/feed-state-file.js";
+export { loadFeedState } from "./infra/repository/feed-state-file.js";
+/** @internal */
+export { saveFeedState, FeedStateFileLive } from "./infra/repository/feed-state-file.js";
+/** @internal */
 export {
   listRunArtifacts,
   loadRunArtifact,

@@ -79,6 +79,7 @@ export type GrokProcessRequest = {
   timeoutMs?: number;
 };
 
+/** @internal */
 export class GrokProcess extends Context.Service<
   GrokProcess,
   {

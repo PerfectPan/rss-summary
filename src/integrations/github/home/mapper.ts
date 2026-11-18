@@ -147,6 +147,7 @@ function stringField(record: Record<string, unknown> | null, key: string): strin
   return typeof value === "string" ? value : "";
 }
 
+/** @internal */
 export function normalizeHomeCardSnapshot(snapshot: HomeFeedCardSnapshot): ActivityCardDto {
   const cardType = stringField(snapshot.card, "card_type");
   const createdAt = stringField(snapshot.card, "created_at");
@@ -172,6 +173,7 @@ export function normalizeHomeCardSnapshot(snapshot: HomeFeedCardSnapshot): Activ
   };
 }
 
+/** @internal */
 export function acquireHomeCard(input: unknown): Acquired {
   const card = normalizeHomeCardSnapshot(homeSnapshot(input));
   return { card, item: itemFromGitHubCard(card) };

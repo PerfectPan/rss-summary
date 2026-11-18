@@ -1,3 +1,4 @@
+/** @internal */
 export const documentMethods = ["browser", "http", "captions", "transcription"] as const;
 
 export type DocumentMethod = (typeof documentMethods)[number];
@@ -22,7 +23,9 @@ export type DocumentMaterials = {
   manifestPath: string;
 };
 
-/** Successful read of one URL. `method` excludes the reader name that the source-vocabulary rule forbids in domain. */
+/** Successful read of one URL. `method` excludes the reader name that the source-vocabulary rule forbids in domain.
+ * @internal
+ */
 export type Document = {
   url: string;
   fetchedUrl: string;

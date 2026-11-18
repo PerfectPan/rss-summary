@@ -57,6 +57,7 @@ type XAccountClient = {
   search: (value: GrokProcessRequest) => Promise<SearchPage>;
 };
 
+/** @internal */
 export type OpenSearchBudget = (options: {
   provider: string;
   stateFile: string;

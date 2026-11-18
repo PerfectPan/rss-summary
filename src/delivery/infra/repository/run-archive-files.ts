@@ -8,6 +8,7 @@ import type { RunAudit, RunDelivery, StoredRunAudit } from "../../domain/run-aud
 
 const toError = (error: unknown): Error => (error instanceof Error ? error : new Error(String(error)));
 
+/** @internal */
 export function saveRunArtifact(
   root: string,
   audit: RunAudit,
@@ -26,6 +27,7 @@ export function saveRunArtifact(
   return { jsonPath, markdownPath };
 }
 
+/** @internal */
 export function listRunArtifacts(root: string): string[] {
   if (!existsSync(root)) {
     return [];
@@ -37,10 +39,12 @@ export function listRunArtifacts(root: string): string[] {
     .reverse();
 }
 
+/** @internal */
 export function loadRunArtifact(path: string): StoredRunAudit {
   return JSON.parse(readFileSync(path, "utf8")) as StoredRunAudit;
 }
 
+/** @internal */
 export function runArtifactLabel(path: string): string {
   return basename(path, ".json");
 }

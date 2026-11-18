@@ -22,6 +22,7 @@ export function normalizeWebPageEntry(entry: WebPageEntry, source: WebPageSubscr
   };
 }
 
+/** @internal */
 export function acquireWebPage(html: string, source: WebPageSubscription): Acquired[] {
   return extractWebPageEntries(html, source).flatMap((entry) => {
     const decoded = decodeEntry(entry);

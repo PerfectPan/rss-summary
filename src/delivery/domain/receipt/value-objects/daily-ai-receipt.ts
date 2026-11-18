@@ -23,6 +23,7 @@ export function createDailyAiDeliveryReceipt(occurrence: string, evidenceIds: st
  * Persist the committed receipt once delivery succeeded. Returns the new
  * committed receipt, or `undefined` when nothing was committed (delivery
  * failed or the receipt was already committed).
+ * @internal
  */
 export async function commitDailyAiDeliveryReceipt(
   receipt: DailyAiDeliveryReceipt,

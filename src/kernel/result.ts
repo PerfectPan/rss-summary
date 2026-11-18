@@ -8,6 +8,7 @@ export function err<E>(error: E): Result<never, E> {
   return { _tag: "Err", error };
 }
 
+/** @internal */
 export function isOk<A, E>(result: Result<A, E>): result is { readonly _tag: "Ok"; readonly value: A } {
   return result._tag === "Ok";
 }

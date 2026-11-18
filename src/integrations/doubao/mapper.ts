@@ -5,6 +5,7 @@ import { itemFromPublication } from "../shared/search-item.js";
 /**
  * Authority levels follow the news score table: 1 is an official source,
  * 2 is authoritative, and every other level stays unrated.
+ * @internal
  */
 export function credibilityForAuthLevel(level: number | undefined): { tier: CredibilityTier } {
   if (level === 1) {

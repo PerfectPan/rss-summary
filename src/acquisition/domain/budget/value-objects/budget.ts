@@ -39,6 +39,7 @@ export type Reservation = {
   cached?: SearchPage;
 };
 
+/** @internal */
 export function cacheKeyMaterial(request: CacheRequest): string {
   return JSON.stringify([
     request.provider,

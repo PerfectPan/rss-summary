@@ -5,6 +5,7 @@ export function markdownLinkText(value: string): string {
   return value.replace(/([\\[\]])/gu, "\\$1");
 }
 
+/** @internal */
 export const formatStarCount = formatCompactCount;
 
 export function displayTime(value: string | undefined): string | undefined {

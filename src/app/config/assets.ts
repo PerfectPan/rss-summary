@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
  * news-topics.json). Walking up to the nearest package.json keeps the path
  * stable whether this module runs from src/ or from the packed dist/ tree,
  * instead of depending on the source file's directory depth.
+ * @internal
  */
 export function packageAsset(name: string): string {
   let directory = dirname(fileURLToPath(import.meta.url));

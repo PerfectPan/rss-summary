@@ -6,6 +6,7 @@ import {
 import { subscriptionEvidenceId } from "../../products/subscriptions/output.js";
 import type { ViewDocument, ViewItem } from "../view.js";
 
+/** @internal */
 export type CandidateCopy = {
   facts: string[];
   label: string;
@@ -15,6 +16,7 @@ export type CandidateCopy = {
   summary: string;
 };
 
+/** @internal */
 export type CandidateCopyOptions = {
   editorialSummary?: string;
 };
@@ -45,6 +47,7 @@ function oneLineFor(candidate: CandidateProject, label: string, facts: string[])
     : `${candidate.repo} 有一条新的项目动态。`;
 }
 
+/** @internal */
 export function candidateCopy(candidate: CandidateProject, options: CandidateCopyOptions = {}): CandidateCopy {
   const label = candidate.label ?? candidate.repo;
   const url = candidate.url ?? candidate.repository?.htmlUrl ?? `https://github.com/${candidate.repo}`;

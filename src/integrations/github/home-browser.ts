@@ -113,6 +113,7 @@ export function saveLoginStorageState(options: {
 }
 /* v8 ignore stop */
 
+/** @internal */
 export function readConduitSnapshots(
   storageState: string,
   timeoutMs: number
@@ -141,6 +142,7 @@ export function readConduitSnapshots(
   );
 }
 
+/** @internal */
 export function readRenderedSnapshots(
   storageState: string,
   timeoutMs: number,

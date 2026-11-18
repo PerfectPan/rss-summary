@@ -82,9 +82,12 @@ export function applySubscriptionSelection<T extends DigestDocument>(
   };
 }
 
+/** @internal */
 export { candidateIdentity } from "../../../integrations/shared/index.js";
 
-/** Record a research decision under the historical ledger key. */
+/** Record a research decision under the historical ledger key.
+ * @internal
+ */
 export function markCandidateResearched(
   state: { researched: Record<string, { at: string; decision?: string; reason?: string }> },
   candidate: CandidateProject,

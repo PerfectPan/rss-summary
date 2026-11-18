@@ -31,6 +31,7 @@ export type GrokRequest = typeof grokRequestSchema.Type;
 
 export { responseSchema };
 
+/** @internal */
 export function isNativeCall(
   event: Record<string, unknown>
 ): event is Record<string, unknown> & { toolCallId: string } {
@@ -43,6 +44,7 @@ export function isNativeCall(
   );
 }
 
+/** @internal */
 export function isNativeReceipt(
   event: Record<string, unknown>,
   calls: Set<string>

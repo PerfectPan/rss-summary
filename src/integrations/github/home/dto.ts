@@ -97,6 +97,7 @@ export function extractHomeFeedSnapshotsFromHtml(html: string): HomeFeedCardSnap
     });
 }
 
+/** @internal */
 export function hasGitHubHomeFeedMarkup(html: string): boolean {
   const $ = load(html);
   return $("feed-container").length > 0 && $("#conduit-feed-frame").length > 0;

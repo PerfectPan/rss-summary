@@ -1,17 +1,28 @@
 import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Effect } from "effect";
+import { Effect, Layer } from "effect";
 import { afterEach, describe, expect, it } from "vite-plus/test";
 import { SearchProvider, type NewsSearchInput } from "../../acquisition/index.js";
-import { GrokSearchClient, GrokXClient } from "./cli.js";
-import { GrokSearchLive } from "./provider.js";
+import { GrokSearchClient, GrokXClient, type GrokSearchOptions } from "./cli.js";
 import { describeSearchProvider } from "../../../tests/support/search-provider-suite.js";
 
 const directories: string[] = [];
 afterEach(async () => {
   await Promise.all(directories.splice(0).map((path) => rm(path, { recursive: true, force: true })));
 });
+// The transport suites exercise `GrokSearchClient` through the SearchProvider surface;
+// the layer is built inline because the production wiring no longer ships a provider module.
+const grokSearchLive = (options: GrokSearchOptions): Layer.Layer<SearchProvider> => {
+  const client = new GrokSearchClient(options);
+  return Layer.succeed(SearchProvider, {
+    search: (input) =>
+      Effect.tryPromise({
+        try: () => client.search(input),
+        catch: (cause) => (cause instanceof Error ? cause : new Error(String(cause)))
+      })
+  });
+};
 const publishedAt = "2026-10-08T01:00:00.000Z";
 const postId = ((BigInt(Date.parse(publishedAt)) - 1288834974657n) << 22n).toString();
 const post = {
@@ -509,7 +520,7 @@ describeSearchProvider({
           return yield* provider.search(value);
         }).pipe(
           Effect.provide(
-            GrokSearchLive({
+            grokSearchLive({
               executable: step === "permanent" ? "/no/such/grok-suite" : executable,
               timezoneOffset: "+08:00",
               timeoutMs: 5_000

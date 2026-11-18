@@ -14,7 +14,9 @@ function isTransientSearchError(error: unknown): error is NewsSearchError {
   return isSearchFailure(error) && (error.code === "rate_limit_exceeded" || error.code === "http_429");
 }
 
-/** Historical backoff: `retryAfterMs`, otherwise `round(250 * 2^(n-1) * (0.5 + clamp(random, 0, 1)))`. */
+/** Historical backoff: `retryAfterMs`, otherwise `round(250 * 2^(n-1) * (0.5 + clamp(random, 0, 1)))`.
+ * @internal
+ */
 export function retryDelayMs(error: { retryAfterMs?: number }, attemptNumber: number, random: () => number): number {
   if (error.retryAfterMs !== undefined) {
     return error.retryAfterMs;
@@ -40,6 +42,7 @@ function retrySchedule(attemptBase = 0) {
   );
 }
 
+/** @internal */
 export function retryEffect<A>(run: () => Promise<A>, attemptBase = 0) {
   return Effect.tryPromise({
     try: run,
@@ -80,6 +83,7 @@ function provideRetryClock<A, E, R>(
   return provided;
 }
 
+/** @internal */
 export function searchWithRetry(
   input: SearchInput,
   search: (input: SearchInput) => Promise<SearchPage>,
