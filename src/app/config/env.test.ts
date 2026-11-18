@@ -92,6 +92,19 @@ describe("app/config/env", () => {
     }
   });
 
+  it("rejects an explicit feed subscription file that does not exist", async () => {
+    const temporaryDirectory = mkdtempSync(join(tmpdir(), "rss-summary-config-"));
+    const missingFile = join(temporaryDirectory, "missing-feeds.json");
+
+    try {
+      await expect(Effect.runPromise(loadEnvConfig({ RSS_FEEDS_FILE: missingFile }))).rejects.toThrow(
+        `Feed subscription file does not exist: ${missingFile}`
+      );
+    } finally {
+      rmSync(temporaryDirectory, { force: true, recursive: true });
+    }
+  });
+
   it("allows RSS feed subscriptions from env", async () => {
     const config = await resolveConfig(
       {
