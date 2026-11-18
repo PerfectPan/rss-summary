@@ -138,6 +138,11 @@ function loadFeedSubscriptions(
 
   const feedsFile = configuredFile ?? "feeds.json";
   if (!existsSync(feedsFile)) {
+    // A configured path that is missing means the deployment lost its registry; silently returning
+    // no subscriptions would turn that into an empty digest that looks like "nothing was published".
+    if (configuredFile) {
+      throw new Error(`Feed subscription file does not exist: ${feedsFile}`);
+    }
     return [];
   }
   return decodeFeedsJson(readFileSync(feedsFile, "utf8"));
