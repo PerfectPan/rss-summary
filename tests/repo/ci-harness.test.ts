@@ -8,7 +8,9 @@ describe("CI harness", () => {
       scripts?: Record<string, string>;
     };
 
-    expect(pkg.scripts?.verify).toBe("pnpm test:layout && pnpm check && pnpm test && pnpm build && pnpm package:check");
+    expect(pkg.scripts?.verify).toBe(
+      "pnpm test:layout && pnpm check && pnpm duplicates && pnpm knip && pnpm test && pnpm build && pnpm package:check"
+    );
     expect(pkg.scripts?.check).toBe("vp check");
     expect(pkg.scripts?.lint).toBe("vp lint");
     expect(pkg.scripts?.test).toBe("vp test run");

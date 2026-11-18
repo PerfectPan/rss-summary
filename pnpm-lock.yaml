@@ -41,8 +41,8 @@ importers:
         version: 1.61.1
     devDependencies:
       '@perfectpan/lint-config':
-        specifier: github:PerfectPan/lint-config#v0.8.0
-        version: https://codeload.github.com/PerfectPan/lint-config/tar.gz/21d4b41b699dfe9786674037a717809653b36026(jscpd@5.4.2)(knip@6.45.1)(oxfmt@0.60.0(vite-plus@0.2.7(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.10)(@voidzero-dev/vite-plus-core@0.2.7(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0)))(oxlint-tsgolint@7.0.2001)(typescript@7.0.2)(vite-plus@0.2.7(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.10)(@voidzero-dev/vite-plus-core@0.2.7(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))
+        specifier: github:PerfectPan/lint-config#v0.9.1
+        version: https://codeload.github.com/PerfectPan/lint-config/tar.gz/b007df94b7436e9d2c2f6cd0a7059d036a141ce8(jscpd@5.4.2)(knip@6.45.1)(oxfmt@0.60.0(vite-plus@0.2.7(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.10)(@voidzero-dev/vite-plus-core@0.2.7(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0)))(oxlint-tsgolint@7.0.2001)(typescript@7.0.2)(vite-plus@0.2.7(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.10)(@voidzero-dev/vite-plus-core@0.2.7(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))
       '@rivus/agent':
         specifier: 0.18.0
         version: 0.18.0(debug@4.4.3(supports-color@7.2.0))(supports-color@7.2.0)(ws@8.22.0)
@@ -1121,9 +1121,9 @@ packages:
     resolution: {integrity: sha512-OhgMQeMmZA0dcFcX4/priaJZWdFECxiClgq6mRX6aatZEcV9PbKC3P3/v8U1hVjviT1i5U+vR8lAtBV6m4FXAA==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
 
-  '@perfectpan/lint-config@https://codeload.github.com/PerfectPan/lint-config/tar.gz/21d4b41b699dfe9786674037a717809653b36026':
-    resolution: {gitHosted: true, integrity: sha512-PgTzo52/lkyrzMWTS5ODoXpGj4TOi6uis9UbAZ4Z9WRnfDkb4nCDAmqKHsYiF+Kw/Cbk28v1crTDV1ylE0CzYQ==, tarball: https://codeload.github.com/PerfectPan/lint-config/tar.gz/21d4b41b699dfe9786674037a717809653b36026}
-    version: 0.8.0
+  '@perfectpan/lint-config@https://codeload.github.com/PerfectPan/lint-config/tar.gz/b007df94b7436e9d2c2f6cd0a7059d036a141ce8':
+    resolution: {gitHosted: true, integrity: sha512-kQUjavX4JIlzB/3uQFQwCsUyEeXiOVY8YG4+CwHzChXSKzk6XTzrdgcvhKVGrCvcE7QyZ8BSL0IO2Scd+HEBoA==, tarball: https://codeload.github.com/PerfectPan/lint-config/tar.gz/b007df94b7436e9d2c2f6cd0a7059d036a141ce8}
+    version: 0.9.1
     peerDependencies:
       eslint-plugin-better-tailwindcss: '>=4.10.0'
       jscpd: '>=5.4.2 <6'
@@ -3724,7 +3724,7 @@ snapshots:
 
   '@oxlint/plugins@1.73.0': {}
 
-  '@perfectpan/lint-config@https://codeload.github.com/PerfectPan/lint-config/tar.gz/21d4b41b699dfe9786674037a717809653b36026(jscpd@5.4.2)(knip@6.45.1)(oxfmt@0.60.0(vite-plus@0.2.7(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.10)(@voidzero-dev/vite-plus-core@0.2.7(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0)))(oxlint-tsgolint@7.0.2001)(typescript@7.0.2)(vite-plus@0.2.7(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.10)(@voidzero-dev/vite-plus-core@0.2.7(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))':
+  '@perfectpan/lint-config@https://codeload.github.com/PerfectPan/lint-config/tar.gz/b007df94b7436e9d2c2f6cd0a7059d036a141ce8(jscpd@5.4.2)(knip@6.45.1)(oxfmt@0.60.0(vite-plus@0.2.7(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.10)(@voidzero-dev/vite-plus-core@0.2.7(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0)))(oxlint-tsgolint@7.0.2001)(typescript@7.0.2)(vite-plus@0.2.7(@opentelemetry/api@1.9.1)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.10)(@voidzero-dev/vite-plus-core@0.2.7(@types/node@24.13.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(typescript@7.0.2)(yaml@2.9.0))':
     optionalDependencies:
       jscpd: 5.4.2
       knip: 6.45.1

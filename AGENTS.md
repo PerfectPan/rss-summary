@@ -10,7 +10,7 @@ This repository is a local TypeScript CLI plus portable Codex skills. Treat ever
 - Do not commit `.env`, `.state/`, build output, local logs, tokens, temporary workspaces, or machine-specific paths.
 - Do not add private tokens, internal hostnames, private repository names, or personal filesystem paths.
 - Use `rg` for searches when available.
-- Run `pnpm verify` before claiming a change is ready (`test:layout` + `vp check` + tests + `tsc` build + package check). Prefer `vp` for lint/fmt/test when Vite+ is installed (`pnpm exec vp …`).
+- Run `pnpm verify` before claiming a change is ready (`test:layout` + `vp check` + duplicates + knip + tests + `tsc` build + package check). Prefer `vp` for lint/fmt/test when Vite+ is installed (`pnpm exec vp …`).
 - Do not claim implementation work is complete until the relevant commands pass, or until skipped commands are explained with concrete blockers.
 - Update tests and documentation when behavior changes.
 - `feeds.json` is the repository-maintained RSS subscription list. Update it through `rss-summary feeds ...` when possible and include intentional feed changes in the pull request.
@@ -34,6 +34,10 @@ gh repo-checks pr-body pr-body.md
 # Format / lint (Vite+):
 pnpm fmt
 pnpm lint
+
+pnpm duplicates        # Fails on any reported duplicate.
+pnpm duplicates:audit  # Reports duplicates without failing on findings.
+pnpm knip              # Fails CI on unused files, exports, or dependencies and on configuration or tag hints.
 
 # Full local gate:
 pnpm verify

@@ -12,6 +12,7 @@
 
 - [ ] Repository checks: `gh repo-checks repository`
 - [ ] PR title and description: `gh repo-checks pr-title "<title>"`, `gh repo-checks pr-body <body-file>`
+- [ ] `pnpm knip` passes with no unused files, exports, dependencies, or configuration or tag hints.
 - [ ] Format, lint, test, build:
 
 ## Risks
