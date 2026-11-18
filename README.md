@@ -174,9 +174,10 @@ rss-summary runs show <run-label>
 ## Development
 
 ```bash
-pnpm verify            # test:layout + check + duplicates + test + build + package:check
+pnpm verify            # test:layout + check + duplicates + knip + test + build + package:check
 pnpm duplicates        # 检出任何一处重复都会失败。
 pnpm duplicates:audit  # 只生成报告，发现重复也不会拦截。
+pnpm knip              # 检出未使用的文件、导出、依赖，或出现配置、标签提示时，CI 失败。
 ```
 
 `main` 受保护。在功能分支上改，开 PR，等 `Verify` + `Coverage` 通过后再合并。

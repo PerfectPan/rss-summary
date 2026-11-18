@@ -82,6 +82,7 @@ Alternatives considered and rejected:
 - Import direction is enforced by the architecture test (`scripts/architecture/boundaries.ts` + `tests/repo/architecture.test.ts`, zero violations), not by lint rules.
 - `pnpm verify` runs `pnpm check` (`vp check`) after `test:layout`.
 - The next step, `pnpm duplicates`, fails on any reported duplicate. Run `pnpm duplicates:audit` separately for a report without failing on findings.
+- `pnpm knip` then checks for unused files, exports, and dependencies. Findings and configuration or tag hints fail the Verify job.
 
 ## CI Gates
 
@@ -89,7 +90,7 @@ Alternatives considered and rejected:
 
 | Job | Command | Fails when |
 | --- | --- | --- |
-| `Verify` | `pnpm verify` | layout mismatch, check (fmt/lint/type) failure, any reported duplicate, test failure, build failure, or packed-package check failure |
+| `Verify` | `pnpm verify` | layout mismatch, check (fmt/lint/type) failure, any reported duplicate, Knip finding or hint, test failure, build failure, or packed-package check failure |
 | `Coverage` | `pnpm test:layout && pnpm test:coverage` | missing sibling tests or coverage below the thresholds in `vite.config.ts` |
 
 Both jobs are intended to be required checks in the branch protection rule for `main` (configure in GitHub → Settings → Branches → Branch protection rules; this cannot be expressed in the workflow file itself).
