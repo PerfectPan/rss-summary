@@ -47,6 +47,13 @@
     "tags": ["Articles", "Design", "Frontend"]
   },
   {
+    "type": "page",
+    "name": "Claude Resources",
+    "url": "https://claude.com/resources/articles",
+    "pathPrefixes": ["/resources/articles/"],
+    "tags": ["Articles", "AI"]
+  },
+  {
     "name": "Hugging Face Blog",
     "url": "https://huggingface.co/blog/feed.xml",
     "tags": ["Articles", "Blog"]

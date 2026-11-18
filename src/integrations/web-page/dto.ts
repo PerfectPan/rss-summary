@@ -80,6 +80,8 @@ function normalizedDate(value: string | undefined): string | undefined {
 }
 
 const SENTENCE_END = /[.!?。！？…]["'”’)\]]*$/u;
+/** A date a card prints as plain text, e.g. `Nov 10, 2026` or `2026-11-10`. */
+const BARE_DATE = /^(?:\d{4}-\d{2}-\d{2}|[A-Z][a-z]{2} \d{1,2}, \d{4})$/u;
 /** Longer than a category or author label, so a short card stays description-less. */
 const MIN_DESCRIPTION_WORDS = 4;
 
@@ -121,7 +123,25 @@ export function extractWebPageEntries(html: string, source: WebPageSubscription)
 
     const current = entries.get(url) ?? { titleScore: 0 };
     const time = element.find("time").first();
-    const publishedAt = normalizedDate(time.attr("datetime") ?? cleanText(time.text()));
+    let publishedAt = normalizedDate(time.attr("datetime") ?? cleanText(time.text()));
+    if (!publishedAt) {
+      // Some cards print a bare date in a plain element instead of a `<time>`. Only a descendant
+      // whose whole text is one calendar date counts, so a headline or sentence that mentions a
+      // date cannot become the publication date.
+      element.find("*").each((_, node) => {
+        if (publishedAt) {
+          return;
+        }
+        const candidate = $(node);
+        if (candidate.children().length > 0) {
+          return;
+        }
+        const text = cleanText(candidate.text());
+        if (text && BARE_DATE.test(text)) {
+          publishedAt = normalizedDate(text);
+        }
+      });
+    }
     const titleElement = element
       .find("h1, h2, h3, h4, h5, h6, [role='heading'], [class*='title'], [class*='headline']")
       .first();

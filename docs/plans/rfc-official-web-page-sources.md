@@ -61,6 +61,11 @@ Example:
   `<h5>`, so the heading selector covers `h5`/`h6`, and they repeat category and author as short
   unpunctuated paragraphs, which `isDescription` drops: a card without a description reports no
   summary instead of one built from its labels.
+- Claude Resources: `https://claude.com/resources/articles`, entries under `/resources/articles/`.
+  Cards print the date as plain text (`Nov 10, 2026`) in a `<span>` and use no `<time>` element at
+  all, so extraction falls back to the first descendant whose entire text is one calendar date. A
+  headline or sentence that merely mentions a date does not count, and a card that declares no date
+  is still skipped rather than given an invented one.
 
 These listing routes allow automated access in their robots policies. Production-client and CLI
 dry-run checks cover dated links, canonical URLs and source health. Blog card titles omit author and
