@@ -51,7 +51,10 @@ gh repo-checks pr-body pr-body.md
 pnpm fmt
 pnpm lint
 
-# Full local gate (test layout + vp check + tests + build + package check):
+pnpm duplicates        # Fails on any reported duplicate.
+pnpm duplicates:audit  # Reports duplicates without failing on findings.
+
+# Full local gate (test layout + vp check + duplicates + tests + build + package check):
 pnpm verify
 
 # Coverage:
