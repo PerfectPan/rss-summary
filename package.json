@@ -59,7 +59,7 @@
     "vite": "catalog:",
     "vite-plus": "catalog:",
     "vitest": "catalog:",
-    "@perfectpan/lint-config": "github:PerfectPan/lint-config#v0.8.0",
+    "@perfectpan/lint-config": "github:PerfectPan/lint-config#v0.9.1",
     "jscpd": "5.4.2",
     "knip": "6.45.1"
   },
