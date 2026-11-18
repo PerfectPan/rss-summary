@@ -390,5 +390,14 @@
       "Articles",
       "News"
     ]
+  },
+  {
+    "name": "claude.dev Blog",
+    "url": "https://claude.dev/rss.xml",
+    "tags": [
+      "Articles",
+      "Blog",
+      "claude"
+    ]
   }
 ]
