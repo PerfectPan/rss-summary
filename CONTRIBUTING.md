@@ -53,8 +53,9 @@ pnpm lint
 
 pnpm duplicates        # Fails on any reported duplicate.
 pnpm duplicates:audit  # Reports duplicates without failing on findings.
+pnpm knip              # Fails CI on unused files, exports, or dependencies and on configuration or tag hints.
 
-# Full local gate (test layout + vp check + duplicates + tests + build + package check):
+# Full local gate (test layout + vp check + duplicates + knip + tests + build + package check):
 pnpm verify
 
 # Coverage:

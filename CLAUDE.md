@@ -30,6 +30,7 @@ pnpm test
 pnpm typecheck
 pnpm duplicates        # Fails on any reported duplicate.
 pnpm duplicates:audit  # Reports duplicates without failing on findings.
+pnpm knip              # Fails CI on unused files, exports, or dependencies and on configuration or tag hints.
 pnpm build
 ```
 
