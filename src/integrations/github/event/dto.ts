@@ -105,7 +105,9 @@ export function decodeEventCard(input: unknown): Result<DecodedEvent, DecodeFail
   return ok(cardFromRaw(decoded.value));
 }
 
-/** Preserves the historical soft cast: a payload that fails decoding becomes an empty card. */
+/** Preserves the historical soft cast: a payload that fails decoding becomes an empty card.
+ * @internal
+ */
 export function normalizeEvent(input: unknown): ActivityCardDto {
   const decoded = decodeEventCard(input);
   if (decoded._tag === "Err") {

@@ -18,6 +18,7 @@ type SearchInputContract = {
   sourcePolicy: string;
 };
 
+/** @internal */
 export function validateDoubaoInput(input: SearchInputContract): void {
   if (input.query.trim() === "" || input.query.length > 100) {
     throw new Error("Doubao search query must contain 1 to 100 characters.");

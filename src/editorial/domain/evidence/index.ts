@@ -1,10 +1,11 @@
 export {
   invalidEditorialCollectionMessage,
   invalidEditorialItemMessage,
-  validateSubscriptionEditorialDraft,
   validateSubscriptionResearch,
   validateSubscriptionSelectionDraft
 } from "./policies/validation.js";
+/** @internal */
+export { validateSubscriptionEditorialDraft } from "./policies/validation.js";
 export {
   assembleSubscriptionEditorial,
   assembleSubscriptionEvidence,

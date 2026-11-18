@@ -37,6 +37,7 @@ export type FallbackSearchProvider = {
  * - `grok_invalid_response`: the CLI search stream lacked a complete receipt.
  * - `grok_source_policy`: the CLI search cannot serve this query's policy.
  * - `10406`: account-quota exhaustion on the primary web-search provider.
+ * @internal
  */
 export const fallbackTriggerCodes: readonly string[] = [
   "network_error",

@@ -4,8 +4,6 @@ export type {
   MergedSearchSource,
   NativeSearchReceipt,
   NewsSearchInput,
-  NewsSearchPage,
-  NewsSearchResult,
   ProviderFallback,
   SearchFallback,
   SearchHitFields,
@@ -16,3 +14,5 @@ export type {
   SearchUsage,
   SourceVerification
 } from "./value-objects/search.js";
+/** @internal */
+export type { NewsSearchPage, NewsSearchResult } from "./value-objects/search.js";

@@ -18,6 +18,7 @@ type SearchInputContract = {
 /** The endpoint rejects queries longer than 128 characters. */
 const maxOutgoingQueryLength = 128;
 
+/** @internal */
 export function validateDeepSeekInput(input: SearchInputContract): void {
   if (input.query.trim() === "" || input.query.length > 128) {
     throw new Error("DeepSeek search query must contain 1 to 128 characters.");
@@ -34,6 +35,7 @@ export function validateDeepSeekInput(input: SearchInputContract): void {
  * (as seen from the caller's timezone offset) unless the query already
  * constrains the window itself, truncating the keywords — never the operator —
  * to stay within the length limit.
+ * @internal
  */
 export function deepSeekOutgoingQuery(query: string, sinceDay?: string): string {
   if (!sinceDay) {

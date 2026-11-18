@@ -7,6 +7,7 @@ import { itemFromPublication } from "../shared/search-item.js";
  * A provider authority score (0–4, `-1` unknown): 3 and above is highly
  * authoritative, every other value stays unrated. The scale has no official
  * level, so a result carrying such a score is never official.
+ * @internal
  */
 export function credibilityForAuthority(authority: number | undefined): {
   tier: CredibilityTier;

@@ -44,6 +44,7 @@ export function requiredString(value: unknown, label: string): string {
   return text.trim();
 }
 
+/** @internal */
 export function optionalString(value: unknown, fallback: string, label: string): string {
   if (value === undefined) {
     return fallback;
@@ -61,6 +62,7 @@ export function optionalBoolean(value: unknown, fallback: boolean, label: string
   return value;
 }
 
+/** @internal */
 export function requireBoundedInteger(
   value: unknown,
   fallback: number,
@@ -78,6 +80,7 @@ export function requireBoundedInteger(
   return Number(value);
 }
 
+/** @internal */
 export function requireBoundedNumber(
   value: unknown,
   fallback: number,
@@ -112,6 +115,7 @@ function requireArray(value: unknown, label: string): unknown[] {
   return value;
 }
 
+/** @internal */
 export function requireStringList(value: unknown, label: string): string[] {
   return requireArray(value, label).map((item, index) => {
     const text = stringValue(item);

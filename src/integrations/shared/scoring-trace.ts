@@ -128,6 +128,7 @@ export function applyScoringContext(acquired: Acquired, context: ScoringContext)
   };
 }
 
+/** @internal */
 export function projectActivity(card: ActivityCardDto, context: ScoringContext): Acquired {
   return applyScoringContext(acquireActivityCard(card), context);
 }

@@ -120,5 +120,7 @@ export type SearchFallback = {
 };
 
 export type NewsSearchInput = SearchInput;
+/** @internal */
 export type NewsSearchResult = SearchResult;
+/** @internal */
 export type NewsSearchPage = SearchPage;

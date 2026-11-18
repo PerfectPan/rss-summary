@@ -17,6 +17,7 @@ export function loadFeedState(path: string): FeedState {
   return decodeFeedState(JSON.parse(readFileSync(path, "utf8")));
 }
 
+/** @internal */
 export function saveFeedState(path: string, state: FeedState): void {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, `${JSON.stringify(state, null, 2)}\n`);

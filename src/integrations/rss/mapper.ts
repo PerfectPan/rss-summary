@@ -24,6 +24,7 @@ function hostIsAcademic(value: string | undefined): boolean {
  * the academic-host convention (arXiv hosts publish papers). Academic hosts
  * are checked on the entry URL and the feed URL; a releases tag wins only
  * when the entry is not academic.
+ * @internal
  */
 export function rssPublicationType(
   htmlUrl: string | undefined,
@@ -156,6 +157,7 @@ export function parseFeedXml(xml: string, feed: FeedSubscription, now: Date): Ac
   ];
 }
 
+/** @internal */
 export function parseFeed(xml: string, feed: FeedSubscription, now: Date): Acquired[] {
   return parseFeedXml(xml, feed, now).map((card) => publicationAcquired(card));
 }

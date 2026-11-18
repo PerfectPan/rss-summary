@@ -172,6 +172,7 @@ function replayTrailing(
  * in each channel. Bounds, section ids, and source labels reproduce the
  * values the earlier Markdown parser produced, locked by the golden
  * registration snapshot and automation.test.ts.
+ * @internal
  */
 export function renderAutomationPresentation(
   view: ViewDocument,

@@ -55,7 +55,7 @@ describe("package CLI metadata", () => {
     expect(pkg.scripts?.build).toBe("tsc -p tsconfig.build.json");
     expect(pkg.scripts?.["package:check"]).toBe("node scripts/check-package.mjs");
     expect(pkg.scripts?.verify).toBe(
-      "pnpm test:layout && pnpm check && pnpm duplicates && pnpm knip && pnpm test && pnpm build && pnpm package:check"
+      "pnpm test:layout && pnpm check && pnpm duplicates && pnpm knip && pnpm knip:production && pnpm test && pnpm build && pnpm package:check"
     );
     expect(buildConfig.compilerOptions?.declaration).toBe(true);
   });

@@ -71,7 +71,9 @@ export function presentationDecisionForCandidate(
   return { depth: "link", reasonCode: "ordinary-update" };
 }
 
-/** Decide how much space a candidate deserves without coupling ranking to Markdown. */
+/** Decide how much space a candidate deserves without coupling ranking to Markdown.
+ * @internal
+ */
 export function presentationDepthForCandidate(
   candidate: CandidateProject,
   policy: PresentationPolicy = {}

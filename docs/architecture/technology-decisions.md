@@ -82,7 +82,7 @@ Alternatives considered and rejected:
 - Import direction is enforced by the architecture test (`scripts/architecture/boundaries.ts` + `tests/repo/architecture.test.ts`, zero violations), not by lint rules.
 - `pnpm verify` runs `pnpm check` (`vp check`) after `test:layout`.
 - The next step, `pnpm duplicates`, fails on any reported duplicate. Run `pnpm duplicates:audit` separately for a report without failing on findings.
-- `pnpm knip` then checks for unused files, exports, and dependencies. Findings and configuration or tag hints fail the Verify job.
+- `pnpm knip` then checks for unused files, exports, and dependencies, followed by `pnpm knip:production`, which follows only the production entries so code that only tests reach is caught too. Findings and configuration or tag hints fail the Verify job.
 
 ## CI Gates
 

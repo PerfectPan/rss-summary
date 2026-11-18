@@ -1,28 +1,25 @@
 export type { CandidateDecision } from "./domain/decision/index.js";
-export {
-  buildDailyAiDigest,
-  cleanDailyAiTitle,
-  dailyAiCategories,
-  industryEvidence,
-  validateEditorialDraft
-} from "./domain/daily-ai/index.js";
+export { buildDailyAiDigest, cleanDailyAiTitle, dailyAiCategories, industryEvidence } from "./domain/daily-ai/index.js";
+/** @internal */
+export { validateEditorialDraft } from "./domain/daily-ai/index.js";
 export type { DailyAiDigest, DailyAiEditorialItem, DailyAiEvidence } from "./domain/daily-ai/index.js";
 export {
   excludeSubscriptionResearchFailures,
-  validateSubscriptionEditorialDraft,
   validateSubscriptionResearch,
   validateSubscriptionSelectionDraft
 } from "./domain/evidence/index.js";
+/** @internal */
+export { validateSubscriptionEditorialDraft } from "./domain/evidence/index.js";
 export type { SubscriptionEvidence } from "./domain/evidence/index.js";
 export {
   applyEditorialSelectionToAudit,
-  presentationDecisionForCandidate,
-  presentationDepthForCandidate,
   repositoryFactsForCandidate,
   scoreAcquired,
   selectCandidatePresentationSections,
   selectResearchCandidates
 } from "./domain/subscription/index.js";
+/** @internal */
+export { presentationDecisionForCandidate, presentationDepthForCandidate } from "./domain/subscription/index.js";
 export type { CandidateProject } from "./domain/subscription/index.js";
 export {
   assembleSubscriptionEditorial,
