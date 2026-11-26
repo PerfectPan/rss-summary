@@ -195,6 +195,7 @@ export function buildNewsStoriesWithAudit(hits: NewsSearchHit[], window: NewsTim
   };
 }
 
+/** @internal */
 export function buildNewsStories(hits: NewsSearchHit[], window: NewsTimeWindow): NewsStory[] {
   return buildNewsStoriesWithAudit(hits, window).stories;
 }
@@ -250,6 +251,7 @@ export function selectNewsStoriesWithAudit(
   };
 }
 
+/** @internal */
 export function selectNewsStories(stories: NewsStory[], topics: readonly NewsTopic[]): SelectedNewsStory[] {
   return selectNewsStoriesWithAudit(stories, topics).stories;
 }

@@ -5,9 +5,6 @@ export {
   type IndustrySource,
   type WebPageSubscription
 } from "./value-objects/subscription.js";
-export {
-  addFeedSubscription,
-  parseFeedSubscriptions,
-  parseIndustrySources,
-  removeFeedSubscription
-} from "./services/catalog.js";
+export { addFeedSubscription, removeFeedSubscription } from "./services/catalog.js";
+/** @internal */
+export { parseFeedSubscriptions, parseIndustrySources } from "./services/catalog.js";

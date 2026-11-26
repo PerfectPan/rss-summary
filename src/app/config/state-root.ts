@@ -13,12 +13,16 @@ export const defaultIndustryStateFile = `${defaultStateDir}/industry-state.json`
 export const defaultRunLogDir = `${defaultStateDir}/runs`;
 export const defaultGithubHomeStorageState = `${defaultStateDir}/github-home-storage.json`;
 
-/** Root for Rivus-deployment-owned state; undefined when the override is unset. */
+/** Root for Rivus-deployment-owned state; undefined when the override is unset.
+ * @internal
+ */
 export function deploymentStateRoot(env: NodeJS.ProcessEnv): string | undefined {
   return env.RIVUS_DEPLOYMENT_STATE_DIR || undefined;
 }
 
-/** Diagnostics directory for the Daily AI tool, matching delivery's layout. */
+/** Diagnostics directory for the Daily AI tool, matching delivery's layout.
+ * @internal
+ */
 export function dailyAiDiagnosticsDir(env: NodeJS.ProcessEnv): string {
   const root = deploymentStateRoot(env);
   return root ? join(root, "rss-summary", "daily-ai") : join(defaultStateDir, "daily-ai");

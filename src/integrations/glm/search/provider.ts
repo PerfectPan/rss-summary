@@ -78,6 +78,7 @@ export class GlmSearchClient {
   }
 }
 
+/** @internal */
 export const GlmSearchLive = (options: Options): Layer.Layer<SearchProvider> => {
   const client = new GlmSearchClient(options);
   return Layer.succeed(SearchProvider, {

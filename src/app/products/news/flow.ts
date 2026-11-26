@@ -48,8 +48,10 @@ import { GrokSearchClient, normalizeProvider } from "../../../integrations/grok/
 import type { AuditedSearchPage as NewsSearchPage } from "../../../integrations/grok/index.js";
 import { createHybridNewsSearch } from "./hybrid.js";
 
+/** @internal */
 export type { NewsBriefEdition };
 
+/** @internal */
 export type RivusNewsBriefInput = {
   occurrence: string;
   edition: NewsBriefEdition;
@@ -78,6 +80,7 @@ export type RivusNewsBriefOutput = RivusNewsBriefResult & { markdown: string };
  * Every configured query failed because of provider or network availability.
  * Standalone news briefs still fail; aggregate products may safely degrade by
  * consuming the attached empty result and its complete per-query audit.
+ * @internal
  */
 export class AllNewsQueriesFailedError extends Error {
   readonly result: RivusNewsBriefResult;
@@ -121,6 +124,7 @@ function timeAtOffset(instant: number, timezoneOffset: string): string {
   return shifted.toISOString().slice(11, 16);
 }
 
+/** @internal */
 export function resolveNewsEditionWindow(
   occurrence: string,
   timezoneOffset: string,

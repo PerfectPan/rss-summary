@@ -7,6 +7,7 @@ import { extractWebPageEntries } from "./dto.js";
 import { normalizeWebPageEntry } from "./mapper.js";
 import { asError, provideHttp, timeoutFetch } from "../shared/http.js";
 
+/** @internal */
 export const webHeaders = {
   accept: "text/html, application/xhtml+xml;q=0.9, */*;q=0.8",
   "user-agent": "rss-summary/0.1"

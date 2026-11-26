@@ -64,7 +64,9 @@ export async function postSearchJson(options: {
   return { response, retryAfterMs };
 }
 
-/** The Effect layer every search client lives behind: its `search` over a checked `Error`. */
+/** The Effect layer every search client lives behind: its `search` over a checked `Error`.
+ * @internal
+ */
 export function searchProviderLayer(client: {
   search: (input: SearchInput) => Promise<SearchPage>;
 }): Layer.Layer<SearchProvider> {

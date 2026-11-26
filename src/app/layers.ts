@@ -111,6 +111,7 @@ export function ReadingLive(
   return Layer.mergeAll(http, browser, video, glm);
 }
 
+/** @internal */
 export type AcquisitionOptions = {
   token?: string;
   fetch?: typeof fetch;
@@ -120,6 +121,7 @@ export type AcquisitionOptions = {
 /**
  * Assemble the acquisition ports from their integrations (feed, listing pages,
  * GitHub activity and catalog) plus the module's own state-backed stores.
+ * @internal
  */
 export function AcquisitionLive(
   options: AcquisitionOptions = {}
@@ -151,6 +153,7 @@ export type AppServices =
   | VideoReader
   | GlmReader;
 
+/** @internal */
 export type AppLiveOptions = {
   acquisition?: AcquisitionOptions;
   delivery?: DeliveryOptions;
@@ -161,6 +164,7 @@ export type AppLiveOptions = {
  * Assemble every module's live layer plus the Node platform layer. The module
  * layers receive their environment-derived options; NodeFileSystem comes from
  * @effect/platform-node and stays merged into the output.
+ * @internal
  */
 export function AppLive(options: AppLiveOptions = {}): Layer.Layer<AppServices> {
   return Layer.provideMerge(
@@ -169,7 +173,9 @@ export function AppLive(options: AppLiveOptions = {}): Layer.Layer<AppServices> 
   );
 }
 
-/** Layer options derived from a resolved configuration. */
+/** Layer options derived from a resolved configuration.
+ * @internal
+ */
 export function appLiveOptions(config: AppConfig): AppLiveOptions {
   return {
     acquisition: {

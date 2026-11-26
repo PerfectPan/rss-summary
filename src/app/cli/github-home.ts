@@ -11,6 +11,7 @@ type GithubHomeCommandDeps = {
   stderr?: Writable;
 };
 
+/** @internal */
 export function writeGithubHomeHelp(stdout: Writable): void {
   stdout.write(`Usage:
   rss-summary github-home login [--storage-state .state/github-home-storage.json] [--browser-channel chrome]

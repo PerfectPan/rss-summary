@@ -1,3 +1,4 @@
+/** @internal */
 export { validateEditorialDraft } from "./policies/editorial-draft.js";
 export { buildDailyAiDigest, industryEvidence } from "./services/digest.js";
 export {

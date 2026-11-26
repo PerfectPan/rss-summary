@@ -40,6 +40,7 @@ function parseArgs(argv: string[]): ParsedArgs {
 /**
  * Parse the `调研状态更新建议:` block emitted by the feed-research prompt.
  * Each accepted line looks like: `- github:owner/repo - decision=track reason="why"` .
+ * @internal
  */
 export function parseResearchSuggestions(text: string): ResearchSuggestion[] {
   const lineRegex = /^\s*-\s+(github:\S+|rss:\S+)\s+-\s+decision=(\S+)(?:\s+reason="(.*)")?\s*$/u;

@@ -128,6 +128,7 @@ function parseQuery(value: unknown, topicId: string, queryIndex: number, queryId
   };
 }
 
+/** @internal */
 export function parseNewsTopics(value: string): NewsTopic[] {
   const parsed: unknown = JSON.parse(value);
   if (!Array.isArray(parsed)) {

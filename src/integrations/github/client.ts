@@ -10,6 +10,7 @@ export type GitHubRestOptions = {
   fetch?: typeof fetch;
 };
 
+/** @internal */
 export const githubHeaders = (token: string | undefined): Record<string, string> => {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
